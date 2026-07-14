@@ -12,7 +12,15 @@ export default async (req) => {
     });
   }
 
-  const stripe = new Stripe(Netlify.env.get('STRIPE_SECRET_KEY'));
+  const secretKey = Netlify.env.get('STRIPE_SECRET_KEY');
+  if (!secretKey) {
+    console.error('STRIPE_SECRET_KEY is not set — add it in Site configuration → Environment variables.');
+    return Response.json(
+      { error: 'Checkout is not configured yet. Please try again later.' },
+      { status: 503 },
+    );
+  }
+  const stripe = new Stripe(secretKey);
 
   try {
     const { items } = await req.json().catch(() => ({}));
