@@ -1,21 +1,32 @@
-// Vercel serverless function: /api/create-checkout-session
+// Netlify Function: POST /api/create-checkout-session
 // Builds a Stripe Checkout Session from the items in the cart and returns
 // the hosted checkout URL. The frontend redirects the browser to that URL —
 // card details are entered on Stripe's page, never on this site.
+import Stripe from 'stripe';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-module.exports = async (req, res) => {
+export default async (req) => {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+    });
   }
 
+  const secretKey = Netlify.env.get('STRIPE_SECRET_KEY');
+  if (!secretKey) {
+    console.error('STRIPE_SECRET_KEY is not set — add it in Site configuration → Environment variables.');
+    return Response.json(
+      { error: 'Checkout is not configured yet. Please try again later.' },
+      { status: 503 },
+    );
+  }
+  const stripe = new Stripe(secretKey);
+
   try {
-    const { items } = req.body || {};
+    const { items } = await req.json().catch(() => ({}));
 
     if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Cart is empty' });
+      return Response.json({ error: 'Cart is empty' }, { status: 400 });
     }
 
     // Basic server-side sanity checks — never trust price/name straight
@@ -38,7 +49,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    const origin = req.headers.origin || `https://${req.headers.host}`;
+    const origin = req.headers.get('origin') || new URL(req.url).origin;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -50,9 +61,12 @@ module.exports = async (req, res) => {
       // automatic_tax: { enabled: true },
     });
 
-    return res.status(200).json({ url: session.url });
+    return Response.json({ url: session.url });
   } catch (err) {
     console.error('Checkout session error:', err.message);
-    return res.status(500).json({ error: 'Unable to start checkout. Please try again.' });
+    return Response.json(
+      { error: 'Unable to start checkout. Please try again.' },
+      { status: 500 },
+    );
   }
 };
