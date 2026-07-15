@@ -18,6 +18,16 @@ const SITE = 'https://jblessd.com'
 const START = '<!-- SEO_JSONLD_START'
 const END = '<!-- SEO_JSONLD_END -->'
 
+// The catalog fetch is a same-origin subrequest to /api/products, which spins up
+// a serverless function and a Postgres connection. On a cold path that can take
+// a couple of seconds, and this edge function blocks the whole homepage response
+// on it. Crawlers (Bingbot in particular) enforce a stricter fetch timeout than
+// browsers, so a slow subrequest shows up as "Page fetch failed" in Bing even
+// though the site loads fine in a browser. Bounding the wait guarantees a prompt
+// response: if the live catalog isn't back in time we serve the static fallback
+// ItemList that already ships in index.html.
+const CATALOG_TIMEOUT_MS = 1200
+
 const CATEGORY_LABEL: Record<string, string> = {
   prompts: 'Prompt Packs',
   automations: 'Automation Blueprints',
@@ -87,7 +97,10 @@ export default async (req: Request, context: Context) => {
 
   try {
     const apiUrl = new URL('/api/products', req.url)
-    const apiRes = await fetch(apiUrl, { headers: { accept: 'application/json' } })
+    const apiRes = await fetch(apiUrl, {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS),
+    })
     if (apiRes.ok) {
       const data = (await apiRes.json()) as { products?: ApiProduct[] }
       const products = Array.isArray(data.products) ? data.products : []
