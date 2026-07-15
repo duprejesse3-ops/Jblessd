@@ -1,6 +1,6 @@
-/* THE CONSTRUCT AI — service worker
+/* MULTI-VICE AI — service worker
    Offline support + install for the mobile app (PWA). */
-const CACHE = 'construct-ai-v1';
+const CACHE = 'multi-vice-ai-v1';
 const APP_SHELL = [
   '/',
   '/index.html',
