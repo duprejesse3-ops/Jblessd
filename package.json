@@ -1,0 +1,12 @@
+{
+  "name": "jblessd-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "jblessd.com storefront with Stripe checkout on Netlify Functions",
+  "dependencies": {
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^2.8.2"
+  }
+}

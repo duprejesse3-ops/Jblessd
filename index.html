@@ -728,14 +728,52 @@
   document.getElementById('open-cart').addEventListener('click', openCart);
   document.getElementById('cart-close').addEventListener('click', closeCart);
   cartScrim.addEventListener('click', closeCart);
-  document.getElementById('cart-checkout').addEventListener('click', function(){
-    if(cart.length === 0) return;
-    toast('Order placed — ' + cart.length + ' item(s)');
-    cart = [];
-    renderCart();
-    saveCart();
-    closeCart();
+  var checkoutBtn = document.getElementById('cart-checkout');
+  checkoutBtn.addEventListener('click', async function(){
+    if(cart.length === 0 || checkoutBtn.disabled) return;
+    var originalHTML = checkoutBtn.innerHTML;
+    checkoutBtn.disabled = true;
+    checkoutBtn.textContent = 'Redirecting…';
+    try{
+      var res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(function(i){ return { id: i.id, name: i.name, price: i.price }; })
+        })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start checkout.'); }
+      // Hand off to Stripe's hosted checkout page. The cart is intentionally
+      // left intact so it survives a cancel; it's cleared on successful return.
+      window.location.href = data.url;
+    }catch(err){
+      toast(err.message || 'Something went wrong. Please try again.');
+      checkoutBtn.disabled = false;
+      checkoutBtn.innerHTML = originalHTML;
+    }
   });
+
+  // ---- return from Stripe Checkout ----
+  function handleCheckoutReturn(){
+    var params = new URLSearchParams(window.location.search);
+    var status = params.get('checkout');
+    if(status === 'success'){
+      cart = [];
+      renderCart();
+      saveCart();
+      toast('Payment successful — check your email for delivery.');
+    } else if(status === 'cancelled'){
+      toast('Checkout cancelled — your cart is still here.');
+    }
+    if(status){
+      // Clean the query string so a refresh doesn't re-trigger the message.
+      params.delete('checkout');
+      params.delete('session_id');
+      var qs = params.toString();
+      history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+    }
+  }
 
   // ---- list a product ----
   var addOverlay = document.getElementById('add-overlay');
@@ -790,7 +828,7 @@
     if(e.key === 'Escape'){ productOverlay.classList.remove('open'); closeAdd(); closeCart(); }
   });
 
-  loadCart();
+  loadCart().then(handleCheckoutReturn);
   loadCustomProducts();
 })();
 </script>
