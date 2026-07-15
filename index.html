@@ -333,6 +333,32 @@
   .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);}
   :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){*{transition:none !important; scroll-behavior:auto !important;}}
+
+  /* AI Marketing Agent */
+  .modal.modal-wide{max-width:680px;}
+  .mk-label{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:4px 0 6px;}
+  .mk-result{margin-top:22px; border-top:1px solid var(--line-soft); padding-top:20px;}
+  .mk-tagline{font-family:var(--serif); font-size:17px; line-height:1.4; color:var(--paper); margin:0 0 6px;}
+  .mk-src{font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; display:block; margin-bottom:14px;}
+  .mk-asset{border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin-bottom:12px; background:rgba(18,74,32,.08);}
+  .mk-asset-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px;}
+  .mk-asset-label{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--teal);}
+  .mk-copy{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:4px 9px; cursor:pointer; transition:.15s ease;}
+  .mk-copy:hover{border-color:var(--teal); color:var(--paper);}
+  .mk-copy.done{color:var(--brass); border-color:var(--brass);}
+  .mk-text{font-size:13.5px; line-height:1.6; color:var(--paper); white-space:pre-wrap; margin:0;}
+  .mk-sub{font-size:12.5px; color:var(--muted); margin:0 0 4px;}
+  .mk-list{display:flex; flex-direction:column; gap:10px;}
+  .mk-list .mk-item{padding-left:12px; border-left:2px solid var(--line);}
+  .mk-loading{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13.5px; margin-top:22px;}
+  .mk-spinner{width:16px; height:16px; border:2px solid var(--line); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite;}
+  .mk-error{color:var(--brass-soft); font-size:13.5px; margin-top:18px;}
+  .mk-recent{margin-top:24px; border-top:1px solid var(--line-soft); padding-top:16px;}
+  .mk-recent-head{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 10px;}
+  .mk-recent-item{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--line-soft); cursor:pointer;}
+  .mk-recent-item:hover .mk-recent-name{color:var(--teal);}
+  .mk-recent-name{font-size:13px; color:var(--paper); transition:.15s ease;}
+  .mk-recent-meta{font-family:var(--mono); font-size:10px; color:var(--muted-2); white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -349,6 +375,10 @@
       </span>
     </a>
     <nav class="actions" aria-label="Primary">
+      <button class="btn" id="open-marketing-desktop">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
+        Marketing agent
+      </button>
       <button class="btn" id="open-add-desktop">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         List a product
@@ -580,6 +610,7 @@
     <span class="foot-note">MULTI-VICE AI — LOAD ANY TOOL YOU NEED</span>
     <nav class="foot-links" aria-label="Footer">
       <a href="#catalog">Catalog</a>
+      <a href="#" id="open-marketing-footer">Marketing agent</a>
       <a href="#" id="open-add-footer">List a product</a>
       <a href="#top">Back to top</a>
     </nav>
@@ -640,6 +671,39 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
       List product
     </button>
+  </div>
+</div>
+
+<!-- AI Marketing Agent modal -->
+<div class="overlay" id="marketing-overlay" role="dialog" aria-modal="true" aria-labelledby="mk-title">
+  <div class="modal modal-wide">
+    <button class="modal-close" id="mk-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <span class="concierge-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
+      AI Marketing Agent
+    </span>
+    <h2 id="mk-title" style="margin:12px 0 4px; font-family:var(--serif); font-weight:500;">Generate a campaign in one click.</h2>
+    <p class="concierge-sub">Pick a product (or the whole store), add a goal if you have one, and the agent writes a full campaign — social posts, a launch email, SEO copy, and ad headlines — grounded in your real catalog.</p>
+
+    <label class="mk-label" for="mk-product">Promote</label>
+    <select class="field" id="mk-product">
+      <option value="STORE">The whole store</option>
+    </select>
+
+    <label class="mk-label" for="mk-goal">Goal <span style="color:var(--muted-2);">(optional)</span></label>
+    <input class="field" id="mk-goal" placeholder="e.g. push our new agent configs to developers" />
+
+    <button class="btn btn-gold" style="width:100%; justify-content:center; padding:11px;" id="mk-generate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
+      Generate campaign
+    </button>
+
+    <div id="mk-result" class="mk-result" hidden></div>
+
+    <div id="mk-recent" class="mk-recent" hidden>
+      <p class="mk-recent-head">Recent campaigns</p>
+      <div id="mk-recent-list"></div>
+    </div>
   </div>
 </div>
 
@@ -983,7 +1047,7 @@
 
   // Esc closes any open overlay
   document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){ closeProductModal(); closeAdd(); closeCart(); }
+    if(e.key === 'Escape'){ closeProductModal(); closeAdd(); closeCart(); closeMarketing(); }
   });
 
   // ---- AI concierge ----
@@ -1064,6 +1128,141 @@
       recs.forEach(function(r){ addToCart({ id: r.sku, name: r.name, price: r.price }); });
       openCart();
     });
+  }
+
+  // ---- AI Marketing Agent ----
+  var mkOverlay = document.getElementById('marketing-overlay');
+  var mkProduct = document.getElementById('mk-product');
+  var mkGoal = document.getElementById('mk-goal');
+  var mkGenerate = document.getElementById('mk-generate');
+  var mkResult = document.getElementById('mk-result');
+  var mkRecent = document.getElementById('mk-recent');
+  var mkRecentList = document.getElementById('mk-recent-list');
+  var mkRecentLoaded = false;
+
+  function openMarketing(){
+    populateMarketingProducts();
+    mkOverlay.classList.add('open');
+    if(!mkRecentLoaded){ loadRecentCampaigns(); }
+  }
+  function closeMarketing(){ mkOverlay.classList.remove('open'); }
+  document.getElementById('open-marketing-desktop').addEventListener('click', openMarketing);
+  document.getElementById('open-marketing-footer').addEventListener('click', function(e){ e.preventDefault(); openMarketing(); });
+  document.getElementById('mk-close').addEventListener('click', closeMarketing);
+  mkOverlay.addEventListener('click', function(e){ if(e.target === mkOverlay) closeMarketing(); });
+
+  // Fill the product picker from the live catalog cards already on the page.
+  function populateMarketingProducts(){
+    var cards = catalog.querySelectorAll('.card');
+    var current = mkProduct.value;
+    var html = '<option value="STORE">The whole store</option>';
+    cards.forEach(function(c){
+      html += '<option value="'+esc(c.dataset.id)+'">'+esc(c.dataset.name)+'</option>';
+    });
+    mkProduct.innerHTML = html;
+    if(current){ mkProduct.value = current; }
+  }
+
+  mkGenerate.addEventListener('click', async function(){
+    var sku = mkProduct.value || 'STORE';
+    var goal = mkGoal.value.trim();
+    mkGenerate.disabled = true;
+    mkResult.hidden = false;
+    mkResult.innerHTML = '<div class="mk-loading"><span class="mk-spinner"></span>Writing your campaign — posts, email, SEO, and ad headlines…</div>';
+    try{
+      var res = await fetch('/api/marketing-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: sku, goal: goal })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.campaign){ throw new Error(data.error || 'The marketing agent is unavailable right now.'); }
+      renderCampaign(data.campaign);
+      mkRecentLoaded = false;
+      loadRecentCampaigns();
+    }catch(err){
+      mkResult.innerHTML = '<p class="mk-error">'+esc(err.message || 'Something went wrong. Please try again.')+'</p>';
+    }finally{
+      mkGenerate.disabled = false;
+    }
+  });
+
+  function assetBlock(label, text){
+    return (
+      '<div class="mk-asset">'+
+        '<div class="mk-asset-head"><span class="mk-asset-label">'+esc(label)+'</span>'+
+          '<button class="mk-copy" data-copy="'+esc(text)+'">Copy</button></div>'+
+        '<p class="mk-text">'+esc(text)+'</p>'+
+      '</div>'
+    );
+  }
+
+  function renderCampaign(c){
+    var a = c.assets || {};
+    var srcLabel = c.source === 'ai' ? 'Written by Claude' : 'Generated from templates';
+    var html = '';
+    html += '<span class="mk-src">✦ '+srcLabel+' · for '+esc(c.productName || '')+'</span>';
+    if(a.tagline){ html += '<p class="mk-tagline">'+esc(a.tagline)+'</p>'; }
+
+    if(Array.isArray(a.tweets) && a.tweets.length){
+      var tweetsHtml = '<div class="mk-list">';
+      a.tweets.forEach(function(t){ tweetsHtml += '<div class="mk-item">'+assetBlock('X / Twitter', t)+'</div>'; });
+      tweetsHtml += '</div>';
+      html += tweetsHtml;
+    }
+    if(a.linkedin){ html += assetBlock('LinkedIn', a.linkedin); }
+    if(a.instagram){ html += assetBlock('Instagram', a.instagram); }
+    if(a.email && a.email.subject){
+      html += assetBlock('Email subject', a.email.subject);
+      html += assetBlock('Email body', a.email.body);
+    }
+    if(a.seo && a.seo.metaTitle){
+      html += assetBlock('SEO title', a.seo.metaTitle);
+      html += assetBlock('SEO description', a.seo.metaDescription);
+    }
+    if(Array.isArray(a.adHeadlines) && a.adHeadlines.length){
+      html += assetBlock('Ad headlines', a.adHeadlines.join('\n'));
+    }
+    mkResult.hidden = false;
+    mkResult.innerHTML = html;
+    mkResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    mkResult.querySelectorAll('.mk-copy').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var text = btn.getAttribute('data-copy') || '';
+        var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1500); };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done).catch(function(){ toast('Could not copy'); });
+        }else{ toast('Copy not supported here'); }
+      });
+    });
+  }
+
+  async function loadRecentCampaigns(){
+    try{
+      var res = await fetch('/api/marketing-agent');
+      var data = await res.json().catch(function(){ return {}; });
+      var list = (data && data.campaigns) || [];
+      mkRecentLoaded = true;
+      if(!list.length){ mkRecent.hidden = true; return; }
+      var html = '';
+      list.forEach(function(c){
+        var when = '';
+        try{ when = c.createdAt ? new Date(c.createdAt).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : ''; }catch(_){}
+        html += '<div class="mk-recent-item" data-id="'+esc(c.id)+'">'+
+                  '<span class="mk-recent-name">'+esc(c.productName)+(c.goal ? ' — '+esc(c.goal) : '')+'</span>'+
+                  '<span class="mk-recent-meta">'+esc(when)+'</span>'+
+                '</div>';
+      });
+      mkRecentList.innerHTML = html;
+      mkRecent.hidden = false;
+      mkRecentList.querySelectorAll('.mk-recent-item').forEach(function(item){
+        item.addEventListener('click', function(){
+          var c = list.filter(function(x){ return String(x.id) === item.dataset.id; })[0];
+          if(c){ renderCampaign(c); }
+        });
+      });
+    }catch(e){ mkRecentLoaded = true; mkRecent.hidden = true; }
   }
 
   // ---- init ----

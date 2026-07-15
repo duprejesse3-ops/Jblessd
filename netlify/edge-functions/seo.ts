@@ -49,7 +49,7 @@ function buildItemList(products: ApiProduct[]): string {
       sku: p.sku,
       category: p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category,
       description: p.blurb,
-      brand: { '@type': 'Brand', name: 'THE CONSTRUCT AI' },
+      brand: { '@type': 'Brand', name: 'MULTI-VICE AI' },
       image: `${SITE}/og-image.png`,
       url: `${SITE}/?product=${encodeURIComponent(p.sku)}`,
       offers: {
@@ -66,7 +66,7 @@ function buildItemList(products: ApiProduct[]): string {
   const itemList = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'THE CONSTRUCT AI — full catalog',
+    name: 'MULTI-VICE AI — full catalog',
     numberOfItems: products.length,
     itemListElement,
   }
