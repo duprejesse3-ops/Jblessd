@@ -1,5 +1,13 @@
 node_modules/
 *.log
 
+# Android / TWA build artifacts (generated locally by Bubblewrap — never commit
+# the signing keystore).
+*.keystore
+*.aab
+*.apk
+android.keystore
+app-release-*.jks
+
 # Local Netlify folder
 .netlify
