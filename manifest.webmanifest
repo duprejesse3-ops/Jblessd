@@ -1,7 +1,7 @@
 {
   "name": "MULTI-VICE AI",
   "short_name": "Multi-Vice AI",
-  "description": "Ready-to-use AI productivity tools — prompt packs, automation blueprints, templates, and agent configs, organized by role.",
+  "description": "Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments. Built for people who want to get more done with AI.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
