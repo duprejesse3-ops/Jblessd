@@ -1,10 +1,11 @@
 /* MULTI-VICE AI — service worker
    Offline support + install for the mobile app (PWA). */
-const CACHE = 'multi-vice-ai-v1';
+const CACHE = 'multi-vice-ai-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/icons/logo.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
