@@ -2,28 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Halo AI | AI Prompt Packs, Automations &amp; Agent Configs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#000803" />
+
+<!-- PWA / mobile app -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="application-name" content="THE CONSTRUCT AI" />
+<meta name="apple-mobile-web-app-title" content="Construct AI" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>THE CONSTRUCT AI | AI Prompt Packs, Automations &amp; Agent Configs</title>
 <meta name="description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, Notion templates, and agent configs for founders, marketers, developers, sales, writers, and students." />
 <meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://jblessd.com/" />
-<meta name="theme-color" content="#0A121F" />
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Halo AI" />
-<meta property="og:title" content="Halo AI | AI Prompt Packs, Automations & Agent Configs" />
+<meta property="og:site_name" content="THE CONSTRUCT AI" />
+<meta property="og:title" content="THE CONSTRUCT AI | AI Prompt Packs, Automations & Agent Configs" />
 <meta property="og:description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, templates, and agent configs, organized by role." />
 <meta property="og:url" content="https://jblessd.com/" />
 <meta property="og:image" content="https://jblessd.com/og-image.png" />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Halo AI | AI Productivity Tools" />
+<meta name="twitter:title" content="THE CONSTRUCT AI | AI Productivity Tools" />
 <meta name="twitter:description" content="Prompt packs, automations, templates, and agent configs — built once, sold as instruments." />
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A121F'/%3E%3Cpath d='M16 6 L26 26 L6 26 Z' fill='none' stroke='%23C89B3C' stroke-width='2'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000803'/%3E%3Ctext x='4' y='23' font-family='monospace' font-size='18' fill='%2300FF41'%3E%3E_%3C/text%3E%3C/svg%3E" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +43,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "Halo AI",
+  "name": "THE CONSTRUCT AI",
   "url": "https://jblessd.com/",
   "potentialAction": {
     "@type": "SearchAction",
@@ -47,7 +56,7 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "Halo AI",
+  "name": "THE CONSTRUCT AI",
   "url": "https://jblessd.com/",
   "description": "A catalog of ready-made AI productivity tools: prompt packs, automation blueprints, document templates, and agent configs."
 }
@@ -77,19 +86,19 @@
 
 <style>
   :root{
-    --ink:#0A121F;
-    --panel:#111D30;
-    --panel-2:#0D1626;
-    --line:#25344D;
-    --line-soft:#1B2A3F;
-    --paper:#F3F0E7;
-    --muted:#93A0B4;
-    --muted-2:#5E6C82;
-    --brass:#C6963A;
-    --brass-soft:#B98D3E;
-    --teal:#48C7BB;
+    --ink:#000803;
+    --panel:#07110A;
+    --panel-2:#030A06;
+    --line:#124A20;
+    --line-soft:#0A2A12;
+    --paper:#C9FFD4;
+    --muted:#4BD66A;
+    --muted-2:#2C7A41;
+    --brass:#00FF41;
+    --brass-soft:#23C552;
+    --teal:#5EFFA0;
     --radius:2px;
-    --serif:'Fraunces', Georgia, serif;
+    --serif:'JetBrains Mono', ui-monospace, monospace;
     --sans:'Inter', -apple-system, sans-serif;
     --mono:'JetBrains Mono', ui-monospace, monospace;
   }
@@ -106,18 +115,23 @@
       linear-gradient(var(--line-soft) 1px, transparent 1px),
       linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
     background-size:44px 44px;
-    opacity:.35;
+    opacity:.18;
     mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  #matrix-rain{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.42;}
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(ellipse 100% 80% at 50% 40%, transparent 55%, rgba(0,0,0,.65) 100%);
   }
   a{color:inherit;}
   .wrap{max-width:1120px; margin:0 auto; padding:0 24px; position:relative; z-index:1;}
 
   /* header */
-  header{border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,18,31,.86); backdrop-filter:blur(10px); z-index:40;}
+  header{border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(0,4,1,.88); backdrop-filter:blur(10px); z-index:40;}
   .headrow{display:flex; align-items:center; justify-content:space-between; padding:18px 0;}
   .brand{display:flex; align-items:center; gap:10px; text-decoration:none;}
-  .brand-mark{width:30px; height:30px; border:1px solid var(--brass); display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--brass); font-size:15px;}
-  .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.03em; color:var(--paper);}
+  .brand-mark{width:30px; height:30px; border:1px solid var(--brass); display:flex; align-items:center; justify-content:center; font-family:var(--mono); color:var(--brass); font-size:14px; box-shadow:0 0 12px rgba(0,255,65,.35); text-shadow:0 0 8px var(--brass);}
+  .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.12em; color:var(--paper); text-shadow:0 0 10px rgba(0,255,65,.35);}
   .brand-sub{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--muted-2); display:block; margin-top:1px;}
   nav.actions{display:flex; align-items:center; gap:10px;}
   .btn{
@@ -127,7 +141,7 @@
   }
   .btn:hover{border-color:var(--teal); color:var(--paper);}
   .btn-solid{background:var(--teal); border-color:var(--teal); color:var(--ink); font-weight:600;}
-  .btn-solid:hover{background:#5fd6ca; color:var(--ink);}
+  .btn-solid:hover{background:#8affbe; color:var(--ink);}
   .btn-gold{background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600;}
   .btn-gold:hover{background:#d6a648;}
   .cart-count{font-family:var(--mono); font-size:11px; background:var(--brass); color:var(--ink); min-width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;}
@@ -139,7 +153,7 @@
     font-family:var(--serif); font-weight:500; font-size:clamp(34px,5vw,54px); line-height:1.08;
     max-width:760px; margin:0 0 22px; color:var(--paper); letter-spacing:-.01em;
   }
-  h1 em{color:var(--brass); font-style:italic;}
+  h1 em{color:var(--brass); font-style:italic; text-shadow:0 0 14px rgba(0,255,65,.4);}
   .lede{font-size:17px; line-height:1.65; color:var(--muted); max-width:560px; margin:0 0 36px;}
   .search-row{display:flex; gap:10px; max-width:480px;}
   .search-box{position:relative; flex:1;}
@@ -238,7 +252,7 @@
   .sku{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; color:var(--muted-2);}
   .niche-tag{
     font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--brass);
-    border:1px solid #3A4C6B; padding:2px 7px; width:fit-content; margin-bottom:11px; border-radius:var(--radius);
+    border:1px solid #1C5C2C; padding:2px 7px; width:fit-content; margin-bottom:11px; border-radius:var(--radius);
   }
   .card h3{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 8px; color:var(--paper); line-height:1.3;}
   .card p{font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;}
@@ -250,7 +264,7 @@
     border:none; padding:8px 13px; border-radius:var(--radius); cursor:pointer; display:inline-flex; align-items:center; gap:5px;
     transition:.15s;
   }
-  .add-btn:hover{background:#5fd6ca;}
+  .add-btn:hover{background:#8affbe;}
 
   .empty-state{text-align:center; padding:60px 0; color:var(--muted-2); font-size:14px;}
 
@@ -308,13 +322,15 @@
 </head>
 <body>
 
+<canvas id="matrix-rain" aria-hidden="true"></canvas>
+
 <header>
   <div class="wrap headrow">
     <a href="#top" class="brand">
-      <span class="brand-mark">◯</span>
+      <span class="brand-mark">&gt;_</span>
       <span>
-        <span class="brand-name">Halo AI</span>
-        <span class="brand-sub">AI INSTRUMENTS FOR WORK</span>
+        <span class="brand-name">THE CONSTRUCT AI</span>
+        <span class="brand-sub">LOAD THE TOOL YOU NEED</span>
       </span>
     </a>
     <nav class="actions" aria-label="Primary">
@@ -332,7 +348,7 @@
 
 <main id="top">
   <div class="wrap hero">
-    <p class="eyebrow">Catalog No. 001 — AI Productivity Instruments</p>
+    <p class="eyebrow">&gt; jack in — AI productivity instruments loaded</p>
     <h1>Prompt packs, automations, and agent configs — <em>built once, sold as instruments.</em></h1>
     <p class="lede">Every listing is a spec sheet, not a pitch: what it does, what it runs on, what it costs. Organized by role, so you find the tool built for your work, not a generic bundle.</p>
     <div class="search-row">
@@ -546,7 +562,7 @@
 
 <footer>
   <div class="wrap foot-row">
-    <span class="foot-note">HALO AI — INSTRUMENTS FOR THE WAY YOU WORK</span>
+    <span class="foot-note">THE CONSTRUCT AI — LOAD ANY TOOL YOU NEED</span>
     <nav class="foot-links" aria-label="Footer">
       <a href="#catalog">Catalog</a>
       <a href="#" id="open-add-footer">List a product</a>
@@ -554,7 +570,7 @@
     </nav>
   </div>
   <div class="wrap">
-    <p class="foot-copy">© 2026 Halo AI. All rights reserved.</p>
+    <p class="foot-copy">© 2026 The Construct AI. All rights reserved.</p>
   </div>
 </footer>
 
@@ -1010,6 +1026,59 @@
   handleCheckoutReturn();
   loadCatalogFromApi();
 })();
+</script>
+
+<script>
+/* Matrix digital rain — respects prefers-reduced-motion */
+(function(){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var canvas = document.getElementById('matrix-rain');
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext('2d');
+  var glyphs = 'アカサタナハマヤラワ0123456789ABCDEFｦｱｳｴｵｶｷｸｹｺ<>=/*+-{}[]$#'.split('');
+  var fontSize = 15, cols = 0, drops = [];
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cols = Math.floor(canvas.width / fontSize);
+    drops = [];
+    for (var i = 0; i < cols; i++){ drops[i] = Math.floor(Math.random() * -50); }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var last = 0;
+  function draw(now){
+    if (now - last > 55){
+      last = now;
+      ctx.fillStyle = 'rgba(0, 8, 3, 0.10)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = fontSize + 'px "JetBrains Mono", monospace';
+      for (var i = 0; i < drops.length; i++){
+        var ch = glyphs[Math.floor(Math.random() * glyphs.length)];
+        var x = i * fontSize, y = drops[i] * fontSize;
+        ctx.fillStyle = Math.random() > 0.975 ? '#C9FFD4' : '#00FF41';
+        ctx.fillText(ch, x, y);
+        if (y > canvas.height && Math.random() > 0.975){ drops[i] = 0; }
+        drops[i]++;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+
+<script>
+/* Register the service worker so the storefront installs as a mobile app and works offline */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function (err) {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
 </script>
 
 </body>
