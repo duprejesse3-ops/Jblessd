@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Operator Supply Co. | AI Prompt Packs, Automations &amp; Agent Configs</title>
+<title>Halo AI | AI Prompt Packs, Automations &amp; Agent Configs</title>
 <meta name="description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, Notion templates, and agent configs for founders, marketers, developers, sales, writers, and students." />
 <meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
 <meta name="robots" content="index, follow" />
@@ -12,15 +12,15 @@
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Operator Supply Co." />
-<meta property="og:title" content="Operator Supply Co. | AI Prompt Packs, Automations & Agent Configs" />
+<meta property="og:site_name" content="Halo AI" />
+<meta property="og:title" content="Halo AI | AI Prompt Packs, Automations & Agent Configs" />
 <meta property="og:description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, templates, and agent configs, organized by role." />
 <meta property="og:url" content="https://operatorsupply.co/" />
 <meta property="og:image" content="https://operatorsupply.co/og-image.png" />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Operator Supply Co. | AI Productivity Tools" />
+<meta name="twitter:title" content="Halo AI | AI Productivity Tools" />
 <meta name="twitter:description" content="Prompt packs, automations, templates, and agent configs — built once, sold as instruments." />
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A121F'/%3E%3Cpath d='M16 6 L26 26 L6 26 Z' fill='none' stroke='%23C89B3C' stroke-width='2'/%3E%3C/svg%3E" />
@@ -34,7 +34,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "Operator Supply Co.",
+  "name": "Halo AI",
   "url": "https://operatorsupply.co/",
   "potentialAction": {
     "@type": "SearchAction",
@@ -47,7 +47,7 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "Operator Supply Co.",
+  "name": "Halo AI",
   "url": "https://operatorsupply.co/",
   "description": "A catalog of ready-made AI productivity tools: prompt packs, automation blueprints, document templates, and agent configs."
 }
@@ -170,6 +170,52 @@
   .chip.active{border-color:var(--brass); color:var(--brass);}
   .chip.active.teal-active{border-color:var(--teal); color:var(--teal);}
 
+  /* AI concierge */
+  .concierge{
+    border:1px solid var(--line); border-radius:var(--radius); background:
+      radial-gradient(120% 140% at 0% 0%, rgba(72,199,187,.08), transparent 55%),
+      radial-gradient(120% 140% at 100% 0%, rgba(198,150,58,.10), transparent 55%),
+      var(--panel);
+    padding:26px 26px 24px; margin:0 0 56px; position:relative; overflow:hidden;
+  }
+  .concierge-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--teal); text-transform:uppercase; display:inline-flex; align-items:center; gap:7px;}
+  .concierge-title{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:12px 0 4px; letter-spacing:-.01em;}
+  .concierge-sub{font-size:14px; color:var(--muted); margin:0 0 18px; max-width:560px;}
+  .concierge-form{display:flex; gap:10px; align-items:stretch; flex-wrap:wrap;}
+  #concierge-input{
+    flex:1; min-width:240px; background:var(--panel-2); border:1px solid var(--line); color:var(--paper);
+    font-family:var(--sans); font-size:14px; line-height:1.5; padding:12px 14px; border-radius:var(--radius); resize:vertical; min-height:52px;
+  }
+  #concierge-input:focus{outline:none; border-color:var(--teal);}
+  #concierge-input::placeholder{color:var(--muted-2);}
+  #concierge-submit{white-space:nowrap; align-self:flex-start;}
+  #concierge-submit:disabled{opacity:.6; cursor:default;}
+  .concierge-suggestions{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px;}
+  .mini-chip{
+    font-family:var(--sans); font-size:12px; color:var(--muted); background:transparent;
+    border:1px dashed var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; transition:.15s ease;
+  }
+  .mini-chip:hover{border-color:var(--teal); color:var(--paper); border-style:solid;}
+  .concierge-result{margin-top:22px; border-top:1px solid var(--line-soft); padding-top:20px;}
+  .concierge-summary{font-size:14.5px; line-height:1.6; color:var(--paper); margin:0 0 16px;}
+  .concierge-summary .src-tag{font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; display:block; margin-bottom:8px;}
+  .rec-list{display:grid; gap:10px; margin-bottom:18px;}
+  .rec{display:flex; gap:14px; align-items:flex-start; border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; background:var(--panel-2);}
+  .rec-body{flex:1; min-width:0;}
+  .rec-name{font-family:var(--serif); font-size:15.5px; color:var(--paper); margin:0;}
+  .rec-sku{font-family:var(--mono); font-size:10px; color:var(--muted-2); margin-left:8px;}
+  .rec-reason{font-size:13px; line-height:1.55; color:var(--muted); margin:6px 0 0;}
+  .rec-side{display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0;}
+  .rec-price{font-family:var(--mono); font-size:14px; color:var(--paper);}
+  .rec-add{font-size:12px; padding:6px 12px;}
+  .bundle-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .bundle-total{font-size:14px; color:var(--muted);}
+  .bundle-total b{font-family:var(--mono); color:var(--paper); font-size:16px; font-weight:400; margin-left:6px;}
+  .concierge-loading{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13.5px; margin-top:22px;}
+  .concierge-spinner{width:16px; height:16px; border:2px solid var(--line); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .concierge-error{color:var(--brass-soft); font-size:13.5px; margin-top:18px;}
+
   /* catalog */
   #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper);}
   .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-bottom:40px;}
@@ -250,6 +296,7 @@
   .foot-links{display:flex; gap:18px; font-size:12.5px; color:var(--muted);}
   .foot-links a{text-decoration:none; color:var(--muted);}
   .foot-links a:hover{color:var(--teal);}
+  .foot-copy{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2); margin:22px 0 0; padding-top:20px; border-top:1px solid var(--line-soft);}
 
   #toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--paper); color:var(--ink); font-size:13.5px; font-weight:500; padding:11px 18px; border-radius:var(--radius); z-index:100; opacity:0; pointer-events:none; transition:.25s ease; display:flex; align-items:center; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,.4);}
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -264,9 +311,9 @@
 <header>
   <div class="wrap headrow">
     <a href="#top" class="brand">
-      <span class="brand-mark">▲</span>
+      <span class="brand-mark">◯</span>
       <span>
-        <span class="brand-name">Operator Supply Co.</span>
+        <span class="brand-name">Halo AI</span>
         <span class="brand-sub">AI INSTRUMENTS FOR WORK</span>
       </span>
     </a>
@@ -294,6 +341,28 @@
         <input id="search" type="search" placeholder="Search the catalog…" aria-label="Search products" />
       </div>
     </div>
+  </div>
+
+  <div class="wrap">
+    <section class="concierge" id="concierge" aria-label="AI shopping concierge">
+      <span class="concierge-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+        AI Concierge
+      </span>
+      <p class="concierge-title">Describe your work. Get a tailored toolkit.</p>
+      <p class="concierge-sub">Tell the concierge what you're trying to get done and it hand-picks the products that fit — with a reason for each, ready to add as a bundle.</p>
+      <form class="concierge-form" id="concierge-form">
+        <textarea id="concierge-input" rows="2" placeholder="e.g. I run a 3-person agency and spend half my day on client email, proposals, and status updates." aria-label="Describe what you're working on"></textarea>
+        <button type="submit" class="btn btn-gold" id="concierge-submit">Build my toolkit</button>
+      </form>
+      <div class="concierge-suggestions" id="concierge-suggestions">
+        <button type="button" class="mini-chip" data-q="I'm a solo founder losing hours to email, meetings, and follow-ups.">Solo founder, too many meetings</button>
+        <button type="button" class="mini-chip" data-q="I run marketing and need to ship more content across channels without burning out.">Marketer shipping content</button>
+        <button type="button" class="mini-chip" data-q="I'm a developer who wants to automate code reviews and standups.">Developer automating chores</button>
+        <button type="button" class="mini-chip" data-q="I'm a grad student doing literature reviews and need to research faster.">Researcher, faster lit reviews</button>
+      </div>
+      <div class="concierge-result" id="concierge-result" hidden></div>
+    </section>
   </div>
 
   <div class="wrap trust">
@@ -477,12 +546,15 @@
 
 <footer>
   <div class="wrap foot-row">
-    <span class="foot-note">OPERATOR SUPPLY CO. — INSTRUMENTS FOR THE WAY YOU WORK</span>
+    <span class="foot-note">HALO AI — INSTRUMENTS FOR THE WAY YOU WORK</span>
     <nav class="foot-links" aria-label="Footer">
       <a href="#catalog">Catalog</a>
       <a href="#" id="open-add-footer">List a product</a>
       <a href="#top">Back to top</a>
     </nav>
+  </div>
+  <div class="wrap">
+    <p class="foot-copy">© 2026 Halo AI. All rights reserved.</p>
   </div>
 </footer>
 
@@ -564,35 +636,17 @@
   "use strict";
 
   var cart = [];
-  var customCount = 0;
 
-  // ---- persistence (best-effort; falls back to in-memory if storage unavailable) ----
-  async function loadCart(){
+  // ---- persistence (localStorage; falls back to in-memory if unavailable) ----
+  var STORE_KEY = 'osc:cart';
+  function loadCart(){
     try{
-      var res = await window.storage.get('cart', false);
-      if(res && res.value){ cart = JSON.parse(res.value); renderCart(); }
+      var raw = localStorage.getItem(STORE_KEY);
+      if(raw){ cart = JSON.parse(raw) || []; renderCart(); }
     }catch(e){ /* no saved cart yet */ }
   }
-  async function saveCart(){
-    try{ await window.storage.set('cart', JSON.stringify(cart), false); }catch(e){}
-  }
-  async function loadCustomProducts(){
-    try{
-      var res = await window.storage.get('custom-products', true);
-      if(res && res.value){
-        var items = JSON.parse(res.value);
-        items.forEach(function(p){ appendCard(p, false); });
-        customCount = items.length;
-      }
-    }catch(e){ /* none yet */ }
-  }
-  async function saveCustomProduct(p){
-    try{
-      var res = await window.storage.get('custom-products', true).catch(function(){ return null; });
-      var items = (res && res.value) ? JSON.parse(res.value) : [];
-      items.push(p);
-      await window.storage.set('custom-products', JSON.stringify(items), true);
-    }catch(e){}
+  function saveCart(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(cart)); }catch(e){}
   }
 
   var catalog = document.getElementById('catalog');
@@ -601,7 +655,6 @@
   var activeCat = 'all', activeNiche = 'all';
 
   var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs'};
-  var CAT_PREFIX = {prompts:'PP', automations:'AB', templates:'TP', agents:'AG'};
   var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers'};
 
   function toast(msg){
@@ -784,43 +837,87 @@
   document.getElementById('add-close').addEventListener('click', closeAdd);
   addOverlay.addEventListener('click', function(e){ if(e.target === addOverlay) closeAdd(); });
 
-  function appendCard(p, animate){
-    var card = document.createElement('article');
-    card.className = 'card';
-    card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = p.id;
-    card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
-    card.dataset.spec = p.spec; card.dataset.catlabel = CAT_LABEL[p.category]; card.dataset.nichelabel = NICHE_LABEL[p.niche];
-    card.innerHTML =
-      '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
-      '<div class="card-top"><span class="sku">'+p.id+'</span></div>'+
-      '<span class="niche-tag">'+NICHE_LABEL[p.niche]+'</span>'+
-      '<h3>'+p.name+'</h3><p>'+p.blurb+'</p>'+
-      '<p class="card-format">'+p.format+'</p>'+
-      '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
-    catalog.prepend(card);
-    if(animate){ card.style.opacity = '0'; requestAnimationFrame(function(){ card.style.transition = '.3s ease'; card.style.opacity = '1'; }); }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
   }
 
-  document.getElementById('f-submit').addEventListener('click', function(){
+  function buildCard(p){
+    var id = p.id || p.sku;
+    var catLabel = p.catlabel || p.catLabel || CAT_LABEL[p.category] || p.category;
+    var nicheLabel = p.nichelabel || p.nicheLabel || NICHE_LABEL[p.niche] || p.niche;
+    var card = document.createElement('article');
+    card.className = 'card';
+    card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
+    card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
+    card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
+    card.innerHTML =
+      '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
+      '<div class="card-top"><span class="sku">'+esc(id)+'</span></div>'+
+      '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
+      '<h3>'+esc(p.name)+'</h3><p>'+esc(p.blurb)+'</p>'+
+      '<p class="card-format">'+esc(p.format)+'</p>'+
+      '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
+    return card;
+  }
+
+  function appendCard(p, animate){
+    var card = buildCard(p);
+    catalog.prepend(card);
+    if(animate){ card.style.opacity = '0'; requestAnimationFrame(function(){ card.style.transition = '.3s ease'; card.style.opacity = '1'; }); }
+    return card;
+  }
+
+  // Replace the statically-rendered catalog with the live one from the database.
+  // If the API is unreachable, the server-rendered cards already in the page
+  // remain as a fallback.
+  async function loadCatalogFromApi(){
+    try{
+      var res = await fetch('/api/products');
+      if(!res.ok) return;
+      var data = await res.json();
+      if(data && Array.isArray(data.products) && data.products.length){
+        catalog.innerHTML = '';
+        data.products.forEach(function(p){ catalog.appendChild(buildCard(p)); });
+        applyFilters();
+      }
+    }catch(e){ /* keep the static cards */ }
+  }
+
+  document.getElementById('f-submit').addEventListener('click', async function(){
     var name = document.getElementById('f-name').value.trim();
     var price = document.getElementById('f-price').value;
     if(!name || !price){ toast('Add a name and price first'); return; }
-    customCount++;
-    var category = document.getElementById('f-category').value;
-    var p = {
-      id: 'AI-' + CAT_PREFIX[category] + '-' + String(14 + customCount).padStart(3,'0'),
-      name: name, category: category, niche: document.getElementById('f-niche').value,
-      format: document.getElementById('f-format').value.trim() || 'Digital download',
+    var btn = this;
+    btn.disabled = true;
+    var payload = {
+      name: name,
+      category: document.getElementById('f-category').value,
+      niche: document.getElementById('f-niche').value,
+      format: document.getElementById('f-format').value.trim(),
       price: parseFloat(price) || 0,
-      blurb: document.getElementById('f-blurb').value.trim() || 'No description yet.',
-      spec: document.getElementById('f-spec').value.trim() || '—'
+      blurb: document.getElementById('f-blurb').value.trim(),
+      spec: document.getElementById('f-spec').value.trim()
     };
-    appendCard(p, true);
-    saveCustomProduct(p);
-    applyFilters();
-    toast('Listed "' + p.name + '"');
-    ['f-name','f-format','f-price','f-blurb','f-spec'].forEach(function(id){ document.getElementById(id).value=''; });
-    closeAdd();
+    try{
+      var res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.product){ throw new Error(data.error || 'Could not list the product.'); }
+      appendCard(data.product, true);
+      applyFilters();
+      toast('Listed "' + data.product.name + '"');
+      ['f-name','f-format','f-price','f-blurb','f-spec'].forEach(function(id){ document.getElementById(id).value=''; });
+      closeAdd();
+    }catch(err){
+      toast(err.message || 'Could not list the product.');
+    }finally{
+      btn.disabled = false;
+    }
   });
 
   // Esc closes any open overlay
@@ -828,8 +925,90 @@
     if(e.key === 'Escape'){ productOverlay.classList.remove('open'); closeAdd(); closeCart(); }
   });
 
-  loadCart().then(handleCheckoutReturn);
-  loadCustomProducts();
+  // ---- AI concierge ----
+  var conciergeForm = document.getElementById('concierge-form');
+  var conciergeInput = document.getElementById('concierge-input');
+  var conciergeSubmit = document.getElementById('concierge-submit');
+  var conciergeResult = document.getElementById('concierge-result');
+
+  document.getElementById('concierge-suggestions').addEventListener('click', function(e){
+    var chip = e.target.closest('.mini-chip'); if(!chip) return;
+    conciergeInput.value = chip.dataset.q;
+    conciergeInput.focus();
+    conciergeForm.requestSubmit ? conciergeForm.requestSubmit() : runConcierge();
+  });
+
+  conciergeForm.addEventListener('submit', function(e){ e.preventDefault(); runConcierge(); });
+
+  async function runConcierge(){
+    var query = conciergeInput.value.trim();
+    if(query.length < 3){ toast('Tell the concierge a bit about your work'); return; }
+    conciergeSubmit.disabled = true;
+    conciergeResult.hidden = false;
+    conciergeResult.innerHTML = '<div class="concierge-loading"><span class="concierge-spinner"></span>Reading your notes and picking your toolkit…</div>';
+    try{
+      var res = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !Array.isArray(data.recommendations)){ throw new Error(data.error || 'The concierge is unavailable right now.'); }
+      renderConcierge(data);
+    }catch(err){
+      conciergeResult.innerHTML = '<p class="concierge-error">'+esc(err.message || 'Something went wrong. Please try again.')+'</p>';
+    }finally{
+      conciergeSubmit.disabled = false;
+    }
+  }
+
+  function renderConcierge(data){
+    if(!data.recommendations.length){
+      conciergeResult.innerHTML = '<p class="concierge-error">No close matches — try describing your work in a bit more detail.</p>';
+      return;
+    }
+    var srcLabel = data.source === 'ai' ? 'Curated by Claude' : 'Curated for you';
+    var html = '<p class="concierge-summary"><span class="src-tag">✦ '+srcLabel+'</span>'+esc(data.summary || '')+'</p>';
+    html += '<div class="rec-list">';
+    data.recommendations.forEach(function(r){
+      html +=
+        '<div class="rec">'+
+          '<div class="rec-body">'+
+            '<p class="rec-name">'+esc(r.name)+'<span class="rec-sku">'+esc(r.sku)+'</span></p>'+
+            '<p class="rec-reason">'+esc(r.reason)+'</p>'+
+          '</div>'+
+          '<div class="rec-side">'+
+            '<span class="rec-price">$'+parseFloat(r.price).toFixed(2)+'</span>'+
+            '<button class="btn rec-add" data-sku="'+esc(r.sku)+'">+ Add</button>'+
+          '</div>'+
+        '</div>';
+    });
+    html += '</div>';
+    html +=
+      '<div class="bundle-row">'+
+        '<span class="bundle-total">Full bundle<b>$'+parseFloat(data.bundleTotal || 0).toFixed(2)+'</b></span>'+
+        '<button class="btn btn-solid" id="add-bundle">Add all to cart</button>'+
+      '</div>';
+    conciergeResult.innerHTML = html;
+
+    // Keep the product data around so the add buttons don't need the DOM cards.
+    var recs = data.recommendations;
+    conciergeResult.querySelectorAll('.rec-add').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var r = recs.filter(function(x){ return x.sku === btn.dataset.sku; })[0];
+        if(r){ addToCart({ id: r.sku, name: r.name, price: r.price }); }
+      });
+    });
+    document.getElementById('add-bundle').addEventListener('click', function(){
+      recs.forEach(function(r){ addToCart({ id: r.sku, name: r.name, price: r.price }); });
+      openCart();
+    });
+  }
+
+  // ---- init ----
+  loadCart();
+  handleCheckoutReturn();
+  loadCatalogFromApi();
 })();
 </script>
 
