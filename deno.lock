@@ -13,6 +13,7 @@
       "dependencies": [
         "npm:@anthropic-ai/sdk@0.111",
         "npm:@netlify/database@^1.1.0",
+        "npm:@netlify/edge-functions@^3.0.8",
         "npm:@netlify/functions@^2.8.2",
         "npm:stripe@^17.7.0"
       ]

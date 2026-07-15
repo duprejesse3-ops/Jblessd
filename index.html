@@ -16,7 +16,7 @@
 <title>THE CONSTRUCT AI | AI Prompt Packs, Automations &amp; Agent Configs</title>
 <meta name="description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, Notion templates, and agent configs for founders, marketers, developers, sales, writers, and students." />
 <meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
-<meta name="robots" content="index, follow" />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <link rel="canonical" href="https://jblessd.com/" />
 
 <!-- Open Graph -->
@@ -25,12 +25,19 @@
 <meta property="og:title" content="THE CONSTRUCT AI | AI Prompt Packs, Automations & Agent Configs" />
 <meta property="og:description" content="Ready-to-use AI productivity tools — prompt packs, automation blueprints, templates, and agent configs, organized by role." />
 <meta property="og:url" content="https://jblessd.com/" />
+<meta property="og:locale" content="en_US" />
 <meta property="og:image" content="https://jblessd.com/og-image.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="THE CONSTRUCT AI — a catalog of AI prompt packs, automations, templates, and agent configs." />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="THE CONSTRUCT AI | AI Productivity Tools" />
 <meta name="twitter:description" content="Prompt packs, automations, templates, and agent configs — built once, sold as instruments." />
+<meta name="twitter:image" content="https://jblessd.com/og-image.png" />
+<meta name="twitter:image:alt" content="THE CONSTRUCT AI — AI productivity tools, organized by role." />
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000803'/%3E%3Ctext x='4' y='23' font-family='monospace' font-size='18' fill='%2300FF41'%3E%3E_%3C/text%3E%3C/svg%3E" />
 
@@ -55,12 +62,19 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": "OnlineStore",
   "name": "THE CONSTRUCT AI",
   "url": "https://jblessd.com/",
-  "description": "A catalog of ready-made AI productivity tools: prompt packs, automation blueprints, document templates, and agent configs."
+  "logo": "https://jblessd.com/icons/icon-512.png",
+  "image": "https://jblessd.com/og-image.png",
+  "description": "A catalog of ready-made AI productivity tools: prompt packs, automation blueprints, document templates, and agent configs.",
+  "currenciesAccepted": "USD",
+  "priceRange": "$12–$49"
 }
 </script>
+<!-- SEO_JSONLD_START: the product ItemList below is a static fallback. On
+     Netlify, the seo edge function replaces this block at request time with the
+     live catalog from the database, so structured data never drifts. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -83,6 +97,7 @@
   ]
 }
 </script>
+<!-- SEO_JSONLD_END -->
 
 <style>
   :root{
@@ -728,11 +743,31 @@
     document.getElementById('pm-spec').textContent = data.spec;
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
     productOverlay.classList.add('open');
+    // Reflect the open product in the URL so it can be shared and indexed.
+    if(data.id){
+      try{ history.replaceState(null, '', '/?product=' + encodeURIComponent(data.id)); }catch(_){}
+    }
   }
-  document.getElementById('pm-close').addEventListener('click', function(){ productOverlay.classList.remove('open'); });
-  productOverlay.addEventListener('click', function(e){ if(e.target === productOverlay) productOverlay.classList.remove('open'); });
+  function closeProductModal(){
+    productOverlay.classList.remove('open');
+    // Restore the canonical homepage URL when the product is dismissed.
+    if(location.search.indexOf('product=') !== -1){
+      try{ history.replaceState(null, '', '/'); }catch(_){}
+    }
+  }
+  // Open the modal for a given SKU if its card is present in the catalog.
+  function openProductBySku(sku){
+    if(!sku) return false;
+    var card = catalog.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]');
+    if(!card) return false;
+    openProductModal(cardToData(card));
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
+  }
+  document.getElementById('pm-close').addEventListener('click', closeProductModal);
+  productOverlay.addEventListener('click', function(e){ if(e.target === productOverlay) closeProductModal(); });
   document.getElementById('pm-add').addEventListener('click', function(){
-    if(pendingProduct){ addToCart(pendingProduct); productOverlay.classList.remove('open'); }
+    if(pendingProduct){ addToCart(pendingProduct); closeProductModal(); }
   });
 
   catalog.addEventListener('click', function(e){
@@ -891,7 +926,7 @@
   async function loadCatalogFromApi(){
     try{
       var res = await fetch('/api/products');
-      if(!res.ok) return;
+      if(!res.ok){ openDeepLinkedProduct(); return; }
       var data = await res.json();
       if(data && Array.isArray(data.products) && data.products.length){
         catalog.innerHTML = '';
@@ -899,6 +934,16 @@
         applyFilters();
       }
     }catch(e){ /* keep the static cards */ }
+    openDeepLinkedProduct();
+  }
+
+  // If the page was opened with /?product=SKU (a shared or indexed link),
+  // surface that product immediately once the catalog is on the page.
+  function openDeepLinkedProduct(){
+    try{
+      var sku = new URLSearchParams(location.search).get('product');
+      if(sku) openProductBySku(sku);
+    }catch(_){}
   }
 
   document.getElementById('f-submit').addEventListener('click', async function(){
@@ -938,7 +983,7 @@
 
   // Esc closes any open overlay
   document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){ productOverlay.classList.remove('open'); closeAdd(); closeCart(); }
+    if(e.key === 'Escape'){ closeProductModal(); closeAdd(); closeCart(); }
   });
 
   // ---- AI concierge ----

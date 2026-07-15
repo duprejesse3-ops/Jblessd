@@ -9,6 +9,7 @@
     "stripe": "^17.7.0"
   },
   "devDependencies": {
+    "@netlify/edge-functions": "^3.0.8",
     "@netlify/functions": "^2.8.2"
   }
 }
