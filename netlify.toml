@@ -25,3 +25,11 @@
   [headers.values]
     Cache-Control = "public, max-age=604800"
 
+# Digital Asset Links — proves this domain owns the Google Play TWA so the
+# Android app runs full-screen with no browser address bar. Must be JSON.
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
