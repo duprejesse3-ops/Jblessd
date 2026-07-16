@@ -12,6 +12,10 @@ import { loadCatalog } from '../lib/db.mjs'
 
 const SITE = 'https://jblessd.com'
 
+// Role landing pages served by the pages edge function (/tools/:niche). Kept in
+// sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
+const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students']
+
 function xmlEscape(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -27,6 +31,10 @@ export default async () => {
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/refund-policy/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
+    ...NICHES.map((niche) => {
+      const loc = `${SITE}/tools/${encodeURIComponent(niche)}`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+    }),
     ...products.map((p) => {
       const loc = `${SITE}/product/${encodeURIComponent(p.sku)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>`
