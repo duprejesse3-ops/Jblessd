@@ -2,8 +2,8 @@
 //
 // Serves a sitemap generated from the live catalog so every product is
 // discoverable to crawlers, not just the homepage. Each product is exposed as a
-// deep-link URL (/?product=SKU) that the storefront opens directly to that
-// product. Falls back to the bundled catalog when the database is unreachable.
+// crawlable product page (/product/SKU) with its own metadata and structured
+// data. Falls back to the bundled catalog when the database is unreachable.
 //
 // Replaces the former static sitemap.xml so the list never goes stale.
 
@@ -27,7 +27,7 @@ export default async () => {
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
     ...products.map((p) => {
-      const loc = `${SITE}/?product=${encodeURIComponent(p.sku)}`
+      const loc = `${SITE}/product/${encodeURIComponent(p.sku)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>`
     }),
   ]
