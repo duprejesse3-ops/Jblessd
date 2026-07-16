@@ -49,11 +49,15 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
-function buildItemList(products: ApiProduct[]): string {
-  const itemListElement = products.map((p, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    item: {
+interface Aggregate {
+  count: number
+  average: number
+}
+
+function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggregate>): string {
+  const itemListElement = products.map((p, i) => {
+    const url = `${SITE}/product/${encodeURIComponent(p.sku)}`
+    const item: Record<string, unknown> = {
       '@type': 'Product',
       name: p.name,
       sku: p.sku,
@@ -61,17 +65,28 @@ function buildItemList(products: ApiProduct[]): string {
       description: p.blurb,
       brand: { '@type': 'Brand', name: 'MULTI-VICE AI' },
       image: `${SITE}/og-image.png`,
-      url: `${SITE}/?product=${encodeURIComponent(p.sku)}`,
+      url,
       offers: {
         '@type': 'Offer',
         price: Number(p.price).toFixed(2),
         priceCurrency: 'USD',
         availability: 'https://schema.org/InStock',
-        url: `${SITE}/?product=${encodeURIComponent(p.sku)}`,
+        url,
         priceValidUntil: '2027-12-31',
       },
-    },
-  }))
+    }
+    const agg = aggregates[p.sku]
+    if (agg && agg.count > 0) {
+      item.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: agg.average,
+        reviewCount: agg.count,
+        bestRating: 5,
+        worstRating: 1,
+      }
+    }
+    return { '@type': 'ListItem', position: i + 1, item }
+  })
 
   const itemList = {
     '@context': 'https://schema.org',
@@ -88,6 +103,22 @@ function buildItemList(products: ApiProduct[]): string {
   )
 }
 
+// Best-effort fetch of review aggregates so the catalog markup can carry star
+// ratings. Never blocks the response for long — falls back to no ratings.
+async function fetchAggregates(req: Request): Promise<Record<string, Aggregate>> {
+  try {
+    const res = await fetch(new URL('/api/reviews', req.url), {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS),
+    })
+    if (!res.ok) return {}
+    const data = (await res.json()) as { aggregates?: Record<string, Aggregate> }
+    return data.aggregates ?? {}
+  } catch {
+    return {}
+  }
+}
+
 export default async (req: Request, context: Context) => {
   const res = await context.next()
   const contentType = res.headers.get('content-type') || ''
@@ -97,6 +128,10 @@ export default async (req: Request, context: Context) => {
 
   try {
     const apiUrl = new URL('/api/products', req.url)
+    // Kick off the ratings fetch in parallel with the catalog fetch so the
+    // homepage render waits on the slower of the two, not the sum — crawlers
+    // (Bingbot especially) enforce a strict fetch timeout on this page.
+    const aggregatesPromise = fetchAggregates(req)
     const apiRes = await fetch(apiUrl, {
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS),
@@ -104,12 +139,13 @@ export default async (req: Request, context: Context) => {
     if (apiRes.ok) {
       const data = (await apiRes.json()) as { products?: ApiProduct[] }
       const products = Array.isArray(data.products) ? data.products : []
+      const aggregates = await aggregatesPromise
       const startIdx = html.indexOf(START)
       const endIdx = html.indexOf(END)
       if (products.length && startIdx !== -1 && endIdx !== -1) {
         html =
           html.slice(0, startIdx) +
-          buildItemList(products) +
+          buildItemList(products, aggregates) +
           html.slice(endIdx + END.length)
       }
     }
