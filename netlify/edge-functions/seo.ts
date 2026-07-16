@@ -49,9 +49,16 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
+interface ReviewSample {
+  author: string
+  rating: number
+  body: string
+  createdAt: string | null
+}
 interface Aggregate {
   count: number
   average: number
+  sample?: ReviewSample
 }
 
 function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggregate>): string {
@@ -83,6 +90,17 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
         reviewCount: agg.count,
         bestRating: 5,
         worstRating: 1,
+      }
+      if (agg.sample) {
+        item.review = [
+          {
+            '@type': 'Review',
+            author: { '@type': 'Person', name: agg.sample.author },
+            reviewRating: { '@type': 'Rating', ratingValue: agg.sample.rating, bestRating: 5, worstRating: 1 },
+            reviewBody: agg.sample.body,
+            ...(agg.sample.createdAt ? { datePublished: agg.sample.createdAt.slice(0, 10) } : {}),
+          },
+        ]
       }
     }
     return { '@type': 'ListItem', position: i + 1, item }

@@ -363,6 +363,11 @@
   .foot-links{display:flex; gap:18px; font-size:12.5px; color:var(--muted);}
   .foot-links a{text-decoration:none; color:var(--muted);}
   .foot-links a:hover{color:var(--teal);}
+  .site-status{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--muted);}
+  .site-status-dot{width:7px; height:7px; border-radius:50%; background:var(--muted-2); box-shadow:0 0 0 3px rgba(130,151,137,.08);}
+  .site-status[data-status="healthy"] .site-status-dot{background:var(--teal); box-shadow:0 0 0 3px rgba(94,255,160,.1);}
+  .site-status[data-status="degraded"] .site-status-dot{background:var(--brass); box-shadow:0 0 0 3px rgba(198,165,92,.1);}
+  .site-status[data-status="unhealthy"] .site-status-dot{background:#ff786e; box-shadow:0 0 0 3px rgba(255,120,110,.1);}
   .foot-copy{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2); margin:22px 0 0; padding-top:20px; border-top:1px solid var(--line-soft); display:flex; align-items:center; gap:9px;}
   .foot-logo{width:22px; height:22px; flex:none; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--brass); border-radius:var(--radius); box-shadow:0 0 9px rgba(0,255,65,.28);}
 
@@ -797,6 +802,9 @@
   <div class="wrap foot-row">
     <span class="foot-note">MULTI-VICE AI — LOAD ANY TOOL YOU NEED</span>
     <nav class="foot-links" aria-label="Footer">
+      <span class="site-status" id="site-status" data-status="unknown" title="Automated storefront health checks run every 15 minutes">
+        <span class="site-status-dot" aria-hidden="true"></span><span id="site-status-label">Status pending</span>
+      </span>
       <a href="#catalog">Catalog</a>
       <a href="#" id="open-marketing-footer">Marketing agent</a>
       <a href="#" id="open-add-footer">List a product</a>
@@ -1818,10 +1826,28 @@
     }
   });
 
+  async function loadSiteStatus(){
+    var statusEl = document.getElementById('site-status');
+    var labelEl = document.getElementById('site-status-label');
+    if(!statusEl || !labelEl) return;
+    try{
+      var res = await fetch('/api/site-status');
+      if(!res.ok) return;
+      var data = await res.json();
+      if(!data.current) return;
+      statusEl.dataset.status = data.current.status;
+      labelEl.textContent = data.current.status === 'healthy' ? 'All systems normal' : data.current.summary;
+      statusEl.title = data.current.summary + ' · checked ' + new Date(data.current.checkedAt).toLocaleString();
+    }catch(err){
+      statusEl.title = 'Automated status is temporarily unavailable';
+    }
+  }
+
   // ---- init ----
   loadCart();
   handleCheckoutReturn();
   loadCatalogFromApi();
+  loadSiteStatus();
 })();
 </script>
 
