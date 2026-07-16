@@ -8,6 +8,7 @@
 
 import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
+import { loadCatalog } from '../lib/db.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
@@ -55,19 +56,29 @@ export default async (req: Request, _context: Context) => {
   }
 
   try {
-    // Basic server-side sanity checks — never trust price/name straight from
-    // the client without at least bounding them.
+    // Never trust the price (or name) the browser sends — with a live key this
+    // is real money, and a tampered request could otherwise buy a $49 product
+    // for a penny. Look every item up by its SKU in the server-side catalog
+    // (the database, with the bundled fallback) and charge the authoritative
+    // price from there.
+    const { products } = await loadCatalog()
+    const catalog = new Map(products.map((p) => [p.sku, p]))
+
     const line_items = items.map((item) => {
-      const price = Math.round(parseFloat(String(item.price)) * 100)
-      if (!item.name || !Number.isFinite(price) || price <= 0) {
+      const product = item.id ? catalog.get(String(item.id)) : undefined
+      if (!product) {
+        throw new Error('Invalid item in cart')
+      }
+      const price = Math.round(product.price * 100)
+      if (!Number.isFinite(price) || price <= 0) {
         throw new Error('Invalid item in cart')
       }
       return {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: String(item.name).slice(0, 200),
-            ...(item.id ? { metadata: { sku: String(item.id).slice(0, 100) } } : {}),
+            name: String(product.name).slice(0, 200),
+            metadata: { sku: String(product.sku).slice(0, 100) },
           },
           unit_amount: price,
         },
