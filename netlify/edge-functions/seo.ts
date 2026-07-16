@@ -49,6 +49,30 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
+// These tools are digital goods delivered instantly by download, so shipping is
+// free with no handling or transit time. The return policy accurately states
+// that returns are not permitted after delivery while linking to the exceptions
+// for failed delivery, defective files, duplicate charges, or misdescription.
+const OFFER_VALID_FROM = '2025-01-01'
+
+const SHIPPING_DETAILS = {
+  '@type': 'OfferShippingDetails',
+  shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'USD' },
+  shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
+  deliveryTime: {
+    '@type': 'ShippingDeliveryTime',
+    handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
+    transitTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
+  },
+}
+
+const RETURN_POLICY = {
+  '@type': 'MerchantReturnPolicy',
+  applicableCountry: 'US',
+  returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+  merchantReturnLink: `${SITE}/refund-policy/`,
+}
+
 interface ReviewSample {
   author: string
   rating: number
@@ -80,6 +104,9 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
         availability: 'https://schema.org/InStock',
         url,
         priceValidUntil: '2027-12-31',
+        validFrom: OFFER_VALID_FROM,
+        shippingDetails: SHIPPING_DETAILS,
+        hasMerchantReturnPolicy: RETURN_POLICY,
       },
     }
     const agg = aggregates[p.sku]
