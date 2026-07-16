@@ -77,6 +77,39 @@
   "priceRange": "$12–$49"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does MULTI-VICE AI sell?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role." }
+    },
+    {
+      "@type": "Question",
+      "name": "How are the products delivered?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which AI models do the tools work with?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a membership or all-access option?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. The All-Access Pass is a monthly or annual membership that unlocks the entire catalog plus every new tool as it's released, instead of buying tools one at a time." }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer discounts for buying more than one tool?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout." }
+    }
+  ]
+}
+</script>
 <!-- SEO_JSONLD_START: the product ItemList below is a static fallback. On
      Netlify, the seo edge function replaces this block at request time with the
      live catalog from the database, so structured data never drifts. -->
@@ -340,6 +373,56 @@
   :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){*{transition:none !important; scroll-behavior:auto !important;}}
 
+  /* All-Access Pass (membership) */
+  .pass{border:1px solid var(--brass); border-radius:var(--radius); background:linear-gradient(180deg, rgba(0,255,65,.05), rgba(0,8,3,0)); padding:26px 24px; margin-bottom:56px;}
+  .pass-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--brass); text-transform:uppercase;}
+  .pass-title{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:10px 0 4px; letter-spacing:-.01em;}
+  .pass-sub{font-size:14px; color:var(--muted); margin:0 0 18px; max-width:620px;}
+  .pass-plans{display:flex; gap:12px; flex-wrap:wrap;}
+  .pass-plan{flex:1; min-width:200px; border:1px solid var(--line); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:4px;}
+  .pass-plan .amt{font-family:var(--mono); font-size:24px; color:var(--paper);}
+  .pass-plan .amt small{font-size:13px; color:var(--muted-2);}
+  .pass-plan .note{font-size:12.5px; color:var(--muted-2); margin-bottom:8px;}
+  .pass-plan button{width:100%; justify-content:center; padding:11px;}
+
+  /* Lead magnet / newsletter */
+  .lead{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
+  .lead h2{margin:0 0 6px;}
+  .lead p{font-size:14px; color:var(--muted); margin:0 0 16px; max-width:560px;}
+  .lead form{display:flex; gap:10px; flex-wrap:wrap;}
+  .lead input[type=email]{flex:1; min-width:220px; background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:12px 14px; font:inherit;}
+  .lead input[type=email]:focus{outline:none; border-color:var(--teal);}
+  .lead .lead-note{font-size:12px; color:var(--muted-2); margin-top:10px;}
+
+  /* FAQ */
+  .faq{margin-bottom:56px;}
+  .faq details{border-bottom:1px solid var(--line-soft); padding:14px 0;}
+  .faq summary{cursor:pointer; font-size:15px; color:var(--paper); font-weight:500; list-style:none;}
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::before{content:'+'; color:var(--brass); font-family:var(--mono); margin-right:10px;}
+  .faq details[open] summary::before{content:'–';}
+  .faq p{font-size:14px; color:var(--muted); margin:10px 0 2px; line-height:1.6;}
+
+  /* Footer role links */
+  .foot-roles{display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:6px;}
+  .foot-roles a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted-2);}
+  .foot-roles a:hover{color:var(--brass);}
+
+  /* Product-modal reviews */
+  .pm-reviews{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
+  .pm-reviews h3{font-family:var(--serif); font-weight:500; font-size:16px; margin:0 0 10px;}
+  .rev-summary{display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--muted); margin-bottom:12px;}
+  .stars{color:var(--brass); letter-spacing:2px;}
+  .rev-item{border-top:1px dashed var(--line-soft); padding:11px 0;}
+  .rev-item .who{font-size:12.5px; color:var(--muted); font-weight:600;}
+  .rev-item .txt{font-size:13.5px; color:var(--paper); margin:5px 0 0;}
+  .rev-form{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
+  .rev-form .field{background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:10px 12px; font:inherit;}
+  .rev-form .field:focus{outline:none; border-color:var(--teal);}
+  .star-pick{display:flex; gap:4px; font-size:22px; cursor:pointer;}
+  .star-pick span{color:var(--muted-2); transition:color .1s;}
+  .star-pick span.on{color:var(--brass);}
+
   /* AI Marketing Agent */
   .modal.modal-wide{max-width:680px;}
   .mk-label{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:4px 0 6px;}
@@ -493,6 +576,26 @@
       <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Spec sheet on every listing</span>
       <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>New tools listed weekly</span>
     </div>
+  </div>
+
+  <div class="wrap">
+    <section class="pass" id="membership" aria-label="All-Access Pass membership">
+      <span class="pass-badge">✦ All-Access Pass</span>
+      <p class="pass-title">Unlock the whole catalog — and everything new.</p>
+      <p class="pass-sub">Stop buying tools one at a time. The All-Access Pass gives you every prompt pack, automation, template, and agent config in the store, plus every new tool the moment it drops. Cancel anytime.</p>
+      <div class="pass-plans">
+        <div class="pass-plan">
+          <span class="amt">$29<small>/month</small></span>
+          <span class="note">Everything, month to month.</span>
+          <button class="btn btn-gold" data-plan="monthly">Get monthly access</button>
+        </div>
+        <div class="pass-plan">
+          <span class="amt">$290<small>/year</small></span>
+          <span class="note">Two months free vs. monthly.</span>
+          <button class="btn btn-solid" data-plan="annual">Get annual access</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div class="wrap filters">
@@ -663,6 +766,31 @@
     </section>
     <p class="empty-state" id="empty-state" style="display:none;">No products match — try another search or filter.</p>
   </div>
+
+  <div class="wrap">
+    <section class="lead" id="lead-magnet" aria-label="Free prompt pack">
+      <h2>Get a free prompt pack</h2>
+      <p>Drop your email and we'll send you a free starter prompt pack — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
+      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="newsletter-form">
+        <input type="hidden" name="form-name" value="newsletter" />
+        <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+        <input type="email" name="email" placeholder="you@work.com" aria-label="Your email" required />
+        <button type="submit" class="btn btn-gold" id="newsletter-submit" style="padding:12px 20px;">Send me the free pack</button>
+      </form>
+      <p class="lead-note" id="newsletter-note"></p>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="faq" id="faq" aria-label="Frequently asked questions">
+      <h2 id="faq-heading">Questions, answered</h2>
+      <details><summary>What does MULTI-VICE AI sell?</summary><p>Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role.</p></details>
+      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away.</p></details>
+      <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
+      <details><summary>Is there a membership or all-access option?</summary><p>Yes. The All-Access Pass is a monthly or annual membership that unlocks the entire catalog plus every new tool as it's released, instead of buying tools one at a time.</p></details>
+      <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
+    </section>
+  </div>
 </main>
 
 <footer>
@@ -673,6 +801,16 @@
       <a href="#" id="open-marketing-footer">Marketing agent</a>
       <a href="#" id="open-add-footer">List a product</a>
       <a href="#top">Back to top</a>
+    </nav>
+  </div>
+  <div class="wrap">
+    <nav class="foot-roles" aria-label="Browse tools by role">
+      <a href="/tools/founders">AI tools for founders</a>
+      <a href="/tools/sales">AI tools for sales</a>
+      <a href="/tools/marketers">AI tools for marketers</a>
+      <a href="/tools/developers">AI tools for developers</a>
+      <a href="/tools/writers">AI tools for writers</a>
+      <a href="/tools/students">AI tools for students</a>
     </nav>
   </div>
   <div class="wrap">
@@ -702,6 +840,23 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Add to cart
       </button>
+    </div>
+    <div class="pm-reviews" id="pm-reviews">
+      <h3>Reviews</h3>
+      <div class="rev-summary" id="pm-rev-summary"></div>
+      <div id="pm-rev-list"></div>
+      <form class="rev-form" id="pm-rev-form">
+        <div class="star-pick" id="pm-star-pick" role="radiogroup" aria-label="Your rating">
+          <span data-v="1" role="radio" aria-label="1 star">★</span>
+          <span data-v="2" role="radio" aria-label="2 stars">★</span>
+          <span data-v="3" role="radio" aria-label="3 stars">★</span>
+          <span data-v="4" role="radio" aria-label="4 stars">★</span>
+          <span data-v="5" role="radio" aria-label="5 stars">★</span>
+        </div>
+        <input class="field" id="pm-rev-author" placeholder="Your name" maxlength="80" />
+        <textarea class="field" id="pm-rev-body" rows="2" placeholder="Share how this tool worked for you (optional)" maxlength="1000"></textarea>
+        <button type="submit" class="btn btn-gold" id="pm-rev-submit" style="justify-content:center; padding:10px;">Post review</button>
+      </form>
     </div>
   </div>
 </div>
@@ -900,6 +1055,7 @@
     document.getElementById('pm-spec').textContent = data.spec;
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
     productOverlay.classList.add('open');
+    loadProductReviews(data.id);
     // Reflect the open product in the URL so it can be shared and indexed.
     if(data.id){
       try{ history.replaceState(null, '', '/?product=' + encodeURIComponent(data.id)); }catch(_){}
@@ -1532,6 +1688,133 @@
       chatBusy = false;
       chatSend.disabled = false;
       chatInput.focus();
+    }
+  });
+
+  // ---- product reviews ----
+  var pmRevSummary = document.getElementById('pm-rev-summary');
+  var pmRevList = document.getElementById('pm-rev-list');
+  var pmRevForm = document.getElementById('pm-rev-form');
+  var pmStarPick = document.getElementById('pm-star-pick');
+  var pmRevAuthor = document.getElementById('pm-rev-author');
+  var pmRevBody = document.getElementById('pm-rev-body');
+  var pmRevSubmit = document.getElementById('pm-rev-submit');
+  var pmRating = 0;
+
+  function starString(n){
+    n = Math.round(n);
+    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+  }
+
+  function paintStarPick(){
+    pmStarPick.querySelectorAll('span').forEach(function(s){
+      s.classList.toggle('on', parseInt(s.dataset.v, 10) <= pmRating);
+    });
+  }
+  pmStarPick.addEventListener('click', function(e){
+    var s = e.target.closest('span'); if(!s) return;
+    pmRating = parseInt(s.dataset.v, 10) || 0;
+    paintStarPick();
+  });
+
+  function renderReviews(data){
+    var agg = data.aggregate || { count: 0, average: 0 };
+    if(agg.count > 0){
+      pmRevSummary.innerHTML = '<span class="stars">' + starString(agg.average) + '</span>' +
+        '<span>' + agg.average + ' out of 5 · ' + agg.count + ' review' + (agg.count === 1 ? '' : 's') + '</span>';
+    }else{
+      pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">No reviews yet — be the first.</span>';
+    }
+    var list = data.reviews || [];
+    pmRevList.innerHTML = list.slice(0, 8).map(function(r){
+      return '<div class="rev-item"><div class="who">' + esc(r.author) + ' · <span class="stars">' + starString(r.rating) + '</span></div>' +
+        (r.body ? '<p class="txt">' + esc(r.body) + '</p>' : '') + '</div>';
+    }).join('');
+  }
+
+  async function loadProductReviews(sku){
+    // Reset the form each time the modal opens.
+    pmRating = 0; paintStarPick();
+    pmRevAuthor.value = ''; pmRevBody.value = '';
+    pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">Loading reviews…</span>';
+    pmRevList.innerHTML = '';
+    if(!sku) return;
+    try{
+      var res = await fetch('/api/reviews?sku=' + encodeURIComponent(sku));
+      var data = await res.json().catch(function(){ return {}; });
+      renderReviews(data || {});
+    }catch(e){
+      pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">Reviews are unavailable right now.</span>';
+    }
+  }
+
+  pmRevForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!pendingProduct || !pendingProduct.id){ return; }
+    if(pmRating < 1){ toast('Pick a star rating first'); return; }
+    var author = pmRevAuthor.value.trim();
+    if(!author){ toast('Add your name'); return; }
+    pmRevSubmit.disabled = true;
+    try{
+      var res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: pendingProduct.id, author: author, rating: pmRating, body: pmRevBody.value.trim() })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.review){ throw new Error(data.error || 'Could not post your review.'); }
+      toast('Thanks for the review!');
+      pmRating = 0; paintStarPick(); pmRevAuthor.value = ''; pmRevBody.value = '';
+      loadProductReviews(pendingProduct.id);
+    }catch(err){
+      toast(err.message || 'Could not post your review.');
+    }finally{
+      pmRevSubmit.disabled = false;
+    }
+  });
+
+  // ---- All-Access Pass (membership subscription) ----
+  document.getElementById('membership').addEventListener('click', async function(e){
+    var btn = e.target.closest('button[data-plan]'); if(!btn) return;
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Redirecting…';
+    try{
+      var res = await fetch('/api/create-subscription-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: btn.dataset.plan })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start membership checkout.'); }
+      window.location.href = data.url;
+    }catch(err){
+      toast(err.message || 'Something went wrong. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  });
+
+  // ---- lead magnet / newsletter (Netlify Forms) ----
+  var newsletterForm = document.getElementById('newsletter-form');
+  var newsletterNote = document.getElementById('newsletter-note');
+  newsletterForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var submit = document.getElementById('newsletter-submit');
+    submit.disabled = true;
+    try{
+      var res = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(new FormData(newsletterForm)).toString()
+      });
+      if(!res.ok){ throw new Error('failed'); }
+      newsletterForm.reset();
+      newsletterNote.textContent = "You're in — check your inbox for the free pack.";
+    }catch(err){
+      newsletterNote.textContent = "Something went wrong — please try again.";
+    }finally{
+      submit.disabled = false;
     }
   });
 
