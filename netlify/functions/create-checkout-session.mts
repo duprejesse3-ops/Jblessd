@@ -34,15 +34,24 @@ export default async (req: Request, _context: Context) => {
   }
 
   let items: CartItem[] | undefined
+  let digitalPolicyAccepted = false
   try {
     const body = await req.json()
     items = body?.items
+    digitalPolicyAccepted = body?.digitalPolicyAccepted === true
   } catch {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   if (!Array.isArray(items) || items.length === 0) {
     return Response.json({ error: 'Cart is empty' }, { status: 400 })
+  }
+
+  if (!digitalPolicyAccepted) {
+    return Response.json(
+      { error: 'Please acknowledge the digital delivery and refund policy before checkout.' },
+      { status: 400 },
+    )
   }
 
   try {
@@ -74,6 +83,15 @@ export default async (req: Request, _context: Context) => {
       line_items,
       success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?checkout=cancelled`,
+      custom_text: {
+        submit: {
+          message: 'You requested immediate digital delivery and acknowledged the refund policy before continuing to checkout.',
+        },
+      },
+      metadata: {
+        digital_delivery_acknowledged: 'true',
+        refund_policy_version: '2026-07-16',
+      },
       // Automatically collect and calculate tax if you've set up Stripe Tax.
       // automatic_tax: { enabled: true },
     })

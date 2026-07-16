@@ -20,6 +20,25 @@ import type { Context, Config } from '@netlify/edge-functions'
 const SITE = 'https://jblessd.com'
 const STORE = 'MULTI-VICE AI'
 const FETCH_TIMEOUT_MS = 1500
+const OFFER_VALID_FROM = '2025-01-01'
+
+const SHIPPING_DETAILS = {
+  '@type': 'OfferShippingDetails',
+  shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'USD' },
+  shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
+  deliveryTime: {
+    '@type': 'ShippingDeliveryTime',
+    handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
+    transitTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
+  },
+}
+
+const RETURN_POLICY = {
+  '@type': 'MerchantReturnPolicy',
+  applicableCountry: 'US',
+  returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+  merchantReturnLink: `${SITE}/refund-policy/`,
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   prompts: 'Prompt Packs',
@@ -167,7 +186,7 @@ function page(opts: {
     `<header><a class="brand" href="/">${STORE}</a></header>`
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
-    `<a href="/">Browse the full catalog →</a></footer>` +
+    `<a href="/">Browse the full catalog</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
     `</div></body></html>`
 
   return new Response(head + opts.body + foot, {
@@ -217,6 +236,9 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       availability: 'https://schema.org/InStock',
       url,
       priceValidUntil: '2027-12-31',
+      validFrom: OFFER_VALID_FROM,
+      shippingDetails: SHIPPING_DETAILS,
+      hasMerchantReturnPolicy: RETURN_POLICY,
     },
   }
   if (agg && agg.count > 0) {
@@ -289,6 +311,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     `</div>` +
     `<div class="buy"><span class="price">${money(p.price)}</span>` +
     `<a class="btn" href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
+    `<p style="font-size:13px;color:var(--muted)">Digital delivery is immediate. Sales are final after access is provided, subject to the <a href="/refund-policy/">refund policy</a>.</p>` +
     reviewsHtml +
     relatedHtml
   return page({
