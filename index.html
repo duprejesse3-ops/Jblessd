@@ -575,15 +575,15 @@
       </span>
     </a>
     <nav class="actions" aria-label="Primary">
-      <button class="btn" id="open-marketing-desktop">
+      <button class="btn" id="open-marketing-desktop" aria-haspopup="dialog" aria-expanded="false">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
         Marketing agent
       </button>
-      <button class="btn" id="open-add-desktop">
+      <button class="btn" id="open-add-desktop" aria-haspopup="dialog" aria-expanded="false">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         List a product
       </button>
-      <button class="btn" id="open-cart" aria-haspopup="dialog">
+      <button class="btn" id="open-cart" aria-haspopup="dialog" aria-expanded="false">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
         <span class="cart-count" id="cart-count">0</span>
       </button>
@@ -638,23 +638,23 @@
   <div class="wrap filters">
     <p class="filter-label">Format</p>
     <div class="chip-row" id="category-chips" role="group" aria-label="Filter by format">
-      <button class="chip active" data-cat="all">All</button>
-      <button class="chip" data-cat="prompts">Prompt Packs</button>
-      <button class="chip" data-cat="automations">Automation Blueprints</button>
-      <button class="chip" data-cat="templates">Doc Templates</button>
-      <button class="chip" data-cat="agents">Agent Configs</button>
+      <button class="chip active" data-cat="all" aria-pressed="true">All</button>
+      <button class="chip" data-cat="prompts" aria-pressed="false">Prompt Packs</button>
+      <button class="chip" data-cat="automations" aria-pressed="false">Automation Blueprints</button>
+      <button class="chip" data-cat="templates" aria-pressed="false">Doc Templates</button>
+      <button class="chip" data-cat="agents" aria-pressed="false">Agent Configs</button>
     </div>
     <p class="filter-label">Built for</p>
     <div class="chip-row" id="niche-chips" role="group" aria-label="Filter by role">
-      <button class="chip teal-active active" data-niche="all">Everyone</button>
-      <button class="chip" data-niche="founders">Founders &amp; Ops</button>
-      <button class="chip" data-niche="sales">Sales &amp; CS</button>
-      <button class="chip" data-niche="marketers">Marketers</button>
-      <button class="chip" data-niche="developers">Developers</button>
-      <button class="chip" data-niche="writers">Writers</button>
-      <button class="chip" data-niche="students">Students &amp; Researchers</button>
-      <button class="chip" data-niche="architects">Architects</button>
-      <button class="chip" data-niche="engineers">Engineers</button>
+      <button class="chip teal-active active" data-niche="all" aria-pressed="true">Everyone</button>
+      <button class="chip" data-niche="founders" aria-pressed="false">Founders &amp; Ops</button>
+      <button class="chip" data-niche="sales" aria-pressed="false">Sales &amp; CS</button>
+      <button class="chip" data-niche="marketers" aria-pressed="false">Marketers</button>
+      <button class="chip" data-niche="developers" aria-pressed="false">Developers</button>
+      <button class="chip" data-niche="writers" aria-pressed="false">Writers</button>
+      <button class="chip" data-niche="students" aria-pressed="false">Students &amp; Researchers</button>
+      <button class="chip" data-niche="architects" aria-pressed="false">Architects</button>
+      <button class="chip" data-niche="engineers" aria-pressed="false">Engineers</button>
     </div>
   </div>
 
@@ -863,8 +863,8 @@
       <a href="#catalog">Catalog</a>
       <a href="#contact">Contact</a>
       <a href="/refund-policy/">Refund policy</a>
-      <a href="#" id="open-marketing-footer">Marketing agent</a>
-      <a href="#" id="open-add-footer">List a product</a>
+      <a href="#" id="open-marketing-footer" aria-haspopup="dialog" aria-expanded="false">Marketing agent</a>
+      <a href="#" id="open-add-footer" aria-haspopup="dialog" aria-expanded="false">List a product</a>
       <a href="#top">Back to top</a>
     </nav>
   </div>
@@ -934,11 +934,11 @@
       <div id="pm-rev-list"></div>
       <form class="rev-form" id="pm-rev-form">
         <div class="star-pick" id="pm-star-pick" role="radiogroup" aria-label="Your rating">
-          <span data-v="1" role="radio" aria-label="1 star">★</span>
-          <span data-v="2" role="radio" aria-label="2 stars">★</span>
-          <span data-v="3" role="radio" aria-label="3 stars">★</span>
-          <span data-v="4" role="radio" aria-label="4 stars">★</span>
-          <span data-v="5" role="radio" aria-label="5 stars">★</span>
+          <span data-v="1" role="radio" aria-checked="false" tabindex="0" aria-label="1 star">★</span>
+          <span data-v="2" role="radio" aria-checked="false" tabindex="-1" aria-label="2 stars">★</span>
+          <span data-v="3" role="radio" aria-checked="false" tabindex="-1" aria-label="3 stars">★</span>
+          <span data-v="4" role="radio" aria-checked="false" tabindex="-1" aria-label="4 stars">★</span>
+          <span data-v="5" role="radio" aria-checked="false" tabindex="-1" aria-label="5 stars">★</span>
         </div>
         <input class="field" id="pm-rev-author" placeholder="Your name" maxlength="80" />
         <textarea class="field" id="pm-rev-body" rows="2" placeholder="Share how this tool worked for you (optional)" maxlength="1000"></textarea>
@@ -1041,7 +1041,7 @@
 </aside>
 
 <!-- AI chat assistant (Claude agent) -->
-<button id="chat-fab" aria-label="Open AI assistant" aria-haspopup="dialog">
+<button id="chat-fab" aria-label="Open AI assistant" aria-haspopup="dialog" aria-expanded="false">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   <span>Ask AI</span>
 </button>
@@ -1101,6 +1101,14 @@
     t._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
   }
 
+  // Keep aria-expanded in sync on dialog triggers (a dialog can have more than one).
+  function setExpanded(ids, open){
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
   function applyFilters(){
     var q = search.value.trim().toLowerCase();
     var cards = catalog.querySelectorAll('.card');
@@ -1119,15 +1127,17 @@
 
   document.getElementById('category-chips').addEventListener('click', function(e){
     var btn = e.target.closest('.chip'); if(!btn) return;
-    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
     activeCat = btn.dataset.cat;
     applyFilters();
   });
   document.getElementById('niche-chips').addEventListener('click', function(e){
     var btn = e.target.closest('.chip'); if(!btn) return;
-    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
     activeNiche = btn.dataset.niche;
     applyFilters();
   });
@@ -1235,8 +1245,8 @@
 
   var cartDrawer = document.getElementById('cart-drawer');
   var cartScrim = document.getElementById('cart-scrim');
-  function openCart(){ cartDrawer.classList.add('open'); cartScrim.classList.add('open'); }
-  function closeCart(){ cartDrawer.classList.remove('open'); cartScrim.classList.remove('open'); }
+  function openCart(){ cartDrawer.classList.add('open'); cartScrim.classList.add('open'); document.getElementById('open-cart').setAttribute('aria-expanded', 'true'); }
+  function closeCart(){ cartDrawer.classList.remove('open'); cartScrim.classList.remove('open'); document.getElementById('open-cart').setAttribute('aria-expanded', 'false'); }
   document.getElementById('open-cart').addEventListener('click', openCart);
   document.getElementById('cart-close').addEventListener('click', closeCart);
   cartScrim.addEventListener('click', closeCart);
@@ -1296,8 +1306,8 @@
 
   // ---- list a product ----
   var addOverlay = document.getElementById('add-overlay');
-  function openAdd(){ addOverlay.classList.add('open'); }
-  function closeAdd(){ addOverlay.classList.remove('open'); }
+  function openAdd(){ addOverlay.classList.add('open'); setExpanded(['open-add-desktop', 'open-add-footer'], true); }
+  function closeAdd(){ addOverlay.classList.remove('open'); setExpanded(['open-add-desktop', 'open-add-footer'], false); }
   document.getElementById('open-add-desktop').addEventListener('click', openAdd);
   document.getElementById('open-add-footer').addEventListener('click', function(e){ e.preventDefault(); openAdd(); });
   document.getElementById('add-close').addEventListener('click', closeAdd);
@@ -1534,9 +1544,10 @@
   function openMarketing(){
     populateMarketingProducts();
     mkOverlay.classList.add('open');
+    setExpanded(['open-marketing-desktop', 'open-marketing-footer'], true);
     if(!mkRecentLoaded){ loadRecentCampaigns(); }
   }
-  function closeMarketing(){ mkOverlay.classList.remove('open'); }
+  function closeMarketing(){ mkOverlay.classList.remove('open'); setExpanded(['open-marketing-desktop', 'open-marketing-footer'], false); }
   document.getElementById('open-marketing-desktop').addEventListener('click', openMarketing);
   document.getElementById('open-marketing-footer').addEventListener('click', function(e){ e.preventDefault(); openMarketing(); });
   document.getElementById('mk-close').addEventListener('click', closeMarketing);
@@ -1670,13 +1681,14 @@
   function openChat(){
     chatPanel.hidden = false;
     chatFab.classList.add('hidden');
+    chatFab.setAttribute('aria-expanded', 'true');
     if(!chatGreeted){
       chatGreeted = true;
       addChatBubble('bot', "Hey — I'm the store assistant, powered by a Claude agent. Tell me what you're working on or ask about any tool, and I'll pull the right picks from the catalog.");
     }
     setTimeout(function(){ chatInput.focus(); }, 50);
   }
-  function closeChat(){ chatPanel.hidden = true; chatFab.classList.remove('hidden'); }
+  function closeChat(){ chatPanel.hidden = true; chatFab.classList.remove('hidden'); chatFab.setAttribute('aria-expanded', 'false'); }
 
   chatFab.addEventListener('click', openChat);
   document.getElementById('chat-close').addEventListener('click', closeChat);
@@ -1903,13 +1915,34 @@
 
   function paintStarPick(){
     pmStarPick.querySelectorAll('span').forEach(function(s){
-      s.classList.toggle('on', parseInt(s.dataset.v, 10) <= pmRating);
+      var v = parseInt(s.dataset.v, 10);
+      s.classList.toggle('on', v <= pmRating);
+      var checked = v === pmRating;
+      s.setAttribute('aria-checked', checked ? 'true' : 'false');
+      // roving tabindex: the checked radio (or the first when none chosen) is focusable
+      s.tabIndex = checked || (pmRating === 0 && v === 1) ? 0 : -1;
     });
   }
-  pmStarPick.addEventListener('click', function(e){
-    var s = e.target.closest('span'); if(!s) return;
+  function selectStar(s){
+    if(!s) return;
     pmRating = parseInt(s.dataset.v, 10) || 0;
     paintStarPick();
+    s.focus();
+  }
+  pmStarPick.addEventListener('click', function(e){
+    selectStar(e.target.closest('span'));
+  });
+  pmStarPick.addEventListener('keydown', function(e){
+    var stars = Array.prototype.slice.call(pmStarPick.querySelectorAll('span'));
+    var cur = stars.indexOf(e.target.closest('span'));
+    if(cur === -1) return;
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+      e.preventDefault(); selectStar(stars[Math.min(cur + 1, stars.length - 1)]);
+    }else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+      e.preventDefault(); selectStar(stars[Math.max(cur - 1, 0)]);
+    }else if(e.key === ' ' || e.key === 'Enter'){
+      e.preventDefault(); selectStar(stars[cur]);
+    }
   });
 
   function renderReviews(data){
