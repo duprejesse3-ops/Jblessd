@@ -120,11 +120,6 @@
     },
     {
       "@type": "Question",
-      "name": "Is there a membership or all-access option?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. The All-Access Pass is a monthly or annual membership that unlocks the entire catalog plus every new tool as it's released, instead of buying tools one at a time." }
-    },
-    {
-      "@type": "Question",
       "name": "Do you offer discounts for buying more than one tool?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout." }
     }
@@ -402,18 +397,6 @@
   :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){*{transition:none !important; scroll-behavior:auto !important;}}
 
-  /* All-Access Pass (membership) */
-  .pass{border:1px solid var(--brass); border-radius:var(--radius); background:linear-gradient(180deg, rgba(0,255,65,.05), rgba(0,8,3,0)); padding:26px 24px; margin-bottom:56px;}
-  .pass-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--brass); text-transform:uppercase;}
-  .pass-title{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:10px 0 4px; letter-spacing:-.01em;}
-  .pass-sub{font-size:14px; color:var(--muted); margin:0 0 18px; max-width:620px;}
-  .pass-plans{display:flex; gap:12px; flex-wrap:wrap;}
-  .pass-plan{flex:1; min-width:200px; border:1px solid var(--line); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:4px;}
-  .pass-plan .amt{font-family:var(--mono); font-size:24px; color:var(--paper);}
-  .pass-plan .amt small{font-size:13px; color:var(--muted-2);}
-  .pass-plan .note{font-size:12.5px; color:var(--muted-2); margin-bottom:8px;}
-  .pass-plan button{width:100%; justify-content:center; padding:11px;}
-
   /* Lead magnet / newsletter */
   .lead{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
   .lead h2{margin:0 0 6px;}
@@ -607,26 +590,6 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <section class="pass" id="membership" aria-label="All-Access Pass membership">
-      <span class="pass-badge">✦ All-Access Pass</span>
-      <p class="pass-title">Unlock the whole catalog — and everything new.</p>
-      <p class="pass-sub">Stop buying tools one at a time. The All-Access Pass gives you every prompt pack, automation, template, and agent config in the store, plus every new tool the moment it drops. Cancel anytime.</p>
-      <div class="pass-plans">
-        <div class="pass-plan">
-          <span class="amt">$29<small>/month</small></span>
-          <span class="note">Everything, month to month.</span>
-          <button class="btn btn-gold" data-plan="monthly">Get monthly access</button>
-        </div>
-        <div class="pass-plan">
-          <span class="amt">$290<small>/year</small></span>
-          <span class="note">Two months free vs. monthly.</span>
-          <button class="btn btn-solid" data-plan="annual">Get annual access</button>
-        </div>
-      </div>
-    </section>
-  </div>
-
   <div class="wrap filters">
     <p class="filter-label">Format</p>
     <div class="chip-row" id="category-chips" role="group" aria-label="Filter by format">
@@ -817,7 +780,6 @@
       <details><summary>How are the products delivered?</summary><p>Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away.</p></details>
       <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
       <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
-      <details><summary>Is there a membership or all-access option?</summary><p>Yes. The All-Access Pass is a monthly or annual membership that unlocks the entire catalog plus every new tool as it's released, instead of buying tools one at a time.</p></details>
       <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
     </section>
   </div>
@@ -1816,28 +1778,6 @@
       toast(err.message || 'Could not post your review.');
     }finally{
       pmRevSubmit.disabled = false;
-    }
-  });
-
-  // ---- All-Access Pass (membership subscription) ----
-  document.getElementById('membership').addEventListener('click', async function(e){
-    var btn = e.target.closest('button[data-plan]'); if(!btn) return;
-    var original = btn.innerHTML;
-    btn.disabled = true;
-    btn.textContent = 'Redirecting…';
-    try{
-      var res = await fetch('/api/create-subscription-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: btn.dataset.plan })
-      });
-      var data = await res.json().catch(function(){ return {}; });
-      if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start membership checkout.'); }
-      window.location.href = data.url;
-    }catch(err){
-      toast(err.message || 'Something went wrong. Please try again.');
-      btn.disabled = false;
-      btn.innerHTML = original;
     }
   });
 
