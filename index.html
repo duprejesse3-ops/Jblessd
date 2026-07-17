@@ -438,6 +438,19 @@
   .lead-pack-item h4{margin:0 0 6px; font-size:14px; color:var(--brass);}
   .lead-pack-item pre{white-space:pre-wrap; word-break:break-word; font:13px/1.6 var(--mono); background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; color:var(--paper); margin:0;}
 
+  /* Contact */
+  .contact{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
+  .contact h2{margin:0 0 6px;}
+  .contact .contact-lead{font-size:14px; color:var(--muted); margin:0 0 16px; max-width:560px;}
+  .contact form{display:flex; flex-direction:column; gap:10px;}
+  .contact .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .contact .field{background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:12px 14px; font:inherit;}
+  .contact .row .field{flex:1; min-width:220px;}
+  .contact textarea.field{min-height:120px; resize:vertical;}
+  .contact .field:focus{outline:none; border-color:var(--teal);}
+  .contact .contact-actions{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .contact .contact-note{font-size:12px; color:var(--muted-2);}
+
   /* FAQ */
   .faq{margin-bottom:56px;}
   .faq details{border-bottom:1px solid var(--line-soft); padding:14px 0;}
@@ -808,6 +821,27 @@
   </div>
 
   <div class="wrap">
+    <section class="contact" id="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Contact us</h2>
+      <p class="contact-lead">Questions about a tool, a bulk order, or need a hand after checkout? Send us a note and we'll reply by email — usually within one business day.</p>
+      <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="contact-form">
+        <input type="hidden" name="form-name" value="contact" />
+        <input type="hidden" name="subject" value="New contact message from the storefront" />
+        <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+        <div class="row">
+          <input class="field" type="text" name="name" placeholder="Your name" aria-label="Your name" autocomplete="name" required />
+          <input class="field" type="email" name="email" placeholder="you@work.com" aria-label="Your email" autocomplete="email" required />
+        </div>
+        <textarea class="field" name="message" placeholder="How can we help?" aria-label="Your message" required></textarea>
+        <div class="contact-actions">
+          <button type="submit" class="btn btn-gold" id="contact-submit" style="padding:12px 20px;">Send message</button>
+          <span class="contact-note" id="contact-note"></span>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="wrap">
     <section class="faq" id="faq" aria-label="Frequently asked questions">
       <h2 id="faq-heading">Questions, answered</h2>
       <details><summary>What does MULTI-VICE AI sell?</summary><p>Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role.</p></details>
@@ -827,6 +861,7 @@
         <span class="site-status-dot" aria-hidden="true"></span><span id="site-status-label">Status pending</span>
       </span>
       <a href="#catalog">Catalog</a>
+      <a href="#contact">Contact</a>
       <a href="/refund-policy/">Refund policy</a>
       <a href="#" id="open-marketing-footer">Marketing agent</a>
       <a href="#" id="open-add-footer">List a product</a>
@@ -2002,6 +2037,35 @@
       submit.disabled = false;
     }
   });
+
+  // ---- contact form (Netlify Forms + email notification) ----
+  var contactForm = document.getElementById('contact-form');
+  var contactNote = document.getElementById('contact-note');
+  if(contactForm){
+    contactForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var submit = document.getElementById('contact-submit');
+      submit.disabled = true;
+      contactNote.textContent = 'Sending…';
+      try{
+        // Static-site Netlify Forms: POST the encoded fields back to the origin
+        // so Netlify's form handler captures the submission and emails the owner.
+        var res = await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(new FormData(contactForm)).toString()
+        });
+        if(!res.ok){ throw new Error('failed'); }
+        contactForm.reset();
+        contactNote.textContent = "Thanks — your message is on its way. We'll reply by email.";
+        toast("Message sent — we'll be in touch.");
+      }catch(err){
+        contactNote.textContent = 'Something went wrong — please try again in a moment.';
+      }finally{
+        submit.disabled = false;
+      }
+    });
+  }
 
   async function loadSiteStatus(){
     var statusEl = document.getElementById('site-status');
