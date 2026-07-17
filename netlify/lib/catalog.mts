@@ -9,7 +9,7 @@ export interface Product {
   sku: string
   name: string
   category: 'prompts' | 'automations' | 'templates' | 'agents'
-  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students'
+  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers'
   format: string
   price: number
   blurb: string
@@ -30,6 +30,8 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
   developers: 'Developers',
   writers: 'Writers',
   students: 'Students & Researchers',
+  architects: 'Architects',
+  engineers: 'Engineers',
 }
 
 export const FALLBACK_CATALOG: Product[] = [
@@ -63,4 +65,16 @@ export const FALLBACK_CATALOG: Product[] = [
   { sku: 'AI-AB-028', name: 'Release Notes Bot', category: 'automations', niche: 'developers', format: 'GitHub Actions blueprint', price: 27, blurb: 'Turns merged pull requests into human release notes and a customer-ready changelog.', spec: 'GitHub + Linear + Slack' },
   { sku: 'AI-PP-029', name: 'Voice & Tone Cloner', category: 'prompts', niche: 'writers', format: '25 prompts · interview-to-styleguide', price: 19, blurb: 'Capture any brand or personal voice into a reusable system prompt you can hand to any model.', spec: 'Outputs a drop-in style guide' },
   { sku: 'AI-AG-030', name: 'Customer Churn Sentinel', category: 'agents', niche: 'founders', format: 'Agent config + save-plays', price: 43, blurb: 'Watches usage and support signals and flags at-risk accounts while there is still time to save them.', spec: 'Signal scoring + outreach prompts' },
+  { sku: 'AI-TP-031', name: 'Architecture Decision Record Kit', category: 'templates', niche: 'architects', format: 'Notion + Markdown template', price: 19, blurb: 'Capture the decision, the options you rejected, and why — so the next architect inherits reasoning, not folklore.', spec: 'ADR + RFC + trade-off matrix' },
+  { sku: 'AI-PP-032', name: 'System Design Prompt Pack', category: 'prompts', niche: 'architects', format: '50 prompts · PDF + Notion', price: 24, blurb: 'Pressure-test a design across scale, failure modes, and cost before you commit a single line.', spec: 'C4 diagrams + capacity math' },
+  { sku: 'AI-AG-033', name: 'Threat Modeling Agent', category: 'agents', niche: 'architects', format: 'Agent config + STRIDE library', price: 41, blurb: 'Walks a proposed design and surfaces the attack paths, trust boundaries, and mitigations you missed.', spec: 'STRIDE + data-flow analysis' },
+  { sku: 'AI-AB-034', name: 'Architecture Diagram Sync', category: 'automations', niche: 'architects', format: 'GitHub Actions blueprint', price: 33, blurb: 'Keeps your diagrams honest by regenerating them from the code and infra on every merge.', spec: 'Mermaid + Structurizr export' },
+  { sku: 'AI-TP-035', name: 'Tech Radar Template', category: 'templates', niche: 'architects', format: 'Notion + Sheets template', price: 16, blurb: 'Track what your org should adopt, trial, or retire — with the rationale attached to each ring.', spec: 'Adopt / Trial / Assess / Hold' },
+  { sku: 'AI-AG-036', name: 'RFC Review Agent', category: 'agents', niche: 'architects', format: 'Agent config + review rubric', price: 37, blurb: 'Reads a design doc like a principal engineer would and returns sharp, specific questions before the meeting.', spec: 'Scored against a design rubric' },
+  { sku: 'AI-AB-037', name: 'Incident Postmortem Automation', category: 'automations', niche: 'engineers', format: 'PagerDuty + Slack blueprint', price: 34, blurb: 'Turns an incident timeline into a blameless postmortem draft with action items already assigned.', spec: 'Timeline + root-cause + follow-ups' },
+  { sku: 'AI-PP-038', name: 'Infrastructure-as-Code Prompt Pack', category: 'prompts', niche: 'engineers', format: '45 prompts · PDF', price: 22, blurb: 'Generate, review, and refactor Terraform and Kubernetes manifests without the copy-paste drift.', spec: 'Terraform + K8s + Helm' },
+  { sku: 'AI-AG-039', name: 'On-Call Triage Agent', category: 'agents', niche: 'engineers', format: 'Agent config + runbook loader', price: 45, blurb: 'Reads the alert, pulls the runbook, and proposes the first three checks before you finish logging in.', spec: 'Alert-to-runbook mapping' },
+  { sku: 'AI-AB-040', name: 'Data Pipeline Monitor', category: 'automations', niche: 'engineers', format: 'Airflow + Slack blueprint', price: 36, blurb: 'Catches silent pipeline failures and schema drift, then explains what broke in plain language.', spec: 'dbt + Airflow + Great Expectations' },
+  { sku: 'AI-TP-041', name: 'Runbook Template Library', category: 'templates', niche: 'engineers', format: 'Notion + Markdown templates', price: 18, blurb: 'Operational runbooks your whole team can follow at 3am — deploys, rollbacks, and recovery.', spec: 'Deploy / rollback / restore plays' },
+  { sku: 'AI-PP-042', name: 'Debugging Copilot Prompts', category: 'prompts', niche: 'engineers', format: '60 prompts · PDF + Notion', price: 20, blurb: 'Structured prompts that turn a stack trace and a hunch into a reproducible root cause.', spec: 'Repro → isolate → fix workflow' },
 ]

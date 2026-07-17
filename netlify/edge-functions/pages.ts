@@ -53,6 +53,8 @@ const NICHE_LABEL: Record<string, string> = {
   developers: 'Developers',
   writers: 'Writers',
   students: 'Students & Researchers',
+  architects: 'Architects',
+  engineers: 'Engineers',
 }
 const NICHE_INTRO: Record<string, string> = {
   founders: 'Tools that give a small team back its time — planning, meetings, follow-ups, and the busywork around them.',
@@ -61,6 +63,8 @@ const NICHE_INTRO: Record<string, string> = {
   developers: 'Agents and automations that fit your workflow: PRs, standups, knowledge bases, and grounded answers.',
   writers: 'Keep your voice, lose the blank page — prompts and templates tuned for tone, structure, and speed.',
   students: 'Research and study, organized — literature scans, source comparison, and a weekly operating rhythm.',
+  architects: 'Own the shape of the system — decision records, design reviews, and trade-off analysis that outlast the whiteboard.',
+  engineers: 'Ship and operate with confidence — infrastructure, incidents, pipelines, and the runbooks that hold it all together.',
 }
 
 interface ApiProduct {

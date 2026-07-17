@@ -14,7 +14,7 @@ const SITE = 'https://jblessd.com'
 
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
-const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students']
+const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers']
 
 function xmlEscape(s: string): string {
   return s

@@ -634,6 +634,8 @@
       <button class="chip" data-niche="developers">Developers</button>
       <button class="chip" data-niche="writers">Writers</button>
       <button class="chip" data-niche="students">Students &amp; Researchers</button>
+      <button class="chip" data-niche="architects">Architects</button>
+      <button class="chip" data-niche="engineers">Engineers</button>
     </div>
   </div>
 
@@ -833,6 +835,8 @@
       <a href="/tools/developers">AI tools for developers</a>
       <a href="/tools/writers">AI tools for writers</a>
       <a href="/tools/students">AI tools for students</a>
+      <a href="/tools/architects">AI tools for architects</a>
+      <a href="/tools/engineers">AI tools for engineers</a>
     </nav>
   </div>
   <div class="wrap">
@@ -922,6 +926,8 @@
       <option value="developers">Developers</option>
       <option value="writers">Writers</option>
       <option value="students">Students &amp; Researchers</option>
+      <option value="architects">Architects</option>
+      <option value="engineers">Engineers</option>
     </select>
     <input class="field" id="f-format" placeholder="Format (e.g. Notion template)" />
     <input class="field" id="f-price" type="number" placeholder="Price (USD)" />
@@ -1044,7 +1050,7 @@
   var activeCat = 'all', activeNiche = 'all';
 
   var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs'};
-  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers'};
+  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers'};
 
   function toast(msg){
     var t = document.getElementById('toast');
