@@ -10,7 +10,18 @@ import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY ?? ''
+const stripe = new Stripe(STRIPE_KEY)
+
+// Report which Stripe mode the configured key runs in — without ever logging
+// the key itself. Handy when "checkout still charges in test mode" turns out to
+// be an env-var problem: the function logs make the active mode obvious.
+function stripeMode(key: string): 'live' | 'test' | 'malformed' | 'missing' {
+  if (!key) return 'missing'
+  if (/^(sk|rk)_live_/.test(key)) return 'live'
+  if (/^(sk|rk)_test_/.test(key)) return 'test'
+  return 'malformed'
+}
 
 interface CartItem {
   id?: string
@@ -32,6 +43,16 @@ export default async (req: Request, _context: Context) => {
       { error: 'Checkout is not configured. Please try again later.' },
       { status: 500 },
     )
+  }
+
+  // Surface the active mode in the function logs. If this says "test" when you
+  // expect real charges, the STRIPE_SECRET_KEY env var is still a test key —
+  // update its value to your sk_live_… key and redeploy.
+  const mode = stripeMode(STRIPE_KEY)
+  if (mode === 'test') {
+    console.warn('Checkout: STRIPE_SECRET_KEY is a TEST key — no real cards will be charged.')
+  } else if (mode === 'malformed') {
+    console.error('Checkout: STRIPE_SECRET_KEY does not look like a Stripe secret key (expected sk_live_… / sk_test_…).')
   }
 
   let items: CartItem[] | undefined
