@@ -352,6 +352,31 @@
   .modal-bottom{display:flex; align-items:center; justify-content:space-between;}
   .price-lg{font-family:var(--mono); font-size:22px; color:var(--brass);}
 
+  /* Live Proof — the "watch it work" terminal */
+  .pm-proof{border-top:1px solid var(--line); margin-top:22px; padding-top:20px;}
+  .proof-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .proof-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--brass); display:inline-flex; align-items:center; gap:7px; text-shadow:0 0 8px rgba(0,255,65,.4);}
+  .proof-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
+  @keyframes proof-pulse{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.35; transform:scale(.8);}}
+  .proof-sub{font-size:12.5px; color:var(--muted); line-height:1.4;}
+  .proof-scenario{margin-bottom:10px;}
+  .proof-scenario .field{margin-bottom:0; font-size:12.5px;}
+  .proof-terminal{position:relative; background:#00110A; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:inset 0 0 40px rgba(0,255,65,.06);}
+  .proof-topbar{display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line-soft); background:rgba(0,255,65,.03);}
+  .proof-tdot{width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .proof-tdot:nth-child(1){background:#1f7a37;} .proof-tdot:nth-child(2){background:#155e29;}
+  .proof-tlabel{margin-left:8px; font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted-2);}
+  .proof-output{margin:0; padding:14px 15px; max-height:300px; overflow-y:auto; font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--paper); white-space:pre-wrap; word-wrap:break-word; text-shadow:0 0 6px rgba(0,255,65,.18); min-height:64px;}
+  .proof-hint{color:var(--muted-2); text-shadow:none; font-family:var(--sans); font-size:12.5px; line-height:1.5;}
+  .proof-hint b{color:var(--brass); font-family:var(--mono); font-size:11px;}
+  .proof-terminal[data-empty="false"] .proof-output{color:var(--teal);}
+  .proof-cursor{display:inline-block; width:8px; height:14px; background:var(--brass); box-shadow:0 0 8px var(--brass); vertical-align:text-bottom; animation:proof-blink 1s step-end infinite;}
+  @keyframes proof-blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  .proof-run{margin-top:12px; width:100%; justify-content:center; padding:11px;}
+  .proof-run[disabled]{opacity:.6; cursor:progress;}
+  .proof-run.secondary{background:transparent; color:var(--brass); border:1px solid var(--line);}
+  .proof-run.secondary:hover{border-color:var(--brass); background:rgba(0,255,65,.05);}
+
   /* form fields */
   .field{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); margin-bottom:10px;}
   .field:focus{outline:none; border-color:var(--teal);}
@@ -837,6 +862,26 @@
         Add to cart
       </button>
     </div>
+
+    <!-- Live Proof: watch the product actually work before you buy it -->
+    <div class="pm-proof" id="pm-proof">
+      <div class="proof-head">
+        <span class="proof-badge"><span class="proof-dot" aria-hidden="true"></span>Live proof</span>
+        <span class="proof-sub">Don't take our word for it — watch it run.</span>
+      </div>
+      <div class="proof-scenario">
+        <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
+      </div>
+      <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
+        <div class="proof-topbar"><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tlabel" id="pm-proof-label">demo · idle</span></div>
+        <pre class="proof-output" id="pm-proof-output"><span class="proof-hint">Press <b>Run live demo</b> and Claude will run this product on a real example, streamed here in real time.</span></pre>
+      </div>
+      <button class="btn btn-gold proof-run" id="pm-proof-run">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 5v14l11-7z"/></svg>
+        <span id="pm-proof-run-label">Run live demo</span>
+      </button>
+    </div>
+
     <div class="pm-reviews" id="pm-reviews">
       <h3>Reviews</h3>
       <div class="rev-summary" id="pm-rev-summary"></div>
@@ -1056,6 +1101,7 @@
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
     productOverlay.classList.add('open');
     loadProductReviews(data.id);
+    resetProof(data);
     // Reflect the open product in the URL so it can be shared and indexed.
     if(data.id){
       try{ history.replaceState(null, '', '/?product=' + encodeURIComponent(data.id)); }catch(_){}
@@ -1697,6 +1743,99 @@
       chatSend.disabled = false;
       chatInput.focus();
     }
+  });
+
+  // ---- Live Proof: stream a real, product-specific demo into the terminal ----
+  var proofTerminal = document.getElementById('pm-proof-terminal');
+  var proofOutput = document.getElementById('pm-proof-output');
+  var proofLabel = document.getElementById('pm-proof-label');
+  var proofScenario = document.getElementById('pm-proof-scenario');
+  var proofRun = document.getElementById('pm-proof-run');
+  var proofRunLabel = document.getElementById('pm-proof-run-label');
+  var proofSku = null;
+  var proofBusy = false;
+
+  var IDLE_HINT = 'Press <b>Run live demo</b> and Claude will run this product on a real example, streamed here in real time.';
+
+  // Reset the panel each time a new product opens.
+  function resetProof(data){
+    proofSku = data.id || null;
+    proofBusy = false;
+    proofScenario.value = '';
+    proofRun.disabled = false;
+    proofRun.classList.remove('secondary');
+    proofRunLabel.textContent = 'Run live demo';
+    proofTerminal.setAttribute('data-empty', 'true');
+    proofLabel.textContent = 'demo · idle';
+    proofOutput.innerHTML = '<span class="proof-hint">' + IDLE_HINT + '</span>';
+  }
+
+  function setProofCursor(text){
+    // Render streamed text with a blinking terminal cursor at the end.
+    proofOutput.innerHTML = esc(text) + '<span class="proof-cursor"></span>';
+    proofOutput.scrollTop = proofOutput.scrollHeight;
+  }
+
+  async function runProof(){
+    if(proofBusy || !proofSku) return;
+    proofBusy = true;
+    proofRun.disabled = true;
+    proofTerminal.setAttribute('data-empty', 'false');
+    proofLabel.textContent = 'demo · booting';
+    proofOutput.innerHTML = '<span class="proof-cursor"></span>';
+
+    var scenario = proofScenario.value.trim();
+    var answer = '';
+    var gotText = false;
+
+    try{
+      var res = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: proofSku, scenario: scenario })
+      });
+      if(!res.ok || !res.body){ throw new Error('unavailable'); }
+
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for(var i=0; i<lines.length; i++){
+          var line = lines[i].trim();
+          if(!line) continue;
+          var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+          if(ev.type === 'meta'){
+            proofLabel.textContent = 'demo · ' + (ev.verb || 'running').toLowerCase() + (ev.cached ? ' · replay' : '');
+          }else if(ev.type === 'text'){
+            gotText = true;
+            answer += ev.text;
+            setProofCursor(answer);
+          }
+        }
+      }
+      if(!gotText){ throw new Error('empty'); }
+      proofOutput.innerHTML = esc(answer);      // drop the cursor when done
+      proofLabel.textContent = 'demo · complete';
+    }catch(err){
+      proofOutput.innerHTML = '<span class="proof-hint">The live engine is warming up (it activates after the first production deploy). Try again in a moment.</span>';
+      proofLabel.textContent = 'demo · offline';
+      proofTerminal.setAttribute('data-empty', 'true');
+    }finally{
+      proofBusy = false;
+      proofRun.disabled = false;
+      proofRun.classList.add('secondary');
+      proofRunLabel.textContent = scenario ? 'Run again' : 'Run on my own situation';
+    }
+  }
+
+  proofRun.addEventListener('click', runProof);
+  proofScenario.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); runProof(); }
   });
 
   // ---- product reviews ----
