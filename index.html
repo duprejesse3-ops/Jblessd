@@ -431,6 +431,12 @@
   .lead input[type=email]{flex:1; min-width:220px; background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:12px 14px; font:inherit;}
   .lead input[type=email]:focus{outline:none; border-color:var(--teal);}
   .lead .lead-note{font-size:12px; color:var(--muted-2); margin-top:10px;}
+  .lead-pack{margin-top:20px; border-top:1px solid var(--line-soft); padding-top:20px;}
+  .lead-pack h3{margin:0 0 6px; color:var(--paper);}
+  .lead-pack .lead-pack-intro{font-size:14px; color:var(--muted); max-width:640px;}
+  .lead-pack-item{margin:14px 0;}
+  .lead-pack-item h4{margin:0 0 6px; font-size:14px; color:var(--brass);}
+  .lead-pack-item pre{white-space:pre-wrap; word-break:break-word; font:13px/1.6 var(--mono); background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; color:var(--paper); margin:0;}
 
   /* FAQ */
   .faq{margin-bottom:56px;}
@@ -790,14 +796,14 @@
   <div class="wrap">
     <section class="lead" id="lead-magnet" aria-label="Free prompt pack">
       <h2>Get a free prompt pack</h2>
-      <p>Drop your email and we'll send you a free starter prompt pack — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
-      <form name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="newsletter-form">
-        <input type="hidden" name="form-name" value="newsletter" />
+      <p>Drop your email and we'll unlock a free starter prompt pack right here — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
+      <form id="newsletter-form">
         <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
         <input type="email" name="email" placeholder="you@work.com" aria-label="Your email" required />
-        <button type="submit" class="btn btn-gold" id="newsletter-submit" style="padding:12px 20px;">Send me the free pack</button>
+        <button type="submit" class="btn btn-gold" id="newsletter-submit" style="padding:12px 20px;">Get my free pack</button>
       </form>
       <p class="lead-note" id="newsletter-note"></p>
+      <div id="newsletter-pack" class="lead-pack" hidden></div>
     </section>
   </div>
 
@@ -1927,24 +1933,71 @@
     }
   });
 
-  // ---- lead magnet / newsletter (Netlify Forms) ----
+  // ---- lead magnet / free prompt pack ----
   var newsletterForm = document.getElementById('newsletter-form');
   var newsletterNote = document.getElementById('newsletter-note');
+  var newsletterPack = document.getElementById('newsletter-pack');
+
+  function renderFreePack(data){
+    if(!newsletterPack || !data || !data.pack) return;
+    var pack = data.pack;
+    var frag = document.createElement('div');
+    var h = document.createElement('h3');
+    h.textContent = pack.title;
+    frag.appendChild(h);
+    if(pack.intro){
+      var intro = document.createElement('p');
+      intro.className = 'lead-pack-intro';
+      intro.textContent = pack.intro;
+      frag.appendChild(intro);
+    }
+    (pack.prompts || []).forEach(function(p, i){
+      var wrap = document.createElement('div');
+      wrap.className = 'lead-pack-item';
+      var pt = document.createElement('h4');
+      pt.textContent = (i + 1) + '. ' + p.title;
+      var pb = document.createElement('pre');
+      pb.textContent = p.body;
+      wrap.appendChild(pt);
+      wrap.appendChild(pb);
+      frag.appendChild(wrap);
+    });
+    if(data.markdown){
+      var dl = document.createElement('a');
+      var blob = new Blob([data.markdown], { type: 'text/markdown' });
+      dl.href = URL.createObjectURL(blob);
+      dl.download = (pack.slug || 'free-prompt-pack') + '.md';
+      dl.className = 'btn btn-gold';
+      dl.style.marginTop = '14px';
+      dl.textContent = 'Download the pack (.md)';
+      frag.appendChild(dl);
+    }
+    newsletterPack.innerHTML = '';
+    newsletterPack.appendChild(frag);
+    newsletterPack.hidden = false;
+  }
+
   newsletterForm.addEventListener('submit', async function(e){
     e.preventDefault();
     var submit = document.getElementById('newsletter-submit');
     submit.disabled = true;
+    newsletterNote.textContent = 'Unlocking your pack…';
     try{
-      var res = await fetch('/', {
+      var res = await fetch('/api/free-pack', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(new FormData(newsletterForm)).toString()
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newsletterForm.email.value,
+          'bot-field': newsletterForm['bot-field'].value
+        })
       });
-      if(!res.ok){ throw new Error('failed'); }
+      var data = await res.json();
+      if(!res.ok){ throw new Error(data && data.error ? data.error : 'failed'); }
       newsletterForm.reset();
-      newsletterNote.textContent = "You're in — check your inbox for the free pack.";
+      newsletterNote.textContent = "You're in — here's your free pack. Save it below.";
+      renderFreePack(data);
     }catch(err){
-      newsletterNote.textContent = "Something went wrong — please try again.";
+      newsletterNote.textContent = (err && err.message) ? err.message : "Something went wrong — please try again.";
     }finally{
       submit.disabled = false;
     }
