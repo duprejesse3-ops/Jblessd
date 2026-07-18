@@ -55,7 +55,7 @@ deploys and runs fine before you set this up. To turn delivery on, add **both** 
 Site configuration → Environment variables (email stays off unless both are present, since sending from Resend's shared
 sandbox address only reaches the account owner):
 - `RESEND_API_KEY` — your Resend API key
-- `EMAIL_FROM` — the verified From address, e.g. `MULTI-VICE AI <hello@jblessd.com>` (must be a domain you've verified in Resend)
+- `EMAIL_FROM` — the verified From address, e.g. `MULTIVICE AI <hello@jblessd.com>` (must be a domain you've verified in Resend)
 
 The weekly digest is a scheduled function and only runs on **published production deploys**, never on previews.
 

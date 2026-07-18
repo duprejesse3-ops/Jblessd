@@ -1,8 +1,8 @@
 {
   "packageId": "com.jblessd.app",
   "host": "jblessd.com",
-  "name": "MULTI-VICE AI",
-  "launcherName": "Multi-Vice AI",
+  "name": "MULTIVICE AI",
+  "launcherName": "MultiVice AI",
   "display": "standalone",
   "orientation": "portrait",
   "themeColor": "#000803",

@@ -24,7 +24,7 @@ import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
 const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
 const MAX_TOKENS = 900
-const STORE_NAME = 'MULTI-VICE AI'
+const STORE_NAME = 'MULTIVICE AI'
 const CACHE_VERSION = 'v1' // bump to invalidate all cached demos at once
 
 // Per-category direction so the demo reflects what the product actually *is*.

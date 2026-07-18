@@ -1,4 +1,4 @@
-// Generates the MULTI-VICE AI social share image (og-image.png, 1200x630).
+// Generates the MULTIVICE AI social share image (og-image.png, 1200x630).
 // Builds an SVG in the storefront's terminal/matrix aesthetic. Rasterize to PNG
 // with: rsvg-convert icons/og-image.svg -o og-image.png
 // Deterministic output so re-runs are stable.
@@ -54,7 +54,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   </g>
 
   <!-- brand lockup -->
-  <text x="150" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#e8ffe8">MULTI-VICE AI</text>
+  <text x="150" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#e8ffe8">MULTIVICE AI</text>
   <text x="152" y="130" font-family="${MONO}" font-size="15" letter-spacing="7" fill="${GREEN_MID}" opacity=".8">LOAD THE TOOL YOU NEED</text>
 
   <!-- kicker -->
