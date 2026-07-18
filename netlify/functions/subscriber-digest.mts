@@ -16,7 +16,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL } from '../lib/catalog.mjs'
 import { sendEmail, isEmailConfigured } from '../lib/email.mjs'
 
-const SITE = 'https://multinicheai.com'
+const SITE = 'https://jblessd.com'
 const MAX_RECIPIENTS = 500 // safety cap for a single scheduled run
 const CONCURRENCY = 10
 const FEATURED_COUNT = 5
@@ -61,7 +61,7 @@ export default async () => {
     `${lines}\n\n` +
     `Browse everything, or run any tool live on your own task first: ${SITE}\n\n` +
     `— The MULTINICHE AI team\n\n` +
-    `You're getting this because you grabbed a free prompt pack at multinicheai.com. Reply to unsubscribe.`
+    `You're getting this because you grabbed a free prompt pack at jblessd.com. Reply to unsubscribe.`
 
   const subject = `New at MULTINICHE AI: ${featured[0].name} and more`
 

@@ -14,7 +14,7 @@
 
 import type { Context, Config } from '@netlify/edge-functions'
 
-const SITE = 'https://multinicheai.com'
+const SITE = 'https://jblessd.com'
 const START = '<!-- SEO_JSONLD_START'
 const END = '<!-- SEO_JSONLD_END -->'
 

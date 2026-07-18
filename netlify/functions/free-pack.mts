@@ -76,7 +76,7 @@ export default async (req: Request, context: Context) => {
     `Here's your ${FREE_PACK.title} — five prompts to run your day like an operator.\n\n` +
     `${FREE_PACK.intro}\n\n` +
     `${packToMarkdown(FREE_PACK)}\n\n` +
-    `Want the full 120-prompt set and the rest of the catalog? Browse it at https://multinicheai.com`
+    `Want the full 120-prompt set and the rest of the catalog? Browse it at https://jblessd.com`
   context.waitUntil(
     sendEmail({
       to: email,

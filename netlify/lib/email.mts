@@ -10,7 +10,7 @@
 // Provider: Resend (https://resend.com) via its plain HTTPS API — no SDK, no
 // key management beyond two env vars:
 //   RESEND_API_KEY  — the provider key (required to actually send)
-//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@multinicheai.com>"
+//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@jblessd.com>"
 //
 // If RESEND_API_KEY is not set the sender is a no-op that logs and returns
 // { ok:false, skipped:true }. That is deliberate: the site must keep working on
@@ -74,7 +74,7 @@ function wrapHtml(bodyText: string): string {
     `<div style="background:#000803;padding:18px 28px"><span style="color:#00FF41;font-weight:700;letter-spacing:.04em">MULTINICHE AI</span></div>` +
     `<div style="padding:28px">${paragraphs}</div>` +
     `<div style="padding:16px 28px;border-top:1px solid #eef2ef;font-size:12px;color:#6b7d70">` +
-    `MULTINICHE AI · <a href="https://multinicheai.com" style="color:#0a7d2c">multinicheai.com</a></div>` +
+    `MULTINICHE AI · <a href="https://jblessd.com" style="color:#0a7d2c">jblessd.com</a></div>` +
     `</div></div>`
   )
 }

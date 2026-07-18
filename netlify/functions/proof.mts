@@ -20,7 +20,7 @@ import { getDatabase } from '@netlify/database'
 import { loadCatalog } from '../lib/db.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
-const SITE = 'https://multinicheai.com'
+const SITE = 'https://jblessd.com'
 const MAX_OUTPUT = 8000
 const MAX_SCENARIO = 600
 const LIST_LIMIT = 60

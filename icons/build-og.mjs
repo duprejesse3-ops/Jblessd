@@ -70,7 +70,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   <!-- footer -->
   <line x1="58" y1="540" x2="${W - 58}" y2="540" stroke="${GREEN_DIM}" stroke-width="2" opacity=".6"/>
   <text x="58" y="576" font-family="${MONO}" font-size="19" font-weight="bold" letter-spacing="3" fill="${GREEN_MID}" opacity=".85">PROMPT PACKS • AUTOMATION BLUEPRINTS • DOC TEMPLATES • AGENT CONFIGS</text>
-  <text x="58" y="606" font-family="${MONO}" font-size="17" letter-spacing="2" fill="${GREEN_DIM}">multinicheai.com</text>
+  <text x="58" y="606" font-family="${MONO}" font-size="17" letter-spacing="2" fill="${GREEN_DIM}">jblessd.com</text>
 </svg>
 `;
 

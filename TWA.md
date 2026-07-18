@@ -1,6 +1,6 @@
 # Google Play TWA — build & publish guide
 
-This turns the **MULTINICHE AI** PWA (`https://multinicheai.com`) into an Android app
+This turns the **MULTINICHE AI** PWA (`https://jblessd.com`) into an Android app
 you can upload to the Google Play Store, using a **Trusted Web Activity (TWA)** —
 a thin Android wrapper that runs the live website full-screen, with no browser
 address bar.
@@ -67,7 +67,7 @@ fingerprint of the key the app is signed with. With Google **Play App Signing**
    `REPLACE_WITH_SHA256_FINGERPRINT_FROM_PLAY_CONSOLE`, then deploy.
 
 You can verify it's live by opening
-`https://multinicheai.com/.well-known/assetlinks.json` — it should return the JSON
+`https://jblessd.com/.well-known/assetlinks.json` — it should return the JSON
 with your real fingerprint.
 
 > Tip: if you also test a locally-signed build, add that keystore's fingerprint

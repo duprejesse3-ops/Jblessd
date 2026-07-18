@@ -1,6 +1,6 @@
 {
   "packageId": "com.jblessd.app",
-  "host": "multinicheai.com",
+  "host": "jblessd.com",
   "name": "MULTINICHE AI",
   "launcherName": "MultiNiche AI",
   "display": "standalone",
@@ -14,8 +14,8 @@
   "backgroundColor": "#000803",
   "enableNotifications": false,
   "startUrl": "/?source=twa",
-  "iconUrl": "https://multinicheai.com/icons/icon-512.png",
-  "maskableIconUrl": "https://multinicheai.com/icons/icon-maskable-512.png",
+  "iconUrl": "https://jblessd.com/icons/icon-512.png",
+  "maskableIconUrl": "https://jblessd.com/icons/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
@@ -25,13 +25,13 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://multinicheai.com/manifest.webmanifest",
+  "webManifestUrl": "https://jblessd.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://multinicheai.com/",
+  "fullScopeUrl": "https://jblessd.com/",
   "minSdkVersion": 21,
   "fingerprints": []
 }
