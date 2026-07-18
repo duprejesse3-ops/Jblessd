@@ -34,7 +34,7 @@ interface CartItem {
 // tamper with it. Sold via Stripe subscription mode (separate from the one-time
 // cart, which Stripe can't mix into the same session).
 const ALL_ACCESS = {
-  name: 'MULTIVICE AI — All-Access Pass',
+  name: 'MULTINICHE AI — All-Access Pass',
   amount: 2900, // $29.00 / month, in cents
   interval: 'month' as const,
 }

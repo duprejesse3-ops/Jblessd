@@ -38,7 +38,7 @@ function failed(name: string, latencyMs: number, detail: string): HealthCheck {
 async function fetchWithTimeout(url: URL, accept: string): Promise<{ response: Response; latencyMs: number }> {
   const startedAt = performance.now()
   const response = await fetch(url, {
-    headers: { accept, 'user-agent': 'MULTIVICE-site-maintenance/1.0' },
+    headers: { accept, 'user-agent': 'MULTINICHE-site-maintenance/1.0' },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
   return { response, latencyMs: elapsed(startedAt) }
@@ -51,7 +51,7 @@ async function checkHomepage(origin: string): Promise<HealthCheck> {
     const { response, latencyMs } = await fetchWithTimeout(new URL('/', origin), 'text/html')
     if (!response.ok) return failed(name, latencyMs, `HTTP ${response.status}`)
     const html = await response.text()
-    if (!html.includes('MULTIVICE AI')) return failed(name, latencyMs, 'Expected storefront content is missing')
+    if (!html.includes('MULTINICHE AI')) return failed(name, latencyMs, 'Expected storefront content is missing')
     if (!html.includes('application/ld+json')) return failed(name, latencyMs, 'Structured data is missing')
     return passed(name, latencyMs, 'Homepage and structured data are available')
   } catch (error) {

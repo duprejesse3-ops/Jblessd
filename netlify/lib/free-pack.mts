@@ -59,6 +59,6 @@ export function packToMarkdown(pack: FreePack): string {
   pack.prompts.forEach((p, i) => {
     lines.push(`## ${i + 1}. ${p.title}`, '', p.body, '')
   })
-  lines.push('---', '', 'From MULTIVICE AI — jblessd.com')
+  lines.push('---', '', 'From MULTINICHE AI — jblessd.com')
   return lines.join('\n')
 }

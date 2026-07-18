@@ -114,7 +114,7 @@ async function aiPicks(query: string, products: Product[]): Promise<{ summary: s
       {
         role: 'user',
         content:
-          `You are the shopping concierge for MULTIVICE AI, a store of ready-to-use AI ` +
+          `You are the shopping concierge for MULTINICHE AI, a store of ready-to-use AI ` +
           `productivity tools (prompt packs, automation blueprints, doc templates, and agent configs).\n\n` +
           `A shopper says:\n"""${query}"""\n\n` +
           `Pick the ${MAX_PICKS} or fewer products from this catalog that would help them most. ` +

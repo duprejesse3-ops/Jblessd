@@ -21,7 +21,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
-const STORE_NAME = 'MULTIVICE AI'
+const STORE_NAME = 'MULTINICHE AI'
 const STORE_SKU = 'STORE'
 
 // The shape of a generated campaign. Kept flat so the frontend can render each

@@ -23,7 +23,7 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
 const SITE = 'https://jblessd.com'
-const STORE = 'MULTIVICE AI'
+const STORE = 'MULTINICHE AI'
 const FETCH_TIMEOUT_MS = 1500
 const OFFER_VALID_FROM = '2025-01-01'
 
@@ -721,7 +721,7 @@ function renderUpdate(c: Campaign): Response {
 
 function renderUpdatesIndex(campaigns: Campaign[]): Response {
   const url = `${SITE}/updates`
-  const intro = 'The latest from MULTIVICE AI — new tools, launches, and what we’re building.'
+  const intro = 'The latest from MULTINICHE AI — new tools, launches, and what we’re building.'
   const cards = campaigns.length
     ? campaigns
         .map((c) => {
