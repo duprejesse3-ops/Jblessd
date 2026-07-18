@@ -10,7 +10,7 @@
 import type { Config } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
