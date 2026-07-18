@@ -14,12 +14,13 @@
 import type { Context, Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import { FREE_PACK, packToMarkdown } from '../lib/free-pack.mjs'
+import { sendEmail } from '../lib/email.mjs'
 
 // Pragmatic email check — good enough to reject typos and honeypot junk without
 // bouncing valid addresses.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
   }
@@ -66,6 +67,23 @@ export default async (req: Request, _context: Context) => {
   } catch (err) {
     console.error('free-pack: could not persist subscriber —', (err as Error).message)
   }
+
+  // Also *email* the pack to the subscriber, so the promise ("we'll send you a
+  // pack") is kept even after they close the tab — not just handed back in this
+  // response. Fire-and-forget: the on-page delivery below never waits on it, and
+  // if no email provider is configured the sender is a graceful no-op.
+  const emailBody =
+    `Here's your ${FREE_PACK.title} — five prompts to run your day like an operator.\n\n` +
+    `${FREE_PACK.intro}\n\n` +
+    `${packToMarkdown(FREE_PACK)}\n\n` +
+    `Want the full 120-prompt set and the rest of the catalog? Browse it at https://jblessd.com`
+  context.waitUntil(
+    sendEmail({
+      to: email,
+      subject: `Your ${FREE_PACK.title} from MULTI-VICE AI`,
+      text: emailBody,
+    }),
+  )
 
   return Response.json({
     ok: true,

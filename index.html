@@ -18,7 +18,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>MULTI-VICE AI | AI Prompt Packs, Automations &amp; Agent Configs</title>
-<meta name="description" content="Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments. Built for people who want to get more done with AI." />
+<meta name="description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
 <meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <link rel="canonical" href="https://jblessd.com/" />
@@ -27,7 +27,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MULTI-VICE AI" />
 <meta property="og:title" content="MULTI-VICE AI | AI Prompt Packs, Automations & Agent Configs" />
-<meta property="og:description" content="Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments. Built for people who want to get more done with AI." />
+<meta property="og:description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
 <meta property="og:url" content="https://jblessd.com/" />
 <meta property="og:locale" content="en_US" />
 <meta property="og:image" content="https://jblessd.com/og-image.png" />
@@ -39,7 +39,7 @@
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="MULTI-VICE AI | AI Productivity Tools" />
-<meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments. Built for people who want to get more done with AI." />
+<meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
 <meta name="twitter:image" content="https://jblessd.com/og-image.png" />
 <meta name="twitter:image:alt" content="MULTI-VICE AI — AI productivity tools, organized by role." />
 
@@ -89,7 +89,7 @@
   "url": "https://jblessd.com/",
   "logo": "https://jblessd.com/icons/icon-512.png",
   "image": "https://jblessd.com/og-image.png",
-  "description": "Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments. Built for people who want to get more done with AI.",
+  "description": "Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role.",
   "currenciesAccepted": "USD",
   "priceRange": "$12–$49"
 }
@@ -328,6 +328,15 @@
   .card p{font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;}
   .card-format{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); border-top:1px dashed var(--line); padding-top:11px; margin-bottom:11px;}
   .card-bottom{display:flex; align-items:center; justify-content:space-between;}
+  .card-rating{display:flex; align-items:center; gap:7px; margin:-2px 0 11px; font-size:13px;}
+  .card-rating .rating-meta{font-family:var(--mono); font-size:10.5px; color:var(--muted-2);}
+  .allaccess{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(0,255,65,.05), rgba(0,255,65,.01)); margin-top:8px;}
+  .allaccess-inner{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .allaccess h2{margin:10px 0 6px;}
+  .allaccess p{color:var(--muted); max-width:52ch; margin:0;}
+  .allaccess-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .allaccess-price{font-family:var(--mono); font-size:30px; color:var(--paper);}
+  .allaccess-price span{font-size:14px; color:var(--muted-2);}
   .price{font-family:var(--mono); font-size:15px; color:var(--brass);}
   .add-btn{
     font-family:var(--sans); font-size:11.5px; font-weight:600; background:var(--teal); color:var(--ink);
@@ -374,6 +383,12 @@
   .proof-cursor{display:inline-block; width:8px; height:14px; background:var(--brass); box-shadow:0 0 8px var(--brass); vertical-align:text-bottom; animation:proof-blink 1s step-end infinite;}
   @keyframes proof-blink{0%,100%{opacity:1;}50%{opacity:0;}}
   .proof-run{margin-top:12px; width:100%; justify-content:center; padding:11px;}
+  .proof-share{margin-top:10px; text-align:center;}
+  .proof-share-btn,.proof-copy{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:8px 14px; cursor:pointer;}
+  .proof-share-btn:hover,.proof-copy:hover{border-color:var(--brass); background:rgba(0,255,65,.06);}
+  .proof-share-link{margin-top:10px; font-family:var(--mono); font-size:11.5px; word-break:break-all; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .proof-share-link a{color:var(--teal);}
+  .proof-copy{padding:4px 10px;}
   .proof-run[disabled]{opacity:.6; cursor:progress;}
   .proof-run.secondary{background:transparent; color:var(--brass); border:1px solid var(--line);}
   .proof-run.secondary:hover{border-color:var(--brass); background:rgba(0,255,65,.05);}
@@ -485,6 +500,9 @@
   .mk-label{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:4px 0 6px;}
   .mk-result{margin-top:22px; border-top:1px solid var(--line-soft); padding-top:20px;}
   .mk-tagline{font-family:var(--serif); font-size:17px; line-height:1.4; color:var(--paper); margin:0 0 6px;}
+  .hero-cta{display:flex; flex-wrap:wrap; gap:12px; margin:20px 0 6px;}
+  .btn-line{background:transparent; color:var(--brass); border:1px solid var(--line);}
+  .btn-line:hover{border-color:var(--brass); background:rgba(0,255,65,.06);}
   .mk-src{font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; display:block; margin-bottom:14px;}
   .mk-asset{border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin-bottom:12px; background:rgba(18,74,32,.08);}
   .mk-asset-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px;}
@@ -595,7 +613,11 @@
   <div class="wrap hero">
     <p class="eyebrow">&gt; MULTI-VICE AI // jack in — AI productivity instruments loaded</p>
     <h1>Prompt packs, automations, and agent configs — <em>built once, sold as instruments.</em></h1>
-    <p class="lede">Every listing is a spec sheet, not a pitch: what it does, what it runs on, what it costs. Organized by role, so you find the tool built for your work, not a generic bundle.</p>
+    <p class="lede">Every listing is a spec sheet, not a pitch: what it does, what it runs on, what it costs. And you don't take our word for any of it — <strong>watch any tool run on your own task before you pay a cent.</strong></p>
+    <div class="hero-cta">
+      <a class="btn btn-gold" href="/free-tool">▶ Watch AI do your task — free</a>
+      <a class="btn btn-line" href="/proof">See live proofs →</a>
+    </div>
     <div class="search-row">
       <div class="search-box">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -807,6 +829,22 @@
   </div>
 
   <div class="wrap">
+    <section class="allaccess" id="all-access" aria-label="All-Access Pass">
+      <div class="allaccess-inner">
+        <div>
+          <span class="niche-tag">All-Access Pass</span>
+          <h2>Want the whole toolkit?</h2>
+          <p>Every prompt pack, automation, template, and agent config — plus everything we ship next — for one monthly price. Cancel anytime.</p>
+        </div>
+        <div class="allaccess-buy">
+          <span class="allaccess-price">$29<span>/mo</span></span>
+          <button class="btn btn-gold" id="all-access-btn" type="button">Get All-Access →</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
     <section class="lead" id="lead-magnet" aria-label="Free prompt pack">
       <h2>Get a free prompt pack</h2>
       <p>Drop your email and we'll unlock a free starter prompt pack right here — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
@@ -849,6 +887,8 @@
       <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
       <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
       <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
+      <details><summary>Can I try a tool before I buy it?</summary><p>Yes. Open any product and hit “Run live demo,” or use the free <a href="/free-tool">Watch AI do your task</a> tool — Claude runs the actual product on a real example (or your own situation) and streams the result, before you spend anything. Browse saved runs on the <a href="/proof">live proofs</a> page.</p></details>
+      <details><summary>Is there a way to get everything?</summary><p>Yes — the <a href="#all-access">All-Access Pass</a> is a monthly subscription that unlocks the entire catalog, including every tool we release later. Cancel anytime.</p></details>
     </section>
   </div>
 </main>
@@ -861,6 +901,9 @@
         <span class="site-status-dot" aria-hidden="true"></span><span id="site-status-label">Status pending</span>
       </span>
       <a href="#catalog">Catalog</a>
+      <a href="/use-cases">Use cases</a>
+      <a href="/proof">Live proofs</a>
+      <a href="/updates">Updates</a>
       <a href="#contact">Contact</a>
       <a href="/refund-policy/">Refund policy</a>
       <a href="#" id="open-marketing-footer" aria-haspopup="dialog" aria-expanded="false">Marketing agent</a>
@@ -926,6 +969,10 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 5v14l11-7z"/></svg>
         <span id="pm-proof-run-label">Run live demo</span>
       </button>
+      <div class="proof-share" id="pm-proof-share" hidden>
+        <button class="proof-share-btn" id="pm-proof-share-btn" type="button">Share this proof</button>
+        <div class="proof-share-link" id="pm-proof-share-link" hidden></div>
+      </div>
     </div>
 
     <div class="pm-reviews" id="pm-reviews">
@@ -1282,6 +1329,32 @@
     }
   });
 
+  // ---- All-Access Pass (recurring subscription checkout) ----
+  var allAccessBtn = document.getElementById('all-access-btn');
+  if(allAccessBtn){
+    allAccessBtn.addEventListener('click', async function(){
+      var ok = window.confirm('The All-Access Pass is $29/month and unlocks the entire catalog, including future tools. Digital access is provided immediately and is subject to the refund policy. Continue to checkout?');
+      if(!ok) return;
+      var original = allAccessBtn.textContent;
+      allAccessBtn.disabled = true;
+      allAccessBtn.textContent = 'Redirecting…';
+      try{
+        var res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'all-access', digitalPolicyAccepted: true })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start checkout.'); }
+        window.location.href = data.url;
+      }catch(err){
+        toast(err.message || 'Something went wrong. Please try again.');
+        allAccessBtn.disabled = false;
+        allAccessBtn.textContent = original;
+      }
+    });
+  }
+
   // ---- return from Stripe Checkout ----
   function handleCheckoutReturn(){
     var params = new URLSearchParams(window.location.search);
@@ -1334,6 +1407,7 @@
       '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
       '<h3>'+esc(p.name)+'</h3><p>'+esc(p.blurb)+'</p>'+
       '<p class="card-format">'+esc(p.format)+'</p>'+
+      '<div class="card-rating" data-rating-for="'+esc(id)+'" hidden></div>'+
       '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
     return card;
   }
@@ -1360,6 +1434,27 @@
       }
     }catch(e){ /* keep the static cards */ }
     openDeepLinkedProduct();
+    loadCatalogRatings();
+  }
+
+  // Fetch review aggregates once and paint compact star ratings onto each card,
+  // so social proof shows on the grid — not only inside a product's modal.
+  async function loadCatalogRatings(){
+    try{
+      var res = await fetch('/api/reviews');
+      if(!res.ok) return;
+      var data = await res.json().catch(function(){ return {}; });
+      var aggs = (data && data.aggregates) || {};
+      catalog.querySelectorAll('.card-rating').forEach(function(el){
+        var sku = el.getAttribute('data-rating-for');
+        var agg = aggs[sku];
+        if(agg && agg.count > 0){
+          el.innerHTML = '<span class="stars">'+starString(agg.average)+'</span>'+
+            '<span class="rating-meta">'+agg.average+' ('+agg.count+')</span>';
+          el.hidden = false;
+        }
+      });
+    }catch(e){ /* ratings are a nice-to-have; ignore failures */ }
   }
 
   // If the page was opened with /?product=SKU (a shared or indexed link),
@@ -1812,8 +1907,13 @@
   var proofScenario = document.getElementById('pm-proof-scenario');
   var proofRun = document.getElementById('pm-proof-run');
   var proofRunLabel = document.getElementById('pm-proof-run-label');
+  var proofShare = document.getElementById('pm-proof-share');
+  var proofShareBtn = document.getElementById('pm-proof-share-btn');
+  var proofShareLink = document.getElementById('pm-proof-share-link');
   var proofSku = null;
   var proofBusy = false;
+  var lastProofOutput = '';
+  var lastProofScenario = '';
 
   var IDLE_HINT = 'Press <b>Run live demo</b> and Claude will run this product on a real example, streamed here in real time.';
 
@@ -1828,6 +1928,11 @@
     proofTerminal.setAttribute('data-empty', 'true');
     proofLabel.textContent = 'demo · idle';
     proofOutput.innerHTML = '<span class="proof-hint">' + IDLE_HINT + '</span>';
+    lastProofOutput = '';
+    lastProofScenario = '';
+    if(proofShare){ proofShare.hidden = true; }
+    if(proofShareBtn){ proofShareBtn.hidden = false; proofShareBtn.disabled = false; proofShareBtn.textContent = 'Share this proof'; }
+    if(proofShareLink){ proofShareLink.hidden = true; proofShareLink.innerHTML = ''; }
   }
 
   function setProofCursor(text){
@@ -1881,6 +1986,12 @@
       if(!gotText){ throw new Error('empty'); }
       proofOutput.innerHTML = esc(answer);      // drop the cursor when done
       proofLabel.textContent = 'demo · complete';
+      // Capture the run so it can be published as a shareable permalink.
+      lastProofOutput = answer;
+      lastProofScenario = scenario;
+      if(proofShare){ proofShare.hidden = false; }
+      if(proofShareBtn){ proofShareBtn.hidden = false; proofShareBtn.disabled = false; proofShareBtn.textContent = 'Share this proof'; }
+      if(proofShareLink){ proofShareLink.hidden = true; proofShareLink.innerHTML = ''; }
     }catch(err){
       proofOutput.innerHTML = '<span class="proof-hint">The live engine is warming up (it activates after the first production deploy). Try again in a moment.</span>';
       proofLabel.textContent = 'demo · offline';
@@ -1897,6 +2008,43 @@
   proofScenario.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); runProof(); }
   });
+
+  // Publish the run just watched as a public, shareable permalink (/proof/:id).
+  if(proofShareBtn){
+    proofShareBtn.addEventListener('click', async function(){
+      if(!proofSku || !lastProofOutput){ return; }
+      proofShareBtn.disabled = true;
+      var original = proofShareBtn.textContent;
+      proofShareBtn.textContent = 'Publishing…';
+      try{
+        var res = await fetch('/api/proof', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku: proofSku, scenario: lastProofScenario, output: lastProofOutput })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if(!res.ok || !data.url){ throw new Error(data.error || 'Could not publish this proof.'); }
+        proofShareLink.hidden = false;
+        proofShareLink.innerHTML = '<a href="' + esc(data.url) + '" target="_blank" rel="noopener">' + esc(data.url) + '</a>' +
+          ' <button type="button" class="proof-copy" data-url="' + esc(data.url) + '">Copy</button>';
+        proofShareBtn.hidden = true;
+        toast('Proof published — share the link');
+      }catch(err){
+        toast(err.message || 'Could not publish this proof.');
+        proofShareBtn.textContent = original;
+      }finally{
+        proofShareBtn.disabled = false;
+      }
+    });
+    proofShareLink.addEventListener('click', function(e){
+      var copy = e.target.closest('.proof-copy');
+      if(!copy) return;
+      var url = copy.dataset.url || '';
+      if(navigator.clipboard && url){
+        navigator.clipboard.writeText(url).then(function(){ toast('Link copied'); }, function(){});
+      }
+    });
+  }
 
   // ---- product reviews ----
   var pmRevSummary = document.getElementById('pm-rev-summary');
