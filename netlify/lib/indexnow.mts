@@ -16,7 +16,7 @@ const INDEXNOW_KEY = 'b7e14a9c8f2d40559a1e6c3b0d84f7a2'
 
 // The canonical host every submitted URL must belong to. IndexNow refuses a
 // batch that mixes hosts or whose host doesn't match the key file's location.
-const SITE_HOST = 'jblessd.com'
+const SITE_HOST = 'multinicheai.com'
 const KEY_LOCATION = `https://${SITE_HOST}/${INDEXNOW_KEY}.txt`
 
 // api.indexnow.org fans a single submission out to every participating engine
@@ -32,7 +32,7 @@ export interface SubmitResult {
 }
 
 // Read every <loc> out of the live sitemap, keeping only URLs on our canonical
-// host (the sitemap always emits jblessd.com URLs, so this holds regardless of
+// host (the sitemap always emits multinicheai.com URLs, so this holds regardless of
 // which origin the function itself runs on).
 export async function sitemapUrls(origin: string): Promise<string[]> {
   const res = await fetch(new URL('/sitemap.xml', origin), {

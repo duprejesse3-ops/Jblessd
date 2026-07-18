@@ -4,4 +4,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://jblessd.com/sitemap.xml
+Sitemap: https://multinicheai.com/sitemap.xml
