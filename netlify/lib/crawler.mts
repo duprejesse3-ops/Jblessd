@@ -52,7 +52,7 @@ const MAX_PAGES = 120 // hard cap on crawl breadth; the real site is ~40 pages
 const CONCURRENCY = 6
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_ISSUES = 25 // keep the persisted issue list bounded
-const CRAWLER_UA = 'MULTIVICE-discovery-crawler/1.0'
+const CRAWLER_UA = 'MULTINICHE-discovery-crawler/1.0'
 
 // Assets and non-page routes we never treat as crawlable HTML pages.
 const SKIP_EXT = /\.(png|jpe?g|svg|ico|webp|gif|avif|css|mjs|js|json|xml|webmanifest|txt|pdf|woff2?|ttf|map)$/i

@@ -80,7 +80,7 @@ export default async (req: Request, context: Context) => {
   context.waitUntil(
     sendEmail({
       to: email,
-      subject: `Your ${FREE_PACK.title} from MULTIVICE AI`,
+      subject: `Your ${FREE_PACK.title} from MULTINICHE AI`,
       text: emailBody,
     }),
   )

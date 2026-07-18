@@ -1,4 +1,4 @@
-// Generates the MULTIVICE AI matrix logo as SVG (standard + maskable variants).
+// Generates the MULTINICHE AI matrix logo as SVG (standard + maskable variants).
 // Deterministic output — no randomness — so re-runs are byte-stable.
 // Run: node icons/build-logo.mjs   (writes icons/logo.svg + icons/logo-maskable.svg)
 
@@ -106,8 +106,8 @@ function svg({ maskable }) {
   const border = maskable
     ? ''
     : `<rect x="6" y="6" width="${S - 12}" height="${S - 12}" rx="${r - 4}" fill="none" stroke="${GREEN_DIM}" stroke-width="3" opacity="0.55"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="MULTIVICE AI">
-  <title>MULTIVICE AI</title>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="MULTINICHE AI">
+  <title>MULTINICHE AI</title>
 ${defs()}
   <rect x="0" y="0" width="${S}" height="${S}" rx="${r}" fill="url(#tile)"/>
   <g opacity="0.9">${rain(1337, maskable ? 0.5 : 0.6)}</g>

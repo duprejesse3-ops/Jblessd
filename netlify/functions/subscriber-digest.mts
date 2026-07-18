@@ -57,13 +57,13 @@ export default async () => {
     .join('\n\n')
 
   const text =
-    `Here's what's new at MULTIVICE AI — ready-to-run AI tools you can watch work before you buy.\n\n` +
+    `Here's what's new at MULTINICHE AI — ready-to-run AI tools you can watch work before you buy.\n\n` +
     `${lines}\n\n` +
     `Browse everything, or run any tool live on your own task first: ${SITE}\n\n` +
-    `— The MULTIVICE AI team\n\n` +
+    `— The MULTINICHE AI team\n\n` +
     `You're getting this because you grabbed a free prompt pack at jblessd.com. Reply to unsubscribe.`
 
-  const subject = `New at MULTIVICE AI: ${featured[0].name} and more`
+  const subject = `New at MULTINICHE AI: ${featured[0].name} and more`
 
   // Send individually (one recipient per message) so addresses stay private.
   // Chunk the sends to stay well within the scheduled-function time budget.

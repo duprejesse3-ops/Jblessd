@@ -3,7 +3,7 @@
 // A machine-readable index of the store for AI answer engines (ChatGPT,
 // Perplexity, Claude, Gemini). The site already optimizes its HTML/JSON-LD for
 // crawlers; this adds the emerging llms.txt convention — a clean, plain-text map
-// of what MULTIVICE AI is, what it sells, and the canonical URLs — so that when
+// of what MULTINICHE AI is, what it sells, and the canonical URLs — so that when
 // someone asks an assistant "best prompt pack for founders" the model has a
 // structured, quotable source that names this store and links straight to the
 // right page.
@@ -29,14 +29,14 @@ export default async () => {
   }
 
   const lines: string[] = [
-    '# MULTIVICE AI',
+    '# MULTINICHE AI',
     '',
     '> Ready-to-use AI productivity tools — prompt packs, automation blueprints, doc',
     '> templates, and agent configs — sold as instruments, not pitches. Every tool can',
     '> be run live on your own task before you buy it, and every purchase is an instant',
     '> digital download.',
     '',
-    'MULTIVICE AI is a storefront of practical, single-purpose AI tools organized by',
+    'MULTINICHE AI is a storefront of practical, single-purpose AI tools organized by',
     'the role they serve. What sets it apart: a "Live Proof" engine that runs any tool',
     'on a real (or your own) task and streams the actual output before purchase.',
     '',

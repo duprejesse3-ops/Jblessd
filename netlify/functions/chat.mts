@@ -20,7 +20,7 @@ import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
 const MAX_STEPS = 5 // safety cap on the agent's tool-use loop
-const STORE_NAME = 'MULTIVICE AI'
+const STORE_NAME = 'MULTINICHE AI'
 
 interface ClientMessage {
   role: 'user' | 'assistant'

@@ -94,7 +94,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
       sku: p.sku,
       category: p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category,
       description: p.blurb,
-      brand: { '@type': 'Brand', name: 'MULTIVICE AI' },
+      brand: { '@type': 'Brand', name: 'MULTINICHE AI' },
       image: `${SITE}/og-image.png`,
       url,
       offers: {
@@ -136,7 +136,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
   const itemList = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'MULTIVICE AI — full catalog',
+    name: 'MULTINICHE AI — full catalog',
     numberOfItems: products.length,
     itemListElement,
   }

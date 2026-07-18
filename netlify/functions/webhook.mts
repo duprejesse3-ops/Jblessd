@@ -54,7 +54,7 @@ export default async (req: Request, _context: Context) => {
         const itemList = names.length ? names.map((n) => `  • ${n}`).join('\n') : '  • Your order'
 
         const body = isSubscription
-          ? `Thanks for going all-in with the MULTIVICE AI All-Access Pass.\n\n` +
+          ? `Thanks for going all-in with the MULTINICHE AI All-Access Pass.\n\n` +
             `Your subscription is active — every tool in the catalog is yours, including everything we ship next.\n\n` +
             `Start here: https://jblessd.com\n\n` +
             `Manage or cancel anytime from the link in your Stripe receipt. Questions? Just reply to this email.`
@@ -66,7 +66,7 @@ export default async (req: Request, _context: Context) => {
 
         await sendEmail({
           to: email,
-          subject: isSubscription ? 'Your MULTIVICE AI All-Access Pass is active' : 'Your MULTIVICE AI order',
+          subject: isSubscription ? 'Your MULTINICHE AI All-Access Pass is active' : 'Your MULTINICHE AI order',
           text: body,
         })
       } catch (err) {

@@ -15,7 +15,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
-const STORE_NAME = 'MULTIVICE AI'
+const STORE_NAME = 'MULTINICHE AI'
 
 interface Draft {
   name: string
