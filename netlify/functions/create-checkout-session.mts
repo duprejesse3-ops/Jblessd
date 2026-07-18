@@ -29,6 +29,44 @@ interface CartItem {
   price?: string | number
 }
 
+// The All-Access Pass: a recurring subscription that unlocks the whole catalog,
+// including everything shipped later. Priced server-side so the browser can't
+// tamper with it. Sold via Stripe subscription mode (separate from the one-time
+// cart, which Stripe can't mix into the same session).
+const ALL_ACCESS = {
+  name: 'MULTI-VICE AI — All-Access Pass',
+  amount: 2900, // $29.00 / month, in cents
+  interval: 'month' as const,
+}
+
+async function createAllAccessSession(stripe: Stripe, origin: string): Promise<Response> {
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: ALL_ACCESS.name,
+            metadata: { sku: 'ALL-ACCESS' },
+          },
+          unit_amount: ALL_ACCESS.amount,
+          recurring: { interval: ALL_ACCESS.interval },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/?checkout=cancelled`,
+    metadata: {
+      plan: 'all-access',
+      digital_delivery_acknowledged: 'true',
+      refund_policy_version: '2026-07-16',
+    },
+  })
+  return Response.json({ url: session.url })
+}
+
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', {
@@ -57,12 +95,32 @@ export default async (req: Request, _context: Context) => {
 
   let items: CartItem[] | undefined
   let digitalPolicyAccepted = false
+  let plan = ''
   try {
     const body = await req.json()
     items = body?.items
     digitalPolicyAccepted = body?.digitalPolicyAccepted === true
+    plan = String(body?.plan ?? '')
   } catch {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`
+
+  // All-Access subscription path: no cart, recurring billing.
+  if (plan === 'all-access') {
+    if (!digitalPolicyAccepted) {
+      return Response.json(
+        { error: 'Please acknowledge the digital delivery and refund policy before checkout.' },
+        { status: 400 },
+      )
+    }
+    try {
+      return await createAllAccessSession(stripe, origin)
+    } catch (err) {
+      console.error('All-access checkout error:', (err as Error).message)
+      return Response.json({ error: 'Unable to start checkout. Please try again.' }, { status: 400 })
+    }
   }
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -106,8 +164,6 @@ export default async (req: Request, _context: Context) => {
         quantity: 1,
       }
     })
-
-    const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

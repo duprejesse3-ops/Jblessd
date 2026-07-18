@@ -16,6 +16,17 @@ const SITE = 'https://jblessd.com'
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
 const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers']
 
+// Outcome-based landing pages (/use-cases/:slug), kept in sync with the slugs
+// the pages edge function knows how to render.
+const USE_CASE_SLUGS = [
+  'draft-investor-updates',
+  'triage-support-tickets',
+  'hit-inbox-zero',
+  'ship-content-faster',
+  'run-better-standups',
+  'research-with-citations',
+]
+
 function xmlEscape(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -25,19 +36,45 @@ function xmlEscape(s: string): string {
     .replace(/'/g, '&apos;')
 }
 
-export default async () => {
+async function recentProofIds(req: Request): Promise<string[]> {
+  try {
+    const res = await fetch(new URL('/api/proof', req.url), {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(1500),
+    })
+    if (!res.ok) return []
+    const data = (await res.json()) as { proofs?: Array<{ id: string }> }
+    return (data.proofs ?? []).map((p) => p.id).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+export default async (req: Request) => {
   const { products } = await loadCatalog()
+  const proofIds = await recentProofIds(req)
 
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/refund-policy/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/proof</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
     ...NICHES.map((niche) => {
       const loc = `${SITE}/tools/${encodeURIComponent(niche)}`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+    }),
+    ...USE_CASE_SLUGS.map((slug) => {
+      const loc = `${SITE}/use-cases/${encodeURIComponent(slug)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
     }),
     ...products.map((p) => {
       const loc = `${SITE}/product/${encodeURIComponent(p.sku)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>`
+    }),
+    ...proofIds.map((id) => {
+      const loc = `${SITE}/proof/${encodeURIComponent(id)}`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`
     }),
   ]
 

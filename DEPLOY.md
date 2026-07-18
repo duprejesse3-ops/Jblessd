@@ -44,3 +44,18 @@ Right now, checkout success just shows a message. Stripe does **not** know these
 ## Notes
 - The secret key must only ever live in Netlify's environment variables — never in the HTML or committed to your repo
 - Test mode and live mode are fully separate; test payments never touch real money
+
+## 7. Email delivery (free-pack, order receipts, weekly digest)
+The site sends transactional email through [Resend](https://resend.com) via a shared sender (`netlify/lib/email.mts`).
+It is used for three things: delivering the free prompt pack to lead-magnet signups, sending an order receipt / review
+ask after a Stripe purchase, and the weekly subscriber digest (`netlify/functions/subscriber-digest.mts`).
+
+Email is **optional to boot**: with no key configured every send is a graceful no-op (it logs and moves on), so the site
+deploys and runs fine before you set this up. To turn delivery on, add **both** of these environment variables in Netlify →
+Site configuration → Environment variables (email stays off unless both are present, since sending from Resend's shared
+sandbox address only reaches the account owner):
+- `RESEND_API_KEY` — your Resend API key
+- `EMAIL_FROM` — the verified From address, e.g. `MULTI-VICE AI <hello@jblessd.com>` (must be a domain you've verified in Resend)
+
+The weekly digest is a scheduled function and only runs on **published production deploys**, never on previews.
+

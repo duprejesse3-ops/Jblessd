@@ -9,6 +9,7 @@
 
 import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
+import { sendEmail } from '../lib/email.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
@@ -40,11 +41,38 @@ export default async (req: Request, _context: Context) => {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    // TODO: this is where real fulfillment happens, e.g.:
-    //  - look up session.customer_details.email
-    //  - email the buyer their download links (Resend, Postmark, SendGrid, etc.)
-    //  - or log the order to a database
     console.log('Payment completed for session:', session.id, session.customer_details?.email)
+
+    // Fulfillment: email the buyer a receipt + delivery note and invite a
+    // review. Line items aren't on the base session object, so fetch them.
+    const email = session.customer_details?.email
+    if (email) {
+      try {
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 50 })
+        const names = lineItems.data.map((li) => li.description).filter(Boolean) as string[]
+        const isSubscription = session.mode === 'subscription'
+        const itemList = names.length ? names.map((n) => `  • ${n}`).join('\n') : '  • Your order'
+
+        const body = isSubscription
+          ? `Thanks for going all-in with the MULTI-VICE AI All-Access Pass.\n\n` +
+            `Your subscription is active — every tool in the catalog is yours, including everything we ship next.\n\n` +
+            `Start here: https://jblessd.com\n\n` +
+            `Manage or cancel anytime from the link in your Stripe receipt. Questions? Just reply to this email.`
+          : `Thanks for your order — here's what you picked up:\n\n${itemList}\n\n` +
+            `Everything is delivered digitally and is ready to use right away. If you didn't get a download link ` +
+            `for any item, reply to this email and we'll sort it out immediately.\n\n` +
+            `Put it to work, and when you've had a chance to use it we'd love a quick review — it helps other ` +
+            `buyers and it helps us build the right things next: https://jblessd.com`
+
+        await sendEmail({
+          to: email,
+          subject: isSubscription ? 'Your MULTI-VICE AI All-Access Pass is active' : 'Your MULTI-VICE AI order',
+          text: body,
+        })
+      } catch (err) {
+        console.error('webhook: could not send order email —', (err as Error).message)
+      }
+    }
   }
 
   return Response.json({ received: true })
