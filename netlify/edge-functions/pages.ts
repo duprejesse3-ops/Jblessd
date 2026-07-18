@@ -22,7 +22,7 @@
 
 import type { Context, Config } from '@netlify/edge-functions'
 
-const SITE = 'https://multinicheai.com'
+const SITE = 'https://jblessd.com'
 const STORE = 'MULTINICHE AI'
 const FETCH_TIMEOUT_MS = 1500
 const OFFER_VALID_FROM = '2025-01-01'

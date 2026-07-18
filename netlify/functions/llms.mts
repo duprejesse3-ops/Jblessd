@@ -15,7 +15,7 @@ import type { Config } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
-const SITE = 'https://multinicheai.com'
+const SITE = 'https://jblessd.com'
 
 export default async () => {
   const { products } = await loadCatalog()
