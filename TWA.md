@@ -1,6 +1,6 @@
 # Google Play TWA — build & publish guide
 
-This turns the **MULTI-VICE AI** PWA (`https://jblessd.com`) into an Android app
+This turns the **MULTIVICE AI** PWA (`https://jblessd.com`) into an Android app
 you can upload to the Google Play Store, using a **Trusted Web Activity (TWA)** —
 a thin Android wrapper that runs the live website full-screen, with no browser
 address bar.
