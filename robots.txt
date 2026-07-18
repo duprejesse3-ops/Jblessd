@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
+User-agent: Bingbot
+Allow: /
+
 Sitemap: https://jblessd.com/sitemap.xml
