@@ -12,6 +12,17 @@ import { loadCatalog } from '../lib/db.mjs'
 
 const SITE = 'https://jblessd.com'
 
+// The brand share image, declared per-URL via the Google image-sitemap
+// extension so crawlers (and Google Images in particular) pick up the current
+// MULTINICHE AI artwork instead of a stale, previously-cached version. The URL
+// is intentionally distinct from any older share image: Google Images keys its
+// cache on the image URL, so a fresh path is the reliable way to get a new
+// picture indexed. Title/caption give image crawlers extra brand context.
+const BRAND_IMAGE = `${SITE}/multiniche-ai-og.png`
+const IMAGE_TITLE = 'MULTINICHE AI'
+const IMAGE_CAPTION =
+  'MULTINICHE AI — AI prompt packs, automation blueprints, doc templates, and agent configs.'
+
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
 const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers']
@@ -36,6 +47,20 @@ function xmlEscape(s: string): string {
     .replace(/'/g, '&apos;')
 }
 
+// Google image-sitemap block, attached to the pages that visually carry the
+// brand image. Emitting <image:loc> is what tells crawlers this URL owns the
+// image; the new filename plus this explicit declaration is the fastest way to
+// refresh what shows up under the brand in image search.
+function imageBlock(): string {
+  return (
+    `\n    <image:image>\n` +
+    `      <image:loc>${xmlEscape(BRAND_IMAGE)}</image:loc>\n` +
+    `      <image:title>${xmlEscape(IMAGE_TITLE)}</image:title>\n` +
+    `      <image:caption>${xmlEscape(IMAGE_CAPTION)}</image:caption>\n` +
+    `    </image:image>`
+  )
+}
+
 async function recentProofIds(req: Request): Promise<string[]> {
   try {
     const res = await fetch(new URL('/api/proof', req.url), {
@@ -55,7 +80,7 @@ export default async (req: Request) => {
   const proofIds = await recentProofIds(req)
 
   const urls = [
-    `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>${imageBlock()}\n  </url>`,
     `  <url>\n    <loc>${SITE}/refund-policy/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/proof</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
@@ -70,7 +95,7 @@ export default async (req: Request) => {
     }),
     ...products.map((p) => {
       const loc = `${SITE}/product/${encodeURIComponent(p.sku)}`
-      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>${imageBlock()}\n  </url>`
     }),
     ...proofIds.map((id) => {
       const loc = `${SITE}/proof/${encodeURIComponent(id)}`
@@ -80,7 +105,8 @@ export default async (req: Request) => {
 
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n` +
+    `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
     urls.join('\n') +
     `\n</urlset>\n`
 

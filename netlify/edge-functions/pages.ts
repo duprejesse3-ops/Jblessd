@@ -238,9 +238,9 @@ function page(opts: {
     `<meta property="og:title" content="${esc(opts.title)}"/>` +
     `<meta property="og:description" content="${esc(opts.description)}"/>` +
     `<meta property="og:url" content="${esc(opts.canonical)}"/>` +
-    `<meta property="og:image" content="${SITE}/og-image.png"/>` +
+    `<meta property="og:image" content="${SITE}/multiniche-ai-og.png"/>` +
     `<meta name="twitter:card" content="summary_large_image"/>` +
-    `<meta name="twitter:image" content="${SITE}/og-image.png"/>` +
+    `<meta name="twitter:image" content="${SITE}/multiniche-ai-og.png"/>` +
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
@@ -325,7 +325,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     category: cat,
     description: p.blurb,
     brand: { '@type': 'Brand', name: STORE },
-    image: `${SITE}/og-image.png`,
+    image: `${SITE}/multiniche-ai-og.png`,
     url,
     offers: {
       '@type': 'Offer',

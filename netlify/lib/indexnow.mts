@@ -33,7 +33,10 @@ export interface SubmitResult {
 
 // Read every <loc> out of the live sitemap, keeping only URLs on our canonical
 // host (the sitemap always emits jblessd.com URLs, so this holds regardless of
-// which origin the function itself runs on).
+// which origin the function itself runs on). Image URLs declared via the
+// sitemap's <image:loc> entries are captured too, so submitting the sitemap
+// also pings the brand share image — the signal that gets a refreshed picture
+// re-crawled for image search rather than the old cached one.
 export async function sitemapUrls(origin: string): Promise<string[]> {
   const res = await fetch(new URL('/sitemap.xml', origin), {
     headers: { accept: 'application/xml' },
@@ -43,7 +46,8 @@ export async function sitemapUrls(origin: string): Promise<string[]> {
   const xml = await res.text()
 
   const urls = new Set<string>()
-  const re = /<loc>\s*([^<\s]+)\s*<\/loc>/gi
+  // Matches both page <loc> and image-extension <image:loc> entries.
+  const re = /<(?:image:)?loc>\s*([^<\s]+)\s*<\/(?:image:)?loc>/gi
   let match: RegExpExecArray | null
   while ((match = re.exec(xml)) !== null) {
     try {
