@@ -223,6 +223,8 @@ function page(opts: {
   canonical: string
   jsonld: unknown[]
   body: string
+  status?: number
+  robots?: string
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
@@ -232,7 +234,7 @@ function page(opts: {
     `<title>${esc(opts.title)}</title>` +
     `<meta name="description" content="${esc(opts.description)}"/>` +
     `<link rel="canonical" href="${esc(opts.canonical)}"/>` +
-    `<meta name="robots" content="index, follow, max-image-preview:large"/>` +
+    `<meta name="robots" content="${esc(opts.robots ?? 'index, follow, max-image-preview:large')}"/>` +
     `<meta property="og:type" content="website"/>` +
     `<meta property="og:site_name" content="${STORE}"/>` +
     `<meta property="og:title" content="${esc(opts.title)}"/>` +
@@ -288,7 +290,7 @@ function page(opts: {
     `</div></body></html>`
 
   return new Response(head + opts.body + foot, {
-    status: 200,
+    status: opts.status ?? 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
@@ -296,12 +298,17 @@ function page(opts: {
   })
 }
 
+// A real HTTP 404 (not a soft 404). Delisted products and unknown slugs must
+// return a 404 status with a noindex directive so Google drops the URL and
+// spends its crawl budget on live pages instead of indexing a "Not here" stub.
 function notFound(): Response {
   return page({
     title: `Not found | ${STORE}`,
     description: 'This page could not be found.',
     canonical: `${SITE}/`,
     jsonld: [],
+    status: 404,
+    robots: 'noindex, follow',
     body: `<nav class="crumbs"><a href="/">Home</a></nav><h1>Not here</h1><p class="lede">That page doesn't exist (or the product was delisted). <a href="/">Head back to the catalog →</a></p>`,
   })
 }
