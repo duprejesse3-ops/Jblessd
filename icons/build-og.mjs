@@ -1,6 +1,6 @@
-// Generates the MULTINICHE AI social share image (og-image.png, 1200x630).
+// Generates the MULTINICHE AI social share image (multiniche-ai-og.png, 1200x630).
 // Builds an SVG in the storefront's terminal/matrix aesthetic. Rasterize to PNG
-// with: rsvg-convert icons/og-image.svg -o og-image.png
+// with: rsvg-convert icons/og-image.svg -o multiniche-ai-og.png
 // Deterministic output so re-runs are stable.
 // Run: node icons/build-og.mjs   (writes icons/og-image.svg)
 
@@ -76,4 +76,4 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 
 writeFileSync(join(DIR, 'og-image.svg'), svg);
 
-console.log('Wrote icons/og-image.svg — rasterize with: rsvg-convert icons/og-image.svg -o og-image.png');
+console.log('Wrote icons/og-image.svg — rasterize with: rsvg-convert icons/og-image.svg -o multiniche-ai-og.png');
