@@ -124,7 +124,7 @@
     {
       "@type": "Question",
       "name": "Do you offer discounts for buying more than one tool?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout." }
     },
     {
       "@type": "Question",
@@ -337,13 +337,13 @@
   .card-bottom{display:flex; align-items:center; justify-content:space-between;}
   .card-rating{display:flex; align-items:center; gap:7px; margin:-2px 0 11px; font-size:13px;}
   .card-rating .rating-meta{font-family:var(--mono); font-size:10.5px; color:var(--muted-2);}
-  .allaccess{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(0,255,65,.05), rgba(0,255,65,.01)); margin-top:8px;}
-  .allaccess-inner{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
-  .allaccess h2{margin:10px 0 6px;}
-  .allaccess p{color:var(--muted); max-width:52ch; margin:0;}
-  .allaccess-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
-  .allaccess-price{font-family:var(--mono); font-size:30px; color:var(--paper);}
-  .allaccess-price span{font-size:14px; color:var(--muted-2);}
+  .bundle-offer{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(0,255,65,.05), rgba(0,255,65,.01)); margin-top:8px;}
+  .bundle-offer-inner{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .bundle-offer h2{margin:10px 0 6px;}
+  .bundle-offer p{color:var(--muted); max-width:58ch; margin:0;}
+  .bundle-offer-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .bundle-offer-value{font-family:var(--mono); font-size:25px; color:var(--paper); line-height:1;}
+  .bundle-offer-value span{display:block; margin-top:7px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-2); text-align:right;}
   .price{font-family:var(--mono); font-size:15px; color:var(--brass);}
   .add-btn{
     font-family:var(--sans); font-size:11.5px; font-weight:600; background:var(--teal); color:var(--ink);
@@ -419,7 +419,11 @@
   .cart-line .id{font-family:var(--mono); font-size:10px; color:var(--muted-2);}
   .cart-foot{border-top:1px solid var(--line); padding:18px 22px;}
   .cart-total-row{display:flex; justify-content:space-between; margin-bottom:14px; font-size:14px; color:var(--muted);}
+  .cart-total-row[hidden]{display:none;}
   .cart-total-row b{color:var(--paper); font-family:var(--mono); font-size:17px; font-weight:400;}
+  .cart-total-row.savings{margin-bottom:8px; color:var(--teal);}
+  .cart-total-row.savings b{color:var(--teal); font-size:14px;}
+  .cart-bundle-note{font-family:var(--mono); font-size:10.5px; line-height:1.5; color:var(--muted-2); margin:-4px 0 14px;}
   .cart-policy{display:flex; align-items:flex-start; gap:9px; margin:0 0 14px; color:var(--muted); font-size:11.5px; line-height:1.45;}
   .cart-policy input{width:16px; height:16px; margin:1px 0 0; flex:none; accent-color:var(--teal);}
   .cart-policy a{color:var(--teal);}
@@ -589,6 +593,34 @@
     #chat-fab{right:14px; bottom:14px;}
   }
 </style>
+
+<!-- Google tag (gtag.js) bootstrap — GA4 + Google Ads conversion tracking.
+     The measurement/conversion IDs are public but pulled from server env vars
+     via /api/analytics-config, so this same markup ships against test and live
+     Google Ads accounts and stays a no-op until the IDs are set. Loading the
+     tag only when configured keeps the page fast and privacy-clean by default. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  // Resolves with the Google Ads purchase send_to (e.g. "AW-123/label") once the
+  // tag is live, or "" when tracking isn't configured. The checkout-success
+  // handler awaits this before reporting the conversion.
+  window.analyticsReady = fetch('/api/analytics-config')
+    .then(function(r){ return r.ok ? r.json() : {}; })
+    .then(function(cfg){
+      if(!cfg || !cfg.configured){ return ''; }
+      var primaryId = cfg.ga4Id || cfg.adsId;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(primaryId);
+      document.head.appendChild(s);
+      gtag('js', new Date());
+      if(cfg.ga4Id){ gtag('config', cfg.ga4Id); }
+      if(cfg.adsId){ gtag('config', cfg.adsId); }
+      return cfg.purchaseSendTo || '';
+    })
+    .catch(function(){ return ''; });
+</script>
 </head>
 <body>
 
@@ -842,16 +874,16 @@
   </div>
 
   <div class="wrap">
-    <section class="allaccess" id="all-access" aria-label="All-Access Pass">
-      <div class="allaccess-inner">
+    <section class="bundle-offer" id="bundle-offer" aria-label="Bundle savings">
+      <div class="bundle-offer-inner">
         <div>
-          <span class="niche-tag">All-Access Pass</span>
-          <h2>Want the whole toolkit?</h2>
-          <p>Every prompt pack, automation, template, and agent config — plus everything we ship next — for one monthly price. Cancel anytime.</p>
+          <span class="niche-tag">Build a bundle</span>
+          <h2>Choose the tools you need. Keep them for good.</h2>
+          <p>Combine three or more different prompt packs, automations, templates, or agent configs and save 15% automatically. One payment, permanent access, no recurring charge.</p>
         </div>
-        <div class="allaccess-buy">
-          <span class="allaccess-price">$29<span>/mo</span></span>
-          <button class="btn btn-gold" id="all-access-btn" type="button">Get All-Access →</button>
+        <div class="bundle-offer-buy">
+          <span class="bundle-offer-value">15% off<span>3+ tools</span></span>
+          <a class="btn btn-gold" href="#concierge">Build my bundle →</a>
         </div>
       </div>
     </section>
@@ -899,9 +931,9 @@
       <details><summary>How are the products delivered?</summary><p>Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away.</p></details>
       <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
       <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
-      <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more tools to your cart and a bundle discount is applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
+      <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
       <details><summary>Can I try a tool before I buy it?</summary><p>Yes. Open any product and hit “Run live demo,” or use the free <a href="/free-tool">Watch AI do your task</a> tool — Claude runs the actual product on a real example (or your own situation) and streams the result, before you spend anything. Browse saved runs on the <a href="/proof">live proofs</a> page.</p></details>
-      <details><summary>Is there a way to get everything?</summary><p>Yes — the <a href="#all-access">All-Access Pass</a> is a monthly subscription that unlocks the entire catalog, including every tool we release later. Cancel anytime.</p></details>
+      <details><summary>Can I build a custom bundle?</summary><p>Yes — use the <a href="#concierge">AI concierge</a> to get a tailored set of tools, or choose any three or more different products from the catalog. The 15% savings are automatic and every purchase is a one-time payment.</p></details>
       <details><summary>Is MULTINICHE AI the same as Multiverse AI?</summary><p>No. <strong>MULTINICHE AI</strong> (spelled M-U-L-T-I-N-I-C-H-E, here at jblessd.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for “Multi-Niche AI,” “Multiniche AI,” or “Multi Niche AI,” you’re in the right place.</p></details>
     </section>
   </div>
@@ -1097,7 +1129,9 @@
   </div>
   <div class="cart-items" id="cart-items"></div>
   <div class="cart-foot">
+    <div class="cart-total-row savings" id="bundle-savings-row" hidden><span>Bundle savings (15%)</span><b id="bundle-savings">−$0.00</b></div>
     <div class="cart-total-row"><span>Total</span><b id="cart-total">$0.00</b></div>
+    <p class="cart-bundle-note" id="cart-bundle-note">Add 3 different tools to save 15%.</p>
     <label class="cart-policy">
       <input type="checkbox" id="digital-policy-accept" />
       <span>I request immediate digital delivery and acknowledge that once access is provided, I lose any cancellation right that applicable law allows me to waive, subject to the <a href="/refund-policy/" target="_blank" rel="noopener">refund policy</a>.</span>
@@ -1289,14 +1323,17 @@
     var wrap = document.getElementById('cart-items');
     var count = document.getElementById('cart-count');
     var totalEl = document.getElementById('cart-total');
+    var savingsRow = document.getElementById('bundle-savings-row');
+    var savingsEl = document.getElementById('bundle-savings');
+    var bundleNote = document.getElementById('cart-bundle-note');
     count.textContent = cart.length;
-    var total = 0;
+    var subtotal = 0;
     wrap.innerHTML = '';
     if(cart.length === 0){
       wrap.innerHTML = '<p style="color:var(--muted-2); font-size:13.5px;">Nothing here yet. Add a tool to get started.</p>';
     }
     cart.forEach(function(item, idx){
-      total += parseFloat(item.price);
+      subtotal += parseFloat(item.price);
       var line = document.createElement('div');
       line.className = 'cart-line';
       line.innerHTML = '<div><div class="name">'+item.name+'</div><div class="id">'+item.id+'</div></div>'+
@@ -1305,7 +1342,21 @@
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button></div>';
       wrap.appendChild(line);
     });
-    totalEl.textContent = '$' + total.toFixed(2);
+    var uniqueTools = new Set(cart.map(function(item){ return item.id; })).size;
+    var bundleEligible = uniqueTools >= 3;
+    var discountedTotal = bundleEligible ? cart.reduce(function(sum, item){
+      return sum + Math.round(parseFloat(item.price) * 100 * .85) / 100;
+    }, 0) : subtotal;
+    var savings = subtotal - discountedTotal;
+    totalEl.textContent = '$' + discountedTotal.toFixed(2);
+    savingsRow.hidden = !bundleEligible;
+    savingsEl.textContent = '−$' + savings.toFixed(2);
+    if(bundleEligible){
+      bundleNote.textContent = 'Bundle unlocked — 15% savings applied at checkout.';
+    } else {
+      var remaining = 3 - uniqueTools;
+      bundleNote.textContent = 'Add ' + remaining + ' more different tool' + (remaining === 1 ? '' : 's') + ' to save 15%.';
+    }
     wrap.querySelectorAll('.cart-remove').forEach(function(btn){
       btn.addEventListener('click', function(){ removeFromCart(parseInt(btn.dataset.idx,10)); });
     });
@@ -1351,37 +1402,43 @@
     }
   });
 
-  // ---- All-Access Pass (recurring subscription checkout) ----
-  var allAccessBtn = document.getElementById('all-access-btn');
-  if(allAccessBtn){
-    allAccessBtn.addEventListener('click', async function(){
-      var ok = window.confirm('The All-Access Pass is $29/month and unlocks the entire catalog, including future tools. Digital access is provided immediately and is subject to the refund policy. Continue to checkout?');
-      if(!ok) return;
-      var original = allAccessBtn.textContent;
-      allAccessBtn.disabled = true;
-      allAccessBtn.textContent = 'Redirecting…';
-      try{
-        var res = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: 'all-access', digitalPolicyAccepted: true })
+  // ---- return from Stripe Checkout ----
+  // Report a value-based purchase conversion to Google Ads / GA4 using the real
+  // order total fetched from Stripe. A real value (not a flat 1.0) is what lets
+  // Smart Bidding strategies like Target ROAS / Maximize Conversion Value
+  // optimize toward high-value orders instead of treating every sale the same.
+  function reportPurchaseConversion(sessionId){
+    if(!sessionId){ return; }
+    fetch('/api/checkout-summary?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(order){
+        if(!order || !order.paid){ return; }
+        // GA4 ecommerce purchase event.
+        gtag('event', 'purchase', {
+          transaction_id: order.transactionId,
+          value: order.value,
+          currency: order.currency
         });
-        var data = await res.json().catch(function(){ return {}; });
-        if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start checkout.'); }
-        window.location.href = data.url;
-      }catch(err){
-        toast(err.message || 'Something went wrong. Please try again.');
-        allAccessBtn.disabled = false;
-        allAccessBtn.textContent = original;
-      }
-    });
+        // Google Ads conversion — only once the tag has loaded and a purchase
+        // conversion action is configured (send_to resolved from env vars).
+        window.analyticsReady.then(function(sendTo){
+          if(!sendTo){ return; }
+          gtag('event', 'conversion', {
+            send_to: sendTo,
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+        });
+      })
+      .catch(function(){ /* tracking is best-effort; never block the buyer */ });
   }
 
-  // ---- return from Stripe Checkout ----
   function handleCheckoutReturn(){
     var params = new URLSearchParams(window.location.search);
     var status = params.get('checkout');
     if(status === 'success'){
+      reportPurchaseConversion(params.get('session_id'));
       cart = [];
       policyCheckbox.checked = false;
       renderCart();
