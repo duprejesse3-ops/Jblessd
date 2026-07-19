@@ -109,7 +109,7 @@
     {
       "@type": "Question",
       "name": "How are the products delivered?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. The moment your payment clears you get your files instantly on the confirmation page, and a copy is emailed to you as well, so you can put the tool to work right away." }
     },
     {
       "@type": "Question",
@@ -928,7 +928,7 @@
     <section class="faq" id="faq" aria-label="Frequently asked questions">
       <h2 id="faq-heading">Questions, answered</h2>
       <details><summary>What does MULTINICHE AI sell?</summary><p>Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role.</p></details>
-      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. After checkout you receive your files and links by email, so you can put the tool to work right away.</p></details>
+      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. The moment your payment clears you get your files instantly on the confirmation page, and a copy is emailed to you as well, so you can put the tool to work right away.</p></details>
       <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
       <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
       <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
@@ -1117,6 +1117,18 @@
       <p class="mk-recent-head">Recent campaigns</p>
       <div id="mk-recent-list"></div>
     </div>
+  </div>
+</div>
+
+<!-- Order delivery: shown on return from a successful checkout so the buyer
+     gets their purchase instantly, and can re-download any time via the link
+     in their order email. -->
+<div class="overlay" id="order-overlay" role="dialog" aria-modal="true" aria-labelledby="order-title">
+  <div class="modal modal-wide">
+    <button class="modal-close" id="order-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <h2 id="order-title" style="margin:6px 0 4px; font-family:var(--serif); font-weight:500;">Your download is ready</h2>
+    <p class="concierge-sub" id="order-sub">Thanks for your purchase — here's everything you bought, ready to use right now.</p>
+    <div id="order-body"></div>
   </div>
 </div>
 
@@ -1438,12 +1450,13 @@
     var params = new URLSearchParams(window.location.search);
     var status = params.get('checkout');
     if(status === 'success'){
-      reportPurchaseConversion(params.get('session_id'));
+      var sessionId = params.get('session_id');
+      reportPurchaseConversion(sessionId);
       cart = [];
       policyCheckbox.checked = false;
       renderCart();
       saveCart();
-      toast('Payment successful — check your email for delivery.');
+      deliverOrder(sessionId);
     } else if(status === 'cancelled'){
       toast('Checkout cancelled — your cart is still here.');
     }
@@ -1454,6 +1467,84 @@
       var qs = params.toString();
       history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
     }
+  }
+
+  // ---- instant delivery on the success page ----
+  // Fetch the purchased items from /api/order (which re-verifies the paid Stripe
+  // session server-side) and hand them over immediately: the real content on the
+  // page plus a Markdown download per item. This is the fix for buyers not
+  // receiving their download — they get it here right away, and again by email.
+  var orderOverlay = document.getElementById('order-overlay');
+  var orderBody = document.getElementById('order-body');
+  var orderSub = document.getElementById('order-sub');
+  function closeOrder(){ if(orderOverlay) orderOverlay.classList.remove('open'); }
+  (function(){
+    var oc = document.getElementById('order-close');
+    if(oc) oc.addEventListener('click', closeOrder);
+    if(orderOverlay) orderOverlay.addEventListener('click', function(e){ if(e.target === orderOverlay) closeOrder(); });
+  })();
+
+  function renderOrderItem(item){
+    var block = document.createElement('div');
+    block.className = 'lead-pack';
+    var h = document.createElement('h3');
+    h.textContent = item.name;
+    block.appendChild(h);
+    if(item.intro){
+      var intro = document.createElement('p');
+      intro.className = 'lead-pack-intro';
+      intro.textContent = item.intro;
+      block.appendChild(intro);
+    }
+    (item.sections || []).forEach(function(s, i){
+      var wrap = document.createElement('div');
+      wrap.className = 'lead-pack-item';
+      var st = document.createElement('h4');
+      st.textContent = (i + 1) + '. ' + s.title;
+      var sb = document.createElement('pre');
+      sb.textContent = s.body;
+      wrap.appendChild(st);
+      wrap.appendChild(sb);
+      block.appendChild(wrap);
+    });
+    if(item.markdown){
+      var dl = document.createElement('a');
+      var blob = new Blob([item.markdown], { type: 'text/markdown' });
+      dl.href = URL.createObjectURL(blob);
+      dl.download = item.filename || ((item.sku || 'download') + '.md');
+      dl.className = 'btn btn-gold';
+      dl.style.marginTop = '14px';
+      dl.textContent = 'Download ' + item.name + ' (.md)';
+      block.appendChild(dl);
+    }
+    return block;
+  }
+
+  function deliverOrder(sessionId){
+    if(!sessionId){
+      toast('Payment successful — check your email for your download.');
+      return;
+    }
+    toast('Payment successful — preparing your download…');
+    fetch('/api/order?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if(!data || !data.paid || !data.items || !data.items.length){
+          // Payment went through but delivery isn't ready yet — the email is the
+          // reliable backstop, so point the buyer there rather than failing.
+          toast('Payment successful — your download is on its way by email.');
+          return;
+        }
+        orderBody.innerHTML = '';
+        orderSub.textContent = data.items.length > 1
+          ? "Thanks for your purchase — here are all " + data.items.length + " items, ready to use. We've also emailed them to you."
+          : "Thanks for your purchase — it's ready to use below. We've also emailed it to you.";
+        data.items.forEach(function(item){ orderBody.appendChild(renderOrderItem(item)); });
+        if(orderOverlay) orderOverlay.classList.add('open');
+      })
+      .catch(function(){
+        toast('Payment successful — your download is on its way by email.');
+      });
   }
 
   // ---- list a product ----

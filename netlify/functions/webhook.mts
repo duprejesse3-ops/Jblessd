@@ -10,8 +10,14 @@
 import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
 import { sendEmail } from '../lib/email.mjs'
+import { fulfilOrder } from '../lib/fulfillment.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+
+// Keep the emailed content reasonable in size — inline the actual deliverables
+// up to this budget, and always include the re-download link so nothing is ever
+// truly out of reach even on a very large order.
+const MAX_INLINE_CHARS = 40_000
 
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
@@ -43,24 +49,47 @@ export default async (req: Request, _context: Context) => {
     const session = event.data.object as Stripe.Checkout.Session
     console.log('Payment completed for session:', session.id, session.customer_details?.email)
 
-    // Fulfillment: email the buyer a receipt + delivery note and invite a
-    // review. Line items aren't on the base session object, so fetch them.
+    // Fulfilment: deliver the actual purchased content by email — not just a
+    // receipt. Stripe calls this reliably even when the buyer closes the tab
+    // before the success page loads, so this is the delivery channel of record.
     const email = session.customer_details?.email
     if (email) {
       try {
-        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 50 })
-        const names = lineItems.data.map((li) => li.description).filter(Boolean) as string[]
-        const itemList = names.length ? names.map((n) => `  • ${n}`).join('\n') : '  • Your order'
+        const origin = getOrigin(session)
+        const { items } = await fulfilOrder(stripe, session.id)
+        const recoveryUrl = `${origin}/?checkout=success&session_id=${encodeURIComponent(session.id)}`
 
-        const body = `Thanks for your order — here's what you picked up:\n\n${itemList}\n\n` +
-          `Everything is delivered digitally and is ready to use right away. If you didn't get a download link ` +
-          `for any item, reply to this email and we'll sort it out immediately.\n\n` +
-          `Put it to work, and when you've had a chance to use it we'd love a quick review — it helps other ` +
-          `buyers and it helps us build the right things next: https://jblessd.com`
+        const itemList = items.length
+          ? items.map((i) => `  • ${i.product.name}`).join('\n')
+          : '  • Your order'
+
+        // Inline the real deliverables up to a size budget; anything beyond it
+        // is still one click away via the recovery link below.
+        const blocks: string[] = []
+        let used = 0
+        let truncated = false
+        for (const item of items) {
+          const block = `\n\n──────────\n${item.markdown}`
+          if (used + block.length > MAX_INLINE_CHARS) {
+            truncated = true
+            break
+          }
+          blocks.push(block)
+          used += block.length
+        }
+
+        const body =
+          `Thanks for your order — here's what you picked up:\n\n${itemList}\n\n` +
+          `Everything is below, ready to use. You can also open or re-download any item any time here:\n${recoveryUrl}\n` +
+          blocks.join('') +
+          (truncated
+            ? `\n\n──────────\n(Some items aren't shown here to keep this email short — open the link above to get all of them.)`
+            : '') +
+          `\n\nWhen you've put it to work we'd love a quick review — it helps other buyers and tells us what to build next: https://jblessd.com`
 
         await sendEmail({
           to: email,
-          subject: 'Your MULTINICHE AI order',
+          subject: 'Your MULTINICHE AI order — download inside',
           text: body,
         })
       } catch (err) {
@@ -70,4 +99,16 @@ export default async (req: Request, _context: Context) => {
   }
 
   return Response.json({ received: true })
+}
+
+// The buyer's success/recovery link needs an absolute origin. Prefer the origin
+// Checkout was created from (stored as the success_url), falling back to the
+// production site so the link is always valid.
+function getOrigin(session: Stripe.Checkout.Session): string {
+  try {
+    if (session.success_url) return new URL(session.success_url).origin
+  } catch {
+    /* malformed success_url — fall through */
+  }
+  return 'https://jblessd.com'
 }
