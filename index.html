@@ -1595,7 +1595,7 @@
   async function loadCatalogFromApi(){
     try{
       var res = await fetch('/api/products');
-      if(!res.ok){ openDeepLinkedProduct(); return; }
+      if(!res.ok){ reconcileCartWithCatalog(); openDeepLinkedProduct(); return; }
       var data = await res.json();
       if(data && Array.isArray(data.products) && data.products.length){
         catalog.innerHTML = '';
@@ -1603,8 +1603,40 @@
         applyFilters();
       }
     }catch(e){ /* keep the static cards */ }
+    reconcileCartWithCatalog();
     openDeepLinkedProduct();
     loadCatalogRatings();
+  }
+
+  // Reconcile a restored cart against the catalog that's actually on the page.
+  // A returning shopper can have items saved in localStorage from an earlier
+  // version of the store — SKUs that were renamed or retired across releases.
+  // Left in the cart, a single stale SKU makes the entire checkout fail
+  // server-side ("Invalid item in cart", HTTP 400), so Stripe never opens and
+  // the whole cart looks broken. Dropping retired items — and refreshing the
+  // name/price of the ones that remain from the authoritative catalog — keeps
+  // the cart limited to items that still exist, so Checkout always succeeds.
+  function reconcileCartWithCatalog(){
+    if(!cart.length) return;
+    var known = {};
+    catalog.querySelectorAll('.card[data-id]').forEach(function(card){
+      known[card.dataset.id] = { name: card.dataset.name, price: card.dataset.price };
+    });
+    // If the catalog failed to render at all, don't wipe an otherwise-valid cart.
+    if(Object.keys(known).length === 0) return;
+    var before = cart.length;
+    cart = cart.filter(function(item){ return item && item.id && known[item.id]; })
+               .map(function(item){
+                 var fresh = known[item.id];
+                 item.name = fresh.name;
+                 item.price = fresh.price;
+                 return item;
+               });
+    renderCart();
+    saveCart();
+    if(cart.length !== before){
+      toast('Your cart was updated — some items are no longer available.');
+    }
   }
 
   // Fetch review aggregates once and paint compact star ratings onto each card,
