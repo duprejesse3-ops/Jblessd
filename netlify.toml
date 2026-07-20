@@ -7,6 +7,24 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Baseline security headers applied to every response. Scoped to /* so both the
+# static storefront and the edge-rendered pages inherit them. The Content-Security-Policy
+# is deliberately tuned to the storefront's real dependencies:
+#   - inline <script>/JSON-LD blocks and inline styles -> 'unsafe-inline'
+#   - Google Fonts CSS + font files -> fonts.googleapis.com / fonts.gstatic.com
+#   - Google Tag Manager / Analytics -> googletagmanager.com / google-analytics.com
+# frame-ancestors 'none' plus X-Frame-Options block clickjacking; HSTS forces HTTPS.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com; form-action 'self'; frame-src https://js.stripe.com https://checkout.stripe.com; upgrade-insecure-requests"
+
 # Service worker must always revalidate so app updates ship immediately.
 [[headers]]
   for = "/sw.js"
