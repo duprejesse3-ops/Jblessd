@@ -7,6 +7,21 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Baseline security headers applied to every response. These harden the site
+# against clickjacking, MIME sniffing, referrer leakage, and protocol
+# downgrade attacks without altering how the storefront renders. No
+# Content-Security-Policy is set here on purpose: the storefront relies on
+# inline scripts, and a mis-scoped policy would silently break the page.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+
 # Service worker must always revalidate so app updates ship immediately.
 [[headers]]
   for = "/sw.js"
