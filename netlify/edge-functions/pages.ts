@@ -225,6 +225,8 @@ function page(opts: {
   body: string
   status?: number
   robots?: string
+  ogType?: string
+  extraMeta?: string
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
@@ -235,7 +237,7 @@ function page(opts: {
     `<meta name="description" content="${esc(opts.description)}"/>` +
     `<link rel="canonical" href="${esc(opts.canonical)}"/>` +
     `<meta name="robots" content="${esc(opts.robots ?? 'index, follow, max-image-preview:large')}"/>` +
-    `<meta property="og:type" content="website"/>` +
+    `<meta property="og:type" content="${esc(opts.ogType ?? 'website')}"/>` +
     `<meta property="og:site_name" content="${STORE}"/>` +
     `<meta property="og:title" content="${esc(opts.title)}"/>` +
     `<meta property="og:description" content="${esc(opts.description)}"/>` +
@@ -243,6 +245,7 @@ function page(opts: {
     `<meta property="og:image" content="${SITE}/multiniche-ai-og.png"/>` +
     `<meta name="twitter:card" content="summary_large_image"/>` +
     `<meta name="twitter:image" content="${SITE}/multiniche-ai-og.png"/>` +
+    (opts.extraMeta ?? '') +
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
@@ -327,6 +330,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
   const productLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
+    '@id': `${url}#product`,
     name: p.name,
     sku: p.sku,
     category: cat,
@@ -334,6 +338,13 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     brand: { '@type': 'Brand', name: STORE },
     image: `${SITE}/multiniche-ai-og.png`,
     url,
+    mainEntityOfPage: url,
+    audience: { '@type': 'Audience', audienceType: nl },
+    additionalProperty: [
+      { '@type': 'PropertyValue', name: 'Built for', value: nl },
+      { '@type': 'PropertyValue', name: 'Format', value: p.format },
+      ...(p.spec && p.spec !== '—' ? [{ '@type': 'PropertyValue', name: 'Spec', value: p.spec }] : []),
+    ],
     offers: {
       '@type': 'Offer',
       price: Number(p.price).toFixed(2),
@@ -342,6 +353,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       url,
       priceValidUntil: '2027-12-31',
       validFrom: OFFER_VALID_FROM,
+      seller: { '@type': 'Organization', name: STORE, url: `${SITE}/` },
       shippingDetails: SHIPPING_DETAILS,
       hasMerchantReturnPolicy: RETURN_POLICY,
     },
@@ -424,6 +436,13 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     description: p.blurb,
     canonical: url,
     jsonld: [productLd, breadcrumb],
+    ogType: 'product',
+    extraMeta:
+      `<meta property="product:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
+      `<meta property="product:price:currency" content="USD"/>` +
+      `<meta property="product:availability" content="in stock"/>` +
+      `<meta property="og:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
+      `<meta property="og:price:currency" content="USD"/>`,
     body,
   })
 }

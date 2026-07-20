@@ -56,9 +56,12 @@
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": "https://jblessd.com/#website",
   "name": "MULTINICHE AI",
   "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
   "url": "https://jblessd.com/",
+  "inLanguage": "en-US",
+  "publisher": { "@id": "https://jblessd.com/#organization" },
   "potentialAction": {
     "@type": "SearchAction",
     "target": "https://jblessd.com/?q={search_term_string}",
@@ -66,40 +69,72 @@
   }
 }
 </script>
-<!-- Organization: the brand entity. alternateName lists the ways people type
-     "Multi-Niche AI" so brand searches (multiniche, multi niche ai) resolve here. -->
+<!-- Organization / OnlineStore: one brand entity, not two. Giving it a stable
+     @id and merging the former separate OnlineStore node lets Google and Bing
+     resolve every reference on the page — the WebSite publisher, each product's
+     seller, the page's "about" — to a single Knowledge-Graph node instead of
+     two competing ones. alternateName lists the ways people type "Multi-Niche
+     AI" so brand searches (multiniche, multi niche ai) resolve here. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": ["Organization", "OnlineStore"],
+  "@id": "https://jblessd.com/#organization",
   "name": "MULTINICHE AI",
   "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
   "url": "https://jblessd.com/",
-  "logo": "https://jblessd.com/icons/icon-512.png",
+  "logo": {
+    "@type": "ImageObject",
+    "@id": "https://jblessd.com/#logo",
+    "url": "https://jblessd.com/icons/icon-512.png",
+    "width": 512,
+    "height": 512,
+    "caption": "MULTINICHE AI"
+  },
   "image": "https://jblessd.com/multiniche-ai-og.png",
   "description": "MULTINICHE AI sells AI productivity tools — prompt packs, automation blueprints, doc templates, and agent configs — as ready-to-use digital downloads.",
   "disambiguatingDescription": "MULTINICHE AI (jblessd.com) is a digital storefront for AI prompt packs, automations, templates, and agent configs. It is a distinct brand and is not affiliated with, or the same as, \"Multiverse AI\" or any similarly named service.",
-  "slogan": "Load any tool you need."
+  "slogan": "Load any tool you need.",
+  "knowsAbout": ["AI prompt engineering", "Workflow automation", "Productivity templates", "AI agents", "Generative AI tools"],
+  "currenciesAccepted": "USD",
+  "priceRange": "$12–$49",
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "url": "https://jblessd.com/#contact",
+    "availableLanguage": ["English"]
+  }
 }
 </script>
+<!-- WebPage: the homepage node itself, wiring the site, the brand, and the
+     on-page FAQ into the same graph so crawlers read them as one document. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "OnlineStore",
-  "name": "MULTINICHE AI",
-  "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
+  "@type": ["WebPage", "CollectionPage"],
+  "@id": "https://jblessd.com/#webpage",
   "url": "https://jblessd.com/",
-  "logo": "https://jblessd.com/icons/icon-512.png",
-  "image": "https://jblessd.com/multiniche-ai-og.png",
+  "name": "MULTINICHE AI | AI Prompt Packs & Automations",
   "description": "Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role.",
-  "currenciesAccepted": "USD",
-  "priceRange": "$12–$49"
+  "isPartOf": { "@id": "https://jblessd.com/#website" },
+  "about": { "@id": "https://jblessd.com/#organization" },
+  "inLanguage": "en-US",
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://jblessd.com/multiniche-ai-og.png",
+    "width": 1200,
+    "height": 630
+  }
 }
 </script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
+  "@id": "https://jblessd.com/#faq",
+  "isPartOf": { "@id": "https://jblessd.com/#webpage" },
+  "about": { "@id": "https://jblessd.com/#organization" },
+  "inLanguage": "en-US",
   "mainEntity": [
     {
       "@type": "Question",
