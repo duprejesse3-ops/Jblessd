@@ -1237,6 +1237,44 @@
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(cart)); }catch(e){}
   }
 
+  // ---- Google Ads click-ID capture (conversion URL attribution) ----
+  // Google Ads auto-tagging appends a click identifier to the landing URL:
+  // gclid (search/display), or gbraid / wbraid (iOS app + web privacy paths).
+  // Persisting it on landing and attaching it to the paid order lets the
+  // purchase conversion be attributed to the exact ad click — the basis for
+  // enhanced / offline conversion import, which survives cookie loss and
+  // closed tabs. Kept for 90 days to match Google's default conversion window.
+  var CLICK_ID_KEY = 'osc:adclick';
+  var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var CLICK_ID_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  function captureAdClickId(){
+    try{
+      var params = new URLSearchParams(window.location.search);
+      for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+        var name = CLICK_ID_PARAMS[i];
+        var value = params.get(name);
+        if(value){
+          // Most recent click wins; overwrite any older stored id.
+          localStorage.setItem(CLICK_ID_KEY, JSON.stringify({ id: value.slice(0, 200), source: name, ts: Date.now() }));
+          return;
+        }
+      }
+    }catch(e){ /* storage or URL unavailable — attribution is best-effort */ }
+  }
+  function getAdClickId(){
+    try{
+      var raw = localStorage.getItem(CLICK_ID_KEY);
+      if(!raw){ return null; }
+      var rec = JSON.parse(raw);
+      if(!rec || !rec.id){ return null; }
+      if(typeof rec.ts === 'number' && (Date.now() - rec.ts) > CLICK_ID_MAX_AGE_MS){
+        localStorage.removeItem(CLICK_ID_KEY);
+        return null;
+      }
+      return { id: rec.id, source: rec.source || 'gclid' };
+    }catch(e){ return null; }
+  }
+
   var catalog = document.getElementById('catalog');
   var emptyState = document.getElementById('empty-state');
   var search = document.getElementById('search');
@@ -1431,12 +1469,15 @@
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'Redirecting…';
     try{
+      var adClick = getAdClickId();
       var res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart.map(function(i){ return { id: i.id, name: i.name, price: i.price }; }),
-          digitalPolicyAccepted: true
+          digitalPolicyAccepted: true,
+          clickId: adClick ? adClick.id : undefined,
+          clickSource: adClick ? adClick.source : undefined
         })
       });
       var data = await res.json().catch(function(){ return {}; });
@@ -2505,6 +2546,7 @@
   }
 
   // ---- init ----
+  captureAdClickId();
   loadCart();
   handleCheckoutReturn();
   loadCatalogFromApi();
