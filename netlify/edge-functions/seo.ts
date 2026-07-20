@@ -15,6 +15,10 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
 const SITE = 'https://jblessd.com'
+// Stable node id for the store, defined in index.html's static graph. Emitting
+// it as the offer's seller ties every product back to the one brand entity
+// instead of leaving the offers seller-less.
+const ORG_ID = `${SITE}/#organization`
 const START = '<!-- SEO_JSONLD_START'
 const END = '<!-- SEO_JSONLD_END -->'
 
@@ -42,6 +46,10 @@ interface ApiProduct {
   price: number
   blurb: string
   catLabel?: string
+  niche?: string
+  nicheLabel?: string
+  format?: string
+  spec?: string
 }
 
 // JSON embedded in HTML must not contain a literal "</script>" or a raw "<".
@@ -90,6 +98,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
     const url = `${SITE}/product/${encodeURIComponent(p.sku)}`
     const item: Record<string, unknown> = {
       '@type': 'Product',
+      '@id': `${url}#product`,
       name: p.name,
       sku: p.sku,
       category: p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category,
@@ -105,10 +114,22 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
         url,
         priceValidUntil: '2027-12-31',
         validFrom: OFFER_VALID_FROM,
+        seller: { '@id': ORG_ID },
         shippingDetails: SHIPPING_DETAILS,
         hasMerchantReturnPolicy: RETURN_POLICY,
       },
     }
+    // The audience and spec/format descriptors give crawlers structured facts
+    // about who a tool is for and what it ships as — the kind of detail that
+    // enriches a merchant listing beyond name and price.
+    const nicheLabel = p.nicheLabel ?? p.niche
+    if (nicheLabel) {
+      item.audience = { '@type': 'Audience', audienceType: nicheLabel }
+    }
+    const properties: Array<Record<string, string>> = []
+    if (p.format) properties.push({ '@type': 'PropertyValue', name: 'Format', value: p.format })
+    if (p.spec && p.spec !== '—') properties.push({ '@type': 'PropertyValue', name: 'Spec', value: p.spec })
+    if (properties.length) item.additionalProperty = properties
     const agg = aggregates[p.sku]
     if (agg && agg.count > 0) {
       item.aggregateRating = {
