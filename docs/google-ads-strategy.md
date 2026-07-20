@@ -132,12 +132,19 @@ values.
 
 ## 4. Next steps for maximum accuracy (optional, recommended once live)
 
+- **`gclid` capture (implemented):** the storefront now reads the Google Ads
+  click identifier (`gclid`, or `gbraid` / `wbraid` on privacy paths) from the
+  landing URL, persists it for 90 days, and attaches it to the paid Stripe
+  session as `ad_click_id` metadata. This ties each purchase to the exact ad
+  click. It stays empty for buyers who didn't arrive from an ad and is never
+  used for pricing. To activate reporting, set the tag IDs in Netlify (see the
+  environment-variables table above) — the code is a no-op until then.
 - **Enhanced conversions:** hash and send the buyer email from the success page
   (available in the Stripe session) to recover conversions lost to cookie
   restrictions. Improves Smart Bidding accuracy noticeably.
 - **Server-side conversions via the webhook:** `netlify/functions/webhook.mts`
   already receives `checkout.session.completed` reliably (survives closed tabs).
-  Sending the conversion from there using the Google Ads API / offline conversion
-  import removes dependence on the browser entirely — the most robust setup.
-- **`gclid` capture:** persist the `gclid` URL parameter on landing and attach it
-  to the order so offline/enhanced conversions attribute to the exact click.
+  The `ad_click_id` now stored on the session metadata is exactly what an
+  offline / enhanced conversion import needs — sending the conversion from the
+  webhook using the Google Ads API removes dependence on the browser entirely
+  (the most robust setup).

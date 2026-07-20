@@ -60,10 +60,18 @@ export default async (req: Request, _context: Context) => {
 
   let items: CartItem[] | undefined
   let digitalPolicyAccepted = false
+  let clickId = ''
+  let clickSource = ''
   try {
     const body = await req.json()
     items = body?.items
     digitalPolicyAccepted = body?.digitalPolicyAccepted === true
+    // Google Ads click identifier captured from the landing URL (gclid / gbraid
+    // / wbraid). Stored on the session so the paid order can be attributed back
+    // to the exact ad click for enhanced / offline conversion import. Purely
+    // informational — never trusted for pricing — so we just sanitise it.
+    if (typeof body?.clickId === 'string') clickId = body.clickId.slice(0, 200)
+    if (typeof body?.clickSource === 'string') clickSource = body.clickSource.slice(0, 20)
   } catch {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
@@ -134,6 +142,10 @@ export default async (req: Request, _context: Context) => {
         bundle_discount_percent: bundleEligible ? '15' : '0',
         digital_delivery_acknowledged: 'true',
         refund_policy_version: '2026-07-16',
+        // Ad-click attribution for Google Ads conversion import (empty when the
+        // buyer didn't arrive from an ad). Kept alongside the order so a later
+        // offline/enhanced conversion upload can tie this purchase to the click.
+        ...(clickId ? { ad_click_id: clickId, ad_click_source: clickSource || 'gclid' } : {}),
       },
       // Automatically collect and calculate tax if you've set up Stripe Tax.
       // automatic_tax: { enabled: true },
