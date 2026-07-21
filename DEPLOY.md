@@ -1,7 +1,7 @@
 # Deploying jblessd.com with working Stripe checkout (Netlify)
 
 This project has two parts:
-- **Static site**: `index.html`, `og-image.png`, `robots.txt`, `sitemap.xml`
+- **Static site**: `index.html`, `multiniche-ai-og.png`, `robots.txt`, `sitemap.xml`
 - **Serverless functions**: `netlify/functions/create-checkout-session.js` (required), `netlify/functions/webhook.js` (optional, for fulfillment)
 - **`netlify.toml`**: tells Netlify where the functions live and redirects `/api/*` to them, so the frontend code doesn't need to change
 
