@@ -232,6 +232,7 @@ function page(opts: {
     `<!DOCTYPE html><html lang="en"><head>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
+    `<meta http-equiv="content-language" content="en-US"/>` +
     `<meta name="theme-color" content="#080000"/>` +
     `<title>${esc(opts.title)}</title>` +
     `<meta name="description" content="${esc(opts.description)}"/>` +
@@ -296,6 +297,7 @@ function page(opts: {
     status: opts.status ?? 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'Content-Language': 'en-US',
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
     },
   })
