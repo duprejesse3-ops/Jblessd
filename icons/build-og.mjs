@@ -14,11 +14,11 @@ const W = 1200;
 const H = 630;
 
 // --- palette (mirrors the storefront CSS custom properties) ---
-const INK_A = '#041b0d';
-const INK_B = '#00060a';
-const GREEN = '#00FF41';
-const GREEN_MID = '#23C552';
-const GREEN_DIM = '#0d7a2e';
+const INK_A = '#1b0404';
+const INK_B = '#0a0400';
+const GREEN = '#ff2a2a';
+const GREEN_MID = '#e03a3a';
+const GREEN_DIM = '#7a1f1f';
 const MONO = 'DejaVu Sans Mono, monospace';
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -28,8 +28,8 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
       <stop offset="1" stop-color="${INK_B}"/>
     </linearGradient>
     <radialGradient id="glow" cx="30%" cy="42%" r="75%">
-      <stop offset="0" stop-color="#00ff41" stop-opacity=".10"/>
-      <stop offset="1" stop-color="#00ff41" stop-opacity="0"/>
+      <stop offset="0" stop-color="#ff2a2a" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#ff2a2a" stop-opacity="0"/>
     </radialGradient>
     <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="1.1"/>
@@ -54,14 +54,14 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   </g>
 
   <!-- brand lockup -->
-  <text x="150" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#e8ffe8">MULTINICHE AI</text>
+  <text x="150" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
   <text x="152" y="130" font-family="${MONO}" font-size="15" letter-spacing="7" fill="${GREEN_MID}" opacity=".8">LOAD THE TOOL YOU NEED</text>
 
   <!-- kicker -->
   <text x="60" y="234" font-family="${MONO}" font-size="24" font-weight="bold" letter-spacing="6" fill="${GREEN}">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>
 
   <!-- headline -->
-  <g font-family="${MONO}" font-size="52" font-weight="bold" fill="#dfffe0">
+  <g font-family="${MONO}" font-size="52" font-weight="bold" fill="#ffdfdf">
     <text x="58" y="318">Prompt packs, automations,</text>
     <text x="58" y="388">and agent configs — built once,</text>
     <text x="58" y="458" fill="${GREEN}">sold as instruments.</text>

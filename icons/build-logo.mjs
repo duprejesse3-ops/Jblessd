@@ -10,11 +10,11 @@ const DIR = dirname(fileURLToPath(import.meta.url));
 const S = 512; // canvas size
 
 // --- palette (mirrors the storefront CSS custom properties) ---
-const INK_A = '#041b0d';
-const INK_B = '#00060a'; // note: slight teal-black so the tile has depth
-const GREEN = '#00FF41';
-const GREEN_DIM = '#0d7a2e';
-const GREEN_MID = '#23C552';
+const INK_A = '#1b0404';
+const INK_B = '#0a0400'; // note: slight teal-black so the tile has depth
+const GREEN = '#ff2a2a';
+const GREEN_DIM = '#7a1f1f';
+const GREEN_MID = '#e03a3a';
 
 // Deterministic pseudo-random: mulberry32 seeded once.
 function rng(seed) {

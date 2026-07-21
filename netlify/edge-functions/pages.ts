@@ -232,7 +232,7 @@ function page(opts: {
     `<!DOCTYPE html><html lang="en"><head>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
-    `<meta name="theme-color" content="#000803"/>` +
+    `<meta name="theme-color" content="#080000"/>` +
     `<title>${esc(opts.title)}</title>` +
     `<meta name="description" content="${esc(opts.description)}"/>` +
     `<link rel="canonical" href="${esc(opts.canonical)}"/>` +
@@ -249,7 +249,7 @@ function page(opts: {
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
-    `:root{--ink:#000803;--panel:#07110A;--line:#124A20;--line-soft:#0A2A12;--paper:#C9FFD4;--muted:#4BD66A;--muted-2:#2C7A41;--brass:#00FF41;}` +
+    `:root{--ink:#080000;--panel:#110807;--line:#4A1212;--line-soft:#2A0A0A;--paper:#FFD4D4;--muted:#E86A6A;--muted-2:#9A3C3C;--brass:#FF2A2A;}` +
     `*{box-sizing:border-box}` +
     `body{margin:0;background:var(--ink);color:var(--paper);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}` +
     `a{color:var(--brass);text-decoration:none}a:hover{text-decoration:underline}` +
@@ -271,8 +271,8 @@ function page(opts: {
     `h2{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:22px;margin:40px 0 14px}` +
     `.stars{color:var(--brass);letter-spacing:2px;font-size:17px}` +
     `.rev{border-top:1px solid var(--line-soft);padding:14px 0}` +
-    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#040c07}` +
-    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#07110A}` +
+    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#0c0404}` +
+    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#110807}` +
     `.proof-out{font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.7;color:var(--paper);padding:16px 18px;white-space:normal;word-break:break-word}` +
     `.rev .who{font-size:13px;color:var(--muted);font-weight:600}` +
     `.rev .txt{font-size:14.5px;color:var(--paper);margin:6px 0 0}` +
@@ -832,7 +832,7 @@ function renderFreeTool(): Response {
     `<p class="lede">${esc(intro)}</p>` +
     `<form id="ft-form" style="margin:18px 0">` +
     `<textarea id="ft-input" rows="3" maxlength="600" placeholder="e.g. Turn my messy meeting notes into decisions, owners, and deadlines" ` +
-    `style="width:100%;background:#040c07;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea>` +
+    `style="width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea>` +
     `<button class="btn" id="ft-run" type="submit" style="margin-top:10px">▶ Run it on my task</button></form>` +
     `<div class="proof" id="ft-term" hidden><div class="proof-bar" id="ft-lab">demo · idle</div><div class="proof-out" id="ft-out"></div></div>` +
     `<div id="ft-cta" class="buy" hidden></div>` +
