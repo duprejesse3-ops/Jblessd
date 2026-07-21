@@ -9,15 +9,10 @@
 
 import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
-import { sendEmail } from '../lib/email.mjs'
 import { fulfilOrder } from '../lib/fulfillment.mjs'
+import { deliverOrderEmail } from '../lib/order-email.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-
-// Keep the emailed content reasonable in size — inline the actual deliverables
-// up to this budget, and always include the re-download link so nothing is ever
-// truly out of reach even on a very large order.
-const MAX_INLINE_CHARS = 40_000
 
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
@@ -51,49 +46,15 @@ export default async (req: Request, _context: Context) => {
 
     // Fulfilment: deliver the actual purchased content by email — not just a
     // receipt. Stripe calls this reliably even when the buyer closes the tab
-    // before the success page loads, so this is the delivery channel of record.
+    // before the success page loads. Delivery is deduplicated per session, so
+    // this and the success-page path (/api/order) together send exactly one
+    // confirmation whichever fires first.
     const email = session.customer_details?.email
     if (email) {
       try {
         const origin = getOrigin(session)
         const { items } = await fulfilOrder(stripe, session.id)
-        const recoveryUrl = `${origin}/?checkout=success&session_id=${encodeURIComponent(session.id)}`
-
-        const itemList = items.length
-          ? items.map((i) => `  • ${i.product.name}`).join('\n')
-          : '  • Your order'
-
-        // Inline the real deliverables up to a size budget; anything beyond it
-        // is still one click away via the recovery link below.
-        const blocks: string[] = []
-        let used = 0
-        let truncated = false
-        for (const item of items) {
-          const block = `\n\n──────────\n${item.markdown}`
-          if (used + block.length > MAX_INLINE_CHARS) {
-            truncated = true
-            break
-          }
-          blocks.push(block)
-          used += block.length
-        }
-
-        const body =
-          `Thanks for your order — here's what you picked up:\n\n${itemList}\n\n` +
-          `Each one now runs as an app: open your order page below, fill in a short form, and it ` +
-          `does the work on your own input — right in the browser, as many times as you like.\n${recoveryUrl}\n\n` +
-          `The full text of every item is also included below, ready to copy or save.` +
-          blocks.join('') +
-          (truncated
-            ? `\n\n──────────\n(Some items aren't shown here to keep this email short — open the link above to get all of them.)`
-            : '') +
-          `\n\nWhen you've put it to work we'd love a quick review — it helps other buyers and tells us what to build next: https://jblessd.com`
-
-        await sendEmail({
-          to: email,
-          subject: 'Your MULTINICHE AI order — ready to use inside',
-          text: body,
-        })
+        await deliverOrderEmail({ to: email, sessionId: session.id, items, origin })
       } catch (err) {
         console.error('webhook: could not send order email —', (err as Error).message)
       }

@@ -17,6 +17,7 @@
 import Stripe from 'stripe'
 import type { Context, Config } from '@netlify/functions'
 import { fulfilOrder } from '../lib/fulfillment.mjs'
+import { deliverOrderEmail } from '../lib/order-email.mjs'
 import { deliverableSlug } from '../lib/deliverables.mjs'
 import { buildProductApp } from '../lib/product-app.mjs'
 
@@ -39,9 +40,24 @@ export default async (req: Request, _context: Context) => {
   }
 
   try {
-    const { paid, items } = await fulfilOrder(stripe, sessionId)
+    const { paid, email, items } = await fulfilOrder(stripe, sessionId)
     if (!paid) {
       return Response.json({ paid: false }, { status: 200, headers: { 'Cache-Control': 'private, no-store' } })
+    }
+
+    // Also send the confirmation email from here, not only from the Stripe
+    // webhook. The webhook needs a signing secret and a registered endpoint to
+    // ever fire; this endpoint is hit reliably by the buyer's browser on the
+    // success page. Delivery is deduplicated per session, so the buyer receives
+    // exactly one confirmation even when both paths run. Awaited but fully
+    // guarded — an email problem must never block handing over the content.
+    if (email) {
+      try {
+        const origin = new URL(req.url).origin
+        await deliverOrderEmail({ to: email, sessionId, items, origin })
+      } catch (err) {
+        console.error('order: confirmation email failed —', (err as Error).message)
+      }
     }
 
     return Response.json(
