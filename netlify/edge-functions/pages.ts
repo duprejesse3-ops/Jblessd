@@ -60,6 +60,7 @@ const NICHE_LABEL: Record<string, string> = {
   students: 'Students & Researchers',
   architects: 'Architects',
   engineers: 'Engineers',
+  office: 'Office & Admin',
 }
 const NICHE_INTRO: Record<string, string> = {
   founders: 'Tools that give a small team back its time — planning, meetings, follow-ups, and the busywork around them.',
@@ -70,6 +71,7 @@ const NICHE_INTRO: Record<string, string> = {
   students: 'Research and study, organized — literature scans, source comparison, and a weekly operating rhythm.',
   architects: 'Own the shape of the system — decision records, design reviews, and trade-off analysis that outlast the whiteboard.',
   engineers: 'Ship and operate with confidence — infrastructure, incidents, pipelines, and the runbooks that hold it all together.',
+  office: 'Get through the workday faster — email, meetings, expenses, and the recurring admin that eats an afternoon.',
 }
 
 // Outcome-based landing pages (/use-cases/:slug). These sit orthogonal to the

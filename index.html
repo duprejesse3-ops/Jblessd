@@ -819,6 +819,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="chip" data-niche="developers" aria-pressed="false">Developers</button>
       <button class="chip" data-niche="writers" aria-pressed="false">Writers</button>
       <button class="chip" data-niche="students" aria-pressed="false">Students &amp; Researchers</button>
+      <button class="chip" data-niche="office" aria-pressed="false">Office &amp; Admin</button>
       <button class="chip" data-niche="architects" aria-pressed="false">Architects</button>
       <button class="chip" data-niche="engineers" aria-pressed="false">Engineers</button>
     </div>
@@ -1072,6 +1073,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/tools/developers">AI tools for developers</a>
       <a href="/tools/writers">AI tools for writers</a>
       <a href="/tools/students">AI tools for students</a>
+      <a href="/tools/office">AI tools for office &amp; admin</a>
       <a href="/tools/architects">AI tools for architects</a>
       <a href="/tools/engineers">AI tools for engineers</a>
     </nav>
@@ -1168,6 +1170,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <option value="developers">Developers</option>
       <option value="writers">Writers</option>
       <option value="students">Students &amp; Researchers</option>
+      <option value="office">Office &amp; Admin</option>
       <option value="architects">Architects</option>
       <option value="engineers">Engineers</option>
     </select>
@@ -1350,7 +1353,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var activeCat = 'all', activeNiche = 'all';
 
   var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs'};
-  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers'};
+  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin'};
 
   function toast(msg){
     var t = document.getElementById('toast');
