@@ -51,10 +51,17 @@ export default async (req: Request, _context: Context) => {
     // success page. Delivery is deduplicated per session, so the buyer receives
     // exactly one confirmation even when both paths run. Awaited but fully
     // guarded — an email problem must never block handing over the content.
+    //
+    // We also report back whether the email actually went out. Until the sending
+    // domain is verified with the provider, email is a no-op, so the success page
+    // must not claim "we emailed it to you" when nothing was sent — the buyer's
+    // reliable copy is the on-page delivery and the downloadable app instead.
+    let emailed = false
     if (email) {
       try {
         const origin = new URL(req.url).origin
-        await deliverOrderEmail({ to: email, sessionId, items, origin })
+        const result = await deliverOrderEmail({ to: email, sessionId, items, origin })
+        emailed = result.sent
       } catch (err) {
         console.error('order: confirmation email failed —', (err as Error).message)
       }
@@ -63,6 +70,9 @@ export default async (req: Request, _context: Context) => {
     return Response.json(
       {
         paid: true,
+        // Whether a confirmation email was actually delivered for this order, so
+        // the storefront can tell the buyer the truth rather than a fixed promise.
+        emailed,
         items: items.map(({ product, deliverable, markdown }) => ({
           sku: deliverable.sku,
           name: deliverable.name,
