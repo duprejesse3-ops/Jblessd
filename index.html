@@ -507,6 +507,31 @@
   .lead-pack-item h4{margin:0 0 6px; font-size:14px; color:var(--brass);}
   .lead-pack-item pre{white-space:pre-wrap; word-break:break-word; font:13px/1.6 var(--mono); background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; color:var(--paper); margin:0;}
 
+  /* Product-as-app — the interactive "use it now" form on the success page */
+  .pa{border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(135deg, rgba(0,255,65,.05), rgba(0,255,65,.01)); padding:16px 17px; margin:16px 0 4px;}
+  .pa-head{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
+  .pa-badge{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink); background:var(--brass); border-radius:999px; padding:3px 9px; font-weight:600;}
+  .pa-title{font-family:var(--serif); font-weight:500; font-size:15px; color:var(--paper);}
+  .pa-tagline{font-size:12.5px; color:var(--muted); margin:2px 0 14px; line-height:1.55;}
+  .pa-field{margin-bottom:12px;}
+  .pa-field label{display:block; font-size:11px; letter-spacing:.04em; color:var(--paper); margin-bottom:5px;}
+  .pa-field .pa-help{display:block; font-size:11px; color:var(--muted-2); margin-top:4px;}
+  .pa-input{width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); resize:vertical;}
+  .pa-input:focus{outline:none; border-color:var(--teal);}
+  textarea.pa-input{min-height:60px; line-height:1.5;}
+  .pa-run{width:100%; justify-content:center; padding:11px; margin-top:2px;}
+  .pa-run[disabled]{opacity:.6; cursor:progress;}
+  .pa-out-wrap{margin-top:14px;}
+  .pa-out-bar{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:8px;}
+  .pa-out-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
+  .pa-output{white-space:pre-wrap; word-wrap:break-word; font:13px/1.65 var(--mono); background:#00110A; border:1px solid var(--line); border-radius:var(--radius); padding:14px 15px; color:var(--teal); margin:0; max-height:340px; overflow-y:auto; text-shadow:0 0 6px rgba(0,255,65,.14);}
+  .pa-out-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .pa-out-actions button{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:7px 13px; cursor:pointer;}
+  .pa-out-actions button:hover{border-color:var(--brass); background:rgba(0,255,65,.06);}
+  .pa-cursor{display:inline-block; width:7px; height:14px; background:var(--teal); margin-left:2px; vertical-align:middle; animation:proof-pulse 1s steps(2) infinite;}
+  /* Teaser shown in the product modal so shoppers know it becomes an app once owned */
+  .pm-app-note{margin-top:12px; font-size:12px; color:var(--muted); border-left:2px solid var(--brass); padding:2px 0 2px 11px; line-height:1.55;}
+
   /* Contact */
   .contact{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
   .contact h2{margin:0 0 6px;}
@@ -1064,6 +1089,7 @@
         <button class="proof-share-btn" id="pm-proof-share-btn" type="button">Share this proof</button>
         <div class="proof-share-link" id="pm-proof-share-link" hidden></div>
       </div>
+      <p class="pm-app-note">This is a free preview. Own it and you can run it as a full app — fill in a short form and it does the work on your own input, right on your download page, as many times as you like.</p>
     </div>
 
     <div class="pm-reviews" id="pm-reviews">
@@ -1163,7 +1189,7 @@
 <div class="overlay" id="order-overlay" role="dialog" aria-modal="true" aria-labelledby="order-title">
   <div class="modal modal-wide">
     <button class="modal-close" id="order-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-    <h2 id="order-title" style="margin:6px 0 4px; font-family:var(--serif); font-weight:500;">Your download is ready</h2>
+    <h2 id="order-title" style="margin:6px 0 4px; font-family:var(--serif); font-weight:500;">Your tools are ready to use</h2>
     <p class="concierge-sub" id="order-sub">Thanks for your purchase — here's everything you bought, ready to use right now.</p>
     <div id="order-body"></div>
   </div>
@@ -1555,6 +1581,7 @@
   var orderOverlay = document.getElementById('order-overlay');
   var orderBody = document.getElementById('order-body');
   var orderSub = document.getElementById('order-sub');
+  var orderSessionId = null;
   function closeOrder(){ if(orderOverlay) orderOverlay.classList.remove('open'); }
   (function(){
     var oc = document.getElementById('order-close');
@@ -1573,6 +1600,9 @@
       intro.className = 'lead-pack-intro';
       intro.textContent = item.intro;
       block.appendChild(intro);
+    }
+    if(item.app && item.app.fields && item.app.fields.length){
+      block.appendChild(buildAppPanel(item));
     }
     (item.sections || []).forEach(function(s, i){
       var wrap = document.createElement('div');
@@ -1598,7 +1628,177 @@
     return block;
   }
 
+  // Build the interactive "use it as an app" panel: a short form the buyer fills
+  // in, a run button, and a live-streamed result from /api/run-product. This is
+  // the payoff — the product runs on their own input right here.
+  function buildAppPanel(item){
+    var app = item.app;
+    var panel = document.createElement('div');
+    panel.className = 'pa';
+    var head = document.createElement('div');
+    head.className = 'pa-head';
+    head.innerHTML = '<span class="pa-badge">Run it now</span><span class="pa-title">' + esc(app.title) + '</span>';
+    panel.appendChild(head);
+    if(app.tagline){
+      var tag = document.createElement('p');
+      tag.className = 'pa-tagline';
+      tag.textContent = app.tagline;
+      panel.appendChild(tag);
+    }
+
+    var form = document.createElement('form');
+    var controls = {};
+    app.fields.forEach(function(f){
+      var fw = document.createElement('div');
+      fw.className = 'pa-field';
+      var id = 'pa-' + esc(item.sku) + '-' + esc(f.id);
+      var lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      fw.appendChild(lab);
+      var input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      input.className = 'pa-input';
+      input.id = id;
+      if(f.type === 'textarea'){ input.rows = 3; } else { input.type = 'text'; }
+      if(f.placeholder){ input.placeholder = f.placeholder; }
+      if(f.required){ input.required = true; }
+      input.maxLength = 4000;
+      fw.appendChild(input);
+      if(f.help){
+        var help = document.createElement('span');
+        help.className = 'pa-help';
+        help.textContent = f.help;
+        fw.appendChild(help);
+      }
+      controls[f.id] = input;
+      form.appendChild(fw);
+    });
+
+    var btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'btn btn-gold pa-run';
+    btn.textContent = app.cta || 'Run';
+    form.appendChild(btn);
+    panel.appendChild(form);
+
+    var outWrap = document.createElement('div');
+    outWrap.className = 'pa-out-wrap';
+    outWrap.hidden = true;
+    panel.appendChild(outWrap);
+
+    var busy = false;
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(busy) return;
+      if(!orderSessionId){ toast('Reload this page from your order link to run it.'); return; }
+      var inputs = {};
+      var anyValue = false;
+      Object.keys(controls).forEach(function(k){
+        var v = controls[k].value.trim();
+        inputs[k] = v;
+        if(v) anyValue = true;
+      });
+      if(!anyValue){ toast('Fill in at least one field so it has something to work with.'); return; }
+      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; });
+    });
+
+    return panel;
+  }
+
+  function runProductApp(item, inputs, outWrap, btn, setBusy){
+    setBusy(true);
+    btn.disabled = true;
+    outWrap.hidden = false;
+    outWrap.innerHTML =
+      '<div class="pa-out-bar"><span class="pa-out-dot"></span><span class="pa-out-status">starting…</span></div>' +
+      '<pre class="pa-output"><span class="pa-cursor"></span></pre>';
+    var statusEl = outWrap.querySelector('.pa-out-status');
+    var outEl = outWrap.querySelector('.pa-output');
+
+    var answer = '';
+    var gotText = false;
+    function paint(){
+      outEl.innerHTML = esc(answer) + '<span class="pa-cursor"></span>';
+      outEl.scrollTop = outEl.scrollHeight;
+    }
+
+    fetch('/api/run-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs })
+    }).then(function(res){
+      if(!res.ok || !res.body){ throw new Error('unavailable'); }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump(){
+        return reader.read().then(function(chunk){
+          if(chunk.done){ return; }
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for(var i=0; i<lines.length; i++){
+            var line = lines[i].trim();
+            if(!line) continue;
+            var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+            if(ev.type === 'meta'){
+              statusEl.textContent = (ev.verb || 'running') + '…';
+            }else if(ev.type === 'text'){
+              gotText = true;
+              answer += ev.text;
+              paint();
+            }else if(ev.type === 'error'){
+              answer = ev.text || 'The live engine is warming up. Try again shortly.';
+              outEl.textContent = answer;
+            }
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).then(function(){
+      if(gotText){
+        outEl.textContent = answer; // drop the cursor
+        statusEl.textContent = 'done';
+        var actions = document.createElement('div');
+        actions.className = 'pa-out-actions';
+        var copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy result';
+        copyBtn.addEventListener('click', function(){
+          if(navigator.clipboard){ navigator.clipboard.writeText(answer).then(function(){ toast('Result copied'); }, function(){}); }
+        });
+        var dlBtn = document.createElement('button');
+        dlBtn.type = 'button';
+        dlBtn.textContent = 'Download result';
+        dlBtn.addEventListener('click', function(){
+          var blob = new Blob([answer], { type: 'text/plain' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = (item.sku || 'result') + '-result.txt';
+          document.body.appendChild(a); a.click(); a.remove();
+        });
+        actions.appendChild(copyBtn);
+        actions.appendChild(dlBtn);
+        outWrap.appendChild(actions);
+      }else if(!answer){
+        outEl.textContent = 'The live engine is warming up (it activates after the first production deploy). Your full item is in the Markdown download below.';
+        statusEl.textContent = 'offline';
+      }else{
+        statusEl.textContent = 'offline';
+      }
+    }).catch(function(){
+      outEl.textContent = 'Could not run it just now. Your full item is in the Markdown download below — try running it again in a moment.';
+      statusEl.textContent = 'offline';
+    }).finally(function(){
+      setBusy(false);
+      btn.disabled = false;
+      btn.textContent = 'Run again';
+    });
+  }
+
   function deliverOrder(sessionId){
+    orderSessionId = sessionId || null;
     if(!sessionId){
       toast('Payment successful — check your email for your download.');
       return;
@@ -1615,8 +1815,8 @@
         }
         orderBody.innerHTML = '';
         orderSub.textContent = data.items.length > 1
-          ? "Thanks for your purchase — here are all " + data.items.length + " items, ready to use. We've also emailed them to you."
-          : "Thanks for your purchase — it's ready to use below. We've also emailed it to you.";
+          ? "Thanks for your purchase — run each of your " + data.items.length + " tools right here on your own work, or download them below. We've also emailed everything to you."
+          : "Thanks for your purchase — run it right here on your own work, or download it below. We've also emailed it to you.";
         data.items.forEach(function(item){ orderBody.appendChild(renderOrderItem(item)); });
         if(orderOverlay) orderOverlay.classList.add('open');
       })

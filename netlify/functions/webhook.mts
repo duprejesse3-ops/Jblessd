@@ -80,7 +80,9 @@ export default async (req: Request, _context: Context) => {
 
         const body =
           `Thanks for your order — here's what you picked up:\n\n${itemList}\n\n` +
-          `Everything is below, ready to use. You can also open or re-download any item any time here:\n${recoveryUrl}\n` +
+          `Each one now runs as an app: open your order page below, fill in a short form, and it ` +
+          `does the work on your own input — right in the browser, as many times as you like.\n${recoveryUrl}\n\n` +
+          `The full text of every item is also included below, ready to copy or save.` +
           blocks.join('') +
           (truncated
             ? `\n\n──────────\n(Some items aren't shown here to keep this email short — open the link above to get all of them.)`
@@ -89,7 +91,7 @@ export default async (req: Request, _context: Context) => {
 
         await sendEmail({
           to: email,
-          subject: 'Your MULTINICHE AI order — download inside',
+          subject: 'Your MULTINICHE AI order — ready to use inside',
           text: body,
         })
       } catch (err) {

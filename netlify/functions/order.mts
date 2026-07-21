@@ -18,6 +18,7 @@ import Stripe from 'stripe'
 import type { Context, Config } from '@netlify/functions'
 import { fulfilOrder } from '../lib/fulfillment.mjs'
 import { deliverableSlug } from '../lib/deliverables.mjs'
+import { buildProductApp } from '../lib/product-app.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
 
@@ -46,7 +47,7 @@ export default async (req: Request, _context: Context) => {
     return Response.json(
       {
         paid: true,
-        items: items.map(({ deliverable, markdown }) => ({
+        items: items.map(({ product, deliverable, markdown }) => ({
           sku: deliverable.sku,
           name: deliverable.name,
           format: deliverable.format,
@@ -55,6 +56,10 @@ export default async (req: Request, _context: Context) => {
           sections: deliverable.sections,
           markdown,
           filename: `${deliverableSlug(deliverable)}.md`,
+          // The interactive "use it as an app" form. Rendered on the success
+          // page so the buyer can run the product on their own input instead of
+          // just reading the document. Runs are served by /api/run-product.
+          app: buildProductApp(product),
         })),
       },
       // Private: the response is tied to one buyer's session id.
