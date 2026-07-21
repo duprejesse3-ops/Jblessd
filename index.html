@@ -144,7 +144,7 @@
     {
       "@type": "Question",
       "name": "How are the products delivered?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. The moment your payment clears you get your files instantly on the confirmation page, and a copy is emailed to you as well, so you can put the tool to work right away." }
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. The moment your payment clears you get your tools instantly on the confirmation page — use each one right there, and download a copy to save and reopen anytime, so your access never depends on email. We email you a copy as well." }
     },
     {
       "@type": "Question",
@@ -990,7 +990,7 @@
     <section class="faq" id="faq" aria-label="Frequently asked questions">
       <h2 id="faq-heading">Questions, answered</h2>
       <details><summary>What does MULTINICHE AI sell?</summary><p>Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role.</p></details>
-      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. The moment your payment clears you get your files instantly on the confirmation page, and a copy is emailed to you as well, so you can put the tool to work right away.</p></details>
+      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. The moment your payment clears you get your tools instantly on the confirmation page — use each one right there, and download a copy to save and reopen anytime, so your access never depends on email. We email you a copy as well.</p></details>
       <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
       <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
       <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
@@ -1184,8 +1184,9 @@
 </div>
 
 <!-- Order delivery: shown on return from a successful checkout so the buyer
-     gets their purchase instantly, and can re-download any time via the link
-     in their order email. -->
+     gets their purchase instantly, can download each tool as a self-contained
+     app to reopen later, and can re-run any time via their order link — with the
+     confirmation email as an extra copy, not the only way back in. -->
 <div class="overlay" id="order-overlay" role="dialog" aria-modal="true" aria-labelledby="order-title">
   <div class="modal modal-wide">
     <button class="modal-close" id="order-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -1625,7 +1626,69 @@
       dl.textContent = 'Download ' + item.name + ' (.md)';
       block.appendChild(dl);
     }
+    // Download the product as a self-contained app: a single HTML file the buyer
+    // saves to their device. It holds the full content (usable offline) plus a
+    // permanent one-click link back to their live order page, so they can reopen
+    // and re-run the tool any time — even if the confirmation email never arrives.
+    var appDl = document.createElement('a');
+    var appBlob = new Blob([buildAppDownloadHtml(item)], { type: 'text/html' });
+    appDl.href = URL.createObjectURL(appBlob);
+    appDl.download = (item.sku || 'product') + '-app.html';
+    appDl.className = 'btn btn-solid';
+    appDl.style.marginTop = '10px';
+    appDl.textContent = 'Download the app (keep it forever)';
+    block.appendChild(appDl);
     return block;
+  }
+
+  // Build a self-contained HTML file for one purchased tool — the buyer's own
+  // savable copy of the "product app". It bakes in the full deliverable content
+  // and a permanent link back to their live order page (the session recovery
+  // URL), so their access never depends on the confirmation email arriving.
+  function buildAppDownloadHtml(item){
+    var recoveryUrl = orderSessionId
+      ? (location.origin + '/?checkout=success&session_id=' + encodeURIComponent(orderSessionId))
+      : location.origin;
+    var app = item.app || {};
+    var fieldList = (app.fields || []).map(function(f){
+      return '<li>' + esc(f.label) + '</li>';
+    }).join('');
+    var sections = (item.sections || []).map(function(s, i){
+      return '<h3>' + (i + 1) + '. ' + esc(s.title) + '</h3>' +
+             '<pre>' + esc(s.body) + '</pre>';
+    }).join('');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"/>' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+      '<title>' + esc(item.name) + ' — MULTINICHE AI</title>' +
+      '<style>' +
+      'body{margin:0;background:#f4f6f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0b1f12;line-height:1.6}' +
+      '.wrap{max-width:760px;margin:0 auto;padding:0 0 48px}' +
+      'header{background:#000803;padding:18px 28px}' +
+      'header b{color:#00FF41;font-weight:700;letter-spacing:.04em}' +
+      'main{background:#fff;border:1px solid #e2e8e4;border-top:none;padding:28px}' +
+      'h1{font-size:1.5rem;margin:0 0 4px}' +
+      'h2{font-size:1.05rem;margin:28px 0 8px}' +
+      'h3{font-size:1rem;margin:22px 0 6px}' +
+      'pre{white-space:pre-wrap;word-wrap:break-word;background:#f7faf8;border:1px solid #eef2ef;border-radius:8px;padding:14px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}' +
+      '.cta{display:inline-block;margin:8px 0 4px;background:#00b341;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px}' +
+      '.note{background:#f0f9f2;border:1px solid #cdeed6;border-radius:8px;padding:14px 16px;font-size:14px;margin:18px 0}' +
+      '.muted{color:#6b7d70;font-size:12px;margin-top:28px;border-top:1px solid #eef2ef;padding-top:14px}' +
+      'ul{margin:6px 0;padding-left:20px}' +
+      '</style></head><body><div class="wrap">' +
+      '<header><b>MULTINICHE AI</b></header>' +
+      '<main>' +
+      '<h1>' + esc(item.name) + '</h1>' +
+      (item.intro ? '<p>' + esc(item.intro) + '</p>' : '') +
+      '<div class="note"><b>This is your app — keep this file.</b><br/>Open it any time to read and use your tool. ' +
+      'To run it live on your own input (as many times as you like), use the button below — it reopens your order page. ' +
+      'No email needed.</div>' +
+      '<a class="cta" href="' + esc(recoveryUrl) + '">Run it live on your own input →</a>' +
+      (app.tagline ? '<h2>' + esc(app.title || 'Run it') + '</h2><p>' + esc(app.tagline) + '</p>' : '') +
+      (fieldList ? '<p>It asks you for:</p><ul>' + fieldList + '</ul>' : '') +
+      (sections ? '<h2>Everything you bought</h2>' + sections : '') +
+      '<p class="muted">MULTINICHE AI · <a href="' + esc(location.origin) + '">' + esc(location.host) + '</a><br/>' +
+      'Keep this file safe — it is your permanent copy and your link back to the live app.</p>' +
+      '</main></div></body></html>';
   }
 
   // Build the interactive "use it as an app" panel: a short form the buyer fills
@@ -1800,7 +1863,7 @@
   function deliverOrder(sessionId){
     orderSessionId = sessionId || null;
     if(!sessionId){
-      toast('Payment successful — check your email for your download.');
+      toast('Payment successful — reopen this page from your order link to get your download.');
       return;
     }
     toast('Payment successful — preparing your download…');
@@ -1808,20 +1871,23 @@
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(data){
         if(!data || !data.paid || !data.items || !data.items.length){
-          // Payment went through but delivery isn't ready yet — the email is the
-          // reliable backstop, so point the buyer there rather than failing.
-          toast('Payment successful — your download is on its way by email.');
+          // Payment went through but delivery isn't ready yet. Email may not be
+          // active, so tell the buyer to reload rather than promise an email.
+          toast('Payment successful — reload this page in a moment to get your download.');
           return;
         }
         orderBody.innerHTML = '';
-        orderSub.textContent = data.items.length > 1
-          ? "Thanks for your purchase — run each of your " + data.items.length + " tools right here on your own work, or download them below. We've also emailed everything to you."
-          : "Thanks for your purchase — run it right here on your own work, or download it below. We've also emailed it to you.";
+        var emailedLine = data.emailed
+          ? " We've also emailed everything to you."
+          : ' Use “Download the app” on each item to keep a copy you can reopen anytime.';
+        orderSub.textContent = (data.items.length > 1
+          ? "Thanks for your purchase — run each of your " + data.items.length + " tools right here on your own work, or download them below."
+          : "Thanks for your purchase — run it right here on your own work, or download it below.") + emailedLine;
         data.items.forEach(function(item){ orderBody.appendChild(renderOrderItem(item)); });
         if(orderOverlay) orderOverlay.classList.add('open');
       })
       .catch(function(){
-        toast('Payment successful — your download is on its way by email.');
+        toast('Payment successful — reload this page in a moment to get your download.');
       });
   }
 
