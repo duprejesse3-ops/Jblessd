@@ -9,7 +9,7 @@ export interface Product {
   sku: string
   name: string
   category: 'prompts' | 'automations' | 'templates' | 'agents'
-  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers'
+  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office'
   format: string
   price: number
   blurb: string
@@ -32,6 +32,7 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
   students: 'Students & Researchers',
   architects: 'Architects',
   engineers: 'Engineers',
+  office: 'Office & Admin',
 }
 
 export const FALLBACK_CATALOG: Product[] = [
@@ -77,4 +78,16 @@ export const FALLBACK_CATALOG: Product[] = [
   { sku: 'AI-AB-040', name: 'Data Pipeline Monitor', category: 'automations', niche: 'engineers', format: 'Airflow + Slack blueprint', price: 36, blurb: 'Catches silent pipeline failures and schema drift, then explains what broke in plain language.', spec: 'dbt + Airflow + Great Expectations' },
   { sku: 'AI-TP-041', name: 'Runbook Template Library', category: 'templates', niche: 'engineers', format: 'Notion + Markdown templates', price: 18, blurb: 'Operational runbooks your whole team can follow at 3am — deploys, rollbacks, and recovery.', spec: 'Deploy / rollback / restore plays' },
   { sku: 'AI-PP-042', name: 'Debugging Copilot Prompts', category: 'prompts', niche: 'engineers', format: '60 prompts · PDF + Notion', price: 20, blurb: 'Structured prompts that turn a stack trace and a hunch into a reproducible root cause.', spec: 'Repro → isolate → fix workflow' },
+  { sku: 'AI-PP-043', name: 'Exam Study Prompt Pack', category: 'prompts', niche: 'students', format: '55 prompts · PDF + Notion', price: 14, blurb: 'Active-recall and spaced-repetition prompts that turn a dense syllabus into a study plan you can actually finish.', spec: 'Works with Claude, ChatGPT, Gemini' },
+  { sku: 'AI-TP-044', name: 'Course Notes System', category: 'templates', niche: 'students', format: 'Notion template', price: 12, blurb: 'A Cornell-style notes workspace with summaries, cue columns, and one-click review pages for every class.', spec: 'Duplicate-and-go, one page per course' },
+  { sku: 'AI-AG-045', name: 'Essay Feedback Agent', category: 'agents', niche: 'students', format: 'Agent config + rubric library', price: 24, blurb: 'Reads your draft like a TA would and returns line-level feedback on argument, structure, and clarity — never writes it for you.', spec: 'Rubric-scored, plagiarism-safe by design' },
+  { sku: 'AI-PP-046', name: 'Lecture-to-Flashcards Prompts', category: 'prompts', niche: 'students', format: '30 prompts · Anki-ready', price: 13, blurb: 'Paste a lecture transcript or your notes and get clean question-and-answer cards ready to import.', spec: 'Anki + Quizlet CSV export' },
+  { sku: 'AI-TP-047', name: 'Semester Planner Template', category: 'templates', niche: 'students', format: 'Notion + Sheets template', price: 15, blurb: 'Track every course, deadline, and grade in one place, with a running GPA that updates as you go.', spec: 'Assignment tracker + GPA calculator' },
+  { sku: 'AI-AB-048', name: 'Citation Formatter Automation', category: 'automations', niche: 'students', format: 'Make.com blueprint', price: 19, blurb: 'Drop in a link or DOI and get a clean, correctly formatted reference added to your bibliography automatically.', spec: 'APA, MLA & Chicago · Zotero sync' },
+  { sku: 'AI-AG-049', name: 'Study Buddy Tutor Agent', category: 'agents', niche: 'students', format: 'Agent config + subject presets', price: 22, blurb: 'A Socratic tutor that asks the next question instead of handing you the answer, so the concept actually sticks.', spec: 'Presets for STEM, humanities & languages' },
+  { sku: 'AI-PP-050', name: 'Professional Email Prompt Pack', category: 'prompts', niche: 'office', format: '60 prompts · PDF + Notion', price: 16, blurb: 'Say the hard thing well — declines, follow-ups, and status updates that stay warm and get read.', spec: 'Tone controls for every workplace situation' },
+  { sku: 'AI-TP-051', name: 'Meeting Agenda & Minutes Template', category: 'templates', niche: 'office', format: 'Notion + Docs template', price: 12, blurb: 'Walk in with a tight agenda and walk out with decisions, owners, and dates already written down.', spec: 'Agenda + action-item tracker in one' },
+  { sku: 'AI-AB-052', name: 'Expense Report Automation', category: 'automations', niche: 'office', format: 'Zapier blueprint', price: 23, blurb: 'Turns a folder of receipts into a categorized, submission-ready expense report without the manual typing.', spec: 'Gmail + Drive + Sheets · OCR line items' },
+  { sku: 'AI-AG-053', name: 'Calendar Scheduling Agent', category: 'agents', niche: 'office', format: 'Agent config + calendar hooks', price: 26, blurb: 'Handles the back-and-forth of finding a time, then books the meeting and sends the invite for you.', spec: 'Google + Outlook calendar aware' },
+  { sku: 'AI-TP-054', name: 'Standard Operating Procedure Kit', category: 'templates', niche: 'office', format: 'Notion + Markdown template', price: 17, blurb: 'Capture how work actually gets done so a task survives vacations, handoffs, and new hires.', spec: 'Step-by-step SOP + onboarding checklist' },
 ]
