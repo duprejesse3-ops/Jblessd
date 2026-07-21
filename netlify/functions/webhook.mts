@@ -23,7 +23,9 @@ export default async (req: Request, _context: Context) => {
   }
 
   const signature = req.headers.get('stripe-signature')
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  // Accept the common misspelling STRIPE_WEBHOOKS_SECRET as well, so a near-miss
+  // in the env config doesn't silently break signature verification.
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOKS_SECRET
 
   // Stripe needs the raw, unparsed request body to verify the signature.
   // req.text() gives us exactly that.

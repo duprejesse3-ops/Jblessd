@@ -9,8 +9,12 @@
 //
 // Provider: Resend (https://resend.com) via its plain HTTPS API — no SDK, no
 // key management beyond two env vars:
-//   RESEND_API_KEY  — the provider key (required to actually send)
-//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@jblessd.com>"
+//   RESEND_API_KEY  — the provider key (required to actually send). The alias
+//                     RESEND_API is also accepted, since that name is easy to
+//                     reach for when configuring the provider.
+//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@jblessd.com>".
+//                     A bare "hello@jblessd.com" (or a value with stray angle
+//                     brackets) is normalised into a valid From automatically.
 //
 // If RESEND_API_KEY is not set the sender is a no-op that logs and returns
 // { ok:false, skipped:true }. That is deliberate: the site must keep working on
@@ -47,12 +51,55 @@ function getEnv(name: string): string {
   return process.env[name] ?? ''
 }
 
-/** Whether a real provider key AND a From address are configured. Both are
- * required: sending from Resend's shared sandbox address only reaches the
+/** Read the first non-empty value among several candidate names. Lets us accept
+ * a couple of common aliases for the same setting so a near-miss in the Netlify
+ * env config (e.g. RESEND_API instead of RESEND_API_KEY) doesn't silently turn
+ * email delivery off. */
+function getEnvAny(...names: string[]): string {
+  for (const n of names) {
+    const v = getEnv(n)
+    if (v) return v
+  }
+  return ''
+}
+
+// The provider key may be configured under either name.
+const RESEND_KEY_NAMES = ['RESEND_API_KEY', 'RESEND_API']
+
+/** Resolve the raw RESEND_API_KEY value from any accepted name. */
+export function getResendKey(): string {
+  return getEnvAny(...RESEND_KEY_NAMES)
+}
+
+/**
+ * Normalise the configured From into a value Resend accepts: either a bare
+ * `email@domain` or `Display Name <email@domain>`. Env values are hand-entered
+ * and easy to get subtly wrong (a stray leading `<`, a missing closing `>`, a
+ * bare address with no brand name), and Resend rejects anything malformed — so
+ * a small mistake here silently drops every customer email. Returns '' when no
+ * email address can be found, which callers treat as "not configured".
+ */
+export function normalizeFrom(raw: string): string {
+  const s = (raw ?? '').trim()
+  if (!s) return ''
+  const emailMatch = s.match(/[^\s<>]+@[^\s<>]+\.[^\s<>]+/)
+  if (!emailMatch) return ''
+  const email = emailMatch[0]
+  // Anything that isn't the address or angle brackets is the display name.
+  const name = s
+    .replace(email, '')
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return name ? `${name} <${email}>` : `MULTINICHE AI <${email}>`
+}
+
+/** Whether a real provider key AND a usable From address are configured. Both
+ * are required: sending from Resend's shared sandbox address only reaches the
  * account owner, so without an explicit verified EMAIL_FROM every customer
  * send would be rejected. Treat that as "not configured" and no-op instead. */
 export function isEmailConfigured(): boolean {
-  return getEnv('RESEND_API_KEY').length > 0 && getEnv('EMAIL_FROM').length > 0
+  return getResendKey().length > 0 && normalizeFrom(getEnv('EMAIL_FROM')).length > 0
 }
 
 // Minimal, safe HTML escaping for turning plain-text bodies into an HTML part.
@@ -84,13 +131,13 @@ function wrapHtml(bodyText: string): string {
  * carry on. When no provider key is configured it logs and returns skipped:true.
  */
 export async function sendEmail(msg: EmailMessage): Promise<EmailResult> {
-  const apiKey = getEnv('RESEND_API_KEY')
-  const from = getEnv('EMAIL_FROM')
+  const apiKey = getResendKey()
+  const from = normalizeFrom(getEnv('EMAIL_FROM'))
   const to = Array.isArray(msg.to) ? msg.to : [msg.to]
 
   if (!apiKey || !from) {
     console.warn(
-      `email: RESEND_API_KEY and EMAIL_FROM must both be set — skipping send of "${msg.subject}" to ${to.length} recipient(s).`,
+      `email: RESEND_API_KEY and a valid EMAIL_FROM must both be set — skipping send of "${msg.subject}" to ${to.length} recipient(s).`,
     )
     return { ok: false, skipped: true }
   }
