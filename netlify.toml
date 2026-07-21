@@ -29,6 +29,11 @@
   for = "/*"
   [headers.values]
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    # Declare the site language at the HTTP layer. Bing's SEO analyzer flags a
+    # "Meta Language tag" warning when a page has only <html lang> and no explicit
+    # content-language signal; the header (paired with the meta tag in the HTML)
+    # satisfies that check for every response, including the edge-rendered pages.
+    Content-Language = "en-US"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
