@@ -7,6 +7,14 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Private owner-only AI workstation. Served at the clean /admin URL; the page
+# itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
+# session is established, so a public rewrite is safe.
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
 # Baseline security headers applied to every response. Scoped to /* so both the
 # static storefront and the edge-rendered pages inherit them. The Content-Security-Policy
 # is deliberately tuned to the storefront's real dependencies:
@@ -33,6 +41,19 @@
   for = "/sw.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# Private admin workstation — keep it out of every search index and cache.
+[[headers]]
+  for = "/admin"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/admin.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
 
 [[headers]]
   for = "/manifest.webmanifest"
