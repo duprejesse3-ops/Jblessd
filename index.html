@@ -531,6 +531,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .lead-pack-item h4{margin:0 0 6px; font-size:14px; color:var(--brass);}
   .lead-pack-item pre{white-space:pre-wrap; word-break:break-word; font:13px/1.6 var(--mono); background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; color:var(--paper); margin:0;}
 
+  /* Order information / receipt on the success page — also the elements Google
+     Ads' order-information setup selects (transaction id, value, currency, email). */
+  #order-info{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:14px 16px; margin:14px 0 4px;}
+  .oi-title{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-2); margin:0 0 10px;}
+  .oi-row{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:6px 0; border-top:1px solid var(--line-soft); font-size:13px;}
+  .oi-row:first-of-type{border-top:none;}
+  .oi-label{color:var(--muted); letter-spacing:.03em;}
+  .oi-value{color:var(--paper); font-family:var(--mono); text-align:right; word-break:break-all;}
+
   /* Product-as-app — the interactive "use it now" form on the success page */
   .pa{border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(135deg, rgba(255,42,42,.05), rgba(255,42,42,.01)); padding:16px 17px; margin:16px 0 4px;}
   .pa-head{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
@@ -1220,6 +1229,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="modal-close" id="order-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <h2 id="order-title" style="margin:6px 0 4px; font-family:var(--serif); font-weight:500;">Your tools are ready to use</h2>
     <p class="concierge-sub" id="order-sub">Thanks for your purchase — here's everything you bought, ready to use right now.</p>
+    <!-- Order information: the buyer's receipt and, at the same time, the stable
+         set of elements Google Ads' "select website element" order-information
+         setup binds to (transaction id, value, currency, email). Populated on a
+         paid return; empty and hidden until then. -->
+    <div id="order-info" hidden></div>
     <div id="order-body"></div>
   </div>
 </div>
@@ -1888,6 +1902,34 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
   }
 
+  // Render the order-information block: the buyer's receipt, and the stable,
+  // labelled elements Google Ads' "select website element" order-information
+  // setup binds to. Each value carries a fixed id and a data-order-field hook so
+  // the element picker can target it reliably across renders. Value and currency
+  // are kept in separate elements (a bare number and a bare ISO code) so each can
+  // be selected on its own without stripping formatting.
+  var orderInfo = document.getElementById('order-info');
+  function orderInfoRow(label, id, field, value){
+    return '<div class="oi-row"><span class="oi-label">' + esc(label) + '</span>' +
+      '<span class="oi-value" id="' + id + '" data-order-field="' + field + '">' + esc(value) + '</span></div>';
+  }
+  function renderOrderInfo(data){
+    if(!orderInfo){ return; }
+    if(!data || !data.transactionId){ orderInfo.hidden = true; return; }
+    var rows = orderInfoRow('Transaction ID', 'order-info-transaction-id', 'transaction_id', data.transactionId);
+    if(typeof data.value === 'number'){
+      rows += orderInfoRow('Order value', 'order-info-value', 'value', data.value.toFixed(2));
+    }
+    if(data.currency){
+      rows += orderInfoRow('Currency', 'order-info-currency', 'currency', data.currency);
+    }
+    if(data.email){
+      rows += orderInfoRow('Email', 'order-info-email', 'email', data.email);
+    }
+    orderInfo.innerHTML = '<p class="oi-title">Order information</p>' + rows;
+    orderInfo.hidden = false;
+  }
+
   function deliverOrder(sessionId){
     orderSessionId = sessionId || null;
     if(!sessionId){
@@ -1905,6 +1947,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           return;
         }
         orderBody.innerHTML = '';
+        renderOrderInfo(data);
         var emailedLine = data.emailed
           ? " We've also emailed everything to you."
           : ' Use “Download the app” on each item to keep a copy you can reopen anytime.';

@@ -21,6 +21,12 @@ export interface FulfilledItem {
 export interface Fulfilment {
   paid: boolean
   email: string | null
+  // Order financials, surfaced so the success page can both report a value-based
+  // conversion and render the values as selectable elements for Google Ads'
+  // "select website element" order-information setup.
+  transactionId: string
+  value: number
+  currency: string
   items: FulfilledItem[]
 }
 
@@ -35,7 +41,14 @@ export async function fulfilOrder(stripe: Stripe, sessionId: string): Promise<Fu
   })
 
   if (session.payment_status !== 'paid') {
-    return { paid: false, email: session.customer_details?.email ?? null, items: [] }
+    return {
+      paid: false,
+      email: session.customer_details?.email ?? null,
+      transactionId: session.id,
+      value: (session.amount_total ?? 0) / 100,
+      currency: (session.currency ?? 'usd').toUpperCase(),
+      items: [],
+    }
   }
 
   // Ensure we have line items even if the expand above didn't include them.
@@ -70,5 +83,14 @@ export async function fulfilOrder(stripe: Stripe, sessionId: string): Promise<Fu
     items.push({ product, deliverable, markdown: deliverableToMarkdown(deliverable) })
   }
 
-  return { paid: true, email: session.customer_details?.email ?? null, items }
+  return {
+    paid: true,
+    email: session.customer_details?.email ?? null,
+    // session.id is the stable transaction id; Google Ads and GA4 use it to
+    // de-duplicate if the buyer reloads the success page.
+    transactionId: session.id,
+    value: (session.amount_total ?? 0) / 100,
+    currency: (session.currency ?? 'usd').toUpperCase(),
+    items,
+  }
 }
