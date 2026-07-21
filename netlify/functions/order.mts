@@ -40,7 +40,7 @@ export default async (req: Request, _context: Context) => {
   }
 
   try {
-    const { paid, email, items } = await fulfilOrder(stripe, sessionId)
+    const { paid, email, transactionId, value, currency, items } = await fulfilOrder(stripe, sessionId)
     if (!paid) {
       return Response.json({ paid: false }, { status: 200, headers: { 'Cache-Control': 'private, no-store' } })
     }
@@ -73,6 +73,15 @@ export default async (req: Request, _context: Context) => {
         // Whether a confirmation email was actually delivered for this order, so
         // the storefront can tell the buyer the truth rather than a fixed promise.
         emailed,
+        // Order information rendered on the success page as selectable elements
+        // for Google Ads' "select website element" order-information setup, and
+        // shown to the buyer as their receipt. Only ever returned for a paid
+        // session and never cached (private, no-store) — it carries the buyer's
+        // own email, which is theirs to see on their own confirmation page.
+        transactionId,
+        value,
+        currency,
+        email,
         items: items.map(({ product, deliverable, markdown }) => ({
           sku: deliverable.sku,
           name: deliverable.name,
