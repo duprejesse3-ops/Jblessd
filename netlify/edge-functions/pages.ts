@@ -230,6 +230,11 @@ function page(opts: {
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
+    // Google tag (gtag.js) — same Google Ads tag the static storefront (index.html)
+    // loads, so these edge-rendered pages report as "tagged" in Google Tag Assistant
+    // and share the site-wide measurement/conversion tracking instead of being blind spots.
+    `<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>` +
+    `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108');</script>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
     `<meta http-equiv="content-language" content="en-US"/>` +
