@@ -805,9 +805,15 @@ function renderFreeTool(): Response {
     `for(var k=0;k<ls.length;k++){var ln=ls[k].trim();if(!ln)continue;var ev;try{ev=JSON.parse(ln);}catch(_){continue;}` +
     `if(ev.type==='text'){got=true;ans+=ev.text;setOut(ans);}}}` +
     `if(!got)throw new Error('empty');lastOut=ans;out.innerHTML=esc(ans);lab.textContent='demo · complete';` +
+    // Build the CTA hrefs from variables rather than inline string literals. The
+    // discovery crawler extracts links with a regex over raw HTML; a literal
+    // href="/product/'+sku pattern makes it capture a bare "/product/" (up to the
+    // quote) and report a phantom 404. Interpolating a variable keeps a quote
+    // immediately after href=" so nothing bogus is captured.
+    `var storeHref='/?product='+encodeURIComponent(sku),detailHref='/product/'+encodeURIComponent(sku);` +
     `cta.innerHTML='<p>That was <b>'+esc(name)+'</b> ($'+parseFloat(price).toFixed(2)+') running on your task.</p>'+` +
-    `'<a class=\"btn\" href=\"/?product='+encodeURIComponent(sku)+'\">Get '+esc(name)+' →</a> '+` +
-    `'<a class=\"btn ghost\" href=\"/product/'+encodeURIComponent(sku)+'\">See details</a> '+` +
+    `'<a class=\"btn\" href=\"'+storeHref+'\">Get '+esc(name)+' →</a> '+` +
+    `'<a class=\"btn ghost\" href=\"'+detailHref+'\">See details</a> '+` +
     `'<button class=\"btn ghost\" id=\"ft-share\" type=\"button\">Share this result</button><span id=\"ft-link\"></span>';cta.hidden=false;` +
     `var sb=document.getElementById('ft-share');if(sb){sb.addEventListener('click',shareProof);}` +
     `}catch(err){out.innerHTML='<span class=\"ft-hint\">The live engine is warming up (it activates after the first production deploy), or no close match was found. Try describing your task in a bit more detail.</span>';lab.textContent='demo · offline';}` +

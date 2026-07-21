@@ -75,9 +75,27 @@ async function recentProofIds(req: Request): Promise<string[]> {
   }
 }
 
+// Individual update pages (/updates/:id) are rendered by the pages edge function
+// from the marketing agent's published campaigns and are linked from the
+// /updates index, so crawlers reach them — but they'd be missing from the
+// sitemap unless we advertise each one here, the same way we do for proofs.
+async function recentUpdateIds(req: Request): Promise<number[]> {
+  try {
+    const res = await fetch(new URL('/api/marketing-agent', req.url), {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(1500),
+    })
+    if (!res.ok) return []
+    const data = (await res.json()) as { campaigns?: Array<{ id: number }> }
+    return (data.campaigns ?? []).map((c) => c.id).filter((id) => Number.isFinite(id))
+  } catch {
+    return []
+  }
+}
+
 export default async (req: Request) => {
   const { products } = await loadCatalog()
-  const proofIds = await recentProofIds(req)
+  const [proofIds, updateIds] = await Promise.all([recentProofIds(req), recentUpdateIds(req)])
 
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>${imageBlock()}\n  </url>`,
@@ -85,6 +103,7 @@ export default async (req: Request) => {
     `  <url>\n    <loc>${SITE}/proof</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/free-tool</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     ...NICHES.map((niche) => {
       const loc = `${SITE}/tools/${encodeURIComponent(niche)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`
@@ -99,6 +118,10 @@ export default async (req: Request) => {
     }),
     ...proofIds.map((id) => {
       const loc = `${SITE}/proof/${encodeURIComponent(id)}`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`
+    }),
+    ...updateIds.map((id) => {
+      const loc = `${SITE}/updates/${encodeURIComponent(String(id))}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`
     }),
   ]
