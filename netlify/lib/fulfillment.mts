@@ -11,11 +11,25 @@ import type Stripe from 'stripe'
 import { loadCatalog } from './db.mjs'
 import type { Product } from './catalog.mjs'
 import { buildDeliverable, deliverableToMarkdown, type Deliverable } from './deliverables.mjs'
+import { upgradeDeliverable } from './ai-deliverable.mjs'
 
 export interface FulfilledItem {
   product: Product
   deliverable: Deliverable
   markdown: string
+  // True when the deliverable was authored by Claude for this specific product
+  // rather than filled from the metadata template — set only when enrichment ran.
+  aiCrafted?: boolean
+}
+
+export interface FulfilOptions {
+  /**
+   * Upgrade each item's deliverable to its AI-authored version (cached per SKU
+   * in Netlify Blobs) when the AI Gateway is available. Off by default so the
+   * cheap ownership checks — e.g. /api/run-product — never pay for it; the
+   * download page and order email opt in.
+   */
+  enrich?: boolean
 }
 
 export interface Fulfilment {
@@ -35,7 +49,11 @@ export interface Fulfilment {
  * (with no items) for any session that isn't genuinely paid, so callers never
  * hand over content for an unpaid or tampered session id.
  */
-export async function fulfilOrder(stripe: Stripe, sessionId: string): Promise<Fulfilment> {
+export async function fulfilOrder(
+  stripe: Stripe,
+  sessionId: string,
+  opts: FulfilOptions = {},
+): Promise<Fulfilment> {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ['line_items.data.price.product'],
   })
@@ -81,6 +99,24 @@ export async function fulfilOrder(stripe: Stripe, sessionId: string): Promise<Fu
     if (!product) continue
     const deliverable = buildDeliverable(product)
     items.push({ product, deliverable, markdown: deliverableToMarkdown(deliverable) })
+  }
+
+  // Optionally upgrade every item to its AI-authored deliverable. Done here so
+  // the download page and the confirmation email fulfil from the same enriched
+  // content and can't drift. Run concurrently; each upgrade falls back to its
+  // own template on failure, so this can only improve the result, never break it.
+  if (opts.enrich && items.length) {
+    await Promise.all(
+      items.map(async (item) => {
+        const upgraded = await upgradeDeliverable(item.product, {
+          deliverable: item.deliverable,
+          markdown: item.markdown,
+        })
+        item.deliverable = upgraded.deliverable
+        item.markdown = upgraded.markdown
+        item.aiCrafted = upgraded.aiCrafted
+      }),
+    )
   }
 
   return {

@@ -40,7 +40,9 @@ export default async (req: Request, _context: Context) => {
   }
 
   try {
-    const { paid, email, transactionId, value, currency, items } = await fulfilOrder(stripe, sessionId)
+    const { paid, email, transactionId, value, currency, items } = await fulfilOrder(stripe, sessionId, {
+      enrich: true,
+    })
     if (!paid) {
       return Response.json({ paid: false }, { status: 200, headers: { 'Cache-Control': 'private, no-store' } })
     }
@@ -82,7 +84,7 @@ export default async (req: Request, _context: Context) => {
         value,
         currency,
         email,
-        items: items.map(({ product, deliverable, markdown }) => ({
+        items: items.map(({ product, deliverable, markdown, aiCrafted }) => ({
           sku: deliverable.sku,
           name: deliverable.name,
           format: deliverable.format,
@@ -90,6 +92,9 @@ export default async (req: Request, _context: Context) => {
           intro: deliverable.intro,
           sections: deliverable.sections,
           markdown,
+          // True when Claude authored this deliverable for the product, so the
+          // page can tell the buyer their download is bespoke, not boilerplate.
+          aiCrafted: aiCrafted === true,
           filename: `${deliverableSlug(deliverable)}.md`,
           // The interactive "use it as an app" form. Rendered on the success
           // page so the buyer can run the product on their own input instead of
