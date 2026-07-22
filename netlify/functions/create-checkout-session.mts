@@ -62,6 +62,11 @@ export default async (req: Request, _context: Context) => {
   let digitalPolicyAccepted = false
   let clickId = ''
   let clickSource = ''
+  // Campaign attribution captured from the landing URL's utm_* params. Carried
+  // onto the session so the server-side webhook can record which campaign /
+  // source / keyword produced each paid order in the store's own ad_events
+  // dataset — the data the bid strategy is tuned on. Informational only.
+  const attribution: Record<string, string> = {}
   try {
     const body = await req.json()
     items = body?.items
@@ -72,6 +77,11 @@ export default async (req: Request, _context: Context) => {
     // informational — never trusted for pricing — so we just sanitise it.
     if (typeof body?.clickId === 'string') clickId = body.clickId.slice(0, 200)
     if (typeof body?.clickSource === 'string') clickSource = body.clickSource.slice(0, 20)
+    // utm_* attribution — each capped to Stripe's 500-char metadata value limit.
+    for (const key of ['utmSource', 'utmMedium', 'utmCampaign', 'utmTerm', 'utmContent']) {
+      const value = body?.attribution?.[key]
+      if (typeof value === 'string' && value.trim()) attribution[key] = value.trim().slice(0, 200)
+    }
   } catch {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
@@ -146,6 +156,13 @@ export default async (req: Request, _context: Context) => {
         // buyer didn't arrive from an ad). Kept alongside the order so a later
         // offline/enhanced conversion upload can tie this purchase to the click.
         ...(clickId ? { ad_click_id: clickId, ad_click_source: clickSource || 'gclid' } : {}),
+        // Campaign attribution (utm_*) so the webhook can record this order
+        // against the campaign / source / keyword that produced it.
+        ...(attribution.utmSource ? { utm_source: attribution.utmSource } : {}),
+        ...(attribution.utmMedium ? { utm_medium: attribution.utmMedium } : {}),
+        ...(attribution.utmCampaign ? { utm_campaign: attribution.utmCampaign } : {}),
+        ...(attribution.utmTerm ? { utm_term: attribution.utmTerm } : {}),
+        ...(attribution.utmContent ? { utm_content: attribution.utmContent } : {}),
       },
       // Automatically collect and calculate tax if you've set up Stripe Tax.
       // automatic_tax: { enabled: true },

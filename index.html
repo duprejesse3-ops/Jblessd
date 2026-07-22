@@ -1317,7 +1317,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // enhanced / offline conversion import, which survives cookie loss and
   // closed tabs. Kept for 90 days to match Google's default conversion window.
   var CLICK_ID_KEY = 'osc:adclick';
+  var ATTRIB_KEY = 'osc:attrib';
   var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
   var CLICK_ID_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
   function captureAdClickId(){
     try{
@@ -1328,9 +1330,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if(value){
           // Most recent click wins; overwrite any older stored id.
           localStorage.setItem(CLICK_ID_KEY, JSON.stringify({ id: value.slice(0, 200), source: name, ts: Date.now() }));
-          return;
+          break;
         }
       }
+      // Persist utm_* campaign params (present on manually-tagged links; Google
+      // auto-tagging uses gclid instead). Attaching these to the paid order lets
+      // a purchase be attributed to the campaign / keyword that produced it.
+      var utm = {}, hasUtm = false;
+      for(var j = 0; j < UTM_PARAMS.length; j++){
+        var uv = params.get(UTM_PARAMS[j]);
+        if(uv){ utm[UTM_PARAMS[j]] = uv.slice(0, 200); hasUtm = true; }
+      }
+      if(hasUtm){ utm.ts = Date.now(); localStorage.setItem(ATTRIB_KEY, JSON.stringify(utm)); }
     }catch(e){ /* storage or URL unavailable — attribution is best-effort */ }
   }
   function getAdClickId(){
@@ -1345,6 +1356,75 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       }
       return { id: rec.id, source: rec.source || 'gclid' };
     }catch(e){ return null; }
+  }
+  // The stored utm_* attribution, mapped to the camelCase keys the checkout and
+  // landing-beacon endpoints expect. Null once the 90-day window has lapsed.
+  function getAttribution(){
+    try{
+      var raw = localStorage.getItem(ATTRIB_KEY);
+      if(!raw){ return null; }
+      var rec = JSON.parse(raw);
+      if(!rec){ return null; }
+      if(typeof rec.ts === 'number' && (Date.now() - rec.ts) > CLICK_ID_MAX_AGE_MS){
+        localStorage.removeItem(ATTRIB_KEY);
+        return null;
+      }
+      var out = {};
+      if(rec.utm_source) out.utmSource = rec.utm_source;
+      if(rec.utm_medium) out.utmMedium = rec.utm_medium;
+      if(rec.utm_campaign) out.utmCampaign = rec.utm_campaign;
+      if(rec.utm_term) out.utmTerm = rec.utm_term;
+      if(rec.utm_content) out.utmContent = rec.utm_content;
+      return out;
+    }catch(e){ return null; }
+  }
+  // A coarse device class for the landing record. No fingerprinting — just a
+  // viewport bucket so the report can show mobile-vs-desktop ad traffic.
+  function deviceHint(){
+    try{
+      var w = window.innerWidth || (screen && screen.width) || 0;
+      if(w > 0 && w < 768) return 'mobile';
+      if(w >= 768 && w < 1024) return 'tablet';
+      return 'desktop';
+    }catch(e){ return null; }
+  }
+  // Fire a first-party landing beacon when this visit arrived from an ad (a
+  // click id) or a tagged link (utm_*). Recorded server-side in ad_events so the
+  // owner's ad-performance report can divide real order revenue by the traffic
+  // each campaign and landing page brought in — data that survives ad blockers
+  // and lives in the store's own database, not just inside Google Ads.
+  function trackLanding(){
+    try{
+      var params = new URLSearchParams(window.location.search);
+      var clickId = null, clickSource = null;
+      for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+        var v = params.get(CLICK_ID_PARAMS[i]);
+        if(v){ clickId = v.slice(0, 200); clickSource = CLICK_ID_PARAMS[i]; break; }
+      }
+      var hasUtm = UTM_PARAMS.some(function(p){ return params.get(p); });
+      if(!clickId && !hasUtm){ return; } // not an ad / tagged arrival — nothing to learn
+      var referrerHost = null;
+      try{ if(document.referrer){ referrerHost = new URL(document.referrer).hostname; } }catch(e){}
+      var payload = {
+        clickId: clickId || undefined,
+        clickSource: clickSource || undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmTerm: params.get('utm_term') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        landingPath: (window.location.pathname || '/').slice(0, 512),
+        referrerHost: referrerHost || undefined,
+        device: deviceHint() || undefined
+      };
+      var body = JSON.stringify(payload);
+      // sendBeacon survives the page unloading; fall back to a keepalive fetch.
+      if(navigator.sendBeacon){
+        navigator.sendBeacon('/api/track-landing', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/track-landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function(){});
+      }
+    }catch(e){ /* analytics is best-effort; never block the page */ }
   }
 
   var catalog = document.getElementById('catalog');
@@ -1542,6 +1622,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     checkoutBtn.textContent = 'Redirecting…';
     try{
       var adClick = getAdClickId();
+      var attribution = getAttribution();
       var res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1549,7 +1630,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           items: cart.map(function(i){ return { id: i.id, name: i.name, price: i.price }; }),
           digitalPolicyAccepted: true,
           clickId: adClick ? adClick.id : undefined,
-          clickSource: adClick ? adClick.source : undefined
+          clickSource: adClick ? adClick.source : undefined,
+          attribution: attribution || undefined
         })
       });
       var data = await res.json().catch(function(){ return {}; });
@@ -2887,6 +2969,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   // ---- init ----
   captureAdClickId();
+  trackLanding();
   loadCart();
   handleCheckoutReturn();
   loadCatalogFromApi();
