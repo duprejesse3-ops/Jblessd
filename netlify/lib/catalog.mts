@@ -9,7 +9,7 @@ export interface Product {
   sku: string
   name: string
   category: 'prompts' | 'automations' | 'templates' | 'agents'
-  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office'
+  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance'
   format: string
   price: number
   blurb: string
@@ -33,6 +33,7 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
   architects: 'Architects',
   engineers: 'Engineers',
   office: 'Office & Admin',
+  finance: 'Finance & Investing',
 }
 
 export const FALLBACK_CATALOG: Product[] = [
@@ -90,4 +91,15 @@ export const FALLBACK_CATALOG: Product[] = [
   { sku: 'AI-AB-052', name: 'Expense Report Automation', category: 'automations', niche: 'office', format: 'Zapier blueprint', price: 23, blurb: 'Turns a folder of receipts into a categorized, submission-ready expense report without the manual typing.', spec: 'Gmail + Drive + Sheets · OCR line items' },
   { sku: 'AI-AG-053', name: 'Calendar Scheduling Agent', category: 'agents', niche: 'office', format: 'Agent config + calendar hooks', price: 26, blurb: 'Handles the back-and-forth of finding a time, then books the meeting and sends the invite for you.', spec: 'Google + Outlook calendar aware' },
   { sku: 'AI-TP-054', name: 'Standard Operating Procedure Kit', category: 'templates', niche: 'office', format: 'Notion + Markdown template', price: 17, blurb: 'Capture how work actually gets done so a task survives vacations, handoffs, and new hires.', spec: 'Step-by-step SOP + onboarding checklist' },
+  // Finance & investing — a cutting-edge line, each runnable in-app after purchase
+  { sku: 'AI-AG-055', name: 'Portfolio Rebalancing Analyst', category: 'agents', niche: 'finance', format: 'Agent config + drift rules', price: 44, blurb: 'Reads your holdings and target allocation, then tells you exactly what to buy and sell to get back on track.', spec: 'Drift bands + tax-lot aware' },
+  { sku: 'AI-AG-056', name: 'Earnings Call Copilot', category: 'agents', niche: 'finance', format: 'Agent config + transcript loader', price: 46, blurb: 'Turns a raw earnings transcript into the thesis, the risks, and the three numbers that actually moved the stock.', spec: 'Guidance + sentiment + KPI extraction' },
+  { sku: 'AI-AG-057', name: 'Personal CFO Agent', category: 'agents', niche: 'finance', format: 'Agent config + monthly review', price: 39, blurb: 'A standing agent that reviews your spending, spots the leaks, and gives you three moves to hit your savings goal.', spec: 'Cashflow + goal tracking' },
+  { sku: 'AI-AG-058', name: 'DCF Valuation Agent', category: 'agents', niche: 'finance', format: 'Agent config + model presets', price: 49, blurb: 'Feed it the fundamentals and it builds a discounted-cash-flow valuation with a bull, base, and bear case.', spec: 'Sensitivity table + WACC presets' },
+  { sku: 'AI-AB-059', name: 'Receipt-to-Ledger Automation', category: 'automations', niche: 'finance', format: 'Zapier blueprint', price: 29, blurb: 'Turns a photo or PDF of a receipt into a categorized, tax-ready ledger entry — no manual typing.', spec: 'OCR + tax-category mapping' },
+  { sku: 'AI-AB-060', name: 'Cashflow Forecast Automation', category: 'automations', niche: 'finance', format: 'Make.com blueprint', price: 33, blurb: 'Pulls your invoices and bills and projects a 13-week cashflow so you see the crunch before it hits.', spec: '13-week rolling forecast' },
+  { sku: 'AI-PP-061', name: 'Financial Modeling Prompt Pack', category: 'prompts', niche: 'finance', format: '50 prompts · PDF + Sheets', price: 26, blurb: 'Build three-statement models, unit economics, and scenario analyses without staring at a blank spreadsheet.', spec: 'Excel + Google Sheets formulas' },
+  { sku: 'AI-PP-062', name: 'Equity Research Prompt Pack', category: 'prompts', niche: 'finance', format: '45 prompts · PDF', price: 24, blurb: 'Structured prompts that turn a 10-K into an investment thesis with catalysts, risks, and a price target.', spec: '10-K / 10-Q teardown workflow' },
+  { sku: 'AI-TP-063', name: 'Investor-Ready Financials Template', category: 'templates', niche: 'finance', format: 'Sheets + Notion template', price: 22, blurb: 'The revenue, burn, and runway model investors expect — filled in from your numbers, not a blank tab.', spec: 'P&L + burn + runway + cap table' },
+  { sku: 'AI-TP-064', name: 'Personal Budget & Net-Worth Template', category: 'templates', niche: 'finance', format: 'Sheets template', price: 15, blurb: 'Track every account, bill, and goal in one place, with a net-worth line that updates as you go.', spec: '50/30/20 + net-worth tracker' },
 ]

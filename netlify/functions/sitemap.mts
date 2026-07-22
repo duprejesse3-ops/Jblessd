@@ -25,7 +25,7 @@ const IMAGE_CAPTION =
 
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
-const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers', 'office']
+const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers', 'office', 'finance']
 
 // Outcome-based landing pages (/use-cases/:slug), kept in sync with the slugs
 // the pages edge function knows how to render.
