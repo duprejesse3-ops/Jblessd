@@ -130,6 +130,52 @@ values.
 
 ---
 
+## 3a. First-party ad-performance dataset (implemented on the site)
+
+Google Ads reporting lives inside Google's account, browser conversions are lost
+to ad blockers and closed tabs, and neither gives you a copy of the data you can
+slice yourself. The site now keeps its **own** first-party record of what drives
+revenue, in the Netlify Database `ad_events` table:
+
+- **Landings** — when a visit arrives carrying a Google Ads click id
+  (`gclid` / `gbraid` / `wbraid`) or `utm_*` campaign params, the page posts a
+  small, PII-free beacon to `POST /api/track-landing` that records the click id,
+  campaign/source/keyword, landing path, referrer host, and a coarse device
+  class. This is the **traffic** side — the denominator for conversion rate.
+- **Purchases** — the Stripe webhook (`checkout.session.completed`) writes one
+  `purchase` row per paid order **server-side**, carrying the real order value
+  plus the ad click id and campaign captured at checkout. Because it fires from
+  the webhook it survives closed tabs and blocked pixels, and a unique index on
+  the session id makes Stripe's retries idempotent (no double-counting).
+
+No email, name, IP, or address is stored — only the attribution signals needed
+to answer "which campaign / keyword / landing page actually converts."
+
+### Reading the data
+
+- `GET /api/ad-performance?days=30` (owner-only, behind the `/admin` session)
+  returns the aggregated report: totals (landings, purchases, revenue,
+  conversion rate, average order value) and breakdowns **by campaign**, **by
+  source**, **by landing page**, and **by day**.
+- The `/admin` AI workstation has a matching read-only `ad_performance` tool, so
+  you can just ask it *"how are my ads doing?"* or *"which campaign converts
+  best?"* and get the numbers back from the live table.
+
+### How this feeds the strategy
+
+This is the data the bid strategy in §2 is tuned on. Use it to spot which
+campaigns produce real revenue (not just clicks), which landing pages convert,
+and where to push or pull spend — then act on it in the Google Ads UI. Under
+Google's auto-tagging the campaign/keyword breakdown for `gclid`-only traffic
+lives in Google Ads itself; the stored click id is the join key for an offline /
+enhanced conversion upload (see §4).
+
+> Scope: the landing beacon fires on the storefront homepage (the primary ad
+> landing page). The purchase/revenue side is captured server-side for **every**
+> order regardless of which page the buyer landed on.
+
+---
+
 ## 4. Next steps for maximum accuracy (optional, recommended once live)
 
 - **`gclid` capture (implemented):** the storefront now reads the Google Ads

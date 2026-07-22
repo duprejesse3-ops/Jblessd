@@ -20,6 +20,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
 import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
+import { getAdPerformance } from '../lib/ad-performance.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
 const STORE_NAME = 'MULTINICHE AI'
@@ -142,6 +143,7 @@ const TOOL_RUNNERS: Record<string, ToolRunner> = {
   subscribers_summary: () => subscribersSummary(),
   contact_messages: (i) => contactMessages(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
   recent_proofs: (i) => recentProofs(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
+  ad_performance: (i) => getAdPerformance(Number(i?.days) || 30),
   security_status: () => latestRun('security_runs'),
   site_health: () => latestRun('site_health_runs'),
   crawl_status: () => latestRun('crawl_runs'),
@@ -155,6 +157,7 @@ const TOOLS: Anthropic.Tool[] = [
   { name: 'subscribers_summary', description: 'Email subscriber totals, breakdown by source, and recent sign-ups.', input_schema: { type: 'object', properties: {} } },
   { name: 'contact_messages', description: 'Recent contact-form messages (excerpts).', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
   { name: 'recent_proofs', description: 'Recent shared "Live Proof" runs shoppers saved.', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
+  { name: 'ad_performance', description: 'First-party Google Ads performance from the store\'s own data: ad traffic (landings), conversions, revenue, conversion rate and average order value, broken down by campaign, source, and landing page. Use for "how are my ads doing", "which campaign converts best", "where should I spend more".', input_schema: { type: 'object', properties: { days: { type: 'integer', description: 'Look-back window in days, 1-365 (default 30).' } } } },
   { name: 'security_status', description: 'The latest automated security-header scan result.', input_schema: { type: 'object', properties: {} } },
   { name: 'site_health', description: 'The latest automated site-health check result.', input_schema: { type: 'object', properties: {} } },
   { name: 'crawl_status', description: 'The latest automated discovery-crawl result.', input_schema: { type: 'object', properties: {} } },

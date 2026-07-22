@@ -9,6 +9,7 @@
 
 import Stripe from 'stripe'
 import type { Context } from '@netlify/functions'
+import { getDatabase } from '@netlify/database'
 import { fulfilOrder } from '../lib/fulfillment.mjs'
 import { deliverOrderEmail } from '../lib/order-email.mjs'
 
@@ -46,6 +47,12 @@ export default async (req: Request, _context: Context) => {
     const session = event.data.object as Stripe.Checkout.Session
     console.log('Payment completed for session:', session.id, session.customer_details?.email)
 
+    // Record the sale in the store's own first-party ad dataset — server-side,
+    // so it survives closed tabs and blocked pixels that lose the browser
+    // conversion. This is the "revenue" half the ad-performance report divides
+    // by each campaign's traffic. Best-effort: never let it block fulfilment.
+    await recordPurchaseEvent(session)
+
     // Fulfilment: deliver the actual purchased content by email — not just a
     // receipt. Stripe calls this reliably even when the buyer closes the tab
     // before the success page loads. Delivery is deduplicated per session, so
@@ -76,4 +83,40 @@ function getOrigin(session: Stripe.Checkout.Session): string {
     /* malformed success_url — fall through */
   }
   return 'https://jblessd.com'
+}
+
+// Persist a 'purchase' row in the first-party ad_events dataset. Reads the real
+// order value from the paid session and the ad attribution the checkout stored
+// on its metadata (ad_click_id + utm_*). The unique partial index on
+// session_id makes this idempotent, so Stripe's automatic webhook retries can't
+// double-count an order. Never throws — attribution is best-effort.
+async function recordPurchaseEvent(session: Stripe.Checkout.Session): Promise<void> {
+  try {
+    const m = session.metadata ?? {}
+    const clickId = m.ad_click_id ? String(m.ad_click_id).slice(0, 200) : null
+    const clickSource = clickId ? String(m.ad_click_source || 'gclid').slice(0, 20) : null
+    const utmSource = m.utm_source ? String(m.utm_source).slice(0, 200) : null
+    const utmMedium = m.utm_medium ? String(m.utm_medium).slice(0, 200) : null
+    const utmCampaign = m.utm_campaign ? String(m.utm_campaign).slice(0, 200) : null
+    const utmTerm = m.utm_term ? String(m.utm_term).slice(0, 200) : null
+    const utmContent = m.utm_content ? String(m.utm_content).slice(0, 200) : null
+    const value = (session.amount_total ?? 0) / 100
+    const currency = (session.currency ?? 'usd').toUpperCase()
+
+    const db = getDatabase()
+    await db.sql`
+      INSERT INTO ad_events (
+        event_type, click_id, click_source,
+        utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+        session_id, value, currency
+      ) VALUES (
+        'purchase', ${clickId}, ${clickSource},
+        ${utmSource}, ${utmMedium}, ${utmCampaign}, ${utmTerm}, ${utmContent},
+        ${session.id}, ${value}, ${currency}
+      )
+      ON CONFLICT (session_id) WHERE event_type = 'purchase' DO NOTHING
+    `
+  } catch (err) {
+    console.error('webhook: could not record purchase event —', (err as Error).message)
+  }
 }
