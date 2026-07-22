@@ -380,6 +380,34 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .card:hover{border-color:var(--brass); transform:translateY(-2px); box-shadow:0 14px 34px rgba(0,0,0,.35);}
   .card.hidden{display:none;}
+  /* Procedural cover art: a blueprint-style banner per product, keyed to its
+     category. Rendered as .card::before so every card — static or live from the
+     API — gets an image with no extra markup. Colors stay in the crimson family
+     so the art harmonizes with the theme; each category has its own glyph. */
+  .card::before{
+    content:""; display:block; height:104px; margin:-22px -22px 18px;
+    border-bottom:1px solid var(--line);
+    border-radius:var(--radius) var(--radius) 0 0;
+    background-color:var(--panel-2);
+    background-image:
+      var(--art-glyph, none),
+      radial-gradient(120% 130% at var(--art-x,78%) -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-repeat:no-repeat, no-repeat, repeat, repeat;
+    background-position:right 20px center, 0 0, 0 0, 0 0;
+    background-size:auto 60%, cover, 22px 22px, 22px 22px;
+    transition:filter .2s ease;
+  }
+  .card:hover::before{filter:brightness(1.12) saturate(1.08);}
+  /* Nudge the glow across the grid so identical categories don't line up. */
+  .card:nth-of-type(4n+2)::before{--art-x:26%;}
+  .card:nth-of-type(4n+3)::before{--art-x:52%;}
+  .card:nth-of-type(4n)::before{--art-x:92%;}
+  [data-cat="prompts"]{--art-glow:rgba(255,42,42,.22); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF6A6A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M16 20 28 32 16 44'/><path d='M34 44h16'/></svg>");}
+  [data-cat="automations"]{--art-glow:rgba(255,106,58,.18); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF8A5A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='15' cy='32' r='6'/><circle cx='49' cy='32' r='6'/><path d='M21 32h16'/><path d='M33 26l6 6-6 6'/></svg>");}
+  [data-cat="templates"]{--art-glow:rgba(255,92,138,.16); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF7DA6' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><rect x='19' y='12' width='26' height='40' rx='3'/><path d='M25 24h14M25 32h14M25 40h9'/></svg>");}
+  [data-cat="agents"]{--art-glow:rgba(199,31,58,.24); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF5A6E' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M32 9 52 20.5v23L32 55 12 43.5v-23z'/><circle cx='32' cy='32' r='5.5'/></svg>");}
   .corner{position:absolute; width:9px; height:9px; border-color:var(--brass); opacity:0; transition:.2s;}
   .card:hover .corner{opacity:1;}
   .c-tl{top:-1px; left:-1px; border-top:1px solid; border-left:1px solid;}
@@ -420,6 +448,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .overlay.open{display:flex;}
   .modal{background:var(--panel); border:1px solid var(--line); max-width:480px; width:100%; padding:28px; position:relative; border-radius:var(--radius); max-height:90vh; overflow-y:auto;}
   .modal-close{position:absolute; top:16px; right:16px; background:none; border:none; color:var(--muted-2); cursor:pointer; padding:4px;}
+  /* Hero cover art at the top of the product modal, using the same per-category
+     glyph/glow vars as the cards (set on #pm-media via its data-cat). */
+  .pm-media{
+    height:150px; margin:-28px -28px 22px; border-bottom:1px solid var(--line);
+    border-radius:var(--radius) var(--radius) 0 0; background-color:var(--panel-2);
+    background-image:
+      var(--art-glyph, none),
+      radial-gradient(120% 130% at 74% -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-repeat:no-repeat, no-repeat, repeat, repeat;
+    background-position:right 30px center, 0 0, 0 0, 0 0;
+    background-size:auto 64%, cover, 24px 24px, 24px 24px;
+  }
   .modal-close:hover{color:var(--paper);}
   .modal h2{font-family:var(--serif); font-weight:500; font-size:24px; margin:10px 0 12px; color:var(--paper);}
   .modal p.desc{font-size:14px; color:var(--muted); line-height:1.6; margin:0 0 20px;}
@@ -1090,6 +1132,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="overlay" id="product-overlay" role="dialog" aria-modal="true" aria-labelledby="pm-name">
   <div class="modal">
     <button class="modal-close" id="pm-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="pm-media" id="pm-media"></div>
     <span class="sku" id="pm-sku"></span>
     <h2 id="pm-name"></h2>
     <p class="desc" id="pm-desc"></p>
@@ -1499,6 +1542,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.getElementById('pm-format').textContent = data.format;
     document.getElementById('pm-spec').textContent = data.spec;
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
+    // Set the modal's cover art to match the product's category. Fall back to
+    // inferring it from the SKU prefix so shared/deep-linked opens still show art.
+    var cat = data.category;
+    if(!cat && data.id){
+      var pfx = { PP:'prompts', AB:'automations', TP:'templates', AG:'agents' };
+      var m = String(data.id).match(/-(PP|AB|TP|AG)-/);
+      cat = m ? pfx[m[1]] : '';
+    }
+    document.getElementById('pm-media').dataset.cat = cat || '';
     productOverlay.classList.add('open');
     loadProductReviews(data.id);
     resetProof(data);
@@ -1542,7 +1594,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     return {
       id: card.dataset.id, name: card.dataset.name, price: card.dataset.price,
       format: card.dataset.format, spec: card.dataset.spec, blurb: card.querySelector('p').textContent,
-      catLabel: card.dataset.catlabel, nicheLabel: card.dataset.nichelabel
+      catLabel: card.dataset.catlabel, nicheLabel: card.dataset.nichelabel,
+      category: card.dataset.cat, niche: card.dataset.niche
     };
   }
 
