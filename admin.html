@@ -226,6 +226,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   "use strict";
   var AUTH = "/api/admin-auth";
   var CONSOLE = "/api/admin-console";
+  var BUILDER = "/api/product-builder";
 
   var el = function (id) { return document.getElementById(id); };
   var gate = el("gate"), gateMsg = el("gateMsg"), gateInfo = el("gateInfo");
@@ -271,6 +272,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "COMMANDS",
     "  help            show this help",
     "  status          gateway + session status",
+    "  build <brief>   design a new product with the Product Builder agent",
+    "  drafts          list products the builder has designed",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -278,13 +281,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  • catalog, pricing        • subscribers & sign-up sources",
     "  • reviews & ratings        • contact-form messages",
     "  • marketing campaigns      • live proofs shoppers saved",
-    "  • security / site-health / crawl status",
+    "  • product drafts           • security / site-health / crawl status",
     "",
     "examples:",
     "  \"how is the store doing today?\"",
     "  \"list the products and their prices\"",
-    "  \"any new contact messages this week?\"",
-    "  \"what did the last security scan find?\"",
+    "  build a $20 automation for freelance video editors",
+    "  build something for architects, agent config, ~$40",
     ""
   ].join("\n");
 
@@ -386,9 +389,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower === "clear" || lower === "cls") { doClear(); return; }
     if (lower === "logout" || lower === "exit" || lower === "quit") { print("sys", "closing session…"); doLogout(); return; }
     if (lower === "status") {
-      print("sys", "gateway: " + linkState.textContent + "\nsession: active\nmodel: claude-sonnet-4-5\naccess: read-only");
+      print("sys", "gateway: " + linkState.textContent + "\nsession: active\nmodel: claude-sonnet-4-5\naccess: read-only + product builder");
       return;
     }
+    if (lower === "build" || lower === "build ") {
+      print("sys", "usage: build <brief>   e.g. build a $20 automation for freelance video editors");
+      return;
+    }
+    if (lower.indexOf("build ") === 0) { buildProduct(raw.slice(6).trim()); return; }
+    if (lower === "drafts") { listDrafts(); return; }
     ask(raw);
   }
 
@@ -426,6 +435,87 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       thinking.remove();
       print("reply err", "network error — the workstation is unreachable.");
       history.pop();
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // ---------- product builder ----------
+  var CAT_LABEL = {
+    prompts: "Prompt Pack", automations: "Automation Blueprint",
+    templates: "Doc Template", agents: "Agent Config"
+  };
+
+  function renderDraft(d) {
+    var price = "$" + Number(d.price).toFixed(2);
+    var cat = CAT_LABEL[d.category] || d.category;
+    printHTML("reply",
+      "<span class='accent'>" + escapeHtml(d.sku) + "</span>  " +
+        "<b>" + escapeHtml(d.name) + "</b>\n" +
+      "<span class='sys'>" + escapeHtml(cat) + " · " + escapeHtml(d.niche) +
+        " · <span class='cyan'>" + price + "</span> · " + escapeHtml(d.format) + "</span>\n" +
+      escapeHtml(d.blurb) + "\n" +
+      "<span class='amber'>spec:</span> " + escapeHtml(d.spec));
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  async function buildProduct(brief) {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "product builder designing");
+    try {
+      var r = await fetch(BUILDER, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ brief: brief })
+      });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) {
+        if (r.status === 401) {
+          print("reply err", (j.error || "session expired") + " — reloading…");
+          setTimeout(function(){ location.reload(); }, 1200);
+        } else {
+          print("reply err", j.error || ("error " + r.status));
+        }
+        return;
+      }
+      var d = j.draft;
+      print("tools", "▸ built via " + (d && d.source === "heuristic" ? "template fallback" : "claude-sonnet-4-5") +
+        (j.persisted ? " · saved as draft" : " · not saved (db unavailable)"));
+      if (d) renderDraft(d);
+      printHTML("sys", "review it, then run <b>drafts</b> to see all designs. drafts stay out of the live catalog until you promote them.");
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the builder is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  async function listDrafts() {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading drafts");
+    try {
+      var r = await fetch(BUILDER, { headers: { "accept": "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", j.error || ("error " + r.status)); return; }
+      var drafts = j.drafts || [];
+      if (!drafts.length) {
+        printHTML("sys", "no product drafts yet. run <b>build &lt;brief&gt;</b> to design one.");
+        return;
+      }
+      print("sys", drafts.length + " draft" + (drafts.length === 1 ? "" : "s") + " (newest first):");
+      drafts.forEach(renderDraft);
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the builder is unreachable.");
     } finally {
       busy = false; input.disabled = false; input.focus();
     }
