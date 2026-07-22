@@ -5,6 +5,8 @@
 // this generates a complete, ready-to-publish marketing campaign: a tagline,
 // social posts for X/LinkedIn/Instagram, a launch email, SEO metadata, and a set
 // of ad headlines — each grounded in the real catalog so nothing is invented.
+// Every campaign also carries a direct link to the product (or store) page and a
+// shareable image, so posts and emails drive traffic instead of dead-ending.
 //
 //   POST — generate a campaign for { sku?, goal? } and persist it.
 //   GET  — list recent campaigns.
@@ -24,6 +26,18 @@ const MODEL = 'claude-sonnet-4-5'
 const STORE_NAME = 'MULTINICHE AI'
 const STORE_SKU = 'STORE'
 
+// Canonical site + the shareable image every campaign can attach. Kept in sync
+// with the SEO edge function (netlify/edge-functions/seo.ts), which uses the
+// same domain and OG image for product/store structured data.
+const SITE_URL = 'https://jblessd.com'
+const CAMPAIGN_IMAGE = `${SITE_URL}/multiniche-ai-og.png`
+
+// The exact page a campaign should drive traffic to: the product deep-link, or
+// the storefront when marketing the whole store.
+function campaignLink(target: Product | null): string {
+  return target ? `${SITE_URL}/product/${encodeURIComponent(target.sku)}` : SITE_URL
+}
+
 // The shape of a generated campaign. Kept flat so the frontend can render each
 // channel with a copy button and the DB can store it verbatim as JSON.
 interface Campaign {
@@ -34,6 +48,9 @@ interface Campaign {
   email: { subject: string; body: string }
   seo: { metaTitle: string; metaDescription: string }
   adHeadlines: string[]
+  // Where the campaign sends people, and the image to attach to posts/emails.
+  link: string
+  image: string
 }
 
 interface CampaignRow {
@@ -51,32 +68,34 @@ function heuristicCampaign(target: Product | null, goal: string): Campaign {
   const name = target ? target.name : `${STORE_NAME} — the full toolkit`
   const audience = target ? NICHE_LABEL[target.niche] : 'people who want to get more done with AI'
   const kind = target ? CATEGORY_LABEL[target.category].toLowerCase() : 'AI productivity tools'
-  const desc = target ? target.blurb : 'Prompt packs, automation blueprints, doc templates, and agent configs — built once, sold as instruments.'
+  const desc = target ? target.blurb : 'Prompt packs, automation blueprints, doc templates, and agent configs — built once, ready to put to work today.'
   const price = target ? `$${target.price.toFixed(2)}` : 'every budget'
   const angle = goal ? ` ${goal}.` : ''
+  const link = campaignLink(target)
+  const cta = target ? 'Grab it now' : 'Start browsing'
 
   return {
     tagline: target
       ? `${name}: ${desc}`
-      : `${STORE_NAME}: load the tool you need.`,
+      : `${STORE_NAME}: load the tool you need and ship faster today.`,
     tweets: [
-      `New in the shop → ${name}. ${desc} Built for ${audience.toLowerCase()}.${angle} ${price === 'every budget' ? '' : `Just ${price}.`}`.trim(),
-      `Stop rebuilding the same workflow. ${name} is a ready-to-run ${kind} you can put to work today. ✦`,
-      `If you're in ${audience.toLowerCase()}, this one's for you: ${name}. Spec sheet, not a pitch.`,
+      `New in the shop → ${name}. ${desc} Built for ${audience.toLowerCase()}.${angle} ${price === 'every budget' ? '' : `Just ${price} —`} ${cta}: ${link}`.replace(/\s+/g, ' ').trim(),
+      `Stop rebuilding the same workflow from scratch. ${name} is ready to run today and pays for itself fast. See it → ${link}`,
+      `If you're in ${audience.toLowerCase()}, this one saves you hours: ${name}. ${cta} → ${link}`,
     ],
     linkedin:
       `Introducing ${name}.\n\n${desc}\n\n` +
-      `We built it for ${audience.toLowerCase()} who'd rather ship than fiddle. Every listing is a spec sheet: what it does, what it runs on, what it costs.${angle ? `\n\n${goal}.` : ''}\n\n` +
-      `Take a look — ${price === 'every budget' ? 'priced for every budget' : `it's ${price}`}.`,
+      `We built it for ${audience.toLowerCase()} who'd rather ship than fiddle — real specs, real results, no fluff.${angle ? `\n\n${goal}.` : ''}\n\n` +
+      `${price === 'every budget' ? 'Priced for every budget' : `It's ${price}`}, and it's ready the moment you check out. ${cta}: ${link}`,
     instagram:
-      `${name} just dropped ✦\n\n${desc}\n\nBuilt for ${audience.toLowerCase()}. Link in bio.\n\n#AI #productivity #${kind.replace(/[^a-z0-9]+/gi, '')} #tools`,
+      `${name} just dropped ✦\n\n${desc}\n\nBuilt for ${audience.toLowerCase()} — ${cta.toLowerCase()} at the link in bio or ${link}\n\n#AI #productivity #${kind.replace(/[^a-z0-9]+/gi, '')} #tools`,
     email: {
-      subject: target ? `New: ${name}` : `Meet ${STORE_NAME}`,
+      subject: target ? `New: ${name} — ready to use today` : `Meet ${STORE_NAME}`,
       body:
         `Hi there,\n\n` +
-        `We just added ${name} to the shop. ${desc}\n\n` +
-        `It's built for ${audience.toLowerCase()}, and like everything here, it comes with a full spec sheet so you know exactly what you're getting${price === 'every budget' ? '' : ` — all for ${price}`}.${angle ? `\n\n${goal}.` : ''}\n\n` +
-        `Have a look and grab it while it's fresh.\n\n— The ${STORE_NAME} team`,
+        `We just added ${name} to the shop, and it's built to save you time from day one. ${desc}\n\n` +
+        `It's made for ${audience.toLowerCase()}, and like everything here it comes with a full spec sheet so you know exactly what you're getting${price === 'every budget' ? '' : ` — all for ${price}`}.${angle ? `\n\n${goal}.` : ''}\n\n` +
+        `${cta} here: ${link}\n\n— The ${STORE_NAME} team`,
     },
     seo: {
       metaTitle: `${name} | ${STORE_NAME}`.slice(0, 60),
@@ -87,12 +106,16 @@ function heuristicCampaign(target: Product | null, goal: string): Campaign {
       `Built for ${audience}`.slice(0, 40),
       `Ready-to-run ${kind}`.slice(0, 40),
     ],
+    link,
+    image: CAMPAIGN_IMAGE,
   }
 }
 
 // ---- AI path: ask Claude to compose the campaign ----
 async function aiCampaign(target: Product | null, goal: string, catalog: Product[]): Promise<Campaign> {
   const anthropic = new Anthropic()
+
+  const link = campaignLink(target)
 
   const subject = target
     ? {
@@ -122,17 +145,17 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
         tagline: { type: 'string', description: 'One punchy line that captures the offer.' },
         tweets: {
           type: 'array',
-          description: 'Exactly 3 standalone posts for X/Twitter, each under 260 characters.',
+          description: 'Exactly 3 standalone posts for X/Twitter, each under 260 characters. At least one must end with a call to action that includes the exact page URL provided.',
           items: { type: 'string' },
         },
-        linkedin: { type: 'string', description: 'A professional LinkedIn post, 2-4 short paragraphs.' },
-        instagram: { type: 'string', description: 'An Instagram caption with a few relevant hashtags.' },
+        linkedin: { type: 'string', description: 'A professional LinkedIn post, 2-4 short paragraphs, closing with a call to action that links to the exact page URL provided.' },
+        instagram: { type: 'string', description: 'An Instagram caption with a clear call to action and a few relevant hashtags.' },
         email: {
           type: 'object',
           description: 'A short marketing email.',
           properties: {
             subject: { type: 'string', description: 'A compelling subject line under 60 characters.' },
-            body: { type: 'string', description: 'The email body, friendly and concise, with a clear call to action.' },
+            body: { type: 'string', description: 'The email body: warm, benefit-led, and concise, ending with a clear call to action that includes the exact page URL provided.' },
           },
           required: ['subject', 'body'],
         },
@@ -166,11 +189,15 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
         content:
           `You are the in-house marketing agent for ${STORE_NAME}, a store of ready-to-use AI ` +
           `productivity tools (prompt packs, automation blueprints, doc templates, and agent configs). ` +
-          `The brand voice is confident, technical, and no-nonsense — every product is "a spec sheet, not a pitch." ` +
-          `Avoid hype words and exclamation-point spam.\n\n` +
+          `The brand voice is confident and credible, but warm and sales-oriented: lead with the outcome ` +
+          `and the benefit, make the value obvious, and always close with a clear call to action. Keep it ` +
+          `grounded in the real specs — written to convert, not to hype. Use tasteful energy; avoid spammy ` +
+          `buzzwords and exclamation-point overload.\n\n` +
           (goal ? `The store owner's goal for this campaign: """${goal}"""\n\n` : '') +
           `Compose a complete marketing campaign for the following ${target ? 'product' : 'store'}. ` +
           `Ground every claim in the details provided — do not invent features, prices, or specs.\n\n` +
+          `Where a link is appropriate (social CTAs and the email), use this exact page URL verbatim — ` +
+          `do not shorten, guess, or alter it: ${link}\n\n` +
           `Details:\n${JSON.stringify(subject, null, 2)}`,
       },
     ],
@@ -202,17 +229,30 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
     email: { subject: out.email.subject.trim(), body: out.email.body.trim() },
     seo: { metaTitle: out.seo.metaTitle.trim(), metaDescription: out.seo.metaDescription.trim() },
     adHeadlines: out.adHeadlines.slice(0, 3).map((h) => String(h).trim()),
+    // The link and image are set deterministically so every campaign points at
+    // the real page and ships a shareable image, regardless of the model output.
+    link,
+    image: CAMPAIGN_IMAGE,
   }
 }
 
 function normalizeRow(row: any): CampaignRow {
+  const assets = typeof row.assets === 'string' ? JSON.parse(row.assets) : row.assets
+  // Campaigns generated before links/images were added won't carry them.
+  // Backfill so every listed campaign has a real page link and a shareable image.
+  if (assets && typeof assets === 'object') {
+    if (!assets.link) {
+      assets.link = row.sku && row.sku !== STORE_SKU ? `${SITE_URL}/product/${encodeURIComponent(row.sku)}` : SITE_URL
+    }
+    if (!assets.image) assets.image = CAMPAIGN_IMAGE
+  }
   return {
     id: Number(row.id),
     sku: row.sku,
     productName: row.product_name,
     goal: row.goal ?? '',
     source: row.source,
-    assets: typeof row.assets === 'string' ? JSON.parse(row.assets) : row.assets,
+    assets,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
   }
 }
