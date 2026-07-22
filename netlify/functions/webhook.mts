@@ -62,7 +62,7 @@ export default async (req: Request, _context: Context) => {
     if (email) {
       try {
         const origin = getOrigin(session)
-        const { items } = await fulfilOrder(stripe, session.id)
+        const { items } = await fulfilOrder(stripe, session.id, { enrich: true })
         await deliverOrderEmail({ to: email, sessionId: session.id, items, origin })
       } catch (err) {
         console.error('webhook: could not send order email —', (err as Error).message)

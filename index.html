@@ -1778,6 +1778,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var h = document.createElement('h3');
     h.textContent = item.name;
     block.appendChild(h);
+    // When the deliverable was authored by Claude for this exact product (rather
+    // than filled from the generic template), tell the buyer — it's the reason
+    // their download reads like a finished tool, not a fill-in-the-blanks form.
+    if(item.aiCrafted){
+      var craft = document.createElement('p');
+      craft.style.margin = '2px 0 8px';
+      craft.innerHTML = '<span class="pa-badge">AI-crafted</span> ' +
+        '<span style="font-size:13px;color:var(--muted)">Written for this product — finished content, not a template.</span>';
+      block.appendChild(craft);
+    }
     if(item.intro){
       var intro = document.createElement('p');
       intro.className = 'lead-pack-intro';
@@ -1861,6 +1871,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '<main>' +
       '<h1>' + esc(item.name) + '</h1>' +
       (item.intro ? '<p>' + esc(item.intro) + '</p>' : '') +
+      (item.aiCrafted ? '<div class="note"><b>AI-crafted for this product.</b><br/>' +
+        'The content below was written specifically for this tool — finished and ready to use, not a template to fill in.</div>' : '') +
       '<div class="note"><b>This is your app — keep this file.</b><br/>Open it any time to read and use your tool. ' +
       'To run it live on your own input (as many times as you like), use the button below — it reopens your order page. ' +
       'No email needed.</div>' +
