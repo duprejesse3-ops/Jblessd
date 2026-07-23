@@ -227,6 +227,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var AUTH = "/api/admin-auth";
   var CONSOLE = "/api/admin-console";
   var BUILDER = "/api/product-builder";
+  var ADS = "/api/google-ads-builder";
 
   var el = function (id) { return document.getElementById(id); };
   var gate = el("gate"), gateMsg = el("gateMsg"), gateInfo = el("gateInfo");
@@ -274,6 +275,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  status          gateway + session status",
     "  build <brief>   design a new product with the Product Builder agent",
     "  drafts          list products the builder has designed",
+    "  ads [sku] [| goal]   build a paste-ready Google Ads plan (headlines, keywords…)",
+    "  adplans         list Google Ads plans the builder has generated",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -288,6 +291,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  \"list the products and their prices\"",
     "  build a $20 automation for freelance video editors",
     "  build something for architects, agent config, ~$40",
+    "  ads                          whole-store Google Ads plan",
+    "  ads AI-PP-046                plan for one product",
+    "  ads AI-AG-012 | push the launch discount",
     ""
   ].join("\n");
 
@@ -398,6 +404,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     if (lower.indexOf("build ") === 0) { buildProduct(raw.slice(6).trim()); return; }
     if (lower === "drafts") { listDrafts(); return; }
+    if (lower === "ads" || lower.indexOf("ads ") === 0) { buildAds(raw.slice(3).trim()); return; }
+    if (lower === "adplans") { listAdPlans(); return; }
     ask(raw);
   }
 
@@ -516,6 +524,150 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     } catch (_) {
       thinking.remove();
       print("reply err", "network error — the builder is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // ---------- google ads builder ----------
+  // Turn a keyword {text, matchType} into the exact token you paste into Google
+  // Ads: broad = plain, phrase = "quoted", exact = [bracketed].
+  function kwToken(k) {
+    var t = String(k && k.text != null ? k.text : "");
+    if (!t) return "";
+    if (k.matchType === "exact") return "[" + t + "]";
+    if (k.matchType === "phrase") return '"' + t + '"';
+    return t;
+  }
+
+  function renderAdPlan(p) {
+    var a = p.assets || {};
+    var head = (a.headlines || []);
+    var desc = (a.descriptions || []);
+    var kws = (a.keywords || []);
+    var negs = (a.negativeKeywords || []);
+    var sites = (a.sitelinks || []);
+    var calls = (a.callouts || []);
+    var snip = a.structuredSnippet || { header: "", values: [] };
+
+    var lines = [];
+    lines.push("<span class='accent'>" + escapeHtml(p.productName) + "</span> "
+      + "<span class='sys'>· google ads plan" + (p.goal ? " · goal: " + escapeHtml(p.goal) : "") + "</span>");
+    lines.push("<span class='amber'>Final URL:</span> " + escapeHtml(a.finalUrl || ""));
+    if (a.displayPath) {
+      lines.push("<span class='amber'>Display path:</span> /"
+        + escapeHtml(a.displayPath.path1 || "") + "/" + escapeHtml(a.displayPath.path2 || ""));
+    }
+
+    lines.push("");
+    lines.push("<span class='cyan'>HEADLINES</span> <span class='sys'>(≤30 chars each · paste one per headline slot)</span>");
+    head.forEach(function (h) { lines.push("  " + escapeHtml(h) + " <span class='sys'>(" + h.length + ")</span>"); });
+
+    lines.push("");
+    lines.push("<span class='cyan'>DESCRIPTIONS</span> <span class='sys'>(≤90 chars each)</span>");
+    desc.forEach(function (d) { lines.push("  " + escapeHtml(d) + " <span class='sys'>(" + d.length + ")</span>"); });
+
+    lines.push("");
+    lines.push("<span class='cyan'>KEYWORDS</span> <span class='sys'>(paste as-is — quotes = phrase, [ ] = exact)</span>");
+    kws.forEach(function (k) { lines.push("  " + escapeHtml(kwToken(k))); });
+
+    if (negs.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>NEGATIVE KEYWORDS</span>");
+      lines.push("  " + escapeHtml(negs.join(", ")));
+    }
+
+    if (sites.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>SITELINKS</span>");
+      sites.forEach(function (s) {
+        lines.push("  <b>" + escapeHtml(s.text) + "</b> — " + escapeHtml(s.description1)
+          + (s.description2 ? " / " + escapeHtml(s.description2) : ""));
+      });
+    }
+
+    if (calls.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>CALLOUTS</span>");
+      lines.push("  " + escapeHtml(calls.join(" · ")));
+    }
+
+    if (snip.values && snip.values.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>STRUCTURED SNIPPET</span>");
+      lines.push("  " + escapeHtml(snip.header) + ": " + escapeHtml(snip.values.join(", ")));
+    }
+
+    printHTML("reply", lines.join("\n"));
+  }
+
+  // Parse "ads [sku] [| goal]" into { sku, goal }. A bare token with no spaces
+  // is treated as a SKU; anything with spaces (and no "|") is treated as a goal.
+  function parseAdsArgs(arg) {
+    arg = (arg || "").trim();
+    if (!arg) return { sku: "", goal: "" };
+    var bar = arg.indexOf("|");
+    if (bar !== -1) {
+      return { sku: arg.slice(0, bar).trim(), goal: arg.slice(bar + 1).trim() };
+    }
+    if (/\s/.test(arg)) return { sku: "", goal: arg };
+    return { sku: arg, goal: "" };
+  }
+
+  async function buildAds(arg) {
+    if (busy) return;
+    var parsed = parseAdsArgs(arg);
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "google ads builder writing your plan");
+    try {
+      var r = await fetch(ADS, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sku: parsed.sku, goal: parsed.goal })
+      });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) {
+        if (r.status === 401) {
+          print("reply err", (j.error || "session expired") + " — reloading…");
+          setTimeout(function(){ location.reload(); }, 1200);
+        } else {
+          print("reply err", j.error || ("error " + r.status));
+        }
+        return;
+      }
+      var p = j.plan;
+      print("tools", "▸ built via " + (p && p.source === "heuristic" ? "template fallback" : "claude-sonnet-4-5") +
+        (j.persisted ? " · saved" : " · not saved (db unavailable)"));
+      if (p) renderAdPlan(p);
+      printHTML("sys", "copy each field into Google Ads. run <b>ads</b> again to regenerate, or <b>adplans</b> to review past plans.");
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the ads builder is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  async function listAdPlans() {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading ad plans");
+    try {
+      var r = await fetch(ADS, { headers: { "accept": "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", j.error || ("error " + r.status)); return; }
+      var plans = j.plans || [];
+      if (!plans.length) {
+        printHTML("sys", "no ad plans yet. run <b>ads</b> (optionally with a sku) to generate one.");
+        return;
+      }
+      print("sys", plans.length + " ad plan" + (plans.length === 1 ? "" : "s") + " (newest first):");
+      plans.forEach(renderAdPlan);
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the ads builder is unreachable.");
     } finally {
       busy = false; input.disabled = false; input.focus();
     }
