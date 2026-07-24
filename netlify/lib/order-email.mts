@@ -111,7 +111,11 @@ export async function deliverOrderEmail(
     store = null
   }
 
-  const recoveryUrl = `${origin}/?checkout=success&session_id=${encodeURIComponent(sessionId)}`
+  // The buyer's permanent re-open link: the order confirmation page carrying
+  // their session id. /order-confirmation serves the storefront (see the rewrite
+  // in netlify.toml), so this behaves exactly as the old "/?checkout=success"
+  // link did while keeping every order on one confirmation URL.
+  const recoveryUrl = `${origin}/order-confirmation?checkout=success&session_id=${encodeURIComponent(sessionId)}`
   const { subject, text } = buildOrderEmail(items, recoveryUrl)
 
   const res = await sendEmail({ to, subject, text })

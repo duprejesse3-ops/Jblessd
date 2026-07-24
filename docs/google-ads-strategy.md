@@ -23,13 +23,52 @@ It now reports a **value-based purchase conversion** end to end:
    (GA4 + Google Ads).
 3. **On a successful checkout return**, the page fetches the real order total
    from Stripe via `GET /api/checkout-summary?session_id=…` and fires:
-   - a GA4 `purchase` event, and
-   - a Google Ads `conversion` event
-   both carrying the **real order value, currency, and a `transaction_id`** for
+   - a GA4 `purchase` event,
+   - a Google Ads `conversion` event, and
+   - a `purchase` event pushed onto `dataLayer` with a GA4-shaped `ecommerce`
+     object, which is what a Google Tag Manager conversion tag triggers on
+   all carrying the **real order value, currency, and a `transaction_id`** for
    de-duplication.
 
 Reporting the true order value (not a flat `1.0`) is the whole point: value-based
 bid strategies need per-order value to optimize toward high-value carts.
+
+### The order confirmation page: `/order-confirmation`
+
+Google Ads' guided purchase-conversion setup asks for an **order confirmation
+page URL** and inspects it for a Tag Manager container. Give it:
+
+```
+https://jblessd.com/order-confirmation
+```
+
+Stripe sends every paid buyer to `/order-confirmation?checkout=success&session_id=…`,
+and `netlify.toml` rewrites that path to `index.html` (a rewrite, status 200 — not
+a redirect), so:
+
+- the URL serves the storefront's own HTML, **including the GTM container snippet
+  and its `<noscript>` iframe**, so a detector that fetches the page finds
+  `GTM-M746RK4R` in the first response without running any JavaScript;
+- it works with **no** `session_id` — Google's scan of the bare URL still sees a
+  fully tagged page;
+- the buyer's experience is unchanged, because the same single-page app answers
+  both `/` and `/order-confirmation`.
+
+Before this, the purchase ended on `/?checkout=success&session_id=…`. Google
+normalizes that query string away, has no distinct page to inspect, and reports
+**"Tag manager container not found — add a Tag Manager container to your order
+confirmation page."** even though the homepage is tagged.
+
+The page is intentionally **not** `noindex`'d and **not** disallowed in
+`robots.txt`: nothing should stand between Google's tag detector and the page.
+`index.html` already declares `<link rel="canonical" href="https://jblessd.com/">`,
+so search engines fold the URL into the homepage on their own.
+
+If you finish the guided flow and let the **container** send the purchase
+conversion, remove `GOOGLE_ADS_PURCHASE_LABEL` from the environment so the
+in-page gtag conversion stops firing as well. Both send the same
+`transaction_id`, so Google de-duplicates the order — but running one path is
+easier to reason about than trusting de-duplication.
 
 ### Environment variables to set (Netlify → Site settings → Environment variables)
 
@@ -59,9 +98,16 @@ events fire.
 
 - Open the site with `?debug` in Google Tag Assistant / the GA4 DebugView.
 - Complete a **Stripe test-mode** checkout. On return to
-  `/?checkout=success&session_id=…` confirm a `purchase` event fires with the
-  correct `value` and `currency`, and a Google Ads `conversion` hit with the same
-  `transaction_id`.
+  `/order-confirmation?checkout=success&session_id=…` confirm a `purchase` event
+  fires with the correct `value` and `currency`, and a Google Ads `conversion` hit
+  with the same `transaction_id`.
+- In GTM's preview mode, the same page should show a `purchase` event in the
+  dataLayer with an `ecommerce` object — that's the trigger the guided flow builds
+  its conversion tag on.
+- To check container detection the way Google does it, fetch the confirmation page
+  and look for the container id in the raw HTML:
+  `curl -s https://jblessd.com/order-confirmation | grep -c GTM-M746RK4R`
+  (expect a non-zero count).
 - In Google Ads, the Purchase conversion action should move from *"No recent
   conversions"* to *"Recording conversions"* within ~24–48h of live traffic.
 
@@ -117,8 +163,10 @@ Switch to **Maximize Conversion Value with a Target ROAS (tROAS)**.
 
 ```
 Buyer completes Stripe Checkout
-   → returns to /?checkout=success&session_id=cs_...
+   → returns to /order-confirmation?checkout=success&session_id=cs_...
+      (rewritten to index.html — the GTM container ships in that HTML)
       → GET /api/checkout-summary  (server verifies payment_status=paid, returns value+currency)
+         → dataLayer 'purchase'  { ecommerce: { transaction_id, value, currency, items } }  → GTM
          → gtag GA4 'purchase'  { transaction_id, value, currency }
          → gtag Ads 'conversion' { send_to, transaction_id, value, currency }
             → Google Ads Smart Bidding (Maximize Conversion Value / Target ROAS)

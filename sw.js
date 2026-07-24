@@ -1,9 +1,9 @@
 /* MULTINICHE AI — service worker
    Offline support + install for the mobile app (PWA). */
-// Bumped to v4 with the Google tag consolidation so the precached app shell
-// (which embeds the tag markup) is refetched instead of serving the old snippet
-// to returning/offline visitors.
-const CACHE = 'multiniche-ai-v4';
+// Bumped to v5 with the dedicated /order-confirmation route so the precached app
+// shell (which embeds the tag markup and the purchase dataLayer push) is refetched
+// instead of serving the old snippet to returning/offline visitors.
+const CACHE = 'multiniche-ai-v5';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -45,13 +45,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Navigations: network-first so shoppers get fresh catalog, fall back to
-  // the cached shell when offline.
+  // the cached shell when offline. Only the homepage response refreshes the
+  // stored shell — other routes (the server-rendered product/proof pages, and
+  // /order-confirmation, which carries one buyer's order in its query string)
+  // must not become what an offline visitor sees when they open "/".
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('/', copy));
+          if (url.pathname === '/' || url.pathname === '/index.html') {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('/', copy));
+          }
           return res;
         })
         .catch(() => caches.match('/').then((r) => r || caches.match('/index.html')))

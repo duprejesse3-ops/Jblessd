@@ -141,7 +141,17 @@ export default async (req: Request, _context: Context) => {
       payment_method_types: ['card'],
       line_items,
       allow_promotion_codes: true,
-      success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      // Land paid buyers on the dedicated order confirmation URL rather than the
+      // homepage with a query string. /order-confirmation is rewritten to
+      // index.html in netlify.toml, so the buyer gets the same instant-delivery
+      // experience, but the purchase now ends on a stable path that can be given
+      // to Google Ads / Tag Manager as the order confirmation page. Google's
+      // guided purchase-conversion setup inspects that URL for a container and
+      // cannot do so when the only thing distinguishing the confirmation page is
+      // "?checkout=success". The checkout=success parameter is kept because the
+      // storefront's return handler keys off it to report the conversion and open
+      // the delivery panel.
+      success_url: `${origin}/order-confirmation?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?checkout=cancelled`,
       custom_text: {
         submit: {
