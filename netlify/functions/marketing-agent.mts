@@ -258,10 +258,31 @@ function normalizeRow(row: any): CampaignRow {
 }
 
 export default async (req: Request, _context: Context) => {
-  // ---- GET: list recent campaigns ----
+  // ---- GET: list recent campaigns, or look one up by id ----
   if (req.method === 'GET') {
+    // /updates/:id has to resolve any published update, not just one that happens
+    // to still be in the recent-12 window the index shows. Without an id lookup,
+    // an update page 404s as soon as a dozen newer campaigns exist, even though
+    // Google already has the URL from an earlier sitemap.
+    const idParam = new URL(req.url).searchParams.get('id')
     try {
       const db = getDatabase()
+      if (idParam !== null) {
+        const id = Number(idParam)
+        if (!Number.isInteger(id) || id < 1) {
+          return Response.json({ campaigns: [] }, { headers: { 'Cache-Control': 'no-store' } })
+        }
+        const rows = (await db.sql`
+          SELECT id, sku, product_name, goal, source, assets, created_at
+          FROM campaigns
+          WHERE id = ${id}
+          LIMIT 1
+        `) as any[]
+        return Response.json(
+          { campaigns: (rows ?? []).map(normalizeRow) },
+          { headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
       const rows = (await db.sql`
         SELECT id, sku, product_name, goal, source, assets, created_at
         FROM campaigns

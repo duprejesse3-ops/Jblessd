@@ -22,11 +22,20 @@
 
   gtag('config', window.GOOGLE_ADS_TAG_ID, { allow_enhanced_conversions: true });
 </script>
-<!-- Google Tag Manager -->
+<!-- Google Tag Manager. The `n` lines are the nonce-propagation addition from
+     Google's CSP guide: the CSP served by netlify/edge-functions/csp.ts admits
+     script elements by nonce, and this snippet creates the gtm.js element itself,
+     so it has to copy the nonce onto it. gtm.js then reuses that nonce for every
+     script it injects — without this, Custom HTML tags in the container would be
+     blocked. The nonce content attribute is hidden from getAttribute() once the
+     page has loaded, hence reading the .nonce property first. -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;
+var n=d.querySelector('[nonce]');
+n&&j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));
+f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-M746RK4R');</script>
 <!-- End Google Tag Manager -->
 <meta charset="UTF-8" />
