@@ -4,9 +4,13 @@
 // real value, Smart Bidding strategies like Target ROAS have nothing to
 // optimize toward — every conversion would look identical.
 //
-// Deliberately returns only non-sensitive totals (amount, currency, item
-// count, payment status). No customer email, address, or line-item detail is
-// exposed, even though the session id travels through the browser URL.
+// Returns order totals (amount, currency, payment status) plus the buyer's own
+// email. The email powers Google Ads enhanced conversions: the storefront hands
+// it to the Google tag, which normalizes and SHA-256 hashes it in the browser
+// before sending, improving conversion match rates. It's only ever returned for
+// a genuinely paid session and marked private, no-store — it's the buyer's own
+// address, returned to their own success-page browser, exactly as /api/order
+// already does. No address or line-item detail is exposed here.
 //
 // Reachable at /api/checkout-summary via the /api/* rewrite in netlify.toml.
 
@@ -48,6 +52,9 @@ export default async (req: Request, _context: Context) => {
         transactionId: session.id,
         value: (session.amount_total ?? 0) / 100,
         currency: (session.currency ?? 'usd').toUpperCase(),
+        // Buyer's own email for enhanced conversions. Normalized/hashed by the
+        // Google tag in the browser; may be absent if Stripe collected none.
+        email: session.customer_details?.email ?? session.customer_email ?? null,
       },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
