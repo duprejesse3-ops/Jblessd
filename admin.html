@@ -480,8 +480,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   function escapeHtml(s) {
+    // Quotes included: these strings are interpolated into single-quoted HTML
+    // attributes (data-*, alt, title) as well as text.
     return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   async function buildProduct(brief) {
@@ -689,22 +692,145 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // ---------- ad creatives (Google Ads product images) ----------
   // The store sells digital products, so there are no product photos. This
   // builds an on-brand ad image per product (or the whole store) at Google's
-  // three core image-asset ratios. Previews are the raw SVG (crisp + light);
-  // the download links route through Netlify Image CDN, which rasterizes the
-  // SVG to a Google-Ads-ready PNG at the exact recommended pixel size.
+  // three core image-asset ratios. /api/ad-image returns SVG (crisp, tiny,
+  // perfect for the previews below) but Google Ads only accepts raster uploads,
+  // so the download links rasterize to a real PNG in the browser instead.
+  //
+  // Do NOT route these through Netlify Image CDN: /.netlify/images only
+  // transforms raster sources and passes an SVG straight through untouched, so
+  // `&fm=png` produced a file called *.png that still held SVG markup. Google
+  // Ads and desktop image viewers both reject that as an unavailable/broken
+  // image. Canvas rasterization below emits genuine PNG bytes at the exact
+  // recommended pixel size.
   var CREATIVE_SIZES = [
     { key: "landscape", label: "Landscape · 1.91:1", w: 1200, h: 628, prev: 300 },
     { key: "square",    label: "Square · 1:1",       w: 1200, h: 1200, prev: 190 },
     { key: "portrait",  label: "Portrait · 4:5",     w: 960,  h: 1200, prev: 156 }
   ];
+  var CREATIVE_SIZE_BY_KEY = {};
+  CREATIVE_SIZES.forEach(function (s) { CREATIVE_SIZE_BY_KEY[s.key] = s; });
+
+  // Products from the last `creatives all` run, so the bulk download button can
+  // re-render every card without another catalog fetch.
+  var bulkCreatives = [];
 
   function creativeSvgUrl(sku, sizeKey) {
     return ADIMG + "?" + (sku ? "sku=" + encodeURIComponent(sku) + "&" : "") + "size=" + sizeKey;
   }
-  function creativePngUrl(sku, s) {
-    var src = creativeSvgUrl(sku, s.key);
-    return "/.netlify/images?url=" + encodeURIComponent(src) +
-      "&w=" + s.w + "&h=" + s.h + "&fit=cover&fm=png";
+  function creativeSlug(sku) {
+    return sku ? String(sku).toLowerCase() : "store";
+  }
+  function creativeFileName(sku, sizeKey) {
+    return "multiniche-" + creativeSlug(sku) + "-" + sizeKey + ".png";
+  }
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { reject(new Error("the creative did not load")); };
+      img.src = src;
+    });
+  }
+
+  // Draw the same-origin SVG into a canvas at full Google-Ads pixel size and
+  // encode it as PNG. Same-origin sources do not taint the canvas, and the SVG
+  // carries explicit width/height so it rasterizes 1:1 with no scaling blur.
+  async function creativePngBlob(sku, s) {
+    var img = await loadImage(creativeSvgUrl(sku, s.key));
+    var canvas = document.createElement("canvas");
+    canvas.width = s.w; canvas.height = s.h;
+    var ctx = canvas.getContext("2d");
+    // Paint the brand backdrop first: PNG defaults to transparent, and Google
+    // Ads composites unknown transparency onto white.
+    ctx.fillStyle = "#080000";
+    ctx.fillRect(0, 0, s.w, s.h);
+    ctx.drawImage(img, 0, 0, s.w, s.h);
+    return await new Promise(function (resolve, reject) {
+      canvas.toBlob(function (blob) {
+        if (blob) resolve(blob); else reject(new Error("could not encode the PNG"));
+      }, "image/png");
+    });
+  }
+
+  // A preview that fails to load (cold start, network blip) would otherwise leave
+  // a silent empty box; label it so the console says what actually happened.
+  function flagBrokenPreviews(container) {
+    container.querySelectorAll("img").forEach(function (img) {
+      img.addEventListener("error", function () {
+        var note = node("sys", "preview didn't load — click to download anyway");
+        note.style.cssText = "font-size:11px;padding:10px;border:1px dashed var(--line);border-radius:4px;";
+        img.replaceWith(note);
+      });
+    });
+  }
+
+  function saveBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Give the browser time to start the download before dropping the blob.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
+  async function downloadCreative(sku, sizeKey) {
+    var s = CREATIVE_SIZE_BY_KEY[sizeKey];
+    if (!s) return;
+    saveBlob(await creativePngBlob(sku, s), creativeFileName(sku, sizeKey));
+  }
+
+  // Every download link is rendered as an anchor carrying the SKU + size, so one
+  // delegated handler covers both `creatives` and `creatives all` output.
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest("[data-creative-size]");
+    if (link) {
+      e.preventDefault();
+      link.style.opacity = "0.5";
+      downloadCreative(link.dataset.creativeSku || "", link.dataset.creativeSize)
+        .catch(function (err) {
+          print("reply err", "could not build the PNG for " +
+            (link.dataset.creativeSku || "the store") + " — " + err.message);
+        })
+        .finally(function () { link.style.opacity = ""; });
+      return;
+    }
+    var bulk = e.target.closest("[data-creative-bulk]");
+    if (bulk) { e.preventDefault(); downloadAllCreatives(bulk.dataset.creativeBulk); }
+  });
+
+  // One PNG per product, saved back to back. The browser asks once to allow
+  // multiple downloads; after that every product lands in the downloads folder.
+  async function downloadAllCreatives(sizeKey) {
+    if (busy) return;
+    var s = CREATIVE_SIZE_BY_KEY[sizeKey];
+    if (!s || !bulkCreatives.length) return;
+    busy = true; input.disabled = true;
+    var failed = [];
+    // Snapshot the list so a `creatives all` re-run mid-download cannot shift it.
+    var queue = bulkCreatives.slice();
+    var line = print("thinking", "rendering PNGs 0/" + queue.length);
+    try {
+      for (var i = 0; i < queue.length; i++) {
+        var sku = queue[i].sku;
+        try {
+          saveBlob(await creativePngBlob(sku, s), creativeFileName(sku, s.key));
+        } catch (err) {
+          failed.push(sku);
+        }
+        line.textContent = "rendering PNGs " + (i + 1) + "/" + queue.length;
+        // Breathe between saves so the browser does not drop queued downloads.
+        await new Promise(function (done) { setTimeout(done, 120); });
+      }
+      line.remove();
+      print("sys", "saved " + (queue.length - failed.length) + " " + s.key +
+        " PNGs (" + s.w + "×" + s.h + " px) to your downloads folder." +
+        (failed.length ? " skipped: " + failed.join(", ") : ""));
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
   }
 
   function showCreatives(arg) {
@@ -713,29 +839,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (/\s/.test(sku)) sku = sku.split(/\s+/)[0];
     var isStore = !sku || sku.toUpperCase() === "STORE";
     var label = isStore ? "the whole store" : escapeHtml(sku);
-    var slug = isStore ? "store" : sku.toLowerCase();
 
     print("sys", "google ads product images for " + (isStore ? "the whole store" : sku) +
       " — 3 Google-recommended sizes. click a size to download the PNG.");
 
     var cards = CREATIVE_SIZES.map(function (s) {
-      var png = creativePngUrl(isStore ? "" : sku, s);
       var svg = creativeSvgUrl(isStore ? "" : sku, s.key);
-      var fname = "multiniche-" + slug + "-" + s.key + ".png";
+      var attrs = "data-creative-sku='" + escapeHtml(isStore ? "" : sku) + "' data-creative-size='" + s.key + "'";
       var ph = Math.round(s.prev * s.h / s.w);
       return "" +
         "<div style='display:inline-block;vertical-align:top;margin:0 18px 18px 0;text-align:center;'>" +
-          "<a href='" + png + "' download='" + fname + "' title='Download " + s.w + "×" + s.h + " PNG'>" +
+          "<a href='#' " + attrs + " title='Download " + s.w + "×" + s.h + " PNG'>" +
             "<img src='" + svg + "' width='" + s.prev + "' height='" + ph + "' alt='" + escapeHtml(label) + " " + s.key + " ad creative' " +
               "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
           "</a>" +
           "<div class='sys' style='margin-top:6px;font-size:12px;'>" + s.label + "</div>" +
           "<div class='sys' style='font-size:11px;'>" + s.w + "×" + s.h + " px</div>" +
-          "<a href='" + png + "' download='" + fname + "' class='cyan' style='font-size:11px;'>download PNG ↓</a>" +
+          "<a href='#' " + attrs + " class='cyan' style='font-size:11px;'>download PNG ↓</a>" +
         "</div>";
     }).join("");
 
-    printHTML("reply", "<div style='margin-top:6px'>" + cards + "</div>");
+    flagBrokenPreviews(printHTML("reply", "<div style='margin-top:6px'>" + cards + "</div>"));
     printHTML("sys",
       "upload these in Google Ads under <b>Assets → Images</b> (Performance Max, Demand Gen or Display). " +
       "landscape + square cover most placements; portrait is for Demand Gen. " +
@@ -746,7 +870,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // Renders a Google Ads image for EVERY product in the live catalog at once,
   // so the owner can grab a ready-to-upload PNG for each listing instead of
   // running `creatives <sku>` sixty-odd times. Each card previews the crisp SVG
-  // and links to the Image-CDN-rasterized PNG in all three Google sizes.
+  // and rasterizes to a real PNG on click, in any of the three Google sizes.
   async function showAllCreatives() {
     if (busy) return;
     busy = true; input.disabled = true;
@@ -761,6 +885,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         printHTML("sys", "no products in the catalog yet — nothing to build creatives for.");
         return;
       }
+      bulkCreatives = products.map(function (p) { return { sku: p.sku }; });
 
       print("sys", "google ads images for all " + products.length + " products — one image file per product, " +
         "in Google's 3 recommended sizes. click any size to download the PNG.");
@@ -770,21 +895,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       var cards = products.map(function (p) {
         var sku = p.sku;
         var name = p.name || sku;
-        var slug = String(sku).toLowerCase();
+        var skuAttr = "data-creative-sku='" + escapeHtml(sku) + "'";
         var links = CREATIVE_SIZES.map(function (s) {
-          var png = creativePngUrl(sku, s);
-          var fname = "multiniche-" + slug + "-" + s.key + ".png";
-          return "<a href='" + png + "' download='" + fname + "' class='cyan' style='font-size:11px;margin-right:10px;' " +
+          return "<a href='#' " + skuAttr + " data-creative-size='" + s.key + "' " +
+            "class='cyan' style='font-size:11px;margin-right:10px;' " +
             "title='Download " + s.w + "×" + s.h + " PNG'>" + s.key + " ↓</a>";
         }).join("");
         var landscape = CREATIVE_SIZES[0];
         var svg = creativeSvgUrl(sku, landscape.key);
-        var png = creativePngUrl(sku, landscape);
-        var fname = "multiniche-" + slug + "-" + landscape.key + ".png";
         var ph = Math.round(prevW * landscape.h / landscape.w);
         return "" +
           "<div style='display:inline-block;vertical-align:top;width:" + prevW + "px;margin:0 18px 20px 0;'>" +
-            "<a href='" + png + "' download='" + fname + "' title='Download " + landscape.w + "×" + landscape.h + " PNG'>" +
+            "<a href='#' " + skuAttr + " data-creative-size='" + landscape.key + "' " +
+              "title='Download " + landscape.w + "×" + landscape.h + " PNG'>" +
               "<img src='" + svg + "' width='" + prevW + "' height='" + ph + "' loading='lazy' " +
                 "alt='" + escapeHtml(name) + " Google Ads creative' " +
                 "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
@@ -795,7 +918,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           "</div>";
       }).join("");
 
-      printHTML("reply", "<div style='margin-top:6px'>" + cards + "</div>");
+      flagBrokenPreviews(printHTML("reply", "<div style='margin-top:6px'>" + cards + "</div>"));
+      printHTML("sys",
+        "grab the whole set in one go: " +
+        CREATIVE_SIZES.map(function (s) {
+          return "<a href='#' data-creative-bulk='" + s.key + "' class='cyan'>" +
+            "download all " + s.key + " PNGs ↓</a>";
+        }).join(" · ") +
+        " — the browser asks once to allow multiple downloads.");
       printHTML("sys",
         "each product now has its own ad image file. upload them in Google Ads under " +
         "<b>Assets → Images</b> and pair each with its product landing page. " +

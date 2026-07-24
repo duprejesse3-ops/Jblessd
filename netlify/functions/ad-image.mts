@@ -16,9 +16,11 @@
 //          portrait (960×1200, 4:5) } — Google's recommended asset dimensions.
 //
 // The SVG is deterministic and grounded in the real catalog (nothing invented),
-// so it is served publicly with a long cache: it is marketing collateral, holds
-// no secrets, and must be fetchable by Netlify Image CDN, which rasterizes it to
-// a Google-Ads-ready PNG (see the admin console's `creatives` command).
+// so it is served publicly with a long cache: it is marketing collateral and
+// holds no secrets. Google Ads only accepts raster uploads, so the admin
+// console's `creatives` command rasterizes this SVG to a real PNG in the browser
+// (canvas) before saving it. Netlify Image CDN cannot do that job — it only
+// transforms raster sources and passes SVG through untouched.
 
 import type { Config } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
@@ -83,27 +85,31 @@ function esc(s: string): string {
 
 // Naive word-wrap for SVG text (SVG has no auto-wrap). Estimates glyph width at
 // ~0.58em for a bold sans face and breaks into at most `maxLines` lines, adding
-// an ellipsis if the text overflows.
+// an ellipsis only when words genuinely do not fit.
 function wrap(text: string, fontSize: number, maxWidth: number, maxLines: number): string[] {
   const charW = fontSize * 0.58
   const perLine = Math.max(6, Math.floor(maxWidth / charW))
-  const words = text.split(/\s+/)
+  const words = text.split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let cur = ''
+  let truncated = false
   for (const word of words) {
     const next = cur ? cur + ' ' + word : word
     if (next.length > perLine && cur) {
+      // Only stop once the last permitted line is already full; breaking any
+      // earlier drops words that still had a line to sit on.
+      if (lines.length === maxLines - 1) {
+        truncated = true
+        break
+      }
       lines.push(cur)
       cur = word
-      if (lines.length === maxLines - 1) break
     } else {
       cur = next
     }
   }
-  if (cur && lines.length < maxLines) lines.push(cur)
-  // If words remain unplaced, mark truncation on the last line.
-  const placed = lines.join(' ').split(/\s+/).length
-  if (placed < words.length && lines.length) {
+  if (cur) lines.push(cur)
+  if (truncated && lines.length) {
     lines[lines.length - 1] = lines[lines.length - 1].replace(/[\s.,;:—–-]+$/, '') + '…'
   }
   return lines
@@ -144,13 +150,15 @@ function pill(x: number, y: number, text: string, fontSize: number, accent: stri
 
 function renderSvg(product: Product | null, size: { w: number; h: number }): string {
   const { w, h } = size
-  const art = product ? CATEGORY[product.category] : STORE_ART
+  // Fall back to the brand mark for a category with no glyph yet: a creative that
+  // still renders beats a 500 that shows up as a broken image in the console.
+  const art = (product && CATEGORY[product.category]) || STORE_ART
   const accent = art.accent
   const row = w / h > 1.4 // landscape gets a side-by-side layout
 
   const name = product ? product.name : 'Ready-to-run AI tools'
   const kicker = product
-    ? `${CATEGORY_LABEL[product.category]} · ${NICHE_LABEL[product.niche]}`
+    ? `${CATEGORY_LABEL[product.category] ?? product.category} · ${NICHE_LABEL[product.niche] ?? product.niche}`
     : 'Prompts · Automations · Templates · Agents'
   const sub = product
     ? product.blurb
