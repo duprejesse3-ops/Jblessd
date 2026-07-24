@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="MULTINICHE AI">
+  <title>MULTINICHE AI</title>
+
+  <defs>
+    <linearGradient id="tile-ls" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b0404"/>
+      <stop offset="1" stop-color="#0a0400"/>
+    </linearGradient>
+    <radialGradient id="core-ls" cx="50%" cy="42%" r="58%">
+      <stop offset="0" stop-color="#ff2a2a" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ff2a2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette-ls" cx="50%" cy="46%" r="62%">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow-ls" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1200" height="300" rx="40" fill="url(#tile-ls)"/>
+  <rect x="0" y="0" width="1200" height="300" rx="40" fill="url(#core-ls)"/>
+  <rect x="0" y="0" width="1200" height="300" rx="40" fill="url(#vignette-ls)"/>
+  <rect x="10" y="10" width="1180" height="280" rx="32" fill="none" stroke="#7a1f1f" stroke-width="4" opacity="0.5"/>
+  <g transform="translate(600 150) scale(0.5) translate(-256 -256)">
+    <g fill="none" stroke="#ff2a2a" stroke-width="50" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M136 316 L136 152 L256 260 L376 152 L376 316" filter="url(#glow-ls)"/>
+    </g>
+    <rect x="192" y="350" width="128" height="34" rx="17" fill="#ff2a2a" filter="url(#glow-ls)"/>
+  </g>
+</svg>
