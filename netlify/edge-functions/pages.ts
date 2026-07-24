@@ -213,6 +213,21 @@ async function getJson<T>(url: URL): Promise<T | null> {
   }
 }
 
+// The catalog is the one fetch a product/niche/use-case page cannot render without,
+// and the first request to it also pays for a serverless cold start plus a Postgres
+// connection — which regularly overruns FETCH_TIMEOUT_MS. A single attempt therefore
+// turned a warm-up into "product not found": a live URL answered 404, which is how a
+// perfectly tagged page ends up reported as untagged, and how Google is invited to
+// delist it. The first attempt doubles as the warm-up, so one retry is enough.
+async function getCatalog(req: Request): Promise<ApiProduct[] | null> {
+  const url = new URL('/api/products', req.url)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const data = await getJson<{ products?: ApiProduct[] }>(url)
+    if (data?.products?.length) return data.products
+  }
+  return null
+}
+
 function catLabel(p: ApiProduct): string {
   return p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category
 }
@@ -242,10 +257,14 @@ function page(opts: {
     `<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>` +
     `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108',{allow_enhanced_conversions:true});</script>` +
     // Google Tag Manager container — also mirrored from index.html so Tag Assistant
-    // finds GTM-M746RK4R on every page of the site, not just the homepage.
+    // finds GTM-M746RK4R on every page of the site, not just the homepage. The `n`
+    // lines copy the per-request nonce from csp.ts onto the gtm.js element created
+    // here, so GTM can propagate it to the scripts it injects.
     `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});` +
     `var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;` +
-    `j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);` +
+    `j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;` +
+    `var n=d.querySelector('[nonce]');n&&j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));` +
+    `f.parentNode.insertBefore(j,f);` +
     `})(window,document,'script','dataLayer','GTM-M746RK4R');</script>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
@@ -303,7 +322,17 @@ function page(opts: {
     `.roles{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}` +
     `.roles a{font-size:13px;border:1px solid var(--line);border-radius:2px;padding:6px 12px;color:var(--muted)}` +
     `footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line-soft);font-size:13px;color:var(--muted-2)}` +
-    `</style></head><body><div class="wrap">` +
+    `</style></head><body>` +
+    // Google Tag Manager (noscript) — the second half of GTM's install snippet,
+    // mirrored from index.html. It was missing here, so every edge-rendered page
+    // shipped only the JS half of the container. Tag detectors that fetch a page
+    // without running its scripts (Google's tag coverage crawler among them) look
+    // for this iframe, which is why /product/* and /updates/* reported "Not tagged"
+    // while the static homepage reported "Tagged". frame-src in the CSP already
+    // allows googletagmanager.com, so it loads under the nonce policy unchanged.
+    `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M746RK4R"` +
+    ` height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>` +
+    `<div class="wrap">` +
     `<header><a class="brand" href="/">${STORE}</a></header>`
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
@@ -333,6 +362,26 @@ function notFound(): Response {
     robots: 'noindex, follow',
     body: `<nav class="crumbs"><a href="/">Home</a></nav><h1>Not here</h1><p class="lede">That page doesn't exist (or the product was delisted). <a href="/">Head back to the catalog →</a></p>`,
   })
+}
+
+// "The catalog is unreachable" is not the same claim as "this page does not exist",
+// and answering a live product URL with 404 tells Google to drop it. A 503 says
+// come back shortly and leaves the URL's indexing — and its tag status — intact.
+function unavailable(): Response {
+  const res = page({
+    title: `Temporarily unavailable | ${STORE}`,
+    description: 'This page is temporarily unavailable.',
+    canonical: `${SITE}/`,
+    jsonld: [],
+    status: 503,
+    robots: 'noindex, follow',
+    body: `<nav class="crumbs"><a href="/">Home</a></nav><h1>One moment</h1><p class="lede">The catalog is waking up and this page couldn't be built just now. <a href="/">Try the catalog →</a></p>`,
+  })
+  const headers = new Headers(res.headers)
+  headers.set('Retry-After', '30')
+  // Never let an outage response be cached in place of the real page.
+  headers.set('Cache-Control', 'no-store')
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
 }
 
 function stars(avg: number): string {
@@ -905,20 +954,25 @@ export default async (req: Request, _context: Context) => {
 
   // ---- /updates (index) and /updates/:id ----  also catalog-independent.
   if (parts[0] === 'updates') {
-    const res = await getJson<{ campaigns?: Campaign[] }>(new URL('/api/marketing-agent', req.url))
-    const campaigns = res?.campaigns ?? []
     if (parts[1]) {
+      // Ask for this exact campaign rather than scanning the recent-12 index, so an
+      // update URL Google discovered months ago still resolves instead of 404ing
+      // once a dozen newer campaigns push it out of the list.
       const id = Number(decodeURIComponent(parts[1]))
-      const c = campaigns.find((x) => x.id === id)
+      if (!Number.isInteger(id) || id < 1) return notFound()
+      const res = await getJson<{ campaigns?: Campaign[] }>(
+        new URL(`/api/marketing-agent?id=${id}`, req.url),
+      )
+      const c = res?.campaigns?.[0]
       if (!c) return notFound()
       return renderUpdate(c)
     }
-    return renderUpdatesIndex(campaigns)
+    const res = await getJson<{ campaigns?: Campaign[] }>(new URL('/api/marketing-agent', req.url))
+    return renderUpdatesIndex(res?.campaigns ?? [])
   }
 
-  const data = await getJson<{ products?: ApiProduct[] }>(new URL('/api/products', req.url))
-  const products = data?.products ?? []
-  if (!products.length) return notFound()
+  const products = await getCatalog(req)
+  if (!products) return unavailable()
 
   // ---- /use-cases (index) and /use-cases/:slug ----
   if (parts[0] === 'use-cases') {

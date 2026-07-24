@@ -7,6 +7,16 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# The Content-Security-Policy is generated per request by netlify/edge-functions/csp.ts,
+# not by a [[headers]] rule, because it carries a one-time nonce that the same
+# function stamps onto every <script> element on the way out. Declared here rather
+# than inline so it is guaranteed to run before the inline-declared seo and pages
+# functions: netlify.toml declarations run first, so context.next() hands csp.ts the
+# finished document and no script tag escapes without a nonce.
+[[edge_functions]]
+  path = "/*"
+  function = "csp"
+
 # Private owner-only AI workstation. Served at the clean /admin URL; the page
 # itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
 # session is established, so a public rewrite is safe.
@@ -16,29 +26,23 @@
   status = 200
 
 # Baseline security headers applied to every response. Scoped to /* so both the
-# static storefront and the edge-rendered pages inherit them. The Content-Security-Policy
-# is deliberately tuned to the storefront's real dependencies:
-#   - inline <script>/JSON-LD blocks and inline styles -> 'unsafe-inline'
-#   - Google Fonts CSS + font files -> fonts.googleapis.com / fonts.gstatic.com
-#   - Google Tag Manager / Analytics -> googletagmanager.com / google-analytics.com
-#   - GA4 measurement (/g/collect) also posts to analytics.google.com and its
-#     regional hosts (region1.…), and to stats.g.doubleclick.net once Google
-#     Signals / the Ads link is on. Leaving those out of connect-src silently
-#     drops page_view, scroll and conversion hits, so all three are allowlisted.
-#   - Google Ads conversion + remarketing (AW-…) -> googleadservices.com,
-#     googleads.g.doubleclick.net, ad.doubleclick.net and td.doubleclick.net
-#     (ccm/s/collect), and google.com (ccm/rmkt collection endpoints)
-#   - Google Tag Assistant (tagassistant.google.com) -> it loads the page being
-#     debugged and talks to it across windows, so it needs script/connect/frame
-#     and frame-ancestors access. Without it Tag Assistant cannot reach the page
-#     and reports "Google Tag: GTM-… not found" even though the tag is installed.
+# static storefront and the edge-rendered pages inherit them.
+#
+# Content-Security-Policy is deliberately absent from this block — it is emitted by
+# netlify/edge-functions/csp.ts, which mints a per-request nonce and stamps it onto
+# every <script> element. Custom headers are applied on top of edge function
+# responses, so a CSP declared here would arrive alongside the nonced one and the
+# browser would enforce both policies at once; the stricter intersection would then
+# block scripts the nonce was meant to allow. Keep the policy in exactly one place.
+# The rationale for every allowlisted host lives in that file.
 #
 # Framing/isolation notes — these are deliberately tuned so tag debugging works:
-#   - frame-ancestors allows only ourselves and Tag Assistant, so clickjacking
-#     from arbitrary origins is still blocked. X-Frame-Options is intentionally
-#     NOT set: it has no allowlist (only DENY/SAMEORIGIN), so any value strict
-#     enough to be useful also blocks Tag Assistant, and browsers enforce it on
-#     top of CSP. frame-ancestors is its modern, more expressive replacement.
+#   - frame-ancestors (in the CSP from csp.ts) allows only ourselves and Tag
+#     Assistant, so clickjacking from arbitrary origins is still blocked.
+#     X-Frame-Options is intentionally NOT set: it has no allowlist (only
+#     DENY/SAMEORIGIN), so any value strict enough to be useful also blocks Tag
+#     Assistant, and browsers enforce it on top of CSP. frame-ancestors is its
+#     modern, more expressive replacement.
 #   - Cross-Origin-Opener-Policy is intentionally NOT set (i.e. left at the
 #     unsafe-none default). Tag Assistant opens the site in a new tab and debugs
 #     it over the window.opener channel; COOP: same-origin severs that opener
@@ -58,7 +62,6 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self' https://tagassistant.google.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://td.doubleclick.net https://*.g.doubleclick.net https://www.google.com https://*.google.com https://tagassistant.google.com; form-action 'self'; frame-src https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net https://tagassistant.google.com; upgrade-insecure-requests"
 
 # Service worker must always revalidate so app updates ship immediately.
 [[headers]]
