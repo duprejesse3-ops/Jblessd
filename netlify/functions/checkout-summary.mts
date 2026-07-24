@@ -5,12 +5,14 @@
 // optimize toward — every conversion would look identical.
 //
 // Returns order totals (amount, currency, payment status) plus the buyer's own
-// email. The email powers Google Ads enhanced conversions: the storefront hands
-// it to the Google tag, which normalizes and SHA-256 hashes it in the browser
-// before sending, improving conversion match rates. It's only ever returned for
-// a genuinely paid session and marked private, no-store — it's the buyer's own
-// address, returned to their own success-page browser, exactly as /api/order
-// already does. No address or line-item detail is exposed here.
+// contact details. These power Google Ads enhanced conversions: the storefront
+// hands them to the Google tag, which normalizes and SHA-256 hashes them in the
+// browser before sending, so raw values never reach Google. More matchable
+// fields means a higher match rate, so email, phone and billing name/address are
+// all included when Stripe collected them. Everything here is the buyer's own
+// data, returned only for a genuinely paid session, only to that buyer's own
+// success-page browser, and marked private/no-store — exactly as /api/order
+// already does. No line-item detail is exposed here.
 //
 // Reachable at /api/checkout-summary via the /api/* rewrite in netlify.toml.
 
@@ -44,6 +46,15 @@ export default async (req: Request, _context: Context) => {
       return Response.json({ paid: false }, { status: 200 })
     }
 
+    const details = session.customer_details
+    // Stripe gives one "name" string; Ads wants first/last separately. Split on
+    // the last space so multi-word first names stay intact.
+    const fullName = (details?.name ?? '').trim()
+    const splitAt = fullName.lastIndexOf(' ')
+    const firstName = splitAt > 0 ? fullName.slice(0, splitAt) : fullName
+    const lastName = splitAt > 0 ? fullName.slice(splitAt + 1) : ''
+    const address = details?.address
+
     return Response.json(
       {
         paid: true,
@@ -52,9 +63,23 @@ export default async (req: Request, _context: Context) => {
         transactionId: session.id,
         value: (session.amount_total ?? 0) / 100,
         currency: (session.currency ?? 'usd').toUpperCase(),
-        // Buyer's own email for enhanced conversions. Normalized/hashed by the
-        // Google tag in the browser; may be absent if Stripe collected none.
-        email: session.customer_details?.email ?? session.customer_email ?? null,
+        // Buyer's own details for enhanced conversions. Normalized/hashed by the
+        // Google tag in the browser; each may be absent if Stripe collected none,
+        // and the storefront skips any field that comes back empty.
+        email: details?.email ?? session.customer_email ?? null,
+        phone: details?.phone ?? null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        address: address
+          ? {
+              line1: address.line1 ?? null,
+              line2: address.line2 ?? null,
+              city: address.city ?? null,
+              state: address.state ?? null,
+              postalCode: address.postal_code ?? null,
+              country: address.country ?? null,
+            }
+          : null,
       },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )

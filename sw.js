@@ -1,6 +1,9 @@
 /* MULTINICHE AI — service worker
    Offline support + install for the mobile app (PWA). */
-const CACHE = 'multiniche-ai-v3';
+// Bumped to v4 with the Google tag consolidation so the precached app shell
+// (which embeds the tag markup) is refetched instead of serving the old snippet
+// to returning/offline visitors.
+const CACHE = 'multiniche-ai-v4';
 const APP_SHELL = [
   '/',
   '/index.html',

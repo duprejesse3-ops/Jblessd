@@ -237,8 +237,16 @@ function page(opts: {
     // Google tag (gtag.js) — same Google Ads tag the static storefront (index.html)
     // loads, so these edge-rendered pages report as "tagged" in Google Tag Assistant
     // and share the site-wide measurement/conversion tracking instead of being blind spots.
+    // allow_enhanced_conversions matches index.html: it lets the tag send hashed
+    // user_data, which is what Google Ads enhanced ("advanced") conversions need.
     `<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>` +
-    `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108');</script>` +
+    `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108',{allow_enhanced_conversions:true});</script>` +
+    // Google Tag Manager container — also mirrored from index.html so Tag Assistant
+    // finds GTM-M746RK4R on every page of the site, not just the homepage.
+    `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});` +
+    `var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;` +
+    `j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);` +
+    `})(window,document,'script','dataLayer','GTM-M746RK4R');</script>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
     `<meta http-equiv="content-language" content="en-US"/>` +
