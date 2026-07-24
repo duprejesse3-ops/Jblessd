@@ -1741,6 +1741,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         // conversion action is configured (send_to resolved from env vars).
         window.analyticsReady.then(function(sendTo){
           if(!sendTo){ return; }
+          // Enhanced conversions "in-page code": hand the buyer's own email to
+          // the Google tag before the conversion. gtag normalizes and SHA-256
+          // hashes it in the browser, so raw email never reaches Google, and
+          // the hashed value lets Ads match this conversion to the click far
+          // more accurately than automatic collection alone. This resolves the
+          // Ads diagnostic asking to add in-page code alongside Automatic.
+          if(order.email){
+            gtag('set', 'user_data', {
+              email: String(order.email).trim().toLowerCase()
+            });
+          }
           gtag('event', 'conversion', {
             send_to: sendTo,
             transaction_id: order.transactionId,
