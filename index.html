@@ -1783,12 +1783,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // order total fetched from Stripe. A real value (not a flat 1.0) is what lets
   // Smart Bidding strategies like Target ROAS / Maximize Conversion Value
   // optimize toward high-value orders instead of treating every sale the same.
-  function reportPurchaseConversion(sessionId){
+  //
+  // Two consumers are served here, deliberately:
+  //   1. the gtag.js tag hard-coded in <head>, which sends the conversion today;
+  //   2. the Google Tag Manager container (GTM-M746RK4R), via an explicit
+  //      "purchase" dataLayer event. gtag() calls do land in dataLayer, but as
+  //      an arguments array that GTM triggers cannot read, so a container has
+  //      nothing to fire on. Pushing a named event with an ecommerce object is
+  //      what Google Ads' guided purchase-conversion setup builds its tag and
+  //      variables from, and it is only meaningful on a page the container is
+  //      installed on — hence /order-confirmation.
+  // Both carry the same server-verified transaction_id, so Google de-duplicates
+  // the order if the container is later configured to send the conversion too.
+  function reportPurchaseConversion(sessionId, purchasedItems){
     if(!sessionId){ return; }
     fetch('/api/checkout-summary?session_id=' + encodeURIComponent(sessionId))
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(order){
         if(!order || !order.paid){ return; }
+        pushPurchaseToDataLayer(order, purchasedItems);
         // Everything is reported inside analyticsReady: the GA4 measurement ID is
         // configured from server env vars, so a purchase event pushed before that
         // config command lands has no destination and is silently dropped. Both
@@ -1822,12 +1835,43 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       .catch(function(){ /* tracking is best-effort; never block the buyer */ });
   }
 
+  // Announce the purchase to Google Tag Manager in the GA4 ecommerce shape its
+  // guided setup expects. `ecommerce: null` first clears any previous ecommerce
+  // object so a reload can't blend two orders' data together — Google's own
+  // recommendation for dataLayer pushes. Item detail comes from the cart as it
+  // stood when the buyer left for Stripe; the money figures always come from the
+  // server-verified session, never from the browser.
+  function pushPurchaseToDataLayer(order, purchasedItems){
+    var items = (purchasedItems || []).map(function(item){
+      return {
+        item_id: item.id,
+        item_name: item.name,
+        item_category: item.catLabel || item.category,
+        price: parseFloat(item.price) || 0,
+        quantity: 1
+      };
+    });
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({
+      event: 'purchase',
+      ecommerce: {
+        transaction_id: order.transactionId,
+        value: order.value,
+        currency: order.currency,
+        items: items
+      }
+    });
+  }
+
   function handleCheckoutReturn(){
     var params = new URLSearchParams(window.location.search);
     var status = params.get('checkout');
     if(status === 'success'){
       var sessionId = params.get('session_id');
-      reportPurchaseConversion(sessionId);
+      // Snapshot the cart before it's emptied below: the conversion report is
+      // async, so by the time it runs `cart` is already cleared.
+      reportPurchaseConversion(sessionId, cart.slice());
       cart = [];
       policyCheckbox.checked = false;
       renderCart();
@@ -1838,6 +1882,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     if(status){
       // Clean the query string so a refresh doesn't re-trigger the message.
+      // Only the parameters are dropped — the path stays as it is, so a buyer
+      // returning from Stripe keeps the /order-confirmation URL in the address
+      // bar instead of being silently moved back to the homepage.
       params.delete('checkout');
       params.delete('session_id');
       var qs = params.toString();
@@ -1928,7 +1975,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // URL), so their access never depends on the confirmation email arriving.
   function buildAppDownloadHtml(item){
     var recoveryUrl = orderSessionId
-      ? (location.origin + '/?checkout=success&session_id=' + encodeURIComponent(orderSessionId))
+      ? (location.origin + '/order-confirmation?checkout=success&session_id=' + encodeURIComponent(orderSessionId))
       : location.origin;
     var app = item.app || {};
     var fieldList = (app.fields || []).map(function(f){

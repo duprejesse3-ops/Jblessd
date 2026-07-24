@@ -17,6 +17,32 @@
   path = "/*"
   function = "csp"
 
+# Order confirmation page. Stripe sends buyers here after a successful payment
+# (see success_url in netlify/functions/create-checkout-session.mts), and this is
+# the URL to hand to Google Ads / Google Tag Manager as the order confirmation
+# page.
+#
+# It is a rewrite (status 200), not a redirect: the storefront's own HTML —
+# including the Google Tag Manager container snippet and its <noscript> iframe —
+# is served verbatim at this URL, so a tag detector that fetches
+# /order-confirmation finds GTM-M746RK4R in the first response without running
+# any JavaScript and without following a hop. The purchase flow previously ended
+# on "/?checkout=success&session_id=…", and Google Ads' guided purchase-conversion
+# setup has no stable page to inspect there — it normalizes the query string away
+# and reports "Tag Manager container not found" for the confirmation page even
+# though the homepage itself is tagged. A path of its own fixes that while the
+# buyer keeps the exact same delivery experience, because the same single-page
+# app answers both URLs.
+#
+# Deliberately NOT noindex'd: index.html carries <link rel="canonical"
+# href="https://jblessd.com/">, so search engines consolidate this URL into the
+# homepage on their own, and nothing (an X-Robots-Tag, a robots.txt Disallow) is
+# left in the way of Google's tag detector fetching the page.
+[[redirects]]
+  from = "/order-confirmation"
+  to = "/index.html"
+  status = 200
+
 # Private owner-only AI workstation. Served at the clean /admin URL; the page
 # itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
 # session is established, so a public rewrite is safe.
