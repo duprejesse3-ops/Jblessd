@@ -1,14 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
+<!-- Google tag (gtag.js) — Google Ads. Loaded eagerly at the very top of <head>
+     rather than behind the /api/analytics-config fetch below, so the conversion
+     linker reads the gclid/gbraid/wbraid off the landing URL before anything can
+     strip it. This is the page's ONE gtag.js load: the config block further down
+     adds the GA4 measurement ID on the same tag instead of loading a second copy,
+     because two gtag.js loads double-configure the Ads account and double-count
+     conversions.
+     allow_enhanced_conversions is the flag that actually permits the tag to send
+     the hashed user_data the success-page handler supplies. Without it gtag
+     silently discards that data and Google Ads reports enhanced conversions as
+     receiving nothing, which is what "advanced conversions not working" looks
+     like in the Ads diagnostics panel. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>
 <script>
+  window.GOOGLE_ADS_TAG_ID = 'AW-17866165108';
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', 'AW-17866165108');
+  gtag('config', window.GOOGLE_ADS_TAG_ID, { allow_enhanced_conversions: true });
 </script>
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -749,29 +761,34 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
 </style>
 
-<!-- Google tag (gtag.js) bootstrap — GA4 + Google Ads conversion tracking.
-     The measurement/conversion IDs are public but pulled from server env vars
-     via /api/analytics-config, so this same markup ships against test and live
-     Google Ads accounts and stays a no-op until the IDs are set. Loading the
-     tag only when configured keeps the page fast and privacy-clean by default. -->
+<!-- Google tag configuration from server env vars. The Google Ads tag itself is
+     already loaded and configured at the top of <head>; this block only adds what
+     has to come from the environment and must NOT load gtag.js again:
+       - the GA4 measurement ID (configured on the same already-loaded tag)
+       - the Google Ads purchase conversion label, which the checkout-success
+         handler awaits before reporting the conversion
+     IDs are public (they ship in the page HTML) but come from env vars so the
+     same markup deploys against test and live Google Ads accounts. -->
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){ dataLayer.push(arguments); }
+  window.gtag = window.gtag || function(){ dataLayer.push(arguments); };
   // Resolves with the Google Ads purchase send_to (e.g. "AW-123/label") once the
   // tag is live, or "" when tracking isn't configured. The checkout-success
-  // handler awaits this before reporting the conversion.
+  // handler awaits this before reporting the conversion, so it also guarantees
+  // the GA4 config command below has run before any purchase event is pushed.
   window.analyticsReady = fetch('/api/analytics-config')
     .then(function(r){ return r.ok ? r.json() : {}; })
     .then(function(cfg){
       if(!cfg || !cfg.configured){ return ''; }
-      var primaryId = cfg.ga4Id || cfg.adsId;
-      var s = document.createElement('script');
-      s.async = true;
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(primaryId);
-      document.head.appendChild(s);
-      gtag('js', new Date());
+      // A single gtag.js load serves any number of destinations — each extra
+      // config command just registers another measurement/conversion ID on it.
       if(cfg.ga4Id){ gtag('config', cfg.ga4Id); }
-      if(cfg.adsId){ gtag('config', cfg.adsId); }
+      // Only configure an Ads account the head block didn't already cover, so
+      // pointing GOOGLE_ADS_ID at a different account still works without
+      // double-configuring the default one.
+      if(cfg.adsId && cfg.adsId !== window.GOOGLE_ADS_TAG_ID){
+        gtag('config', cfg.adsId, { allow_enhanced_conversions: true });
+      }
       return cfg.purchaseSendTo || '';
     })
     .catch(function(){ return ''; });
@@ -1720,6 +1737,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
   });
 
+  // Build the Google Ads enhanced-conversions "in-page code" payload from the
+  // buyer's own checkout details. gtag normalizes and SHA-256 hashes every field
+  // in the browser, so raw values never reach Google; the hashes let Ads match
+  // the sale to the original ad click even when cookies were lost or the tab was
+  // closed. More fields means a higher match rate, so send whatever Stripe
+  // collected — but only non-empty ones, since blank values lower match quality.
+  function buildUserData(order){
+    var data = {};
+    if(order.email){ data.email = String(order.email).trim().toLowerCase(); }
+    // Phone must be E.164 ("+15551234567"); anything else is dropped rather than
+    // sent in a format Ads cannot match.
+    if(order.phone){
+      var phone = String(order.phone).replace(/[^\d+]/g, '');
+      if(/^\+[1-9]\d{7,14}$/.test(phone)){ data.phone_number = phone; }
+    }
+    var addr = order.address || {};
+    var street = [addr.line1, addr.line2].filter(Boolean).join(' ').trim();
+    var address = {};
+    if(order.firstName){ address.first_name = String(order.firstName).trim().toLowerCase(); }
+    if(order.lastName){ address.last_name = String(order.lastName).trim().toLowerCase(); }
+    if(street){ address.street = street.toLowerCase(); }
+    if(addr.city){ address.city = String(addr.city).trim().toLowerCase(); }
+    if(addr.state){ address.region = String(addr.state).trim().toLowerCase(); }
+    if(addr.postalCode){ address.postal_code = String(addr.postalCode).trim(); }
+    if(addr.country){ address.country = String(addr.country).trim().toUpperCase(); }
+    // Ads only accepts an address block that can identify a person.
+    if(address.first_name && address.last_name && address.country){
+      data.address = address;
+    }
+    return Object.keys(data).length ? data : null;
+  }
+
   // ---- return from Stripe Checkout ----
   // Report a value-based purchase conversion to Google Ads / GA4 using the real
   // order total fetched from Stripe. A real value (not a flat 1.0) is what lets
@@ -1731,27 +1780,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(order){
         if(!order || !order.paid){ return; }
-        // GA4 ecommerce purchase event.
-        gtag('event', 'purchase', {
-          transaction_id: order.transactionId,
-          value: order.value,
-          currency: order.currency
-        });
-        // Google Ads conversion — only once the tag has loaded and a purchase
-        // conversion action is configured (send_to resolved from env vars).
+        // Everything is reported inside analyticsReady: the GA4 measurement ID is
+        // configured from server env vars, so a purchase event pushed before that
+        // config command lands has no destination and is silently dropped. Both
+        // fetches race, and this one usually wins — which is why the purchase
+        // event used to go missing from GA4.
         window.analyticsReady.then(function(sendTo){
+          // GA4 ecommerce purchase event.
+          gtag('event', 'purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+          // Google Ads conversion — only once a purchase conversion action is
+          // configured (send_to resolved from env vars).
           if(!sendTo){ return; }
-          // Enhanced conversions "in-page code": hand the buyer's own email to
-          // the Google tag before the conversion. gtag normalizes and SHA-256
-          // hashes it in the browser, so raw email never reaches Google, and
-          // the hashed value lets Ads match this conversion to the click far
-          // more accurately than automatic collection alone. This resolves the
-          // Ads diagnostic asking to add in-page code alongside Automatic.
-          if(order.email){
-            gtag('set', 'user_data', {
-              email: String(order.email).trim().toLowerCase()
-            });
-          }
+          // Enhanced conversions: hand the buyer's hashed details to the tag
+          // BEFORE the conversion event, so gtag attaches them to it. Pairs with
+          // allow_enhanced_conversions on the config command in <head> — without
+          // that flag this data is accepted here and then thrown away, which is
+          // what the Ads diagnostic "add in-page code" warning is really about.
+          var userData = buildUserData(order);
+          if(userData){ gtag('set', 'user_data', userData); }
           gtag('event', 'conversion', {
             send_to: sendTo,
             transaction_id: order.transactionId,

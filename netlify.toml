@@ -28,7 +28,24 @@
 #   - Google Ads conversion + remarketing (AW-…) -> googleadservices.com,
 #     googleads.g.doubleclick.net, ad.doubleclick.net and td.doubleclick.net
 #     (ccm/s/collect), and google.com (ccm/rmkt collection endpoints)
-# frame-ancestors 'none' plus X-Frame-Options block clickjacking; HSTS forces HTTPS.
+#   - Google Tag Assistant (tagassistant.google.com) -> it loads the page being
+#     debugged and talks to it across windows, so it needs script/connect/frame
+#     and frame-ancestors access. Without it Tag Assistant cannot reach the page
+#     and reports "Google Tag: GTM-… not found" even though the tag is installed.
+#
+# Framing/isolation notes — these are deliberately tuned so tag debugging works:
+#   - frame-ancestors allows only ourselves and Tag Assistant, so clickjacking
+#     from arbitrary origins is still blocked. X-Frame-Options is intentionally
+#     NOT set: it has no allowlist (only DENY/SAMEORIGIN), so any value strict
+#     enough to be useful also blocks Tag Assistant, and browsers enforce it on
+#     top of CSP. frame-ancestors is its modern, more expressive replacement.
+#   - Cross-Origin-Opener-Policy is intentionally NOT set (i.e. left at the
+#     unsafe-none default). Tag Assistant opens the site in a new tab and debugs
+#     it over the window.opener channel; COOP: same-origin severs that opener
+#     link for a cross-origin opener, which also surfaces as "tag not found".
+#     The site needs no cross-origin isolation (no SharedArrayBuffer), so the
+#     only cost is losing COOP's XS-leak hardening.
+# HSTS forces HTTPS.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -39,11 +56,9 @@
     # satisfies that check for every response, including the edge-rendered pages.
     Content-Language = "en-US"
     X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-    Cross-Origin-Opener-Policy = "same-origin"
-    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://td.doubleclick.net https://www.google.com; form-action 'self'; frame-src https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self' https://tagassistant.google.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://td.doubleclick.net https://*.g.doubleclick.net https://www.google.com https://*.google.com https://tagassistant.google.com; form-action 'self'; frame-src https://js.stripe.com https://checkout.stripe.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net https://tagassistant.google.com; upgrade-insecure-requests"
 
 # Service worker must always revalidate so app updates ship immediately.
 [[headers]]
