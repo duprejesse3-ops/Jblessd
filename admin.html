@@ -229,6 +229,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var BUILDER = "/api/product-builder";
   var ADS = "/api/google-ads-builder";
   var ADIMG = "/api/ad-image";
+  var PRODUCTS = "/api/products";
 
   var el = function (id) { return document.getElementById(id); };
   var gate = el("gate"), gateMsg = el("gateMsg"), gateInfo = el("gateInfo");
@@ -279,6 +280,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  ads [sku] [| goal]   build a paste-ready Google Ads plan (headlines, keywords…)",
     "  adplans         list Google Ads plans the builder has generated",
     "  creatives [sku]   generate Google Ads product images (PNG, all 3 sizes)",
+    "  creatives all     one Google Ads image file per product (whole catalog)",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -298,6 +300,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  ads AI-AG-012 | push the launch discount",
     "  creatives                    ad images for the whole store",
     "  creatives AI-AG-058          ad images for one product",
+    "  creatives all                one ad image per product, catalog-wide",
     ""
   ].join("\n");
 
@@ -411,6 +414,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower === "ads" || lower.indexOf("ads ") === 0) { buildAds(raw.slice(3).trim()); return; }
     if (lower === "adplans") { listAdPlans(); return; }
     if (lower === "creatives" || lower === "adimages") { showCreatives(""); return; }
+    if (lower === "creatives all" || lower === "adimages all" ||
+        lower === "creatives *" || lower === "creatives every" ||
+        lower === "creatives everything") { showAllCreatives(); return; }
     if (lower.indexOf("creatives ") === 0) { showCreatives(raw.slice(10).trim()); return; }
     if (lower.indexOf("adimages ") === 0) { showCreatives(raw.slice(9).trim()); return; }
     ask(raw);
@@ -734,6 +740,72 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       "upload these in Google Ads under <b>Assets → Images</b> (Performance Max, Demand Gen or Display). " +
       "landscape + square cover most placements; portrait is for Demand Gen. " +
       "run <b>creatives &lt;sku&gt;</b> for a specific product.");
+  }
+
+  // ---------- bulk ad creatives: one image file per product ----------
+  // Renders a Google Ads image for EVERY product in the live catalog at once,
+  // so the owner can grab a ready-to-upload PNG for each listing instead of
+  // running `creatives <sku>` sixty-odd times. Each card previews the crisp SVG
+  // and links to the Image-CDN-rasterized PNG in all three Google sizes.
+  async function showAllCreatives() {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading catalog");
+    try {
+      var r = await fetch(PRODUCTS, { headers: { "accept": "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", (j && j.error) || ("error " + r.status)); return; }
+      var products = (j && j.products) || [];
+      if (!products.length) {
+        printHTML("sys", "no products in the catalog yet — nothing to build creatives for.");
+        return;
+      }
+
+      print("sys", "google ads images for all " + products.length + " products — one image file per product, " +
+        "in Google's 3 recommended sizes. click any size to download the PNG.");
+
+      // Landscape (1.91:1) is the primary preview; every size is a download link.
+      var prevW = 260;
+      var cards = products.map(function (p) {
+        var sku = p.sku;
+        var name = p.name || sku;
+        var slug = String(sku).toLowerCase();
+        var links = CREATIVE_SIZES.map(function (s) {
+          var png = creativePngUrl(sku, s);
+          var fname = "multiniche-" + slug + "-" + s.key + ".png";
+          return "<a href='" + png + "' download='" + fname + "' class='cyan' style='font-size:11px;margin-right:10px;' " +
+            "title='Download " + s.w + "×" + s.h + " PNG'>" + s.key + " ↓</a>";
+        }).join("");
+        var landscape = CREATIVE_SIZES[0];
+        var svg = creativeSvgUrl(sku, landscape.key);
+        var png = creativePngUrl(sku, landscape);
+        var fname = "multiniche-" + slug + "-" + landscape.key + ".png";
+        var ph = Math.round(prevW * landscape.h / landscape.w);
+        return "" +
+          "<div style='display:inline-block;vertical-align:top;width:" + prevW + "px;margin:0 18px 20px 0;'>" +
+            "<a href='" + png + "' download='" + fname + "' title='Download " + landscape.w + "×" + landscape.h + " PNG'>" +
+              "<img src='" + svg + "' width='" + prevW + "' height='" + ph + "' loading='lazy' " +
+                "alt='" + escapeHtml(name) + " Google Ads creative' " +
+                "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
+            "</a>" +
+            "<div class='sys' style='margin-top:6px;font-size:12px;'>" + escapeHtml(name) + "</div>" +
+            "<div class='sys' style='font-size:11px;'>" + escapeHtml(sku) + "</div>" +
+            "<div style='margin-top:3px;'>" + links + "</div>" +
+          "</div>";
+      }).join("");
+
+      printHTML("reply", "<div style='margin-top:6px'>" + cards + "</div>");
+      printHTML("sys",
+        "each product now has its own ad image file. upload them in Google Ads under " +
+        "<b>Assets → Images</b> and pair each with its product landing page. " +
+        "run <b>creatives &lt;sku&gt;</b> to see one product across all sizes at full resolution.");
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — could not load the catalog.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
   }
 
   logout.addEventListener("click", doLogout);
