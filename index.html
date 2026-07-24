@@ -235,13 +235,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     --brass:#FF2A2A;
     --brass-soft:#E03A3A;
     --teal:#FF7A7A;
+    /* Placeholder / hint text — kept lighter than --muted-2 so it stays legible
+       on the near-black panels (the darker red failed contrast, notably on the
+       concierge field and search box on mobile). */
+    --placeholder:#D46A6A;
     --radius:2px;
     --serif:'JetBrains Mono', ui-monospace, monospace;
     --sans:'Inter', -apple-system, sans-serif;
     --mono:'JetBrains Mono', ui-monospace, monospace;
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
+  html{scroll-behavior:smooth; scroll-padding-top:76px;}
   body{
     margin:0; background:var(--ink); color:var(--paper);
     font-family:var(--sans); -webkit-font-smoothing:antialiased;
@@ -281,7 +285,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .btn-solid{background:var(--teal); border-color:var(--teal); color:var(--ink); font-weight:600;}
   .btn-solid:hover{background:#ffb0b0; color:var(--ink);}
   .btn-gold{background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600;}
-  .btn-gold:hover{background:#d6a648;}
+  .btn-gold:hover{background:#ff5a5a;}
   .cart-count{font-family:var(--mono); font-size:11px; background:var(--brass); color:var(--ink); min-width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;}
 
   /* hero */
@@ -293,15 +297,28 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   h1 em{color:var(--brass); font-style:italic; text-shadow:0 0 14px rgba(255,42,42,.4);}
   .lede{font-size:17px; line-height:1.65; color:var(--muted); max-width:560px; margin:0 0 36px;}
-  .search-row{display:flex; gap:10px; max-width:480px;}
-  .search-box{position:relative; flex:1;}
+  .search-row{display:flex; flex-direction:column; align-items:flex-start; gap:9px; max-width:480px; margin-top:26px;}
+  .search-lead{font-family:var(--mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted-2);}
+  .search-box{position:relative; width:100%;}
   .search-box svg{position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--muted-2);}
   #search{
-    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--paper);
-    font-family:var(--sans); font-size:14px; padding:12px 14px 12px 38px; border-radius:var(--radius);
+    width:100%; background:var(--panel); border:1px solid var(--line-soft); color:var(--paper);
+    font-family:var(--sans); font-size:13.5px; padding:11px 14px 11px 38px; border-radius:var(--radius);
   }
   #search:focus{outline:none; border-color:var(--teal);}
-  #search::placeholder{color:var(--muted-2);}
+  #search::placeholder{color:var(--placeholder);}
+
+  /* Mobile hero: pull the headline fully above the fold (it was landing
+     mid-sentence under the sticky header) and give the two CTAs a clear
+     stacked hierarchy so the primary action reads as the single next step. */
+  @media (max-width:600px){
+    .hero{padding:44px 0 40px;}
+    h1{font-size:clamp(30px,8vw,40px);}
+    .lede{font-size:16px; margin-bottom:26px;}
+    .hero-cta{gap:10px; margin:18px 0 4px;}
+    .hero-cta .btn{flex:1 1 100%; justify-content:center; padding:13px 16px;}
+    .search-row{max-width:none; margin-top:22px;}
+  }
 
   /* trust strip */
   .trust{border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:22px 0; margin-bottom:56px;}
@@ -326,7 +343,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .concierge{
     border:1px solid var(--line); border-radius:var(--radius); background:
       radial-gradient(120% 140% at 0% 0%, rgba(199,72,72,.08), transparent 55%),
-      radial-gradient(120% 140% at 100% 0%, rgba(198,150,58,.10), transparent 55%),
+      radial-gradient(120% 140% at 100% 0%, rgba(255,42,42,.10), transparent 55%),
       var(--panel);
     padding:26px 26px 24px; margin:0 0 56px; position:relative; overflow:hidden;
   }
@@ -339,7 +356,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     font-family:var(--sans); font-size:14px; line-height:1.5; padding:12px 14px; border-radius:var(--radius); resize:vertical; min-height:52px;
   }
   #concierge-input:focus{outline:none; border-color:var(--teal);}
-  #concierge-input::placeholder{color:var(--muted-2);}
+  #concierge-input::placeholder{color:var(--placeholder);}
   #concierge-submit{white-space:nowrap; align-self:flex-start;}
   #concierge-submit:disabled{opacity:.6; cursor:default;}
   .concierge-suggestions{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px;}
@@ -506,6 +523,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   /* form fields */
   .field{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); margin-bottom:10px;}
   .field:focus{outline:none; border-color:var(--teal);}
+  .field::placeholder{color:var(--placeholder);}
   textarea.field{resize:none; font-family:var(--sans);}
   select.field{appearance:none;}
 
@@ -546,7 +564,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .site-status{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--muted);}
   .site-status-dot{width:7px; height:7px; border-radius:50%; background:var(--muted-2); box-shadow:0 0 0 3px rgba(151,130,130,.08);}
   .site-status[data-status="healthy"] .site-status-dot{background:var(--teal); box-shadow:0 0 0 3px rgba(255,122,122,.1);}
-  .site-status[data-status="degraded"] .site-status-dot{background:var(--brass); box-shadow:0 0 0 3px rgba(198,165,92,.1);}
+  .site-status[data-status="degraded"] .site-status-dot{background:var(--brass); box-shadow:0 0 0 3px rgba(255,42,42,.12);}
   .site-status[data-status="unhealthy"] .site-status-dot{background:#ff786e; box-shadow:0 0 0 3px rgba(255,120,110,.1);}
   .foot-copy{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2); margin:22px 0 0; padding-top:20px; border-top:1px solid var(--line-soft); display:flex; align-items:center; gap:9px;}
   .foot-logo{width:22px; height:22px; flex:none; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--brass); border-radius:var(--radius); box-shadow:0 0 9px rgba(255,42,42,.28);}
@@ -722,7 +740,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .chat-input-row{display:flex; gap:8px; padding:12px; border-top:1px solid var(--line);}
   #chat-input{flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius);}
   #chat-input:focus{outline:none; border-color:var(--teal);}
-  #chat-input::placeholder{color:var(--muted-2);}
+  #chat-input::placeholder{color:var(--placeholder);}
   #chat-send{padding:10px 13px;}
   #chat-send[disabled]{opacity:.6; cursor:progress;}
   @media (max-width:520px){
@@ -805,6 +823,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a class="btn btn-line" href="/proof">See live proofs →</a>
     </div>
     <div class="search-row">
+      <span class="search-lead">Already know what you want?</span>
       <div class="search-box">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input id="search" type="search" placeholder="Search the catalog…" aria-label="Search products" />
