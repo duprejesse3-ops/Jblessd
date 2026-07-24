@@ -16,9 +16,9 @@ const H = 630;
 // --- palette (mirrors the storefront CSS custom properties) ---
 const INK_A = '#1b0404';
 const INK_B = '#0a0400';
-const GREEN = '#ff2a2a';
-const GREEN_MID = '#e03a3a';
-const GREEN_DIM = '#7a1f1f';
+const ACCENT = '#ff2a2a';
+const ACCENT_MID = '#e03a3a';
+const ACCENT_DIM = '#7a1f1f';
 const MONO = 'DejaVu Sans Mono, monospace';
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -40,37 +40,40 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   <rect width="${W}" height="${H}" fill="url(#glow)"/>
 
   <!-- corner frame brackets -->
-  <g stroke="${GREEN_MID}" stroke-width="3" fill="none" opacity=".55">
+  <g stroke="${ACCENT_MID}" stroke-width="3" fill="none" opacity=".55">
     <path d="M40 74 V40 H74"/>
     <path d="M${W - 40} 74 V40 H${W - 74}"/>
     <path d="M40 ${H - 74} V${H - 40} H74"/>
     <path d="M${W - 40} ${H - 74} V${H - 40} H${W - 74}"/>
   </g>
 
-  <!-- terminal icon -->
-  <g transform="translate(56,68)">
-    <rect width="72" height="56" rx="10" fill="none" stroke="${GREEN}" stroke-width="3" opacity=".85"/>
-    <text x="16" y="38" font-family="${MONO}" font-size="30" font-weight="bold" fill="${GREEN}" filter="url(#soft)">&gt;_</text>
+  <!-- brand mark: engineered M monogram + cursor -->
+  <g transform="translate(56,62)">
+    <rect x="0" y="0" width="78" height="78" rx="16" fill="none" stroke="${ACCENT}" stroke-width="3" opacity=".85"/>
+    <g fill="none" stroke="${ACCENT}" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#soft)">
+      <path d="M21 55 L21 24 L39 42 L57 24 L57 55"/>
+    </g>
+    <rect x="29" y="60" width="20" height="6" rx="3" fill="${ACCENT}"/>
   </g>
 
   <!-- brand lockup -->
-  <text x="150" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
-  <text x="152" y="130" font-family="${MONO}" font-size="15" letter-spacing="7" fill="${GREEN_MID}" opacity=".8">LOAD THE TOOL YOU NEED</text>
+  <text x="156" y="102" font-family="${MONO}" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
+  <text x="158" y="130" font-family="${MONO}" font-size="15" letter-spacing="7" fill="${ACCENT_MID}" opacity=".8">LOAD THE TOOL YOU NEED</text>
 
   <!-- kicker -->
-  <text x="60" y="234" font-family="${MONO}" font-size="24" font-weight="bold" letter-spacing="6" fill="${GREEN}">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>
+  <text x="60" y="234" font-family="${MONO}" font-size="24" font-weight="bold" letter-spacing="6" fill="${ACCENT}">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>
 
   <!-- headline -->
   <g font-family="${MONO}" font-size="52" font-weight="bold" fill="#ffdfdf">
     <text x="58" y="318">Prompt packs, automations,</text>
     <text x="58" y="388">and agent configs — built once,</text>
-    <text x="58" y="458" fill="${GREEN}">sold as instruments.</text>
+    <text x="58" y="458" fill="${ACCENT}">sold as instruments.</text>
   </g>
 
   <!-- footer -->
-  <line x1="58" y1="540" x2="${W - 58}" y2="540" stroke="${GREEN_DIM}" stroke-width="2" opacity=".6"/>
-  <text x="58" y="576" font-family="${MONO}" font-size="19" font-weight="bold" letter-spacing="3" fill="${GREEN_MID}" opacity=".85">PROMPT PACKS • AUTOMATION BLUEPRINTS • DOC TEMPLATES • AGENT CONFIGS</text>
-  <text x="58" y="606" font-family="${MONO}" font-size="17" letter-spacing="2" fill="${GREEN_DIM}">jblessd.com</text>
+  <line x1="58" y1="540" x2="${W - 58}" y2="540" stroke="${ACCENT_DIM}" stroke-width="2" opacity=".6"/>
+  <text x="58" y="576" font-family="${MONO}" font-size="19" font-weight="bold" letter-spacing="3" fill="${ACCENT_MID}" opacity=".85">PROMPT PACKS • AUTOMATION BLUEPRINTS • DOC TEMPLATES • AGENT CONFIGS</text>
+  <text x="58" y="606" font-family="${MONO}" font-size="17" letter-spacing="2" fill="${ACCENT_DIM}">jblessd.com</text>
 </svg>
 `;
 

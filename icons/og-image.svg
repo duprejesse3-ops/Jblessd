@@ -24,15 +24,18 @@
     <path d="M1160 556 V590 H1126"/>
   </g>
 
-  <!-- terminal icon -->
-  <g transform="translate(56,68)">
-    <rect width="72" height="56" rx="10" fill="none" stroke="#ff2a2a" stroke-width="3" opacity=".85"/>
-    <text x="16" y="38" font-family="DejaVu Sans Mono, monospace" font-size="30" font-weight="bold" fill="#ff2a2a" filter="url(#soft)">&gt;_</text>
+  <!-- brand mark: engineered M monogram + cursor -->
+  <g transform="translate(56,62)">
+    <rect x="0" y="0" width="78" height="78" rx="16" fill="none" stroke="#ff2a2a" stroke-width="3" opacity=".85"/>
+    <g fill="none" stroke="#ff2a2a" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#soft)">
+      <path d="M21 55 L21 24 L39 42 L57 24 L57 55"/>
+    </g>
+    <rect x="29" y="60" width="20" height="6" rx="3" fill="#ff2a2a"/>
   </g>
 
   <!-- brand lockup -->
-  <text x="150" y="102" font-family="DejaVu Sans Mono, monospace" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
-  <text x="152" y="130" font-family="DejaVu Sans Mono, monospace" font-size="15" letter-spacing="7" fill="#e03a3a" opacity=".8">LOAD THE TOOL YOU NEED</text>
+  <text x="156" y="102" font-family="DejaVu Sans Mono, monospace" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
+  <text x="158" y="130" font-family="DejaVu Sans Mono, monospace" font-size="15" letter-spacing="7" fill="#e03a3a" opacity=".8">LOAD THE TOOL YOU NEED</text>
 
   <!-- kicker -->
   <text x="60" y="234" font-family="DejaVu Sans Mono, monospace" font-size="24" font-weight="bold" letter-spacing="6" fill="#ff2a2a">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>

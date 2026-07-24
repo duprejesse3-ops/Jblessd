@@ -1,5 +1,8 @@
-// Generates the MULTINICHE AI matrix logo as SVG (standard + maskable variants).
-// Deterministic output — no randomness — so re-runs are byte-stable.
+// Generates the MULTINICHE AI monogram logo as SVG (standard + maskable variants).
+// The mark is an engineered "M" (for MULTINICHE) rising to twin peaks with a
+// terminal cursor block beneath it — a nod to the command-line/AI heritage
+// without the generic matrix-rain motif. Deterministic output — no randomness —
+// so re-runs are byte-stable.
 // Run: node icons/build-logo.mjs   (writes icons/logo.svg + icons/logo-maskable.svg)
 
 import { writeFileSync } from 'node:fs';
@@ -9,77 +12,12 @@ import { dirname, join } from 'node:path';
 const DIR = dirname(fileURLToPath(import.meta.url));
 const S = 512; // canvas size
 
-// --- palette (mirrors the storefront CSS custom properties) ---
+// --- brand palette (mirrors the storefront CSS custom properties) ---
 const INK_A = '#1b0404';
-const INK_B = '#0a0400'; // note: slight teal-black so the tile has depth
-const GREEN = '#ff2a2a';
-const GREEN_DIM = '#7a1f1f';
-const GREEN_MID = '#e03a3a';
-
-// Deterministic pseudo-random: mulberry32 seeded once.
-function rng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Build the matrix-rain backdrop: vertical columns of glyph "cells"
-// that fade from a bright leading char up into darkness. Glyphs are
-// tiny rects (0/1/dash segments) so no font is required at raster time.
-function rain(seed, opacityScale) {
-  const rand = rng(seed);
-  const cols = 9;
-  const colW = S / cols;
-  const cell = 30; // vertical spacing of glyphs
-  let out = '';
-  for (let c = 0; c < cols; c++) {
-    const cx = colW * c + colW / 2;
-    const head = Math.floor(rand() * (S / cell)); // leading glyph index
-    const len = 5 + Math.floor(rand() * 7); // trail length
-    for (let i = 0; i < len; i++) {
-      const idx = head - i;
-      if (idx < 0) continue;
-      const y = idx * cell + 6;
-      const lead = i === 0;
-      const op = (lead ? 0.85 : Math.max(0.05, 0.4 - i * 0.055)) * opacityScale;
-      const fill = lead ? GREEN : GREEN_MID;
-      // glyph = 2-3 short horizontal segments to suggest a digital character
-      const g = rand();
-      const w = 11 + Math.round(rand() * 5);
-      const x = cx - w / 2;
-      if (g < 0.4) {
-        // "1"-like vertical tick
-        out += `<rect x="${(cx - 2).toFixed(1)}" y="${y}" width="4" height="18" rx="1.5" fill="${fill}" opacity="${op.toFixed(3)}"/>`;
-      } else if (g < 0.75) {
-        // "0"/box-like
-        out += `<rect x="${x.toFixed(1)}" y="${y}" width="${w}" height="18" rx="3" fill="none" stroke="${fill}" stroke-width="3" opacity="${op.toFixed(3)}"/>`;
-      } else {
-        // dash stack
-        out += `<rect x="${x.toFixed(1)}" y="${y}" width="${w}" height="4" rx="2" fill="${fill}" opacity="${op.toFixed(3)}"/>`;
-        out += `<rect x="${x.toFixed(1)}" y="${y + 8}" width="${(w * 0.6).toFixed(1)}" height="4" rx="2" fill="${fill}" opacity="${(op * 0.8).toFixed(3)}"/>`;
-        out += `<rect x="${x.toFixed(1)}" y="${y + 14}" width="${w}" height="4" rx="2" fill="${fill}" opacity="${(op * 0.9).toFixed(3)}"/>`;
-      }
-    }
-  }
-  return out;
-}
-
-// The terminal prompt mark: a bold ">" chevron + underscore cursor,
-// glowing. Centred on (256,256); `scale` shrinks it for the maskable
-// safe zone.
-function mark(scale) {
-  const glow = `filter="url(#glow)"`;
-  const body = `
-    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
-      <path d="M182 168 L286 256 L182 344" stroke="${GREEN}" stroke-width="40" ${glow}/>
-      <rect x="300" y="322" width="120" height="30" rx="15" fill="${GREEN}" ${glow}/>
-    </g>`;
-  return `<g transform="translate(256 256) scale(${scale}) translate(-256 -256)">${body}</g>`;
-}
+const INK_B = '#0a0400';
+const ACCENT = '#ff2a2a';
+const ACCENT_MID = '#e03a3a';
+const ACCENT_DIM = '#7a1f1f';
 
 function defs() {
   return `
@@ -88,31 +26,51 @@ function defs() {
       <stop offset="0" stop-color="${INK_A}"/>
       <stop offset="1" stop-color="${INK_B}"/>
     </linearGradient>
+    <radialGradient id="core" cx="50%" cy="42%" r="58%">
+      <stop offset="0" stop-color="${ACCENT}" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="${ACCENT}" stop-opacity="0"/>
+    </radialGradient>
     <radialGradient id="vignette" cx="50%" cy="46%" r="62%">
-      <stop offset="0" stop-color="#000000" stop-opacity="0.72"/>
-      <stop offset="0.55" stop-color="#000000" stop-opacity="0.35"/>
+      <stop offset="0" stop-color="#000000" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0.22"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feGaussianBlur stdDeviation="6" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>`;
 }
 
+// The monogram: an "M" drawn as a single bold stroke rising to twin peaks,
+// with a terminal cursor block sitting on the baseline beneath it.
+// `scale` shrinks it into the maskable safe zone. Centred on (256,256).
+function mark(scale) {
+  const glow = `filter="url(#glow)"`;
+  return `<g transform="translate(256 256) scale(${scale}) translate(-256 -256)">
+    <g fill="none" stroke="${ACCENT}" stroke-width="50" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M136 316 L136 152 L256 260 L376 152 L376 316" ${glow}/>
+    </g>
+    <rect x="192" y="350" width="128" height="34" rx="17" fill="${ACCENT}" ${glow}/>
+  </g>`;
+}
+
 function svg({ maskable }) {
   const r = maskable ? 0 : 112; // full-bleed for maskable, rounded tile otherwise
-  const markScale = maskable ? 0.78 : 0.92;
-  const border = maskable
+  const markScale = maskable ? 0.72 : 0.9;
+  // Double keyline gives the tile an "instrument panel" frame; dropped for the
+  // maskable variant so nothing lands in the platform crop zone.
+  const frame = maskable
     ? ''
-    : `<rect x="6" y="6" width="${S - 12}" height="${S - 12}" rx="${r - 4}" fill="none" stroke="${GREEN_DIM}" stroke-width="3" opacity="0.55"/>`;
+    : `<rect x="7" y="7" width="${S - 14}" height="${S - 14}" rx="${r - 5}" fill="none" stroke="${ACCENT_DIM}" stroke-width="3" opacity="0.55"/>
+    <rect x="22" y="22" width="${S - 44}" height="${S - 44}" rx="${r - 17}" fill="none" stroke="${ACCENT_DIM}" stroke-width="1.5" opacity="0.3"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="MULTINICHE AI">
   <title>MULTINICHE AI</title>
 ${defs()}
   <rect x="0" y="0" width="${S}" height="${S}" rx="${r}" fill="url(#tile)"/>
-  <g opacity="0.9">${rain(1337, maskable ? 0.5 : 0.6)}</g>
+  <rect x="0" y="0" width="${S}" height="${S}" rx="${r}" fill="url(#core)"/>
   <rect x="0" y="0" width="${S}" height="${S}" rx="${r}" fill="url(#vignette)"/>
-  ${border}
+  ${frame}
   ${mark(markScale)}
 </svg>
 `;
