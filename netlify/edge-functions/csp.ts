@@ -149,8 +149,7 @@ const CONNECT_HOSTS = [
 // named here.
 //
 // This stays a bounded allowlist of named Google origins, so clickjacking from an
-// arbitrary site is still refused (and netlify/lib/security-scan.mts still passes the
-// framing check). Do NOT collapse it to '*' or 'https:'.
+// arbitrary site is still refused. Do NOT collapse it to '*' or 'https:'.
 const FRAME_ANCESTOR_HOSTS = [
   "'self'",
   'https://tagassistant.google.com',
