@@ -116,12 +116,12 @@ function wrapHtml(bodyText: string): string {
     .map((p) => `<p style="margin:0 0 16px;line-height:1.6">${esc(p).replace(/\n/g, '<br/>')}</p>`)
     .join('')
   return (
-    `<div style="background:#f4f6f5;padding:28px 0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0b1f12">` +
-    `<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8e4;border-radius:8px;overflow:hidden">` +
-    `<div style="background:#000803;padding:18px 28px"><span style="color:#00FF41;font-weight:700;letter-spacing:.04em">MULTINICHE AI</span></div>` +
+    `<div style="background:#f6f3f3;padding:28px 0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f0b0b">` +
+    `<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e8e2e2;border-radius:8px;overflow:hidden">` +
+    `<div style="background:#0a0400;padding:18px 28px"><span style="color:#FF2A2A;font-weight:700;letter-spacing:.04em">MULTINICHE AI</span></div>` +
     `<div style="padding:28px">${paragraphs}</div>` +
-    `<div style="padding:16px 28px;border-top:1px solid #eef2ef;font-size:12px;color:#6b7d70">` +
-    `MULTINICHE AI · <a href="https://jblessd.com" style="color:#0a7d2c">jblessd.com</a></div>` +
+    `<div style="padding:16px 28px;border-top:1px solid #f0eaea;font-size:12px;color:#7d6b6b">` +
+    `MULTINICHE AI · <a href="https://jblessd.com" style="color:#a61b1b">jblessd.com</a></div>` +
     `</div></div>`
   )
 }
