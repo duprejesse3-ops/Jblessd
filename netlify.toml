@@ -108,6 +108,23 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# The storefront is immutable within a deploy. A short browser cache plus stale
+# revalidation removes repeat-request latency without hiding new deploys.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=300, stale-while-revalidate=3600"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300, stale-while-revalidate=3600"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
 # Agent studio: always revalidate. Credit pack pricing and tier costs are fetched
 # from /api/credits at runtime, but the page also renders a balance and an access
 # key for a signed-in customer, so a cached copy must never be reused blindly.
@@ -168,4 +185,3 @@
   [headers.values]
     Content-Type = "application/xml"
     Cache-Control = "public, max-age=0, must-revalidate"
-

@@ -14,6 +14,7 @@ import { fulfilOrder } from '../lib/fulfillment.mjs'
 import { deliverOrderEmail } from '../lib/order-email.mjs'
 import { findPack, grantPurchase, isEmail, normalizeEmail, packTotal } from '../lib/credits.mjs'
 import { sendAccessKeyEmail } from '../lib/credit-email.mjs'
+import { uploadGoogleAdsPurchase } from '../lib/google-ads.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
@@ -53,7 +54,12 @@ export default async (req: Request, _context: Context) => {
     // so it survives closed tabs and blocked pixels that lose the browser
     // conversion. This is the "revenue" half the ad-performance report divides
     // by each campaign's traffic. Best-effort: never let it block fulfilment.
-    await recordPurchaseEvent(session)
+    await Promise.all([
+      recordPurchaseEvent(session),
+      uploadGoogleAdsPurchase(session).catch((err) => {
+        console.error('webhook: Google Ads conversion upload failed —', (err as Error).message)
+      }),
+    ])
 
     // Credit top-ups for the Claude Agent Studio are a different kind of sale:
     // there are no catalog items to deliver, the "fulfilment" is a balance. This

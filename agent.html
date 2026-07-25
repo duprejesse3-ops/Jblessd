@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="/privacy-consent.js"></script>
 <!-- Google tag (gtag.js) — mirrors index.html so this page shares the site-wide
      measurement and conversion tracking instead of being a blind spot. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>
@@ -9,7 +10,9 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'AW-17866165108', {allow_enhanced_conversions:true});
+  window.GOOGLE_ADS_TAG_ID = 'AW-17866165108';
 </script>
+<script src="/marketing-measurement.js"></script>
 <!-- Google Tag Manager. The `n` lines copy the per-request nonce minted by
      netlify/edge-functions/csp.ts onto the gtm.js element this snippet creates,
      so GTM can propagate it to the scripts it injects. -->
@@ -518,6 +521,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/use-cases">Use cases</a>
       <a href="/proof">Live proofs</a>
       <a href="/updates">Updates</a>
+      <a href="/privacy-policy/">Privacy</a>
+      <a href="/terms/">Terms</a>
       <a href="/refund-policy/">Refund policy</a>
     </nav>
     <p style="margin:0">MULTINICHE AI — ready-to-use AI productivity tools, and a Claude agent you can rent by the run. Payments by Stripe. Credits never expire.</p>
@@ -879,6 +884,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       var payload = { action: 'checkout', pack: pack.id };
       if (click) { payload.clickId = click.id; payload.clickSource = click.source; }
       if (attrib) { payload.attribution = attrib; }
+      payload.marketingConsent = window.getMarketingConsent ? window.getMarketingConsent() : 'unknown';
       var res = await fetch('/api/credits', {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -887,6 +893,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       var data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error || 'checkout');
       window.dataLayer.push({ event: 'credit_checkout_start', credit_pack: pack.id, value: pack.price, currency: 'USD' });
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('begin_checkout', { currency: 'USD', value: Number(pack.price || 0), items: [{ item_id: pack.id, item_name: pack.label, price: Number(pack.price || 0), quantity: 1 }], ecomm_prodid: pack.id, ecomm_pagetype: 'cart', ecomm_totalvalue: Number(pack.price || 0) });
+      }
       window.location.href = data.url;
     } catch (err) {
       btn.disabled = false;
@@ -1124,12 +1133,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       if (data.key) saveKey(data.key);
 
-      window.dataLayer.push({
-        event: 'credit_purchase',
-        transaction_id: sessionId,
-        credits: data.credits || 0,
-        currency: 'USD'
-      });
+      var conversionKey = 'osc:credit-conversion:' + sessionId;
+      var alreadyReported = false;
+      try { alreadyReported = localStorage.getItem(conversionKey) === '1'; } catch (e) {}
+      if(!alreadyReported){
+        window.dataLayer.push({
+          event: 'credit_purchase',
+          transaction_id: sessionId,
+          credits: data.credits || 0,
+          value: Number(data.value || 0),
+          currency: 'USD'
+        });
+        if(window.trackMarketingEvent){
+          window.trackMarketingEvent('purchase', { transaction_id: sessionId, value: Number(data.value || 0), currency: data.currency || 'USD', items: [{ item_id: data.pack || 'credits', item_name: 'Agent credits', price: Number(data.value || 0), quantity: 1 }] });
+        }
+        Promise.resolve(window.marketingAnalyticsReady).then(function(cfg){
+          if(cfg && cfg.purchaseSendTo){
+            gtag('event', 'conversion', { send_to: cfg.purchaseSendTo, transaction_id: sessionId, value: Number(data.value || 0), currency: data.currency || 'USD' });
+          }
+        }).catch(function(){});
+        try { localStorage.setItem(conversionKey, '1'); } catch (e) {}
+      }
 
       panel.innerHTML =
         '<strong>' + (data.credits ? data.credits + ' credits added.' : 'Credits confirmed.') +

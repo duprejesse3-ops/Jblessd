@@ -249,13 +249,14 @@ function page(opts: {
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
+    `<script src="/privacy-consent.js"></script>` +
     // Google tag (gtag.js) — same Google Ads tag the static storefront (index.html)
     // loads, so these edge-rendered pages report as "tagged" in Google Tag Assistant
     // and share the site-wide measurement/conversion tracking instead of being blind spots.
     // allow_enhanced_conversions matches index.html: it lets the tag send hashed
     // user_data, which is what Google Ads enhanced ("advanced") conversions need.
     `<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>` +
-    `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108',{allow_enhanced_conversions:true});</script>` +
+    `<script>window.GOOGLE_ADS_TAG_ID='AW-17866165108';window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-17866165108',{allow_enhanced_conversions:true});</script>` +
     // Google Tag Manager container — also mirrored from index.html so Tag Assistant
     // finds GTM-M746RK4R on every page of the site, not just the homepage. The `n`
     // lines copy the per-request nonce from csp.ts onto the gtm.js element created
@@ -266,6 +267,7 @@ function page(opts: {
     `var n=d.querySelector('[nonce]');n&&j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));` +
     `f.parentNode.insertBefore(j,f);` +
     `})(window,document,'script','dataLayer','GTM-M746RK4R');</script>` +
+    `<script src="/marketing-measurement.js"></script>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
     `<meta http-equiv="content-language" content="en-US"/>` +
@@ -336,8 +338,8 @@ function page(opts: {
     `<header><a class="brand" href="/">${STORE}</a></header>`
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
-    `<a href="/">Catalog</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
-    `</div></body></html>`
+    `<a href="/">Catalog</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
+    `</div><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
 
   return new Response(head + opts.body + foot, {
     status: opts.status ?? 200,
@@ -495,7 +497,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     `<div class="row"><span>Spec</span><span>${esc(p.spec)}</span></div>` +
     `</div>` +
     `<div class="buy"><span class="price">${money(p.price)}</span>` +
-    `<a class="btn" href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
+    `<a class="btn" data-product-cta href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
     `<p style="font-size:13px;color:var(--muted)">Digital delivery is immediate. Sales are final after access is provided, subject to the <a href="/refund-policy/">refund policy</a>.</p>` +
     reviewsHtml +
     relatedHtml
@@ -511,7 +513,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       `<meta property="product:availability" content="in stock"/>` +
       `<meta property="og:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
       `<meta property="og:price:currency" content="USD"/>`,
-    body,
+    body: body + `<script>window.trackMarketingEvent&&window.trackMarketingEvent('view_item',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});document.querySelector('[data-product-cta]')?.addEventListener('click',function(){window.trackMarketingEvent&&window.trackMarketingEvent('add_to_cart',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});});</script>`,
   })
 }
 
@@ -872,7 +874,7 @@ function renderFreeTool(): Response {
     `while(true){var ch=await reader.read();if(ch.done)break;buf+=dec.decode(ch.value,{stream:true});var ls=buf.split('\\n');buf=ls.pop();` +
     `for(var k=0;k<ls.length;k++){var ln=ls[k].trim();if(!ln)continue;var ev;try{ev=JSON.parse(ln);}catch(_){continue;}` +
     `if(ev.type==='text'){got=true;ans+=ev.text;setOut(ans);}}}` +
-    `if(!got)throw new Error('empty');lastOut=ans;out.innerHTML=esc(ans);lab.textContent='demo · complete';` +
+    `if(!got)throw new Error('empty');lastOut=ans;out.innerHTML=esc(ans);lab.textContent='demo · complete';window.trackMarketingEvent&&window.trackMarketingEvent('demo_complete',{item_id:sku,method:'free_tool'},{lead:true});` +
     // Build the CTA hrefs from variables rather than inline string literals. The
     // discovery crawler extracts links with a regex over raw HTML; a literal
     // href="/product/'+sku pattern makes it capture a bare "/product/" (up to the

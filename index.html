@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/privacy-consent.js"></script>
 <!-- Google tag (gtag.js) — Google Ads. Loaded eagerly at the very top of <head>
      rather than behind the /api/analytics-config fetch below, so the conversion
      linker reads the gclid/gbraid/wbraid off the landing URL before anything can
@@ -14,8 +15,9 @@
      receiving nothing, which is what "advanced conversions not working" looks
      like in the Ads diagnostics panel. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>
+<script>window.GOOGLE_ADS_TAG_ID='AW-17866165108';</script>
+<script src="/marketing-measurement.js"></script>
 <script>
-  window.GOOGLE_ADS_TAG_ID = 'AW-17866165108';
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -801,25 +803,12 @@ f.parentNode.insertBefore(j,f);
 <script>
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function(){ dataLayer.push(arguments); };
-  // Resolves with the Google Ads purchase send_to (e.g. "AW-123/label") once the
+  // Resolves with the configured Google Ads purchase destination once the
   // tag is live, or "" when tracking isn't configured. The checkout-success
   // handler awaits this before reporting the conversion, so it also guarantees
   // the GA4 config command below has run before any purchase event is pushed.
-  window.analyticsReady = fetch('/api/analytics-config')
-    .then(function(r){ return r.ok ? r.json() : {}; })
-    .then(function(cfg){
-      if(!cfg || !cfg.configured){ return ''; }
-      // A single gtag.js load serves any number of destinations — each extra
-      // config command just registers another measurement/conversion ID on it.
-      if(cfg.ga4Id){ gtag('config', cfg.ga4Id); }
-      // Only configure an Ads account the head block didn't already cover, so
-      // pointing GOOGLE_ADS_ID at a different account still works without
-      // double-configuring the default one.
-      if(cfg.adsId && cfg.adsId !== window.GOOGLE_ADS_TAG_ID){
-        gtag('config', cfg.adsId, { allow_enhanced_conversions: true });
-      }
-      return cfg.purchaseSendTo || '';
-    })
+  window.analyticsReady = Promise.resolve(window.marketingAnalyticsReady)
+    .then(function(cfg){ return (cfg && cfg.purchaseSendTo) || ''; })
     .catch(function(){ return ''; });
 </script>
 </head>
@@ -1191,6 +1180,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/proof">Live proofs</a>
       <a href="/updates">Updates</a>
       <a href="#contact">Contact</a>
+      <a href="/privacy-policy/">Privacy</a>
+      <a href="/terms/">Terms</a>
       <a href="/refund-policy/">Refund policy</a>
       <a href="#" id="open-marketing-footer" aria-haspopup="dialog" aria-expanded="false">Marketing agent</a>
       <a href="#" id="open-add-footer" aria-haspopup="dialog" aria-expanded="false">List a product</a>
@@ -1693,6 +1684,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // ---- cart ----
   function addToCart(data){
     cart.push(data);
+    if(window.trackMarketingEvent){
+      window.trackMarketingEvent('add_to_cart', {
+        currency: 'USD', value: Number(data.price || 0),
+        items: [{ item_id: data.id, item_name: data.name, price: Number(data.price || 0), quantity: 1 }],
+        ecomm_prodid: data.id, ecomm_pagetype: 'cart', ecomm_totalvalue: Number(data.price || 0)
+      });
+    }
     renderCart();
     saveCart();
     toast('Added "' + data.name + '"');
@@ -1765,6 +1763,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     checkoutBtn.disabled = true;
     checkoutBtn.textContent = 'Redirecting…';
     try{
+      var checkoutValue = cart.reduce(function(sum, item){ return sum + Number(item.price || 0); }, 0);
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('begin_checkout', {
+          currency: 'USD', value: checkoutValue,
+          items: cart.map(function(item){ return { item_id: item.id, item_name: item.name, price: Number(item.price || 0), quantity: 1 }; }),
+          ecomm_prodid: cart.map(function(item){ return item.id; }), ecomm_pagetype: 'cart', ecomm_totalvalue: checkoutValue
+        });
+      }
       var adClick = getAdClickId();
       var attribution = getAttribution();
       var res = await fetch('/api/create-checkout-session', {
@@ -1775,6 +1781,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           digitalPolicyAccepted: true,
           clickId: adClick ? adClick.id : undefined,
           clickSource: adClick ? adClick.source : undefined,
+          marketingConsent: window.getMarketingConsent ? window.getMarketingConsent() : 'unknown',
           attribution: attribution || undefined
         })
       });
@@ -2935,6 +2942,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(!gotText){ throw new Error('empty'); }
       proofOutput.innerHTML = esc(answer);      // drop the cursor when done
       proofLabel.textContent = 'demo · complete';
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('demo_complete', { item_id: proofSku, method: scenario ? 'custom_scenario' : 'sample' }, { lead: true });
+      }
       // Capture the run so it can be published as a shareable permalink.
       lastProofOutput = answer;
       lastProofScenario = scenario;
@@ -3160,6 +3170,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(!res.ok){ throw new Error(data && data.error ? data.error : 'failed'); }
       newsletterForm.reset();
       newsletterNote.textContent = "You're in — here's your free pack. Save it below.";
+      if(window.trackMarketingEvent){ window.trackMarketingEvent('sign_up', { method: 'newsletter' }, { lead: true }); }
       renderFreePack(data);
     }catch(err){
       newsletterNote.textContent = (err && err.message) ? err.message : "Something went wrong — please try again.";
@@ -3188,6 +3199,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if(!res.ok){ throw new Error('failed'); }
         contactForm.reset();
         contactNote.textContent = "Thanks — your message is on its way. We'll reply by email.";
+        if(window.trackMarketingEvent){ window.trackMarketingEvent('generate_lead', { method: 'contact_form' }, { lead: true }); }
         toast("Message sent — we'll be in touch.");
       }catch(err){
         contactNote.textContent = 'Something went wrong — please try again in a moment.';
