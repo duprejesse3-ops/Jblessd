@@ -28,14 +28,16 @@ async function diagnose(report: SecurityReport): Promise<string> {
             'leaks. Give the site owner one concise, safe recommendation to close the most important gaps. Prioritize ' +
             'missing critical headers (CSP, HSTS, X-Content-Type-Options) over recommended ones. ' +
             // The storefront runs Google Tag Manager, GA4 and Google Ads, and blocks
-            // framing with "frame-ancestors 'self' https://tagassistant.google.com"
-            // rather than X-Frame-Options — XFO has no allowlist, so any useful value
-            // also blocks Google Tag Assistant and makes the tags look uninstalled.
+            // framing with a bounded CSP frame-ancestors allowlist (itself plus the
+            // Google Tag Assistant / Tag Manager preview origins that must embed the
+            // page to debug it) rather than X-Frame-Options — XFO has no allowlist, so
+            // any useful value also blocks Google Tag Assistant and makes the tags look
+            // uninstalled. Same for narrowing frame-ancestors back to 'self'.
             // Without this constraint the model keeps recommending exactly that.
             'This site deliberately uses CSP frame-ancestors with a narrow allowlist instead of X-Frame-Options, and ' +
             'deliberately allowlists Google Tag Manager, Google Analytics and Google Ads hosts so its tags can load. ' +
-            'Do not recommend adding X-Frame-Options, setting Cross-Origin-Opener-Policy, or removing/narrowing the ' +
-            'Google tag hosts. ' +
+            'Do not recommend adding X-Frame-Options, setting Cross-Origin-Opener-Policy, narrowing frame-ancestors to ' +
+            "'self', or removing/narrowing the Google tag or Tag Assistant/Tag Manager preview origins. " +
             'Do not claim to have changed code, deployed, or fixed anything. ' +
             `Overall grade: ${report.metrics.grade}. ` +
             `Failing/warning checks: ${JSON.stringify(report.checks.filter((c) => c.status !== 'passed'))}`,

@@ -88,9 +88,10 @@ function checkFraming(headers: Headers): SecurityCheck {
   const csp = header(headers, 'content-security-policy').toLowerCase()
   const frameAncestors = /frame-ancestors\s+([^;]+)/.exec(csp)?.[1]?.trim()
   // An explicit allowlist counts as protection, not just 'none'/'self'. The
-  // storefront's policy is "frame-ancestors 'self' https://tagassistant.google.com"
-  // so that Google Tag Assistant can load the page it is debugging; that is a
-  // two-origin allowlist and clickjacking from an arbitrary origin is still
+  // storefront's policy names itself plus the Google Tag Assistant / Tag Manager
+  // preview origins (see FRAME_ANCESTOR_HOSTS in netlify/edge-functions/csp.ts) so
+  // that Google Tag Assistant can load the page it is debugging; that is a bounded
+  // allowlist of named origins and clickjacking from an arbitrary origin is still
   // refused. Insisting on a bare 'self' here reported the site as critically
   // insecure every run and pushed the remediation advice toward an
   // X-Frame-Options / frame-ancestors lockdown, which is exactly the change that
