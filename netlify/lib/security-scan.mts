@@ -77,14 +77,31 @@ function checkContentType(headers: Headers): SecurityCheck {
   return passed(name, 'critical', 'X-Content-Type-Options: nosniff is set')
 }
 
+// A frame-ancestors value only stops clickjacking if it names a bounded set of
+// origins. These sources do not: they let any site on the web frame the page, so a
+// policy containing one is no better than having no policy at all.
+const PERMISSIVE_FRAME_SOURCES = new Set(['*', 'https:', 'http:', '*:*', "'*'"])
+
 function checkFraming(headers: Headers): SecurityCheck {
   const name = 'Clickjacking protection'
   const xfo = header(headers, 'x-frame-options').toLowerCase()
   const csp = header(headers, 'content-security-policy').toLowerCase()
   const frameAncestors = /frame-ancestors\s+([^;]+)/.exec(csp)?.[1]?.trim()
-  const cspBlocks = frameAncestors === "'none'" || frameAncestors === "'self'"
+  // An explicit allowlist counts as protection, not just 'none'/'self'. The
+  // storefront's policy is "frame-ancestors 'self' https://tagassistant.google.com"
+  // so that Google Tag Assistant can load the page it is debugging; that is a
+  // two-origin allowlist and clickjacking from an arbitrary origin is still
+  // refused. Insisting on a bare 'self' here reported the site as critically
+  // insecure every run and pushed the remediation advice toward an
+  // X-Frame-Options / frame-ancestors lockdown, which is exactly the change that
+  // breaks Tag Assistant and makes the Google tags look uninstalled.
+  const sources = frameAncestors ? frameAncestors.split(/\s+/).filter(Boolean) : []
+  const cspBlocks = sources.length > 0 && !sources.some((source) => PERMISSIVE_FRAME_SOURCES.has(source))
   if (xfo === 'deny' || xfo === 'sameorigin' || cspBlocks) {
     return passed(name, 'critical', `Framing restricted (${xfo || `frame-ancestors ${frameAncestors}`})`)
+  }
+  if (sources.length) {
+    return failed(name, 'critical', `CSP frame-ancestors "${frameAncestors}" allows framing by any origin`)
   }
   return failed(name, 'critical', 'No X-Frame-Options or CSP frame-ancestors restriction found')
 }

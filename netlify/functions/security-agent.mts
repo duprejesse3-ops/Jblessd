@@ -26,8 +26,17 @@ async function diagnose(report: SecurityReport): Promise<string> {
             'Act as a web application security analyst. A bot scanned a storefront\'s live HTTP response headers ' +
             'and graded its hardening against clickjacking, protocol downgrade, MIME sniffing, and referrer/permission ' +
             'leaks. Give the site owner one concise, safe recommendation to close the most important gaps. Prioritize ' +
-            'missing critical headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) over recommended ones. Do ' +
-            'not claim to have changed code, deployed, or fixed anything. ' +
+            'missing critical headers (CSP, HSTS, X-Content-Type-Options) over recommended ones. ' +
+            // The storefront runs Google Tag Manager, GA4 and Google Ads, and blocks
+            // framing with "frame-ancestors 'self' https://tagassistant.google.com"
+            // rather than X-Frame-Options — XFO has no allowlist, so any useful value
+            // also blocks Google Tag Assistant and makes the tags look uninstalled.
+            // Without this constraint the model keeps recommending exactly that.
+            'This site deliberately uses CSP frame-ancestors with a narrow allowlist instead of X-Frame-Options, and ' +
+            'deliberately allowlists Google Tag Manager, Google Analytics and Google Ads hosts so its tags can load. ' +
+            'Do not recommend adding X-Frame-Options, setting Cross-Origin-Opener-Policy, or removing/narrowing the ' +
+            'Google tag hosts. ' +
+            'Do not claim to have changed code, deployed, or fixed anything. ' +
             `Overall grade: ${report.metrics.grade}. ` +
             `Failing/warning checks: ${JSON.stringify(report.checks.filter((c) => c.status !== 'passed'))}`,
         },
