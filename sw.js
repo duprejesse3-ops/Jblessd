@@ -7,10 +7,12 @@
 // GTM Preview navigation used to be cached as "/", so a visitor (or a later
 // debugging run) could be served a page pinned to a finished debug session. The
 // fetch handler below now stays out of the way for those URLs entirely.
-const CACHE = 'multiniche-ai-v6';
+const CACHE = 'multiniche-ai-v7';
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/privacy-consent.js',
+  '/marketing-measurement.js',
   '/manifest.webmanifest',
   '/icons/logo.svg',
   '/icons/icon-192.png',

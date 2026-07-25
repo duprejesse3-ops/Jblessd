@@ -100,6 +100,8 @@ export default async (req: Request) => {
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>${imageBlock()}\n  </url>`,
     `  <url>\n    <loc>${SITE}/refund-policy/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/privacy-policy/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/terms/</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/proof</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,

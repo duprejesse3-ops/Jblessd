@@ -148,6 +148,9 @@ async function handleCheckout(req: Request, body: any): Promise<Response> {
   // both revenue lines land in one ad-performance report.
   let clickId = ''
   let clickSource = ''
+  const marketingConsent = body?.marketingConsent === 'granted' || body?.marketingConsent === 'denied'
+    ? body.marketingConsent
+    : 'unknown'
   const attribution: Record<string, string> = {}
   if (typeof body?.clickId === 'string') clickId = body.clickId.slice(0, 200)
   if (typeof body?.clickSource === 'string') clickSource = body.clickSource.slice(0, 20)
@@ -197,6 +200,7 @@ async function handleCheckout(req: Request, body: any): Promise<Response> {
         digital_delivery_acknowledged: 'true',
         refund_policy_version: '2026-07-25',
         ...(clickId ? { ad_click_id: clickId, ad_click_source: clickSource || 'gclid' } : {}),
+        ad_user_data_consent: marketingConsent,
         ...(attribution.utmSource ? { utm_source: attribution.utmSource } : {}),
         ...(attribution.utmMedium ? { utm_medium: attribution.utmMedium } : {}),
         ...(attribution.utmCampaign ? { utm_campaign: attribution.utmCampaign } : {}),
@@ -283,6 +287,9 @@ async function handleClaim(req: Request, body: any): Promise<Response> {
         ok: true,
         granted: result.granted,
         credits: result.granted ? credits : 0,
+        value: (session.amount_total ?? pack?.priceCents ?? 0) / 100,
+        currency: (session.currency ?? 'usd').toUpperCase(),
+        pack: pack?.id ?? null,
         balance: result.balance,
         email: maskEmail(email),
         key: result.issuedKey ?? null,

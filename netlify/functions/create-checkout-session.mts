@@ -62,6 +62,7 @@ export default async (req: Request, _context: Context) => {
   let digitalPolicyAccepted = false
   let clickId = ''
   let clickSource = ''
+  let marketingConsent = 'unknown'
   // Campaign attribution captured from the landing URL's utm_* params. Carried
   // onto the session so the server-side webhook can record which campaign /
   // source / keyword produced each paid order in the store's own ad_events
@@ -77,6 +78,7 @@ export default async (req: Request, _context: Context) => {
     // informational — never trusted for pricing — so we just sanitise it.
     if (typeof body?.clickId === 'string') clickId = body.clickId.slice(0, 200)
     if (typeof body?.clickSource === 'string') clickSource = body.clickSource.slice(0, 20)
+    if (body?.marketingConsent === 'granted' || body?.marketingConsent === 'denied') marketingConsent = body.marketingConsent
     // utm_* attribution — each capped to Stripe's 500-char metadata value limit.
     for (const key of ['utmSource', 'utmMedium', 'utmCampaign', 'utmTerm', 'utmContent']) {
       const value = body?.attribution?.[key]
@@ -166,6 +168,7 @@ export default async (req: Request, _context: Context) => {
         // buyer didn't arrive from an ad). Kept alongside the order so a later
         // offline/enhanced conversion upload can tie this purchase to the click.
         ...(clickId ? { ad_click_id: clickId, ad_click_source: clickSource || 'gclid' } : {}),
+        ad_user_data_consent: marketingConsent,
         // Campaign attribution (utm_*) so the webhook can record this order
         // against the campaign / source / keyword that produced it.
         ...(attribution.utmSource ? { utm_source: attribution.utmSource } : {}),

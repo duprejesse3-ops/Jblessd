@@ -11,6 +11,7 @@
 //   GOOGLE_ADS_ID             e.g. AW-123456789  (Google Ads account tag; a valid
 //                             value overrides the built-in default)
 //   GOOGLE_ADS_PURCHASE_LABEL e.g. AbC-D1efGhIj  (the "Purchase" conversion action label)
+//   GOOGLE_ADS_LEAD_LABEL     e.g. XyZ-Lead1234   (a lead/demo conversion action label)
 //
 // Reachable at /api/analytics-config via the /api/* rewrite in netlify.toml.
 
@@ -32,6 +33,7 @@ export default async (_req: Request, _context: Context) => {
   const envAdsId = (process.env.GOOGLE_ADS_ID ?? '').trim()
   const adsId = looksLikeAdsId(envAdsId) ? envAdsId : DEFAULT_GOOGLE_ADS_ID
   const purchaseLabel = (process.env.GOOGLE_ADS_PURCHASE_LABEL ?? '').trim()
+  const leadLabel = (process.env.GOOGLE_ADS_LEAD_LABEL ?? '').trim()
 
   return Response.json(
     {
@@ -41,6 +43,7 @@ export default async (_req: Request, _context: Context) => {
       // Empty when either half is missing so the client can skip conversion
       // reporting cleanly.
       purchaseSendTo: adsId && purchaseLabel ? `${adsId}/${purchaseLabel}` : '',
+      leadSendTo: adsId && leadLabel ? `${adsId}/${leadLabel}` : '',
       configured: Boolean(ga4Id || adsId),
     },
     {

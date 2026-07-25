@@ -47,6 +47,8 @@ export default async () => {
     `- [Use cases](${SITE}/use-cases): tools grouped by the outcome you want.`,
     `- [Updates](${SITE}/updates): the latest from the store.`,
     `- [Refund policy](${SITE}/refund-policy/): terms for digital delivery.`,
+    `- [Privacy policy](${SITE}/privacy-policy/): data, cookies, analytics, and advertising practices.`,
+    `- [Terms of service](${SITE}/terms/): product licenses, agent credits, and acceptable use.`,
     '',
     '## Browse by role',
     '',

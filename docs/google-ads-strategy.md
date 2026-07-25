@@ -242,3 +242,10 @@ enhanced conversion upload (see §4).
   offline / enhanced conversion import needs — sending the conversion from the
   webhook using the Google Ads API removes dependence on the browser entirely
   (the most robust setup).
+# Measurement and feed deployment
+
+The storefront now emits Consent Mode v2 signals, ecommerce and lead events, dynamic remarketing parameters, and first-party landing attribution on every advertised route. Configure `GOOGLE_ADS_LEAD_LABEL` for the secondary lead action used by completed demos, newsletter signups, and contact requests.
+
+Server-side purchase uploads activate when the Google Ads OAuth and account variables are configured: `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, `GOOGLE_ADS_CUSTOMER_ID`, and `GOOGLE_ADS_CONVERSION_ACTION_ID`. Set `GOOGLE_ADS_LOGIN_CUSTOMER_ID` when the account is accessed through a manager account. `GOOGLE_ADS_API_VERSION` is optional and defaults to `v25`.
+
+Merchant Center can fetch the live catalog from `/merchant-center.xml`. Add `GOOGLE_MERCHANT_RETURN_POLICY_LABEL` only when the same label has been created in Merchant Center. Confirm digital-goods eligibility, target country, tax settings, and free digital delivery in Merchant Center before enabling Shopping or retail Performance Max campaigns.
