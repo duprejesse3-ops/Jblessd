@@ -41,44 +41,111 @@
 //     debugged and talks to it across windows, so it needs script/connect/frame
 //     and frame-ancestors access. Without it Tag Assistant cannot reach the page
 //     and reports "Google Tag: GTM-… not found" even though the tag is installed.
+//   - GTM Preview & Debug -> tagmanager.google.com plus ssl./www.gstatic.com for
+//     the overlay's script, stylesheet and icon font.
+//   - Google Ads remarketing -> the visitor's regional google.<cctld> host, which
+//     needs naming one domain at a time (see GOOGLE_COUNTRY_HOSTS below).
 // See netlify.toml for why X-Frame-Options and COOP are deliberately left unset.
+//
+// One deliberate omission: 'unsafe-eval' is NOT granted. GTM needs it only for
+// Custom JavaScript variables, which resolve to undefined without it; nothing in
+// this container uses one, and granting it would undo most of the protection the
+// nonce buys. Add it to script-src only if such a variable is ever introduced.
 
 import type { Context } from '@netlify/edge-functions'
 
 // Google Tag Manager / gtag.js, Google Analytics 4, Google Ads conversion and
-// remarketing, and Google Tag Assistant. gtm.js is loaded from googletagmanager
-// and pulls the rest in at runtime.
+// remarketing, GTM Preview mode and Google Tag Assistant. gtm.js and gtag.js are
+// loaded from googletagmanager and pull the rest in at runtime — and they pull it
+// from a different host per feature: the conversion linker fetches from google.com,
+// remarketing from googleadservices and googlesyndication, the preview overlay from
+// tagmanager.google.com and gstatic. Every host Google's own CSP guide lists is
+// named here, because a missing one does not fail loudly: the container loads, the
+// tag that needed the blocked host quietly never fires, and Ads/GA report no data.
 const GOOGLE_SCRIPT_HOSTS = [
   'https://www.googletagmanager.com',
+  'https://*.googletagmanager.com',
+  'https://tagmanager.google.com',
   'https://www.google-analytics.com',
+  'https://*.google-analytics.com',
   'https://www.googleadservices.com',
+  'https://*.googleadservices.com',
   'https://googleads.g.doubleclick.net',
+  'https://td.doubleclick.net',
+  'https://static.doubleclick.net',
+  'https://pagead2.googlesyndication.com',
+  'https://*.googlesyndication.com',
+  'https://adservice.google.com',
+  'https://www.google.com',
+  'https://google.com',
+  'https://www.gstatic.com',
+  'https://ssl.gstatic.com',
   'https://tagassistant.google.com',
 ].join(' ')
 
+// Google Ads remarketing and the GA4 <-> Ads link post their audience and
+// conversion hits to the visitor's *own* regional Google domain — e.g.
+// https://www.google.co.uk/pagead/1p-user-list/… for a shopper in Britain — not to
+// google.com. CSP permits no wildcard in the suffix position ("https://www.google.*"
+// is simply an invalid source expression), so each market has to be named. A market
+// that is absent fails closed and silently: the tag fires, the browser refuses the
+// request, and the Ads audience stays empty for everyone in that country. To support
+// another market, append its domain here; nothing else needs to change.
+const GOOGLE_COUNTRY_HOSTS = [
+  'co.uk', 'ie', 'ca', 'com.au', 'co.nz', 'de', 'fr', 'es', 'it', 'nl', 'be', 'ch',
+  'at', 'pt', 'se', 'no', 'dk', 'fi', 'pl', 'cz', 'hu', 'ro', 'gr', 'com.tr',
+  'co.in', 'co.jp', 'co.kr', 'com.sg', 'com.hk', 'com.tw', 'co.id', 'com.ph',
+  'com.my', 'com.br', 'com.mx', 'com.ar', 'cl', 'co', 'com.pe', 'co.za', 'ae',
+  'com.sa', 'co.il', 'com.ng', 'co.ke',
+]
+  .map((tld) => `https://www.google.${tld}`)
+  .join(' ')
+
 const CONNECT_HOSTS = [
   'https://www.googletagmanager.com',
+  'https://*.googletagmanager.com',
+  'https://tagmanager.google.com',
   'https://www.google-analytics.com',
   'https://*.google-analytics.com',
   'https://analytics.google.com',
   'https://*.analytics.google.com',
   'https://stats.g.doubleclick.net',
   'https://www.googleadservices.com',
+  'https://*.googleadservices.com',
   'https://googleads.g.doubleclick.net',
   'https://ad.doubleclick.net',
   'https://td.doubleclick.net',
   'https://*.g.doubleclick.net',
+  'https://*.doubleclick.net',
+  'https://pagead2.googlesyndication.com',
+  'https://ade.googlesyndication.com',
+  'https://*.googlesyndication.com',
+  'https://adservice.google.com',
+  // Bare google.com as well as www: the Google Ads enhanced-conversions / user-data
+  // beacon posts to the apex host, which "https://*.google.com" does not match.
+  'https://google.com',
   'https://www.google.com',
   'https://*.google.com',
   'https://tagassistant.google.com',
+  GOOGLE_COUNTRY_HOSTS,
 ].join(' ')
 
 const FRAME_HOSTS = [
+  "'self'",
   'https://js.stripe.com',
   'https://checkout.stripe.com',
   'https://www.googletagmanager.com',
+  'https://*.googletagmanager.com',
+  'https://tagmanager.google.com',
   'https://td.doubleclick.net',
   'https://bid.g.doubleclick.net',
+  'https://*.g.doubleclick.net',
+  // Floodlight and Ads conversion iframes use per-advertiser subdomains
+  // (<config-id>.fls.doubleclick.net), so the host cannot be pinned exactly.
+  'https://*.doubleclick.net',
+  'https://*.googlesyndication.com',
+  'https://www.google.com',
+  'https://*.google.com',
   'https://tagassistant.google.com',
 ].join(' ')
 
@@ -88,17 +155,26 @@ function policy(nonce: string): string {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self' https://tagassistant.google.com",
-    // GTM serves measurement pixels from googletagmanager.com; listed explicitly
-    // even though the broad https: source already covers it.
-    "img-src 'self' data: https: https://www.googletagmanager.com",
+    // GTM serves measurement pixels from googletagmanager.com, Ads conversion and
+    // remarketing pixels from google.com / googleadservices / doubleclick, and the
+    // preview overlay's chrome from gstatic. The broad https: source already covers
+    // every one of them; they are listed explicitly so the policy still documents
+    // what the site depends on if https: is ever tightened.
+    "img-src 'self' data: https: https://www.googletagmanager.com " +
+      'https://ssl.gstatic.com https://www.gstatic.com',
     // Inline <script> blocks must carry the nonce. Kept in sync with script-src
     // below for browsers that don't implement this directive.
     `script-src-elem 'nonce-${nonce}' 'self' ${GOOGLE_SCRIPT_HOSTS}`,
     // Fallback for script-src-elem, and the directive that governs inline event
     // handler attributes — hence 'unsafe-inline' stays here.
     `script-src 'self' 'unsafe-inline' ${GOOGLE_SCRIPT_HOSTS}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    // tagmanager.google.com / googletagmanager.com serve the stylesheet for GTM's
+    // Preview & Debug overlay; without them the debugger renders unstyled and
+    // unusable even though the container itself is working.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com " +
+      'https://www.googletagmanager.com https://tagmanager.google.com',
+    // data: is required by the Preview & Debug overlay, which inlines its icon font.
+    "font-src 'self' data: https://fonts.gstatic.com https://*.gstatic.com",
     `connect-src 'self' ${CONNECT_HOSTS}`,
     "form-action 'self'",
     `frame-src ${FRAME_HOSTS}`,
