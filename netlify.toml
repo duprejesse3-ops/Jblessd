@@ -63,8 +63,9 @@
 # The rationale for every allowlisted host lives in that file.
 #
 # Framing/isolation notes — these are deliberately tuned so tag debugging works:
-#   - frame-ancestors (in the CSP from csp.ts) allows only ourselves and Tag
-#     Assistant, so clickjacking from arbitrary origins is still blocked.
+#   - frame-ancestors (in the CSP from csp.ts) allows only ourselves and the Google
+#     Tag Assistant / Tag Manager preview origins that have to embed the page to
+#     debug it, so clickjacking from arbitrary origins is still blocked.
 #     X-Frame-Options is intentionally NOT set: it has no allowlist (only
 #     DENY/SAMEORIGIN), so any value strict enough to be useful also blocks Tag
 #     Assistant, and browsers enforce it on top of CSP. frame-ancestors is its

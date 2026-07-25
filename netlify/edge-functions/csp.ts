@@ -39,8 +39,11 @@
 //     (ccm/s/collect), and google.com (ccm/rmkt collection endpoints)
 //   - Google Tag Assistant (tagassistant.google.com) -> it loads the page being
 //     debugged and talks to it across windows, so it needs script/connect/frame
-//     and frame-ancestors access. Without it Tag Assistant cannot reach the page
-//     and reports "Google Tag: GTM-… not found" even though the tag is installed.
+//     access, and it must be allowed to EMBED the page — see FRAME_ANCESTOR_HOSTS,
+//     which covers the whole tagassistant -> tagmanager -> googletagmanager frame
+//     chain. Without every origin in that chain Tag Assistant cannot reach the page
+//     and reports "unable to connect", or "Google Tag: GTM-… not found" even though
+//     the tag is installed.
 //   - GTM Preview & Debug -> tagmanager.google.com plus ssl./www.gstatic.com for
 //     the overlay's script, stylesheet and icon font.
 //   - Google Ads remarketing -> the visitor's regional google.<cctld> host, which
@@ -130,6 +133,32 @@ const CONNECT_HOSTS = [
   GOOGLE_COUNTRY_HOSTS,
 ].join(' ')
 
+// Origins allowed to EMBED this page (frame-ancestors), as opposed to FRAME_HOSTS
+// below, which is what this page may embed. These are opposite directions and a host
+// being in one says nothing about the other — the reason Tag Assistant kept failing
+// to connect while every other Google host was already allowlisted.
+//
+// A Tag Assistant / GTM Preview session does not frame the page from a single
+// origin: the debug UI lives on tagassistant.google.com, but the "Preview" button in
+// the Tag Manager UI drives the session from tagmanager.google.com, and the chain
+// runs through a googletagmanager.com container frame in between. frame-ancestors is
+// evaluated against EVERY ancestor in that chain, not just the immediate parent, so
+// one missing origin cancels the whole load — the iframe stays blank and Tag
+// Assistant reports "unable to connect" / "refused to connect" no matter how
+// complete script-src and frame-src are. Every origin in the chain is therefore
+// named here.
+//
+// This stays a bounded allowlist of named Google origins, so clickjacking from an
+// arbitrary site is still refused (and netlify/lib/security-scan.mts still passes the
+// framing check). Do NOT collapse it to '*' or 'https:'.
+const FRAME_ANCESTOR_HOSTS = [
+  "'self'",
+  'https://tagassistant.google.com',
+  'https://tagmanager.google.com',
+  'https://www.googletagmanager.com',
+  'https://*.googletagmanager.com',
+].join(' ')
+
 const FRAME_HOSTS = [
   "'self'",
   'https://js.stripe.com',
@@ -154,7 +183,7 @@ function policy(nonce: string): string {
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "frame-ancestors 'self' https://tagassistant.google.com",
+    `frame-ancestors ${FRAME_ANCESTOR_HOSTS}`,
     // GTM serves measurement pixels from googletagmanager.com, Ads conversion and
     // remarketing pixels from google.com / googleadservices / doubleclick, and the
     // preview overlay's chrome from gstatic. The broad https: source already covers
