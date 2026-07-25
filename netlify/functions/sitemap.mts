@@ -104,6 +104,9 @@ export default async (req: Request) => {
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/free-tool</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+    // The Claude Agent Studio is the second revenue line (prepaid credits), so it
+    // ranks alongside the catalog rather than below the landing pages.
+    `  <url>\n    <loc>${SITE}/agent</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,
     ...NICHES.map((niche) => {
       const loc = `${SITE}/tools/${encodeURIComponent(niche)}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`

@@ -43,6 +43,18 @@
   to = "/index.html"
   status = 200
 
+# Claude Agent Studio — the customer-facing agent rented by the credit. Served at
+# the clean /agent URL that Stripe's success_url and the access-key emails point
+# at (see netlify/functions/credits.mts), as a rewrite so the buyer returning from
+# Checkout lands on the real page with ?credits=success&session_id=… intact and
+# the page can claim the top-up itself.
+#
+# Unlike /admin this is a revenue page and stays fully indexable.
+[[redirects]]
+  from = "/agent"
+  to = "/agent.html"
+  status = 200
+
 # Private owner-only AI workstation. Served at the clean /admin URL; the page
 # itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
 # session is established, so a public rewrite is safe.
@@ -93,6 +105,19 @@
 # Service worker must always revalidate so app updates ship immediately.
 [[headers]]
   for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Agent studio: always revalidate. Credit pack pricing and tier costs are fetched
+# from /api/credits at runtime, but the page also renders a balance and an access
+# key for a signed-in customer, so a cached copy must never be reused blindly.
+[[headers]]
+  for = "/agent"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/agent.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 

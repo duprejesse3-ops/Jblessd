@@ -336,7 +336,7 @@ function page(opts: {
     `<header><a class="brand" href="/">${STORE}</a></header>`
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
-    `<a href="/">Catalog</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
+    `<a href="/">Catalog</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
     `</div></body></html>`
 
   return new Response(head + opts.body + foot, {
