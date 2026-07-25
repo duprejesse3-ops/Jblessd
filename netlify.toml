@@ -7,6 +7,28 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Google tag gateway for advertisers ("first-party mode"): /metrics is reserved as
+# the tag serving path and proxied to Google's gateway endpoint by
+# netlify/edge-functions/tag-gateway.ts, so tag libraries and measurement hits are
+# fetched from this domain instead of www.googletagmanager.com.
+#
+# Declared FIRST, ahead of csp below, because netlify.toml declarations run in
+# order and the gateway function returns a response without calling
+# context.next(). That ends the chain, so a measurement request never reaches the
+# HTML-rewriting middleware or the redirect engine — it only ever costs one hop.
+#
+# Both paths are needed: the loader snippets request "/metrics/?id=…" while the
+# collect endpoints are "/metrics/g/collect", and "/metrics" with no trailing
+# slash must not fall through to the SPA. See the edge function for why this is
+# not a [[redirects]] proxy (per-request Host and geolocation headers).
+[[edge_functions]]
+  path = "/metrics"
+  function = "tag-gateway"
+
+[[edge_functions]]
+  path = "/metrics/*"
+  function = "tag-gateway"
+
 # The Content-Security-Policy is generated per request by netlify/edge-functions/csp.ts,
 # not by a [[headers]] rule, because it carries a one-time nonce that the same
 # function stamps onto every <script> element on the way out. Declared here rather

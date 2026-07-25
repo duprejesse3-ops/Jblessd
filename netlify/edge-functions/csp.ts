@@ -7,7 +7,8 @@
 // nonce per request, stamps it onto every <script> element in the HTML on the way
 // out, and emits the matching Content-Security-Policy header.
 //
-// It runs first in the edge chain (declared at the top of netlify.toml, and
+// It runs first in the edge chain for every page path (declared at the top of
+// netlify.toml, ahead of everything except the /metrics tag gateway, and
 // netlify.toml declarations run before inline ones), so `context.next()` returns
 // the *finished* document — including the JSON-LD that seo.ts injects and the
 // fully generated pages from pages.ts — and every script tag in it gets nonced.
