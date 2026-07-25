@@ -406,6 +406,26 @@ f.parentNode.insertBefore(j,f);
   @keyframes spin{to{transform:rotate(360deg);}}
   .concierge-error{color:var(--brass-soft); font-size:13.5px; margin-top:18px;}
 
+  /* Claude Agent Studio band — the second revenue line (rented agent runs paid
+     for in prepaid credits) sits in the main scroll path, not just in the nav,
+     because a visitor who isn't ready to buy a $19 pack may still spend $9 on
+     credits to get one job done today. */
+  .studio-band{
+    border:1px solid var(--line); border-radius:var(--radius); background:
+      radial-gradient(130% 150% at 100% 0%, rgba(255,42,42,.13), transparent 58%),
+      var(--panel);
+    padding:24px 26px; margin:0 0 40px; display:flex; gap:26px; align-items:center; flex-wrap:wrap;
+  }
+  .studio-band .sb-main{flex:1 1 340px; min-width:0;}
+  .studio-band .sb-eyebrow{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--brass); text-transform:uppercase; margin:0;}
+  .studio-band h2{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:10px 0 6px; letter-spacing:-.01em;}
+  .studio-band p{font-size:14px; color:var(--muted); margin:0; max-width:56ch;}
+  .studio-band .sb-facts{display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 0; padding:0; list-style:none;}
+  .studio-band .sb-facts li{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted-2); border:1px dashed var(--line); border-radius:var(--radius); padding:5px 9px;}
+  .studio-band .sb-cta{display:flex; flex-direction:column; gap:9px; align-items:stretch;}
+  .studio-band .sb-cta .btn{justify-content:center;}
+  .studio-band .sb-price{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted-2); text-align:center;}
+
   /* catalog */
   #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper);}
   .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-bottom:40px;}
@@ -823,6 +843,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </span>
     </a>
     <nav class="actions" aria-label="Primary">
+      <a class="btn" href="/agent">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+        Agent studio
+      </a>
       <button class="btn" id="open-marketing-desktop" aria-haspopup="dialog" aria-expanded="false">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
         Marketing agent
@@ -846,6 +870,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p class="lede">Every listing is a spec sheet, not a pitch: what it does, what it runs on, what it costs. And you don't take our word for any of it — <strong>watch any tool run on your own task before you pay a cent.</strong></p>
     <div class="hero-cta">
       <a class="btn btn-gold" href="/free-tool">▶ Watch AI do your task — free</a>
+      <a class="btn btn-line" href="/agent">Rent a Claude agent by the run →</a>
       <a class="btn btn-line" href="/proof">See live proofs →</a>
     </div>
     <div class="search-row">
@@ -876,6 +901,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button type="button" class="mini-chip" data-q="I'm a grad student doing literature reviews and need to research faster.">Researcher, faster lit reviews</button>
       </div>
       <div class="concierge-result" id="concierge-result" hidden></div>
+    </section>
+
+    <section class="studio-band" aria-labelledby="studio-band-title">
+      <div class="sb-main">
+        <p class="sb-eyebrow">Claude Agent Studio · new</p>
+        <h2 id="studio-band-title">Don't want a tool? Rent the agent that uses them.</h2>
+        <p>Brief a real Claude agent on your actual job — the investor update, the pricing analysis, the migration plan — and it does the work and hands you the finished document. Metered in prepaid credits, so there's nothing to subscribe to.</p>
+        <ul class="sb-facts">
+          <li>First run free</li>
+          <li>From $9</li>
+          <li>Credits never expire</li>
+          <li>No account needed</li>
+        </ul>
+      </div>
+      <div class="sb-cta">
+        <a class="btn btn-gold" href="/agent">Open the agent studio</a>
+        <span class="sb-price">1 credit per quick run · 3 per deliverable</span>
+      </div>
     </section>
   </div>
 
@@ -1143,6 +1186,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="site-status-dot" aria-hidden="true"></span><span id="site-status-label">Status pending</span>
       </span>
       <a href="#catalog">Catalog</a>
+      <a href="/agent">Agent studio</a>
       <a href="/use-cases">Use cases</a>
       <a href="/proof">Live proofs</a>
       <a href="/updates">Updates</a>

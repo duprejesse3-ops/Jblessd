@@ -38,11 +38,13 @@ async function storeOverview(): Promise<unknown> {
       (SELECT count(*) FROM reviews)           AS reviews,
       (SELECT count(*) FROM subscribers)       AS subscribers,
       (SELECT count(*) FROM contact_messages)  AS contact_messages,
-      (SELECT count(*) FROM proofs)            AS proofs
+      (SELECT count(*) FROM proofs)            AS proofs,
+      (SELECT count(*) FROM credit_accounts)   AS credit_accounts,
+      (SELECT count(*) FROM agent_runs)        AS agent_runs
   `) as any[]
   return {
     counts,
-    note: 'Counts of every operational table. Use the specific tools for detail.',
+    note: 'Counts of every operational table. Use the specific tools for detail — credits_overview for the credit business.',
   }
 }
 
@@ -126,6 +128,87 @@ async function recentProductDrafts(limit: number): Promise<unknown> {
   }
 }
 
+// Claude Agent Studio economics: what the credit business is actually doing.
+// Credits are prepaid, so revenue and consumption are different clocks — a credit
+// sold this month may be spent next month. This reports both sides plus the
+// outstanding balance, which is the liability still owed as compute.
+async function creditsOverview(days: number): Promise<unknown> {
+  const db = getDatabase()
+
+  const [sales] = (await db.sql`
+    SELECT
+      count(*)::int                              AS purchases,
+      coalesce(sum(delta), 0)::int               AS credits_sold,
+      coalesce(sum(amount_cents), 0)::int        AS revenue_cents
+    FROM credit_ledger
+    WHERE reason = 'purchase' AND created_at >= now() - make_interval(days => ${days})
+  `) as any[]
+
+  const [spend] = (await db.sql`
+    SELECT
+      coalesce(-(sum(delta) FILTER (WHERE reason = 'agent_run')), 0)::int AS credits_spent,
+      coalesce(sum(delta) FILTER (WHERE reason = 'refund'), 0)::int       AS credits_refunded
+    FROM credit_ledger
+    WHERE created_at >= now() - make_interval(days => ${days})
+  `) as any[]
+
+  const [book] = (await db.sql`
+    SELECT
+      count(*)::int                                   AS accounts,
+      coalesce(sum(balance), 0)::int                   AS credits_outstanding,
+      coalesce(sum(lifetime_credits), 0)::int          AS credits_sold_all_time,
+      coalesce(sum(lifetime_spend_cents), 0)::int      AS revenue_cents_all_time,
+      (count(*) FILTER (WHERE balance > 0))::int       AS accounts_with_balance
+    FROM credit_accounts
+  `) as any[]
+
+  const byMode = (await db.sql`
+    SELECT
+      mode,
+      count(*)::int                          AS runs,
+      (count(*) FILTER (WHERE account_id IS NULL))::int AS trial_runs,
+      coalesce(sum(credits), 0)::int         AS credits,
+      coalesce(sum(input_tokens), 0)::int    AS input_tokens,
+      coalesce(sum(output_tokens), 0)::int   AS output_tokens
+    FROM agent_runs
+    WHERE created_at >= now() - make_interval(days => ${days})
+    GROUP BY mode ORDER BY runs DESC
+  `) as any[]
+
+  const topAccounts = (await db.sql`
+    SELECT email, balance, lifetime_credits, lifetime_spend_cents, created_at, last_seen_at
+    FROM credit_accounts ORDER BY lifetime_spend_cents DESC, id DESC LIMIT 10
+  `) as any[]
+
+  const revenue = (sales?.revenue_cents ?? 0) / 100
+  const creditsSold = sales?.credits_sold ?? 0
+
+  return {
+    windowDays: days,
+    window: {
+      purchases: sales?.purchases ?? 0,
+      creditsSold,
+      revenue,
+      revenuePerCredit: creditsSold ? Number((revenue / creditsSold).toFixed(4)) : null,
+      creditsSpent: spend?.credits_spent ?? 0,
+      creditsRefunded: spend?.credits_refunded ?? 0,
+    },
+    allTime: {
+      accounts: book?.accounts ?? 0,
+      accountsWithBalance: book?.accounts_with_balance ?? 0,
+      creditsOutstanding: book?.credits_outstanding ?? 0,
+      creditsSold: book?.credits_sold_all_time ?? 0,
+      revenue: (book?.revenue_cents_all_time ?? 0) / 100,
+    },
+    runsByMode: byMode,
+    topAccounts,
+    note:
+      'Credit revenue is recognised on purchase but consumed later — creditsOutstanding is the balance customers ' +
+      'have paid for and not yet spent (deferred compute liability). runsByMode token totals are the cost side: ' +
+      'compare them against revenuePerCredit to judge margin per tier. trial_runs are free runs by visitors with no account.',
+  }
+}
+
 async function latestRun(table: 'site_health_runs' | 'crawl_runs'): Promise<unknown> {
   const db = getDatabase()
   // Tagged-template queries only (matches the rest of the codebase); the table
@@ -154,6 +237,7 @@ const TOOL_RUNNERS: Record<string, ToolRunner> = {
   recent_proofs: (i) => recentProofs(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
   recent_product_drafts: (i) => recentProductDrafts(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
   ad_performance: (i) => getAdPerformance(Number(i?.days) || 30),
+  credits_overview: (i) => creditsOverview(Math.min(Math.max(Number(i?.days) || 30, 1), 365)),
   site_health: () => latestRun('site_health_runs'),
   crawl_status: () => latestRun('crawl_runs'),
 }
@@ -168,6 +252,7 @@ const TOOLS: Anthropic.Tool[] = [
   { name: 'recent_proofs', description: 'Recent shared "Live Proof" runs shoppers saved.', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
   { name: 'recent_product_drafts', description: 'Product ideas the Product Builder agent has designed (SKU, name, category, niche, price). Drafts only — not yet in the live catalog. Use for "what has the builder proposed", "any new product ideas".', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
   { name: 'ad_performance', description: 'First-party Google Ads performance from the store\'s own data: ad traffic (landings), conversions, revenue, conversion rate and average order value, broken down by campaign, source, and landing page. Use for "how are my ads doing", "which campaign converts best", "where should I spend more".', input_schema: { type: 'object', properties: { days: { type: 'integer', description: 'Look-back window in days, 1-365 (default 30).' } } } },
+  { name: 'credits_overview', description: 'Claude Agent Studio credit economics: purchases, revenue, credits sold vs credits spent, refunds, credits still outstanding (prepaid but unspent), runs and token usage per tier, and the biggest credit customers. Use for "how are credits selling", "how much agent revenue", "what is my margin on deep runs", "how much unspent balance do customers hold".', input_schema: { type: 'object', properties: { days: { type: 'integer', description: 'Look-back window in days, 1-365 (default 30).' } } } },
   { name: 'site_health', description: 'The latest automated site-health check result.', input_schema: { type: 'object', properties: {} } },
   { name: 'crawl_status', description: 'The latest automated discovery-crawl result.', input_schema: { type: 'object', properties: {} } },
 ]
@@ -182,6 +267,9 @@ const SYSTEM_PROMPT =
   `unavailable, say so plainly. You cannot change anything; if asked to modify data, explain that this ` +
   `console is read-only and describe what you would do instead. If the owner wants to CREATE a new product, ` +
   `tell them to run the "build" command (the Product Builder agent) — e.g. build a $20 automation for video editors. ` +
+  `The store has two revenue lines: one-off digital products, and the Claude Agent Studio at /agent where customers ` +
+  `buy prepaid credits and spend them on agent runs. Use credits_overview for anything about that second line — ` +
+  `credit sales, unspent balances, run volume, or per-tier margin. ` +
   `Today's context is a live production store.`
 
 // ---- HTTP handler ---------------------------------------------------------
