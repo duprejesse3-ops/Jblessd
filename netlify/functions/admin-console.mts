@@ -4,7 +4,7 @@
 // that answers the owner's plain-English questions about the running store and,
 // to do so, can call a fixed set of READ-ONLY tools that query the live Netlify
 // Database (catalog, campaigns, reviews, subscribers, contact messages, live
-// proofs) and the latest automated agent runs (security, site health, crawl).
+// proofs) and the latest automated agent runs (site health, crawl).
 //
 // Hard rules baked in:
 //   - Every request must carry a valid admin session cookie (see admin-auth).
@@ -126,15 +126,12 @@ async function recentProductDrafts(limit: number): Promise<unknown> {
   }
 }
 
-async function latestRun(table: 'security_runs' | 'site_health_runs' | 'crawl_runs'): Promise<unknown> {
+async function latestRun(table: 'site_health_runs' | 'crawl_runs'): Promise<unknown> {
   const db = getDatabase()
   // Tagged-template queries only (matches the rest of the codebase); the table
   // is selected by an internal switch, never interpolated from user input.
   let rows: any[]
   switch (table) {
-    case 'security_runs':
-      rows = (await db.sql`SELECT status, summary, recommendation, created_at FROM security_runs ORDER BY created_at DESC LIMIT 1`) as any[]
-      break
     case 'site_health_runs':
       rows = (await db.sql`SELECT status, summary, recommendation, created_at FROM site_health_runs ORDER BY created_at DESC LIMIT 1`) as any[]
       break
@@ -157,7 +154,6 @@ const TOOL_RUNNERS: Record<string, ToolRunner> = {
   recent_proofs: (i) => recentProofs(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
   recent_product_drafts: (i) => recentProductDrafts(Math.min(Math.max(Number(i?.limit) || 10, 1), 25)),
   ad_performance: (i) => getAdPerformance(Number(i?.days) || 30),
-  security_status: () => latestRun('security_runs'),
   site_health: () => latestRun('site_health_runs'),
   crawl_status: () => latestRun('crawl_runs'),
 }
@@ -172,7 +168,6 @@ const TOOLS: Anthropic.Tool[] = [
   { name: 'recent_proofs', description: 'Recent shared "Live Proof" runs shoppers saved.', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
   { name: 'recent_product_drafts', description: 'Product ideas the Product Builder agent has designed (SKU, name, category, niche, price). Drafts only — not yet in the live catalog. Use for "what has the builder proposed", "any new product ideas".', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: '1-25, default 10' } } } },
   { name: 'ad_performance', description: 'First-party Google Ads performance from the store\'s own data: ad traffic (landings), conversions, revenue, conversion rate and average order value, broken down by campaign, source, and landing page. Use for "how are my ads doing", "which campaign converts best", "where should I spend more".', input_schema: { type: 'object', properties: { days: { type: 'integer', description: 'Look-back window in days, 1-365 (default 30).' } } } },
-  { name: 'security_status', description: 'The latest automated security-header scan result.', input_schema: { type: 'object', properties: {} } },
   { name: 'site_health', description: 'The latest automated site-health check result.', input_schema: { type: 'object', properties: {} } },
   { name: 'crawl_status', description: 'The latest automated discovery-crawl result.', input_schema: { type: 'object', properties: {} } },
 ]
@@ -182,7 +177,7 @@ const SYSTEM_PROMPT =
   `You are speaking privately to the store owner inside a terminal-style admin workstation — be direct, ` +
   `concise, and technical, like a good CLI. Prefer short lines and compact tables over long prose.\n\n` +
   `You have read-only tools that query the live store. When the owner asks about the state of the store ` +
-  `(sales signals, subscribers, reviews, messages, security, health, catalog), CALL THE RELEVANT TOOL and ` +
+  `(sales signals, subscribers, reviews, messages, health, catalog), CALL THE RELEVANT TOOL and ` +
   `answer from the real data — never guess or invent numbers. If a tool reports the data store is ` +
   `unavailable, say so plainly. You cannot change anything; if asked to modify data, explain that this ` +
   `console is read-only and describe what you would do instead. If the owner wants to CREATE a new product, ` +
