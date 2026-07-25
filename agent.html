@@ -43,7 +43,7 @@ f.parentNode.insertBefore(j,f);
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -111,7 +111,7 @@ f.parentNode.insertBefore(j,f);
     --brass-soft:#E03A3A;
     --placeholder:#D46A6A;
     --radius:2px;
-    --serif:'Fraunces',Georgia,serif;
+    --serif:'JetBrains Mono', ui-monospace, monospace;
     --sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
     --mono:'JetBrains Mono',ui-monospace,monospace;
   }
@@ -143,7 +143,7 @@ f.parentNode.insertBefore(j,f);
     width:30px;height:30px;border:1px solid var(--line);border-radius:var(--radius);
     display:grid;place-items:center;color:var(--brass);background:var(--panel);
   }
-  .brand-name{display:block;font-family:var(--serif);font-size:16px;letter-spacing:-.01em;line-height:1.1}
+  .brand-name{display:block;font-family:var(--serif);font-weight:500;font-size:16px;letter-spacing:.12em;line-height:1.1;color:var(--paper);text-shadow:0 0 10px rgba(255,42,42,.35)}
   .brand-sub{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--muted-2)}
   .grow{flex:1}
   .chip{
@@ -161,8 +161,8 @@ f.parentNode.insertBefore(j,f);
   /* ---------- hero ---------- */
   .hero{padding:46px 0 10px}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--muted-2);text-transform:uppercase;margin:0 0 18px}
-  h1{font-family:var(--serif);font-weight:500;font-size:clamp(32px,5.6vw,52px);line-height:1.06;letter-spacing:-.025em;margin:0 0 18px}
-  h1 em{font-style:italic;color:var(--brass)}
+  h1{font-family:var(--serif);font-weight:500;font-size:clamp(34px,5vw,54px);line-height:1.08;letter-spacing:-.01em;margin:0 0 18px}
+  h1 em{font-style:italic;color:var(--brass);text-shadow:0 0 14px rgba(255,42,42,.4)}
   .lede{font-size:17.5px;color:var(--muted);max-width:62ch;margin:0 0 22px}
   .lede strong{color:var(--paper);font-weight:500}
   .hero-facts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px;padding:0;list-style:none}
@@ -550,6 +550,122 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
   }
 
+  // ---- ad-click + campaign attribution -------------------------------------
+  // Shares the storefront's localStorage keys, so a visitor who clicks an ad onto
+  // the homepage and buys credits here still gets attributed, and vice versa.
+  // Landing beacons and paid sessions both feed the same first-party ad_events
+  // dataset the owner's ad-performance report reads.
+  var CLICK_ID_KEY = 'osc:adclick';
+  var ATTRIB_KEY = 'osc:attrib';
+  var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  var CLICK_ID_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+  function captureAdClickId() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      for (var i = 0; i < CLICK_ID_PARAMS.length; i++) {
+        var v = params.get(CLICK_ID_PARAMS[i]);
+        if (v) {
+          // Most recent click wins; overwrite any older stored id.
+          localStorage.setItem(CLICK_ID_KEY, JSON.stringify({ id: v.slice(0, 200), source: CLICK_ID_PARAMS[i], ts: Date.now() }));
+          break;
+        }
+      }
+      var utm = {}, hasUtm = false;
+      for (var j = 0; j < UTM_PARAMS.length; j++) {
+        var uv = params.get(UTM_PARAMS[j]);
+        if (uv) { utm[UTM_PARAMS[j]] = uv.slice(0, 200); hasUtm = true; }
+      }
+      if (hasUtm) { utm.ts = Date.now(); localStorage.setItem(ATTRIB_KEY, JSON.stringify(utm)); }
+    } catch (e) { /* storage unavailable — attribution is best-effort */ }
+  }
+
+  // Parse a stored attribution record, treating anything past Google's 90-day
+  // conversion window as absent.
+  function freshRecord(raw) {
+    try {
+      var rec = JSON.parse(raw);
+      if (!rec) return null;
+      if (typeof rec.ts === 'number' && (Date.now() - rec.ts) > CLICK_ID_MAX_AGE_MS) return null;
+      return rec;
+    } catch (e) { return null; }
+  }
+
+  function getAdClickId() {
+    try {
+      var raw = localStorage.getItem(CLICK_ID_KEY);
+      if (!raw) return null;
+      var rec = freshRecord(raw);
+      if (!rec) { localStorage.removeItem(CLICK_ID_KEY); return null; }
+      return rec.id ? { id: rec.id, source: rec.source || 'gclid' } : null;
+    } catch (e) { return null; }
+  }
+
+  // The stored utm_* attribution, mapped to the camelCase keys the checkout and
+  // landing-beacon endpoints expect.
+  function getAttribution() {
+    try {
+      var raw = localStorage.getItem(ATTRIB_KEY);
+      if (!raw) return null;
+      var rec = freshRecord(raw);
+      if (!rec) { localStorage.removeItem(ATTRIB_KEY); return null; }
+      var out = {};
+      if (rec.utm_source) out.utmSource = rec.utm_source;
+      if (rec.utm_medium) out.utmMedium = rec.utm_medium;
+      if (rec.utm_campaign) out.utmCampaign = rec.utm_campaign;
+      if (rec.utm_term) out.utmTerm = rec.utm_term;
+      if (rec.utm_content) out.utmContent = rec.utm_content;
+      return out;
+    } catch (e) { return null; }
+  }
+
+  // A coarse viewport bucket for the landing record. No fingerprinting.
+  function deviceHint() {
+    try {
+      var w = window.innerWidth || (screen && screen.width) || 0;
+      if (w > 0 && w < 768) return 'mobile';
+      if (w >= 768 && w < 1024) return 'tablet';
+      return 'desktop';
+    } catch (e) { return null; }
+  }
+
+  // Record this arrival server-side when it came from an ad or a tagged link, so
+  // /agent shows up as a landing page in the ad-performance report next to the
+  // catalog pages instead of being invisible to it.
+  function trackLanding() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var clickId = null, clickSource = null;
+      for (var i = 0; i < CLICK_ID_PARAMS.length; i++) {
+        var v = params.get(CLICK_ID_PARAMS[i]);
+        if (v) { clickId = v.slice(0, 200); clickSource = CLICK_ID_PARAMS[i]; break; }
+      }
+      var hasUtm = UTM_PARAMS.some(function (p) { return params.get(p); });
+      if (!clickId && !hasUtm) return; // not an ad / tagged arrival — nothing to learn
+      var referrerHost = null;
+      try { if (document.referrer) { referrerHost = new URL(document.referrer).hostname; } } catch (e) {}
+      var body = JSON.stringify({
+        clickId: clickId || undefined,
+        clickSource: clickSource || undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmTerm: params.get('utm_term') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        landingPath: (window.location.pathname || '/agent').slice(0, 512),
+        referrerHost: referrerHost || undefined,
+        device: deviceHint() || undefined
+      });
+      // sendBeacon survives the page unloading; fall back to a keepalive fetch.
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/track-landing', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/track-landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+      }
+    } catch (e) { /* analytics is best-effort; never block the page */ }
+  }
+
   // ---- minimal markdown renderer -------------------------------------------
   // The agent replies in markdown. Everything is escaped first, so this only
   // ever adds formatting to text that can no longer contain markup.
@@ -758,10 +874,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var original = btn.textContent;
     btn.textContent = 'Opening Stripe…';
     try {
+      var click = getAdClickId();
+      var attrib = getAttribution();
+      var payload = { action: 'checkout', pack: pack.id };
+      if (click) { payload.clickId = click.id; payload.clickSource = click.source; }
+      if (attrib) { payload.attribution = attrib; }
       var res = await fetch('/api/credits', {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ action: 'checkout', pack: pack.id })
+        body: JSON.stringify(payload)
       });
       var data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error || 'checkout');
@@ -1097,6 +1218,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   try { state.key = localStorage.getItem(KEY_STORE) || null; } catch (e) { /* private mode */ }
+  captureAdClickId();
+  trackLanding();
   wire();
   loadState().then(claimIfReturning);
 })();

@@ -11,6 +11,22 @@
   "categories": ["productivity", "shopping", "business"],
   "lang": "en",
   "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Claude Agent Studio",
+      "short_name": "Agent studio",
+      "description": "Brief a Claude agent on real work and pay per run with prepaid credits.",
+      "url": "/agent?source=pwa",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Full catalog",
+      "short_name": "Catalog",
+      "description": "Browse every prompt pack, blueprint, template, and agent config.",
+      "url": "/?source=pwa#catalog",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",

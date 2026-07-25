@@ -142,6 +142,20 @@ async function handleCheckout(req: Request, body: any): Promise<Response> {
   const hinted = normalizeEmail(body?.email)
   const total = packTotal(pack)
 
+  // Ad-click and campaign attribution captured on the /agent landing URL. Carried
+  // onto the session so the webhook's purchase event can credit the ad or campaign
+  // that produced this top-up — the same plumbing product orders already use, so
+  // both revenue lines land in one ad-performance report.
+  let clickId = ''
+  let clickSource = ''
+  const attribution: Record<string, string> = {}
+  if (typeof body?.clickId === 'string') clickId = body.clickId.slice(0, 200)
+  if (typeof body?.clickSource === 'string') clickSource = body.clickSource.slice(0, 20)
+  for (const key of ['utmSource', 'utmMedium', 'utmCampaign', 'utmTerm', 'utmContent']) {
+    const value = body?.attribution?.[key]
+    if (typeof value === 'string' && value.trim()) attribution[key] = value.trim().slice(0, 200)
+  }
+
   try {
     const stripe = new Stripe(STRIPE_KEY)
     const session = await stripe.checkout.sessions.create({
@@ -181,7 +195,13 @@ async function handleCheckout(req: Request, body: any): Promise<Response> {
         credit_pack: pack.id,
         credit_amount: String(total),
         digital_delivery_acknowledged: 'true',
-        refund_policy_version: '2026-07-16',
+        refund_policy_version: '2026-07-25',
+        ...(clickId ? { ad_click_id: clickId, ad_click_source: clickSource || 'gclid' } : {}),
+        ...(attribution.utmSource ? { utm_source: attribution.utmSource } : {}),
+        ...(attribution.utmMedium ? { utm_medium: attribution.utmMedium } : {}),
+        ...(attribution.utmCampaign ? { utm_campaign: attribution.utmCampaign } : {}),
+        ...(attribution.utmTerm ? { utm_term: attribution.utmTerm } : {}),
+        ...(attribution.utmContent ? { utm_content: attribution.utmContent } : {}),
       },
     })
     return Response.json({ url: session.url }, { headers: NO_STORE })
