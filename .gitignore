@@ -9,5 +9,17 @@ node_modules/
 android.keystore
 app-release-*.jks
 
+# TLS material for the custom certificate on jblessd.com. Private keys and CSRs
+# are generated on a local machine and uploaded straight to the CDN control
+# panel — they must never reach this repository. Certificates themselves are
+# public, but they are ignored too so that a whole "certs/" working directory can
+# be dropped in the checkout without a stray key riding along in the same commit.
+*.key
+*.pem
+*.csr
+*.pfx
+*.p12
+certs/
+
 # Local Netlify folder
 .netlify
