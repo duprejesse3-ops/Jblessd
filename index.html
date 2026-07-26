@@ -17,6 +17,12 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>
 <script>window.GOOGLE_ADS_TAG_ID='AW-17866165108';</script>
 <script src="/marketing-measurement.js"></script>
+<!-- Taboola pixel (account 2081418). Loaded after marketing-measurement.js so the
+     shared trackMarketingEvent hub can hand it every funnel event, and after
+     privacy-consent.js because the pixel asks that script whether it may load at
+     all — Taboola has no Consent Mode equivalent, so consent is enforced by
+     withholding the library rather than by muting it. -->
+<script src="/taboola-pixel.js"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -1853,6 +1859,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       .then(function(order){
         if(!order || !order.paid){ return; }
         pushPurchaseToDataLayer(order, purchasedItems);
+        // Taboola's purchase conversion. Sent outside the analyticsReady gate
+        // below because that gate exists only to wait for Google's env-configured
+        // measurement IDs; the Taboola account is fixed in taboola-pixel.js, so
+        // there is nothing to wait for and no reason to lose the conversion if
+        // the Google config fetch fails.
+        if(window.trackTaboolaEvent){
+          window.trackTaboolaEvent('purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+        }
         // Everything is reported inside analyticsReady: the GA4 measurement ID is
         // configured from server env vars, so a purchase event pushed before that
         // config command lands has no destination and is silently dropped. Both

@@ -34,6 +34,13 @@
     try { localStorage.setItem(STORAGE_KEY, choice); } catch (_) {}
     window.gtag('consent', 'update', consentState(choice === 'granted'));
     window.dataLayer.push({ event: 'consent_choice', consent_choice: choice });
+    // Announce the choice to non-Google tags as well. Google's tags pick it up
+    // from the consent update above, but a vendor without Consent Mode (the
+    // Taboola pixel in taboola-pixel.js) can only react to a signal of its own,
+    // and without one it would keep waiting until the next page view.
+    try {
+      window.dispatchEvent(new CustomEvent('marketingconsentchange', { detail: choice }));
+    } catch (_) {}
     var banner = document.getElementById('privacy-consent');
     if (banner) banner.remove();
   }

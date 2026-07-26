@@ -268,6 +268,12 @@ function page(opts: {
     `f.parentNode.insertBefore(j,f);` +
     `})(window,document,'script','dataLayer','GTM-M746RK4R');</script>` +
     `<script src="/marketing-measurement.js"></script>` +
+    // Taboola pixel — mirrored from index.html for the same reason as the Google
+    // tags above: without it these edge-rendered pages are blind spots that a
+    // Taboola campaign can send traffic to but never build an audience from.
+    // Loaded last of the three so the consent script and the measurement hub it
+    // depends on are already defined.
+    `<script src="/taboola-pixel.js"></script>` +
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
     `<meta http-equiv="content-language" content="en-US"/>` +

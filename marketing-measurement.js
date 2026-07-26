@@ -17,6 +17,12 @@
   window.trackMarketingEvent = function (name, parameters, options) {
     var details = parameters || {};
     window.gtag('event', name, details);
+    // Mirror the same funnel event to the Taboola pixel. Done here, at the one
+    // hub every call site already goes through, so the two ad platforms cannot
+    // drift apart: an event added to the funnel later reaches Taboola without
+    // the call site knowing the pixel exists. taboola-pixel.js maps the GA4 name
+    // onto Taboola's vocabulary and ignores anything Taboola has no use for.
+    if (window.trackTaboolaEvent) window.trackTaboolaEvent(name, details, options);
     if (!options || !options.lead) return Promise.resolve();
     return ready.then(function (config) {
       if (!config.leadSendTo) return;
