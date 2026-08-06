@@ -46,6 +46,23 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     BLOBS_DIR=/data/blobs
 
+# Image identity. Declared here, at the end, so that stamping a new revision
+# invalidates only the metadata layer and not the npm install above. The values
+# are supplied by container/image.sh or by the publish workflow; a plain
+# `docker build` with no --build-arg still produces a valid, if undated, image.
+ARG IMAGE_VERSION=dev
+ARG IMAGE_REVISION=unknown
+ARG IMAGE_CREATED=1970-01-01T00:00:00Z
+
+LABEL org.opencontainers.image.title="jblessd.com storefront" \
+      org.opencontainers.image.description="The jblessd.com storefront running on plain Node, without Netlify" \
+      org.opencontainers.image.url="https://jblessd.com" \
+      org.opencontainers.image.vendor="jblessd.com" \
+      org.opencontainers.image.licenses="UNLICENSED" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}"
+
 USER node
 EXPOSE 8080
 

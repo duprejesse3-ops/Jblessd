@@ -36,3 +36,7 @@ packages
 
 Dockerfile
 container/.env
+
+# Builds and publishes the image; it has no job inside one.
+container/image.sh
+container/ci
