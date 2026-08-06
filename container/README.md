@@ -12,11 +12,19 @@ cp container/.env.example container/.env      # then fill it in
 docker compose -f container/docker-compose.yml up --build
 ```
 
-That brings up three services: Postgres, a one-shot migration job, and the app
-on `http://localhost:8080`. The app does not start until the migrations have
-finished, so a fresh volume is fully migrated before the first request.
+On Podman, use the script instead — the reason is in **Podman** below:
 
-To run it without Docker, against a Postgres you already have:
+```sh
+cp container/.env.example container/.env      # then fill it in
+container/podman.sh up --build
+```
+
+Either way that brings up three things: Postgres, a one-shot migration job, and
+the app on `http://localhost:8080`. The app does not start until the migrations
+have finished, so a fresh volume is fully migrated before the first request.
+
+To run it without a container runtime at all, against a Postgres you already
+have:
 
 ```sh
 npm ci                                        # the app's own dependencies
@@ -29,6 +37,50 @@ DATABASE_URL=postgres://... \
 
 Node 22.6 or newer is required — the server relies on native TypeScript type
 stripping to load the `.mts` and `.ts` sources directly. The image pins Node 24.
+
+## Podman
+
+The image itself is ordinary OCI and runs unchanged; what differs is everything
+around it. `container/podman.sh` is the supported path:
+
+```sh
+container/podman.sh up             # start Postgres, migrate, start the app
+container/podman.sh up --build     # rebuild the image first
+container/podman.sh logs           # follow the app's output
+container/podman.sh status
+container/podman.sh migrate        # re-run migrations against a live stack
+container/podman.sh down           # stop and remove; volumes survive
+container/podman.sh down --volumes # ...and delete the data too
+```
+
+It runs the same three steps as compose, in one pod, with the ordering written
+out as shell rather than declared as `depends_on` conditions. Rootless is the
+expected mode; nothing here needs `sudo`.
+
+`container/image.sh` builds under either runtime — it picks whichever of
+`docker` or `podman` is on `PATH`, and `CONTAINER_ENGINE=podman` forces it on a
+machine that has both.
+
+**Why not just point compose at Podman.** `docker-compose.yml` gates the app on
+Postgres reporting healthy and on the migration job exiting 0. Under
+`podman-compose` those conditions are not reliably honoured, and when they are
+skipped all three services start at once: the migration races an unready
+database and the app serves against unmigrated tables. `podman compose` backed
+by the real `docker-compose` binary does honour them — if that is your setup,
+the compose file works as written, but run it from inside `container/` so that
+`.env` and the relative `env_file` resolve the way Compose expects.
+
+**If it still fails, it is usually one of these.**
+
+| Symptom | Cause |
+| --- | --- |
+| `short-name "node:24-alpine" did not resolve` | Podman does not assume Docker Hub for a bare image name. Both image references are now fully qualified; if a local edit reintroduces one, spell out `docker.io/library/`. |
+| `docker: command not found` from `image.sh` | Fixed — the script now detects the engine. Set `CONTAINER_ENGINE=podman` if detection picks wrong. |
+| Hangs at "waiting for healthy" | Podman runs `HEALTHCHECK` on a systemd timer. Without a user systemd session (WSL without it, a CI runner) health never leaves `starting`. `podman.sh` polls `pg_isready` instead and does not depend on it. |
+| `EACCES` / permission denied writing `/data/blobs` | A rootless bind mount maps the container's `node` user to a subuid that does not own the host directory. Use the named volume `podman.sh` creates, or add `:U` to the mount, or run with `--userns=keep-id`. |
+| `ECONNREFUSED 127.0.0.1:5432` at boot | The app started before Postgres was ready. This is exactly the race `podman.sh` serialises. |
+| Migrations look applied but tables are missing | Two ledgers. This container tracks in `container_schema_migrations`; a database previously migrated by Netlify tracks its own. Pointing at an existing Neon database is safe but re-applies from this container's point of view. |
+| Port 8080 in use, or refused below 1024 | Rootless Podman cannot publish privileged ports without `net.ipv4.ip_unprivileged_port_start`. Set `PORT` in `container/.env` to something above 1024 and put a reverse proxy in front. |
 
 ## The image
 
@@ -69,9 +121,14 @@ docker run -d --name jblessd \
   -p 8080:8080 \
   --env-file container/.env \
   -e DATABASE_URL=postgres://... \
+  -e PORT=8080 \
   -v jblessd-blobs:/data/blobs \
   ghcr.io/duprejesse3-ops/jblessd-store:1.4
 ```
+
+`podman run` takes the same flags. Keep `-e PORT=8080` if you pass `--env-file`:
+`PORT` in that file chooses the *host* side of `-p`, and letting it through
+would make the app listen on a port the mapping does not point at.
 
 Migrations are a separate one-shot run of the same image — see the `migrate`
 service in `docker-compose.yml` for the exact command. Apply them before

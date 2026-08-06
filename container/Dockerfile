@@ -7,8 +7,13 @@
 #
 # Node 24 is pinned deliberately: native type stripping needs 22.6 or newer, and
 # pinning the major avoids a future default flipping under the image.
+#
+# The registry is spelled out rather than left as `node:24-alpine`. Docker
+# assumes Docker Hub for a bare name; Podman deliberately does not, and on a
+# non-interactive build it fails outright rather than guessing. Fully qualified
+# means the same image under both.
 
-FROM node:24-alpine
+FROM docker.io/library/node:24-alpine
 
 # tini reaps zombies and forwards SIGTERM to Node, so the graceful shutdown in
 # server.mjs actually runs when the container is stopped.

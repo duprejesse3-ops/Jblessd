@@ -8,6 +8,9 @@
 #   container/image.sh --url              # print the image URLs, build nothing
 #   container/image.sh --url 1.4.0        # ...for that release's tags
 #
+# Works with either Docker or Podman; `build` and `push` take the same flags in
+# both. CONTAINER_ENGINE=podman forces the choice on a machine that has both.
+#
 # The build context is the repository root, not container/, because the image
 # needs the application source that lives above this directory. The script cd's
 # there itself so it works from anywhere.
@@ -88,6 +91,22 @@ if [ -n "$URL_ONLY" ]; then
   exit 0
 fi
 
+# Resolved after `--url` has had its chance to exit, so printing a URL still
+# needs no engine installed at all. Docker wins a tie: a machine with both is
+# usually a Docker machine that also has Podman, and the reverse case is the one
+# people set CONTAINER_ENGINE for.
+ENGINE=${CONTAINER_ENGINE:-}
+if [ -z "$ENGINE" ]; then
+  if command -v docker >/dev/null 2>&1; then
+    ENGINE=docker
+  elif command -v podman >/dev/null 2>&1; then
+    ENGINE=podman
+  else
+    echo "error: neither docker nor podman on PATH; set CONTAINER_ENGINE" >&2
+    exit 1
+  fi
+fi
+
 tag_args=""
 for tag in $tags; do
   tag_args="$tag_args --tag $IMAGE_REPO:$tag"
@@ -102,11 +121,11 @@ if [ "${PUSH:-}" = "1" ]; then
   esac
 fi
 
-echo "Building $IMAGE_REPO"
+echo "Building $IMAGE_REPO with $ENGINE"
 for tag in $tags; do echo "  :$tag"; done
 
 # shellcheck disable=SC2086  # tag_args is a deliberately word-split list
-docker build \
+"$ENGINE" build \
   --file container/Dockerfile \
   --build-arg IMAGE_VERSION="$VERSION" \
   --build-arg IMAGE_REVISION="$revision" \
@@ -117,7 +136,7 @@ docker build \
 if [ "${PUSH:-}" = "1" ]; then
   for tag in $tags; do
     echo "Pushing $IMAGE_REPO:$tag"
-    docker push "$IMAGE_REPO:$tag"
+    "$ENGINE" push "$IMAGE_REPO:$tag"
   done
 else
   echo "Not pushed. Re-run with PUSH=1 to publish."
