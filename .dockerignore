@@ -37,6 +37,7 @@ packages
 Dockerfile
 container/.env
 
-# Builds and publishes the image; it has no job inside one.
+# Build and run the image from outside; they have no job inside one.
 container/image.sh
+container/podman.sh
 container/ci

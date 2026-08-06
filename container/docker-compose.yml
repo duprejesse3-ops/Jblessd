@@ -5,10 +5,15 @@
 #
 # Build context is the repository root, not this directory, because the image
 # needs the application source that lives above it.
+#
+# Podman: prefer `container/podman.sh up`. This file relies on two things
+# podman-compose does not reliably honour — gating a service on another being
+# healthy, and waiting for the one-shot migration to exit 0 — and where they are
+# ignored the app races an unmigrated database. See "Podman" in README.md.
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: docker.io/library/postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: storefront
@@ -53,6 +58,10 @@ services:
     environment:
       DATABASE_URL: postgres://storefront:${POSTGRES_PASSWORD}@postgres:5432/storefront
       BLOBS_DIR: /data/blobs
+      # PORT in .env chooses the *host* port above. env_file would otherwise
+      # also hand it to the app, which would then listen on something the
+      # published mapping does not point at. Pinned back to the container port.
+      PORT: 8080
     volumes:
       - blob-data:/data/blobs
     depends_on:
