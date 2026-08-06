@@ -11,3 +11,8 @@ app-release-*.jks
 
 # Local Netlify folder
 .netlify
+
+# Container runtime secrets — container/.env holds the Stripe, Anthropic,
+# Resend and admin credentials. Only .env.example belongs in the repository.
+.env
+container/.env

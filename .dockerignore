@@ -1,0 +1,38 @@
+# Build context for container/Dockerfile is the repository root, so this file
+# lives here rather than in container/.
+#
+# Keeping node_modules out is not just about image size: the host's tree may
+# have been installed for a different platform or Node version, and copying it
+# in would shadow the clean `npm ci` the Dockerfile performs.
+
+node_modules
+**/node_modules
+
+.git
+.github
+.netlify
+
+# Secrets must never enter an image layer, where they persist even if a later
+# layer deletes them.
+.env
+**/.env
+*.keystore
+*.jks
+
+*.log
+npm-debug.log*
+
+# Local tooling and docs that the running site does not need.
+.claude
+docs
+DEPLOY.md
+TWA.md
+twa-manifest.json
+deno.lock
+
+# The sellable product package is not part of the running storefront; it is
+# embedded into netlify/lib/site-audit-source.mts at authoring time.
+packages
+
+Dockerfile
+container/.env
