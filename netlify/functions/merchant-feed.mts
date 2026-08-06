@@ -41,6 +41,11 @@ export default async () => {
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      // Google Merchant Center re-fetches the feed on a schedule; it is
+      // catalog-derived, so it is served from the durable cache under the shared
+      // 'catalog' purge tag.
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400, durable',
+      'Cache-Tag': 'catalog',
     },
   })
 }

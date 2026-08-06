@@ -25,7 +25,7 @@ const IMAGE_CAPTION =
 
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
-const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers', 'office', 'finance']
+const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers', 'office', 'finance', 'stores']
 
 // Outcome-based landing pages (/use-cases/:slug), kept in sync with the slugs
 // the pages edge function knows how to render.
@@ -142,6 +142,13 @@ export default async (req: Request) => {
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',
+      // Crawler-facing and derived entirely from the catalog, so it is held in
+      // Netlify's durable cache and shares the 'catalog' purge tag with
+      // /api/products: listing a product refreshes this too. Search engines poll
+      // the sitemap on their own schedule, and without this every poll ran the
+      // function and re-queried the database.
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400, durable',
+      'Cache-Tag': 'catalog',
     },
   })
 }

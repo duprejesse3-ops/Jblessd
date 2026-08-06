@@ -7,9 +7,14 @@
 // Reachable at /api/products via the /api/* rewrite in netlify.toml.
 
 import type { Context, Config } from '@netlify/functions'
+import { purgeCache } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+
+// Cache tag for the catalog response, purged whenever a product is listed so a
+// new product is visible immediately rather than after the TTL expires.
+const CATALOG_CACHE_TAG = 'catalog'
 
 const SKU_PREFIX: Record<Product['category'], string> = {
   prompts: 'PP',
@@ -29,10 +34,29 @@ function decorate(p: Product) {
 export default async (req: Request, _context: Context) => {
   if (req.method === 'GET') {
     const { products, source } = await loadCatalog()
-    return Response.json(
-      { products: products.map(decorate), source },
-      { headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' } },
-    )
+
+    // The catalog is the most-requested endpoint on the site: the storefront,
+    // every product page, the sitemap and the scheduled agents all read it. It
+    // previously carried `max-age=0, must-revalidate`, so every one of those
+    // reads ran this function and queried the database. Serving it from
+    // Netlify's CDN instead collapses that to roughly one function invocation
+    // per five minutes, per region, with no change in what a visitor sees:
+    // browsers are still told to revalidate every time, and the CDN copy is
+    // purged the moment a product is listed.
+    //
+    // Only a response actually sourced from the database is cached. A fallback
+    // response means the DB was unreachable, and caching a degraded catalog
+    // would keep serving it long after the database recovered.
+    const headers: Record<string, string> =
+      source === 'db'
+        ? {
+            'Cache-Control': 'public, max-age=0, must-revalidate',
+            'Netlify-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400, durable',
+            'Cache-Tag': CATALOG_CACHE_TAG,
+          }
+        : { 'Cache-Control': 'public, max-age=0, must-revalidate' }
+
+    return Response.json({ products: products.map(decorate), source }, { headers })
   }
 
   if (req.method === 'POST') {
@@ -79,6 +103,15 @@ export default async (req: Request, _context: Context) => {
         VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec})
         RETURNING sku, name, category, niche, format, price, blurb, spec
       `) as Array<any>
+
+      // Drop the cached catalog so the new product shows up on the next read
+      // instead of waiting out the CDN TTL. A purge failure must not fail the
+      // listing — the product is already saved, and the TTL bounds the staleness.
+      try {
+        await purgeCache({ tags: [CATALOG_CACHE_TAG] })
+      } catch (err) {
+        console.error('Catalog cache purge failed:', (err as Error).message)
+      }
 
       return Response.json(
         { product: decorate({ ...(row as Product), price: Number(row.price) }) },

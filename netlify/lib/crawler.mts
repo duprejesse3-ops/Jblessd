@@ -48,7 +48,12 @@ export interface DiscoveryReport {
   durationMs: number
 }
 
-const MAX_PAGES = 120 // hard cap on crawl breadth; the real site is ~40 pages
+// Hard cap on crawl breadth. The real site is ~40 pages, so this is comfortable
+// headroom for catalog growth while bounding the worst case: every page in this
+// budget is a live request back through our own edge functions and API routes,
+// so the cap is a direct cap on what one crawl costs. It was 120 — triple the
+// headroom needed, and triple the bill if a link loop ever fed the frontier.
+const MAX_PAGES = 60
 const CONCURRENCY = 6
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_ISSUES = 25 // keep the persisted issue list bounded

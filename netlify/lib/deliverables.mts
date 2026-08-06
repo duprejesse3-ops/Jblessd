@@ -14,6 +14,7 @@
 // any product a user lists later — nothing has to be hand-authored per SKU.
 
 import type { Product } from './catalog.mjs'
+import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -228,12 +229,114 @@ const INTRO: Record<Product['category'], (topic: string) => string> = {
   agents: (t) => `A drop-in agent configuration for ${t}. Paste the system prompt into your model and wire up the inputs.`,
 }
 
+// ---- per-SKU deliverables ------------------------------------------------
+//
+// The generators above work from metadata alone, which is right for a document
+// product: the buyer wants prompts or a template, and those can be composed from
+// what the listing already says.
+//
+// A source-code product cannot work that way. Nothing derivable from a name and
+// a blurb is runnable software, so these SKUs ship their real files instead.
+// Anything listed here bypasses both the category generator and the AI rewrite
+// (see ai-deliverable.mts) — a model must never paraphrase code a customer paid
+// for.
+
+/** The language tag for a fenced block, by file extension. */
+function fenceLanguage(path: string): string {
+  if (path.endsWith('.mjs') || path.endsWith('.js')) return 'js'
+  if (path.endsWith('.mts') || path.endsWith('.ts')) return 'ts'
+  if (path.endsWith('.json')) return 'json'
+  if (path.endsWith('.yml') || path.endsWith('.yaml')) return 'yaml'
+  if (path.endsWith('.sh')) return 'sh'
+  if (path.endsWith('.md')) return 'markdown'
+  return ''
+}
+
+/**
+ * A fence long enough to survive the file's own contents. The README contains
+ * triple-backtick blocks, so wrapping it in three backticks would terminate the
+ * block early and shred the rest of the document.
+ */
+function fenceFor(contents: string): string {
+  let longest = 0
+  for (const run of contents.match(/`+/g) ?? []) longest = Math.max(longest, run.length)
+  return '`'.repeat(Math.max(3, longest + 1))
+}
+
+function siteAuditSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip site-audit-agent.zip\n` +
+        `    cd site-audit-agent\n` +
+        `    ./install.sh\n\n` +
+        `That puts a \`site-audit\` command on your PATH and runs it once to prove the ` +
+        `install worked. Nothing is downloaded, compiled, or fetched from a registry — the ` +
+        `whole tool is the files in the archive. Uninstalling is \`rm -rf\` on two paths, ` +
+        `printed at the end of the install.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`site-audit-agent\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, no API key, and no account. The ` +
+        `only requirement is Node 18 or newer (\`node --version\` to check). Skipping the ` +
+        `installer is fine too:\n\n` +
+        `    node bin/audit.mjs yoursite.com\n\n` +
+        `Verify it works on your machine before you trust it with your site:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it covers every option, all sixteen checks, and how to put ` +
+        `it on a schedule with GitHub Actions, cron, systemd, or a serverless function.`,
+    },
+    {
+      title: 'Files in this package',
+      body: SITE_AUDIT_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of SITE_AUDIT_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
+  'AI-AG-065': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a portable website audit agent — sixteen checks, three ' +
+      'schedulers, zero dependencies. Yours to run on unlimited sites you own, forever. ' +
+      'See LICENSE.md at the end for the terms.',
+    sections: siteAuditSections(product),
+  }),
+}
+
+/** True when a SKU ships hand-authored content that must not be regenerated. */
+export function hasAuthoredDeliverable(sku: string): boolean {
+  return Object.hasOwn(SKU_DELIVERABLES, sku)
+}
+
 /**
  * Build the real deliverable for a product — the actual content the buyer paid
  * for, generated from the product's own metadata so it's specific to what they
  * bought and works for any SKU, seeded or user-listed.
  */
 export function buildDeliverable(product: Product): Deliverable {
+  // A SKU with hand-authored content (source code, for instance) ships that
+  // content verbatim rather than anything generated from its metadata.
+  const authored = SKU_DELIVERABLES[product.sku]
+  if (authored) return authored(product)
+
   const topic = topicOf(product)
   const generate = GENERATORS[product.category] ?? templateSections
   const intro = (INTRO[product.category] ?? INTRO.templates)(topic)

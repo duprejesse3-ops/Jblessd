@@ -13,6 +13,7 @@ import type { Context, Config } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
 const MAX_PICKS = 4
@@ -143,9 +144,17 @@ async function aiPicks(query: string, products: Product[]): Promise<{ summary: s
   }
 }
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
+  }
+
+  // Public, unauthenticated, billed inference — capped per IP so a script cannot
+  // spend the store's budget. See the same guard on /api/chat and /api/demo.
+  const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
+  const limit = await checkRateLimit('concierge', ip, { limit: 30, windowMs: 60 * 60 * 1000 })
+  if (!limit.allowed) {
+    return tooManyRequests(limit.retryAfterSec, 'That is a lot of recommendations in one hour. Please try again shortly.')
   }
 
   let query = ''

@@ -1,0 +1,102 @@
+# Adapter: GitHub Actions.
+#
+# Copy to .github/workflows/site-audit.yml in your own repository.
+#
+# This is the cheapest place to run the audit and the strongest form of "not tied
+# to a third party": GitHub's hosted runners are free for public repositories
+# (and come with a monthly allowance on private ones), the job needs no secrets
+# unless you want notifications, and nothing about it is specific to GitHub —
+# the same three commands run on GitLab CI, Forgejo Actions, Jenkins, or a VPS.
+#
+# Unlike a scheduled function on your host, requests this job makes to your site
+# are ordinary visitor traffic, so they are not billed twice.
+
+name: Site audit
+
+on:
+  schedule:
+    # 06:47 UTC daily. Deliberately not on the hour: GitHub delays cron jobs
+    # scheduled at :00 because everyone picks it.
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Site to audit (defaults to the AUDIT_TARGET variable)
+        required: false
+
+# Nothing is written back to the repo; the report is an artifact.
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No install step: the engine has zero dependencies and needs only the
+      # global fetch that ships with Node 18+.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run audit
+        id: audit
+        env:
+          TARGET: ${{ inputs.target || vars.AUDIT_TARGET }}
+        run: |
+          if [ -z "$TARGET" ]; then
+            echo "Set an AUDIT_TARGET repository variable, or dispatch with a target input." >&2
+            exit 1
+          fi
+          # --fail-on never so the report is always uploaded; the gate is applied
+          # in the following step, after the artifact exists.
+          node packages/site-audit-agent/bin/audit.mjs "$TARGET" \
+            --format markdown --out audit.md --fail-on never
+          node packages/site-audit-agent/bin/audit.mjs "$TARGET" \
+            --format json --out audit.json --fail-on never
+          # --input-type=module so this does not depend on whether the repo's
+          # package.json declares "type": "module".
+          node --input-type=module -e '
+            import { readFileSync, appendFileSync } from "node:fs"
+            const r = JSON.parse(readFileSync("audit.json", "utf8"))
+            appendFileSync(process.env.GITHUB_OUTPUT, `score=${r.score}\nstatus=${r.status}\n`)
+          '
+
+      - name: Publish report to the run summary
+        run: cat audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-audit
+          path: |
+            audit.md
+            audit.json
+          retention-days: 30
+
+      # Optional: post to Slack/Discord only when something is actually wrong.
+      # Add a SITE_AUDIT_WEBHOOK secret to enable it. The empty-secret check is
+      # inside the script because a step's own `env` is not visible to its `if`.
+      - name: Notify on problems
+        if: steps.audit.outputs.status == 'unhealthy'
+        env:
+          WEBHOOK: ${{ secrets.SITE_AUDIT_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "No SITE_AUDIT_WEBHOOK secret set; skipping notification."
+            exit 0
+          fi
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs"
+            import { notify } from "./packages/site-audit-agent/lib/notify.mjs"
+            const report = JSON.parse(readFileSync("audit.json", "utf8"))
+            await notify(report, process.env.WEBHOOK, { when: "problems" })
+          '
+
+      # The gate. Fails the workflow when the audit found real problems, so a
+      # broken sitemap or a dead internal link shows up as a red run.
+      - name: Fail if unhealthy
+        if: steps.audit.outputs.status == 'unhealthy'
+        run: |
+          echo "Audit scored ${{ steps.audit.outputs.score }}/100 (unhealthy)." >&2
+          exit 1

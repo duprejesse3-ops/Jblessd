@@ -17,6 +17,7 @@ import type { Context, Config } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
 const MAX_STEPS = 5 // safety cap on the agent's tool-use loop
@@ -138,9 +139,18 @@ function runTool(
   return { result: { error: `Unknown tool ${name}` }, cards: [] }
 }
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
+  }
+
+  // Public, unauthenticated, and every call is billed inference. A generous
+  // per-IP ceiling leaves a real conversation untouched while stopping a script
+  // from running the store's inference budget down.
+  const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
+  const limit = await checkRateLimit('chat', ip, { limit: 40, windowMs: 60 * 60 * 1000 })
+  if (!limit.allowed) {
+    return tooManyRequests(limit.retryAfterSec, 'That is a lot of messages in one hour. Please try again shortly.')
   }
 
   let history: ClientMessage[] = []

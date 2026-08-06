@@ -35,8 +35,30 @@
 # than inline so it is guaranteed to run before the inline-declared seo and pages
 # functions: netlify.toml declarations run first, so context.next() hands csp.ts the
 # finished document and no script tag escapes without a nonce.
+#
+# excludedPath keeps the function off everything that is not an HTML document.
+# csp.ts only rewrites a response when it is a GET returning text/html — for a
+# JSON API reply, a script file, an icon or the sitemap it invoked context.next()
+# and handed the response straight back, doing nothing but costing an edge
+# invocation. Since the storefront makes several API and asset requests per page
+# view, that was a large multiple on our busiest paths for no benefit. The
+# baseline security headers in the [[headers]] block below are applied by the CDN
+# and still cover every excluded path, so nothing is left unprotected.
 [[edge_functions]]
   path = "/*"
+  excludedPath = [
+    "/api/*",
+    "/.netlify/*",
+    "/.well-known/*",
+    "/icons/*",
+    "/*.js",
+    "/*.json",
+    "/*.xml",
+    "/*.txt",
+    "/*.png",
+    "/*.ico",
+    "/*.webmanifest",
+  ]
   function = "csp"
 
 # Order confirmation page. Stripe sends buyers here after a successful payment
