@@ -1,0 +1,18 @@
+{
+  "name": "storefront-container",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted container runtime for the storefront — runs the application source unmodified, without Netlify",
+  "scripts": {
+    "start": "node --import ./hooks/register.mjs server.mjs",
+    "migrate": "node --import ./hooks/register.mjs migrate.mjs",
+    "smoke": "node --import ./hooks/register.mjs test/smoke.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}

@@ -1,0 +1,61 @@
+# Brings up the storefront and its Postgres.
+#
+#   cp container/.env.example container/.env   # then fill it in
+#   docker compose -f container/docker-compose.yml up --build
+#
+# Build context is the repository root, not this directory, because the image
+# needs the application source that lives above it.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: storefront
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in container/.env}
+      POSTGRES_DB: storefront
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U storefront -d storefront']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Runs the migrations to completion, then exits. The app waits for it, so a
+  # fresh volume is fully migrated before the first request is served.
+  migrate:
+    build:
+      context: ..
+      dockerfile: container/Dockerfile
+    restart: 'no'
+    command: ['node', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '--import', './container/hooks/register.mjs', 'container/migrate.mjs']
+    environment:
+      DATABASE_URL: postgres://storefront:${POSTGRES_PASSWORD}@postgres:5432/storefront
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ..
+      dockerfile: container/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '${PORT:-8080}:8080'
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://storefront:${POSTGRES_PASSWORD}@postgres:5432/storefront
+      BLOBS_DIR: /data/blobs
+    volumes:
+      - blob-data:/data/blobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  blob-data:
