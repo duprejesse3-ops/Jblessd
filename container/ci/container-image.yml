@@ -1,0 +1,94 @@
+# Publishes the jblessd.com storefront image to GitHub Container Registry.
+#
+# NOT ACTIVE WHERE IT SITS. GitHub refuses pushes that touch
+# .github/workflows/ unless the pushing app holds the `workflows` permission,
+# which Netlify's GitHub App does not, so this file is parked here instead.
+# Activate it with one move, committed by you rather than by the app:
+#
+#   git mv container/ci/container-image.yml .github/workflows/
+#   git commit -m "Add container image workflow" && git push
+#
+# Tagging a release (v1.4.0) publishes 1.4.0, 1.4, 1 and latest. Pushes to the
+# default branch publish `edge` only, so `latest` never moves without a release.
+# The manual run builds without publishing, which is the cheap way to check that
+# a Dockerfile change still builds on both architectures.
+
+name: Container image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: container-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The seams this container reimplements — TOML parsing, routing, cron, blob
+  # containment — are what break silently, so they gate the publish. No database
+  # is needed; the suite covers the adapters, not the application's own logic.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm --prefix container install --no-audit --no-fund
+      - run: node --import ./container/hooks/register.mjs container/test/smoke.mjs
+
+  image:
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU is what makes the arm64 half of the manifest possible on an amd64
+      # runner. It is slow, which is why the build cache below matters.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/jblessd-store
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.title=jblessd.com storefront
+            org.opencontainers.image.url=https://jblessd.com
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: container/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'workflow_dispatch' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # These --label flags override the Dockerfile's own LABEL defaults, so
+          # revision and created are accurate without passing them as build args.
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          build-args: |
+            IMAGE_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
