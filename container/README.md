@@ -32,20 +32,35 @@ stripping to load the `.mts` and `.ts` sources directly. The image pins Node 24.
 
 ## The image
 
-Published to GitHub Container Registry as `ghcr.io/<owner>/jblessd-store`,
-where `<owner>` is the GitHub account this repository lives under. Built for
-`linux/amd64` and `linux/arm64`, so it runs on both a normal server and an
-Apple-silicon laptop from the same tag.
+```
+ghcr.io/duprejesse3-ops/jblessd-store
+```
 
-| Tag | Points at |
-| --- | --- |
-| `latest` | the most recent release |
-| `1.4.0`, `1.4`, `1` | that release, and the moving major/minor aliases |
-| `edge` | the tip of `main` — builds, but unreleased |
-| `sha-<full-sha>` | one exact commit, never moved |
+That is the image URL for this repository — GitHub Container Registry, under
+the account that owns it. Built for `linux/amd64` and `linux/arm64`, so it runs
+on both a normal server and an Apple-silicon laptop from the same tag.
+
+| Tag | Points at | Full URL |
+| --- | --- | --- |
+| `latest` | the most recent release | `ghcr.io/duprejesse3-ops/jblessd-store:latest` |
+| `1.4.0`, `1.4`, `1` | that release, and the moving major/minor aliases | `ghcr.io/duprejesse3-ops/jblessd-store:1.4` |
+| `edge` | the tip of `main` — builds, but unreleased | `ghcr.io/duprejesse3-ops/jblessd-store:edge` |
+| `sha-<full-sha>` | one exact commit, never moved | `ghcr.io/duprejesse3-ops/jblessd-store:sha-<full-sha>` |
 
 Pin `1.4` in production. `latest` moves under you on the next release, and
 `edge` is not release-gated.
+
+Nothing answers that URL until the first publish — see **Publishing** below,
+which is still a one-time activation away. To print the URL and its tags for
+whatever you are about to build, without a Docker daemon and without hardcoding
+the account name anywhere:
+
+```sh
+container/image.sh --url                 # ghcr.io/<owner>/jblessd-store:dev, :sha-<short>
+container/image.sh --url 1.4.0           # the four release tags
+```
+
+It derives the owner from `git remote origin`, so a fork prints its own URL.
 
 Running it needs only the image, a Postgres, and somewhere to keep blobs:
 
@@ -55,7 +70,7 @@ docker run -d --name jblessd \
   --env-file container/.env \
   -e DATABASE_URL=postgres://... \
   -v jblessd-blobs:/data/blobs \
-  ghcr.io/<owner>/jblessd-store:1.4
+  ghcr.io/duprejesse3-ops/jblessd-store:1.4
 ```
 
 Migrations are a separate one-shot run of the same image — see the `migrate`
@@ -66,9 +81,9 @@ To point the compose stack at a published tag instead of building from source,
 set `APP_IMAGE` and pull:
 
 ```sh
-APP_IMAGE=ghcr.io/<owner>/jblessd-store:1.4 \
+APP_IMAGE=ghcr.io/duprejesse3-ops/jblessd-store:1.4 \
   docker compose -f container/docker-compose.yml pull
-APP_IMAGE=ghcr.io/<owner>/jblessd-store:1.4 \
+APP_IMAGE=ghcr.io/duprejesse3-ops/jblessd-store:1.4 \
   docker compose -f container/docker-compose.yml up
 ```
 
@@ -107,6 +122,7 @@ workflow at all:
 
 ```sh
 container/image.sh                                  # :dev and :sha-<short>
+container/image.sh --url 1.4.0                      # print the URLs, build nothing
 PUSH=1 container/image.sh 1.4.0                     # release, all four tags
 IMAGE_REPO=registry.example.com/store PUSH=1 container/image.sh 1.4.0
 ```
