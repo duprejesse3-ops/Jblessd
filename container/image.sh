@@ -5,6 +5,8 @@
 #   container/image.sh 1.4.0              # build, tag :1.4.0 :1.4 :1 :latest
 #   PUSH=1 container/image.sh 1.4.0       # ...and push every tag
 #   IMAGE_REPO=ghcr.io/me/store PUSH=1 container/image.sh 1.4.0
+#   container/image.sh --url              # print the image URLs, build nothing
+#   container/image.sh --url 1.4.0        # ...for that release's tags
 #
 # The build context is the repository root, not container/, because the image
 # needs the application source that lives above this directory. The script cd's
@@ -20,6 +22,17 @@ set -eu
 cd "$(dirname "$0")/.."
 
 IMAGE_NAME=${IMAGE_NAME:-jblessd-store}
+
+# `--url` answers "what do I pull?" without a Docker daemon. That is the
+# question a deploy target actually asks, and a full build is a slow and
+# machine-specific way to answer it. It reuses the tag derivation below rather
+# than restating the URLs, so what it prints is exactly what a build publishes.
+URL_ONLY=
+if [ "${1:-}" = "--url" ]; then
+  URL_ONLY=1
+  shift
+fi
+
 VERSION=${1:-dev}
 VERSION=${VERSION#v}
 
@@ -46,7 +59,7 @@ created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 # A release tag names a commit, so building one from a dirty tree produces an
 # image whose recorded revision does not describe its contents. Worth a warning,
 # not a refusal — reproducing a customer's build often means exactly this.
-if [ "$VERSION" != "dev" ] && [ -n "$(git status --porcelain 2>/dev/null || true)" ]; then
+if [ -z "$URL_ONLY" ] && [ "$VERSION" != "dev" ] && [ -n "$(git status --porcelain 2>/dev/null || true)" ]; then
   echo "warning: working tree is dirty; :$VERSION will not match commit $revision" >&2
 fi
 
@@ -65,6 +78,15 @@ case "$VERSION" in
     [ -n "$short" ] && tags="$tags sha-$short"
     ;;
 esac
+
+# One URL per line, on stdout and nothing else, so it composes:
+#   APP_IMAGE=$(container/image.sh --url 1.4.0 | head -1) docker compose ... pull
+if [ -n "$URL_ONLY" ]; then
+  for tag in $tags; do
+    echo "$IMAGE_REPO:$tag"
+  done
+  exit 0
+fi
 
 tag_args=""
 for tag in $tags; do
