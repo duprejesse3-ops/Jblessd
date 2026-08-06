@@ -13,6 +13,7 @@
 import type { Context, Config } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
 const MODEL = 'claude-sonnet-4-5'
 const STORE_NAME = 'MULTINICHE AI'
@@ -121,9 +122,17 @@ async function aiDescription(d: Draft): Promise<Description> {
   }
 }
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
+  }
+
+  // Public, unauthenticated, billed inference — capped per IP. Writing copy for a
+  // listing is a handful of calls; anything beyond this is not a seller.
+  const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
+  const limit = await checkRateLimit('describe', ip, { limit: 25, windowMs: 60 * 60 * 1000 })
+  if (!limit.allowed) {
+    return tooManyRequests(limit.retryAfterSec, 'That is a lot of drafts in one hour. Please try again shortly.')
   }
 
   let draft: Draft

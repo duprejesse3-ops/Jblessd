@@ -62,6 +62,7 @@ const NICHE_LABEL: Record<string, string> = {
   engineers: 'Engineers',
   office: 'Office & Admin',
   finance: 'Finance & Investing',
+  stores: 'Store & Site Owners',
 }
 const NICHE_INTRO: Record<string, string> = {
   founders: 'Tools that give a small team back its time — planning, meetings, follow-ups, and the busywork around them.',
@@ -74,6 +75,7 @@ const NICHE_INTRO: Record<string, string> = {
   engineers: 'Ship and operate with confidence — infrastructure, incidents, pipelines, and the runbooks that hold it all together.',
   office: 'Get through the workday faster — email, meetings, expenses, and the recurring admin that eats an afternoon.',
   finance: 'Money decisions, done in the browser — valuation, rebalancing, cashflow, and the models investors expect, run live on your own numbers.',
+  stores: 'Keep your own storefront healthy — monitoring, SEO, and link checks you run on your own infrastructure, owned outright instead of rented monthly.',
 }
 
 // Outcome-based landing pages (/use-cases/:slug). These sit orthogonal to the
@@ -200,6 +202,29 @@ function money(n: number): string {
   return `$${Number(n).toFixed(2)}`
 }
 
+// Compose a <title> that ends with the store name exactly once.
+//
+// Most titles on this site are built from catalog fields and can just append
+// "| STORE". The update pages cannot: their metaTitle comes from the marketing
+// agent, which has usually already branded the line itself. Appending
+// unconditionally produced
+//   "MULTINICHE AI — the full toolkit | MULTINICHE AI | MULTINICHE AI"
+// on /updates/:id. A brand repeated three times reads as keyword stuffing, and
+// Google's response is to discard the title and write its own from the page —
+// so the one field we fully control stops saying what we chose.
+//
+// Any trailing separator+brand is stripped as often as it appears, the lead is
+// then capped so the meaningful part survives Google's ~600px truncation, and
+// the suffix is re-added only when what remains does not already name the store.
+function titleWithStore(lead: string, max = 60): string {
+  const brand = STORE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const tail = new RegExp(`\\s*[|\\u2014\\u2013-]\\s*${brand}\\s*$`, 'i')
+  let t = lead.trim()
+  while (tail.test(t)) t = t.replace(tail, '').trim()
+  t = t.slice(0, max).trim()
+  return t.toLowerCase().includes(STORE.toLowerCase()) ? t : `${t} | ${STORE}`
+}
+
 async function getJson<T>(url: URL): Promise<T | null> {
   try {
     const res = await fetch(url, {
@@ -211,6 +236,33 @@ async function getJson<T>(url: URL): Promise<T | null> {
   } catch {
     return null
   }
+}
+
+// Same fetch, but it reports *why* it came back empty.
+//
+// getJson() collapses "the API answered, and there is no such record" and "the API
+// never answered" into the same null. For the optional fetches — reviews, rating
+// aggregates — that is the right trade: an outage there should still render the
+// page, just without stars. For a URL whose existence is the question being asked
+// it is exactly wrong, because the caller has to pick a status code and null does
+// not tell it which one is true. Picking 404 tells Google the page is gone and
+// invites it to delist a URL that was merely slow that second; picking 503 tells it
+// to come back later, which is the honest answer to a timeout.
+//
+// The distinction is safe to draw here because /api/marketing-agent and /api/proof
+// both answer a genuinely missing record with HTTP 200 and an empty payload, so a
+// non-OK response or a thrown request is never "absent" — it is only ever "we could
+// not ask". One retry, for the same reason getCatalog() takes one: the first
+// attempt doubles as the warm-up for a cold serverless container plus its Postgres
+// connection, which is what overruns a 1500 ms budget in the first place.
+type Fetched<T> = { ok: true; data: T } | { ok: false }
+
+async function getJsonOrFail<T>(url: URL): Promise<Fetched<T>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const data = await getJson<T>(url)
+    if (data !== null) return { ok: true, data }
+  }
+  return { ok: false }
 }
 
 // The catalog is the one fetch a product/niche/use-case page cannot render without,
@@ -352,7 +404,31 @@ function page(opts: {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Language': 'en-US',
+      // Browser cache. csp.ts downgrades this `public` to `private` on the way
+      // out, because the nonce it stamps must not be replayed to a second
+      // visitor. That downgrade is correct and stays.
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+      // Shared CDN cache — a separate header that csp.ts does not touch, because
+      // it only rewrites Cache-Control. This is the one that costs money when it
+      // is missing: a `private` response is one the CDN is forbidden to reuse, so
+      // without this every crawler hit re-ran this render *plus* its
+      // /api/products subrequest and the Postgres connection behind it. Google
+      // and Bing alone walk 100+ URLs here, and each walk was billed as an edge
+      // invocation and a function invocation rather than a cache hit.
+      //
+      // Caching the body is safe precisely because what gets stored is the
+      // pre-nonce HTML: csp.ts is declared in netlify.toml on /*, is not itself
+      // cached, and therefore runs on every request — cache hit or miss — minting
+      // a fresh nonce each time. Nothing here varies per visitor otherwise; the
+      // catalog and reviews are the same for everyone.
+      //
+      // Errors get a short window instead of the full one. A 404 is still worth
+      // caching briefly because crawlers retry dead URLs persistently, but 60s
+      // keeps a newly listed SKU from being shadowed for long.
+      'Netlify-CDN-Cache-Control':
+        (opts.status ?? 200) === 200
+          ? 'public, s-maxage=300, stale-while-revalidate=86400, durable'
+          : 'public, s-maxage=60',
     },
   })
 }
@@ -387,8 +463,14 @@ function unavailable(): Response {
   })
   const headers = new Headers(res.headers)
   headers.set('Retry-After', '30')
-  // Never let an outage response be cached in place of the real page.
+  // Never let an outage response be cached in place of the real page. Both
+  // caches have to be told: Cache-Control governs the browser, and
+  // Netlify-CDN-Cache-Control governs the shared CDN cache that page() now opts
+  // into. Missing the second one would pin a 503 in front of a live product page
+  // for everyone, for the whole window — strictly worse than the cold render it
+  // was trying to avoid.
   headers.set('Cache-Control', 'no-store')
+  headers.set('Netlify-CDN-Cache-Control', 'no-store')
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
 }
 
@@ -503,7 +585,12 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     `<div class="row"><span>Spec</span><span>${esc(p.spec)}</span></div>` +
     `</div>` +
     `<div class="buy"><span class="price">${money(p.price)}</span>` +
-    `<a class="btn" data-product-cta href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
+    // nofollow: this CTA points at the storefront with a ?product= parameter, which
+    // serves the homepage (and correctly canonicalises to "/"). Left followable, the
+    // 64 product pages hand Googlebot 64 distinct URLs that all render the homepage —
+    // 64 crawls, and 64 catalog fetches, to rediscover a page it already has. The
+    // canonical stops them being indexed; nofollow stops them being fetched at all.
+    `<a class="btn" data-product-cta rel="nofollow" href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
     `<p style="font-size:13px;color:var(--muted)">Digital delivery is immediate. Sales are final after access is provided, subject to the <a href="/refund-policy/">refund policy</a>.</p>` +
     reviewsHtml +
     relatedHtml
@@ -618,12 +705,12 @@ function renderProof(p: Proof): Response {
       ? `<div class="specs"><div class="row"><span>Run on</span><span>${esc(p.scenario)}</span></div></div>`
       : '') +
     `<div class="proof"><div class="proof-bar">demo · ${esc(p.productName)}${dateStr ? ` · ${esc(dateStr)}` : ''}</div><div class="proof-out">${outputHtml}</div></div>` +
-    `<div class="buy"><a class="btn" href="/?product=${encodeURIComponent(p.sku)}">Get ${esc(p.productName)} →</a>` +
+    `<div class="buy"><a class="btn" rel="nofollow" href="/?product=${encodeURIComponent(p.sku)}">Get ${esc(p.productName)} →</a>` +
     `<a class="btn ghost" href="/">Run your own live proof</a></div>` +
     `<p style="font-size:13px;color:var(--muted)">Every tool in the catalog can be run live like this on your own task, free, before you buy.</p>`
 
   return page({
-    title: `Live proof: ${p.productName} in action | ${STORE}`,
+    title: titleWithStore(`Live proof: ${p.productName} in action`, 70),
     description: `Watch ${p.productName} actually work — a real, unedited demonstration from ${STORE}. See the tool do the job before you buy.`,
     canonical: url,
     jsonld: [jsonld],
@@ -813,7 +900,7 @@ function renderUpdate(c: Campaign): Response {
     `<div class="buy"><a class="btn" href="${esc(productLink.replace(SITE, '') || '/')}">${c.sku && c.sku !== 'STORE' ? `See ${esc(c.productName)} →` : 'Browse the catalog →'}</a></div>`
 
   return page({
-    title: `${(a.seo?.metaTitle || headline).slice(0, 60)} | ${STORE}`,
+    title: titleWithStore(a.seo?.metaTitle || headline),
     description: (a.seo?.metaDescription || c.productName).slice(0, 155),
     canonical: url,
     jsonld: [jsonld],
@@ -952,12 +1039,17 @@ export default async (req: Request, _context: Context) => {
   if (parts[0] === 'proof') {
     if (parts[1]) {
       const id = decodeURIComponent(parts[1])
-      const res = await getJson<{ proof?: Proof | null }>(new URL(`/api/proof?id=${encodeURIComponent(id)}`, req.url))
-      if (!res?.proof) return notFound()
-      return renderProof(res.proof)
+      const res = await getJsonOrFail<{ proof?: Proof | null }>(new URL(`/api/proof?id=${encodeURIComponent(id)}`, req.url))
+      if (!res.ok) return unavailable()
+      if (!res.data.proof) return notFound()
+      return renderProof(res.data.proof)
     }
-    const res = await getJson<{ proofs?: Proof[] }>(new URL('/api/proof', req.url))
-    return renderProofIndex(res?.proofs ?? [])
+    // An index whose only job is to list things should not answer 200 with an
+    // empty list because the API was slow — that is a thin page Google may treat
+    // as a soft 404. A genuinely empty list still renders normally.
+    const res = await getJsonOrFail<{ proofs?: Proof[] }>(new URL('/api/proof', req.url))
+    if (!res.ok) return unavailable()
+    return renderProofIndex(res.data.proofs ?? [])
   }
 
   // ---- /updates (index) and /updates/:id ----  also catalog-independent.
@@ -968,15 +1060,17 @@ export default async (req: Request, _context: Context) => {
       // once a dozen newer campaigns push it out of the list.
       const id = Number(decodeURIComponent(parts[1]))
       if (!Number.isInteger(id) || id < 1) return notFound()
-      const res = await getJson<{ campaigns?: Campaign[] }>(
+      const res = await getJsonOrFail<{ campaigns?: Campaign[] }>(
         new URL(`/api/marketing-agent?id=${id}`, req.url),
       )
-      const c = res?.campaigns?.[0]
+      if (!res.ok) return unavailable()
+      const c = res.data.campaigns?.[0]
       if (!c) return notFound()
       return renderUpdate(c)
     }
-    const res = await getJson<{ campaigns?: Campaign[] }>(new URL('/api/marketing-agent', req.url))
-    return renderUpdatesIndex(res?.campaigns ?? [])
+    const res = await getJsonOrFail<{ campaigns?: Campaign[] }>(new URL('/api/marketing-agent', req.url))
+    if (!res.ok) return unavailable()
+    return renderUpdatesIndex(res.data.campaigns ?? [])
   }
 
   const products = await getCatalog(req)
@@ -1013,4 +1107,16 @@ export default async (req: Request, _context: Context) => {
 
 export const config: Config = {
   path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool'],
+  // Opt this function's responses into the CDN cache. Without it the
+  // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
+  // function's response is never cached by default — it re-runs, and re-fetches
+  // /api/products, on every single request.
+  //
+  // Ordering is unaffected: non-cached edge functions run ahead of cached ones,
+  // so csp.ts (declared in netlify.toml on /*) still wraps this one and still
+  // nonces every response on its way to the visitor.
+  //
+  // Safe against the "cached edge responses shadow static files" caveat — none of
+  // the paths above have a static file behind them.
+  cache: 'manual',
 }

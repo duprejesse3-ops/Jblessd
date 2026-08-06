@@ -2,6 +2,7 @@ import type { Config } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
 import { inspectSite, type HealthReport } from '../lib/site-health.mjs'
+import { cachedRecommendation, diagnosisFingerprint, shouldPruneHistory } from '../lib/agent-diagnosis.mjs'
 
 const MODEL = 'claude-haiku-4-5'
 
@@ -42,7 +43,13 @@ async function diagnose(report: HealthReport): Promise<string> {
 
 export default async (req: Request) => {
   const report = await inspectSite(new URL(req.url).origin)
-  const recommendation = await diagnose(report)
+
+  // Only pay Claude when the problem is actually new. A site that has been
+  // sitting on the same failing check since the last run gets last run's
+  // recommendation copied forward — same information, no inference cost.
+  const fingerprint = diagnosisFingerprint(report.status, report.checks)
+  const reused = report.status === 'healthy' ? null : await cachedRecommendation('site_health_runs', fingerprint)
+  const recommendation = reused ?? (await diagnose(report))
 
   try {
     const db = getDatabase()
@@ -50,14 +57,26 @@ export default async (req: Request) => {
       INSERT INTO site_health_runs (status, summary, recommendation, checks, duration_ms)
       VALUES (${report.status}, ${report.summary}, ${recommendation}, ${JSON.stringify(report.checks)}::jsonb, ${report.durationMs})
     `
-    await db.sql`DELETE FROM site_health_runs WHERE created_at < now() - interval '30 days'`
+    // Retention is enforced once a day rather than on every run — see
+    // shouldPruneHistory.
+    if (shouldPruneHistory()) {
+      await db.sql`DELETE FROM site_health_runs WHERE created_at < now() - interval '30 days'`
+    }
   } catch (error) {
     console.error('site maintenance persistence failed:', error instanceof Error ? error.message : 'unknown error')
   }
 
-  console.log(`site maintenance: ${report.status} — ${report.summary}`)
+  console.log(
+    `site maintenance: ${report.status} — ${report.summary}${reused ? ' (recommendation reused, no LLM call)' : ''}`,
+  )
 }
 
 export const config: Config = {
-  schedule: '*/15 * * * *',
+  // Hourly. This was every 15 minutes, which is uptime-monitor cadence for a
+  // job that exists to keep a health *history* for the admin console: each run
+  // costs a scheduled invocation plus five self-requests against our own
+  // functions and edge functions, so quartering the frequency removes roughly
+  // three quarters of that traffic while still catching a real outage inside
+  // the hour.
+  schedule: '0 * * * *',
 }

@@ -21,9 +21,20 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getStore } from '@netlify/blobs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
 const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
 const MAX_TOKENS = 900
+
+// Custom-scenario demos are the one path here that always pays for fresh
+// flagship inference — the default per-SKU demo is served from the Blobs cache,
+// so it is effectively free and stays unmetered so any shopper can watch it.
+// A unique scenario string defeats the cache by design, which without a ceiling
+// makes this endpoint an open, unauthenticated way to spend the store's
+// inference budget. Ten tailored runs an hour per IP is far more than a real
+// shopper needs and bounds what a script can cost.
+const CUSTOM_DEMO_LIMIT = 10
+const CUSTOM_DEMO_WINDOW_MS = 60 * 60 * 1000
 const STORE_NAME = 'MULTINICHE AI'
 const CACHE_VERSION = 'v1' // bump to invalidate all cached demos at once
 
@@ -99,7 +110,7 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
   return { system, user }
 }
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
   }
@@ -115,6 +126,21 @@ export default async (req: Request, _context: Context) => {
   }
 
   if (!sku) return Response.json({ error: 'A product SKU is required.' }, { status: 400 })
+
+  // Only the uncacheable, always-fresh path is metered — see CUSTOM_DEMO_LIMIT.
+  if (scenario) {
+    const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
+    const limit = await checkRateLimit('demo-custom', ip, {
+      limit: CUSTOM_DEMO_LIMIT,
+      windowMs: CUSTOM_DEMO_WINDOW_MS,
+    })
+    if (!limit.allowed) {
+      return tooManyRequests(
+        limit.retryAfterSec,
+        'You have run a lot of tailored demos in the last hour. The standard demo for any product is still available — or try a tailored run again shortly.',
+      )
+    }
+  }
 
   const { products } = await loadCatalog()
   const product = products.find((p) => p.sku === sku)

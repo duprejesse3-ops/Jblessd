@@ -1,0 +1,33 @@
+{
+  "name": "site-audit-agent",
+  "version": "1.0.0",
+  "description": "A portable, zero-dependency website audit agent. Runs anywhere Node does — no account, no API key, no service.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "site-audit": "./bin/audit.mjs"
+  },
+  "main": "./lib/audit.mjs",
+  "exports": {
+    ".": "./lib/audit.mjs",
+    "./report": "./lib/report.mjs",
+    "./notify": "./lib/notify.mjs",
+    "./url-safety": "./lib/url-safety.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "audit": "node bin/audit.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

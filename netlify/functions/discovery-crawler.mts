@@ -2,6 +2,7 @@ import type { Config } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
 import { crawlSite, type DiscoveryReport } from '../lib/crawler.mjs'
+import { cachedRecommendation, diagnosisFingerprint, shouldPruneHistory } from '../lib/agent-diagnosis.mjs'
 
 const MODEL = 'claude-haiku-4-5'
 
@@ -46,7 +47,12 @@ async function diagnose(report: DiscoveryReport): Promise<string> {
 
 export default async (req: Request) => {
   const report = await crawlSite(new URL(req.url).origin)
-  const recommendation = await diagnose(report)
+
+  // As in the maintenance agent: an unchanged set of discovery gaps reuses the
+  // previous recommendation instead of buying an identical one.
+  const fingerprint = diagnosisFingerprint(report.status, report.checks)
+  const reused = report.status === 'healthy' ? null : await cachedRecommendation('crawl_runs', fingerprint)
+  const recommendation = reused ?? (await diagnose(report))
 
   try {
     const db = getDatabase()
@@ -61,16 +67,26 @@ export default async (req: Request) => {
         ${report.durationMs}
       )
     `
-    await db.sql`DELETE FROM crawl_runs WHERE created_at < now() - interval '30 days'`
+    if (shouldPruneHistory()) {
+      await db.sql`DELETE FROM crawl_runs WHERE created_at < now() - interval '30 days'`
+    }
   } catch (error) {
     console.error('discovery crawler persistence failed:', error instanceof Error ? error.message : 'unknown error')
   }
 
-  console.log(`discovery crawler: ${report.status} — ${report.summary}`)
+  console.log(
+    `discovery crawler: ${report.status} — ${report.summary}${reused ? ' (recommendation reused, no LLM call)' : ''}`,
+  )
 }
 
 export const config: Config = {
-  // Runs less often than the uptime check — a full link-graph crawl is heavier
-  // and discovery gaps change on the scale of content edits, not minutes.
-  schedule: '0 */6 * * *',
+  // Once a day, at 03:00 UTC. This is by far the most expensive job on the
+  // site: a full link-graph crawl requests every page we publish, and because
+  // those requests come back through our own edge functions and API routes,
+  // one crawl bills as dozens of extra invocations on top of its own runtime.
+  // It previously ran every six hours. Discovery gaps appear when content is
+  // edited, not on a six-hour clock, so daily catches them just as well at a
+  // quarter of the cost — and the admin console can still trigger a crawl on
+  // demand right after a catalog change.
+  schedule: '0 3 * * *',
 }

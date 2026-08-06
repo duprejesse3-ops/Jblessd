@@ -17,10 +17,24 @@
 // the feature always returns a usable campaign.
 
 import type { Context, Config } from '@netlify/functions'
+import { purgeCache } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+
+// Every /updates and /updates/:id render reads this endpoint, and each read was
+// billing a function invocation plus a Postgres query because the responses were
+// marked no-store. A published campaign is immutable, and the index only changes
+// when a new one is generated — which purges the tag below — so there is nothing
+// for no-store to protect here. Browsers still revalidate on every request; only
+// the shared CDN copy is reused.
+const CAMPAIGNS_CACHE_TAG = 'campaigns'
+const READ_CACHE: Record<string, string> = {
+  'Cache-Control': 'public, max-age=0, must-revalidate',
+  'Netlify-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400, durable',
+  'Cache-Tag': CAMPAIGNS_CACHE_TAG,
+}
 
 const MODEL = 'claude-sonnet-4-5'
 const STORE_NAME = 'MULTINICHE AI'
@@ -278,10 +292,7 @@ export default async (req: Request, _context: Context) => {
           WHERE id = ${id}
           LIMIT 1
         `) as any[]
-        return Response.json(
-          { campaigns: (rows ?? []).map(normalizeRow) },
-          { headers: { 'Cache-Control': 'no-store' } },
-        )
+        return Response.json({ campaigns: (rows ?? []).map(normalizeRow) }, { headers: READ_CACHE })
       }
       const rows = (await db.sql`
         SELECT id, sku, product_name, goal, source, assets, created_at
@@ -289,13 +300,18 @@ export default async (req: Request, _context: Context) => {
         ORDER BY created_at DESC, id DESC
         LIMIT 12
       `) as any[]
-      return Response.json(
-        { campaigns: (rows ?? []).map(normalizeRow) },
-        { headers: { 'Cache-Control': 'no-store' } },
-      )
+      return Response.json({ campaigns: (rows ?? []).map(normalizeRow) }, { headers: READ_CACHE })
     } catch (err) {
       console.error('marketing-agent GET error:', (err as Error).message)
-      return Response.json({ campaigns: [] })
+      // An empty list with a 200 is how the database being down gets reported to
+      // the caller as "there is no such update". /updates/:id renders from this
+      // endpoint, so that answer makes a live, indexed page return 404 during an
+      // outage — a delist instruction, sent because a query failed. Say the true
+      // thing instead: the record's existence is unknown right now, come back.
+      return Response.json(
+        { error: 'Updates are temporarily unavailable.' },
+        { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '30' } },
+      )
     }
   }
 
@@ -345,6 +361,14 @@ export default async (req: Request, _context: Context) => {
       RETURNING id, sku, product_name, goal, source, assets, created_at
     `) as any[]
     saved = normalizeRow(row)
+    // Drop the cached campaign list so a freshly generated update appears on
+    // /updates immediately rather than after the TTL. A purge failure must not
+    // fail the request — the campaign is saved, and the TTL bounds staleness.
+    try {
+      await purgeCache({ tags: [CAMPAIGNS_CACHE_TAG] })
+    } catch (err) {
+      console.error('Campaign cache purge failed:', (err as Error).message)
+    }
   } catch (err) {
     console.error('marketing-agent save error:', (err as Error).message)
     // Still return the generated campaign even if persistence failed.

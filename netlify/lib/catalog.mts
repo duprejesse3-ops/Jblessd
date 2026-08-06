@@ -9,7 +9,7 @@ export interface Product {
   sku: string
   name: string
   category: 'prompts' | 'automations' | 'templates' | 'agents'
-  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance'
+  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance' | 'stores'
   format: string
   price: number
   blurb: string
@@ -34,6 +34,7 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
   engineers: 'Engineers',
   office: 'Office & Admin',
   finance: 'Finance & Investing',
+  stores: 'Store & Site Owners',
 }
 
 export const FALLBACK_CATALOG: Product[] = [
@@ -102,4 +103,9 @@ export const FALLBACK_CATALOG: Product[] = [
   { sku: 'AI-PP-062', name: 'Equity Research Prompt Pack', category: 'prompts', niche: 'finance', format: '45 prompts · PDF', price: 24, blurb: 'Structured prompts that turn a 10-K into an investment thesis with catalysts, risks, and a price target.', spec: '10-K / 10-Q teardown workflow' },
   { sku: 'AI-TP-063', name: 'Investor-Ready Financials Template', category: 'templates', niche: 'finance', format: 'Sheets + Notion template', price: 22, blurb: 'The revenue, burn, and runway model investors expect — filled in from your numbers, not a blank tab.', spec: 'P&L + burn + runway + cap table' },
   { sku: 'AI-TP-064', name: 'Personal Budget & Net-Worth Template', category: 'templates', niche: 'finance', format: 'Sheets template', price: 15, blurb: 'Track every account, bill, and goal in one place, with a net-worth line that updates as you go.', spec: '50/30/20 + net-worth tracker' },
+  // Store & site owners — source-code products, delivered as real files under a
+  // perpetual buy-once license. Priced above the rest of the catalog because the
+  // buyer receives software they own, not a document. See
+  // packages/site-audit-agent and netlify/lib/deliverables.mts (SKU_DELIVERABLES).
+  { sku: 'AI-AG-065', name: 'Site Audit Agent (Source Code)', category: 'agents', niche: 'stores', format: '.zip download · one-command install · zero dependencies · perpetual license', price: 79, blurb: 'The maintenance agent that watches this store, rebuilt to run on any site. Unzip, run ./install.sh, and you have a site-audit command. Sixteen checks, four schedulers, no account and no subscription — you own the code.', spec: 'Runs on Node 18+ anywhere · CLI, cron, CI or serverless' },
 ]

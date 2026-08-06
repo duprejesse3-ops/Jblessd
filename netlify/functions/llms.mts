@@ -84,6 +84,10 @@ export default async () => {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      // Assistant crawlers fetch this repeatedly; it is catalog-derived, so it
+      // lives in the durable cache under the shared 'catalog' purge tag.
+      'Netlify-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400, durable',
+      'Cache-Tag': 'catalog',
     },
   })
 }

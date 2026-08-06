@@ -58,7 +58,7 @@ f.parentNode.insertBefore(j,f);
      <html lang> attribute alone does not. -->
 <meta http-equiv="content-language" content="en-US" />
 <title>MULTINICHE AI | AI Prompt Packs &amp; Automations</title>
-<meta name="description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
+<meta name="description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
 
 <!-- Search engine verification -->
 <meta name="google-site-verification" content="iXRkySFIpS5i8oBRLXjfRQEq3wcY5miqpMGD_z3BWFA" />
@@ -80,7 +80,7 @@ f.parentNode.insertBefore(j,f);
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MULTINICHE AI" />
 <meta property="og:title" content="MULTINICHE AI | AI Prompt Packs & Automations" />
-<meta property="og:description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
+<meta property="og:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
 <meta property="og:url" content="https://jblessd.com/" />
 <meta property="og:locale" content="en_US" />
 <meta property="og:image" content="https://jblessd.com/multiniche-ai-og.png" />
@@ -92,7 +92,7 @@ f.parentNode.insertBefore(j,f);
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="MULTINICHE AI | AI Productivity Tools" />
-<meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role." />
+<meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
 <meta name="twitter:image" content="https://jblessd.com/multiniche-ai-og.png" />
 <meta name="twitter:image:alt" content="MULTINICHE AI — AI productivity tools, organized by role." />
 
@@ -168,7 +168,7 @@ f.parentNode.insertBefore(j,f);
   "@id": "https://jblessd.com/#webpage",
   "url": "https://jblessd.com/",
   "name": "MULTINICHE AI | AI Prompt Packs & Automations",
-  "description": "Prompt packs, automation blueprints, doc templates, and agent configs you can watch run on your own task before you buy. Ready-to-use AI tools, organized by role.",
+  "description": "Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role.",
   "isPartOf": { "@id": "https://jblessd.com/#website" },
   "about": { "@id": "https://jblessd.com/#organization" },
   "inLanguage": "en-US",
@@ -948,6 +948,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="chip" data-niche="finance" aria-pressed="false">Finance &amp; Investing</button>
       <button class="chip" data-niche="architects" aria-pressed="false">Architects</button>
       <button class="chip" data-niche="engineers" aria-pressed="false">Engineers</button>
+      <button class="chip" data-niche="stores" aria-pressed="false">Store &amp; Site Owners</button>
     </div>
   </div>
 
@@ -1205,6 +1206,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/tools/office">AI tools for office &amp; admin</a>
       <a href="/tools/architects">AI tools for architects</a>
       <a href="/tools/engineers">AI tools for engineers</a>
+      <a href="/tools/finance">AI tools for finance &amp; investing</a>
+      <a href="/tools/stores">AI tools for store &amp; site owners</a>
     </nav>
   </div>
   <div class="wrap">
@@ -1304,6 +1307,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <option value="finance">Finance &amp; Investing</option>
       <option value="architects">Architects</option>
       <option value="engineers">Engineers</option>
+      <option value="stores">Store &amp; Site Owners</option>
     </select>
     <input class="field" id="f-format" placeholder="Format (e.g. Notion template)" />
     <input class="field" id="f-price" type="number" placeholder="Price (USD)" />
@@ -2022,6 +2026,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       dl.style.marginTop = '14px';
       dl.textContent = 'Download ' + item.name + ' (.md)';
       block.appendChild(dl);
+    }
+    // Products that ship real files (source code) get a .zip of the actual
+    // package alongside the document, so "install it" means unzip and run the
+    // installer rather than copy thirteen files out of a Markdown file by hand.
+    // Served by /api/download, which re-verifies the paid session on every hit.
+    if(item.archive && item.archive.url){
+      var zipDl = document.createElement('a');
+      zipDl.href = item.archive.url;
+      zipDl.download = item.archive.filename || 'download.zip';
+      zipDl.className = 'btn btn-gold';
+      zipDl.style.marginTop = '14px';
+      zipDl.textContent = 'Download ' + (item.archive.filename || 'the files') + ' — unzip and run ./install.sh';
+      block.appendChild(zipDl);
     }
     // Download the product as a self-contained app: a single HTML file the buyer
     // saves to their device. It holds the full content (usable offline) plus a
@@ -2933,7 +2950,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sku: proofSku, scenario: scenario })
       });
-      if(!res.ok || !res.body){ throw new Error('unavailable'); }
+      if(!res.ok || !res.body){
+        // A 429 is the tailored-demo hourly cap, not an outage — surface the
+        // server's own explanation so the shopper knows the standard demo still
+        // works, rather than the generic "warming up" fallback below.
+        if(res.status === 429){
+          var capMsg = '';
+          try{ capMsg = (await res.json()).error || ''; }catch(_){ capMsg = ''; }
+          proofOutput.innerHTML = '<span class="proof-hint">' + esc(capMsg || 'Too many tailored demos for now. Please try again shortly.') + '</span>';
+          proofLabel.textContent = 'demo · limit reached';
+          proofTerminal.setAttribute('data-empty', 'true');
+          return;
+        }
+        throw new Error('unavailable');
+      }
 
       var reader = res.body.getReader();
       var decoder = new TextDecoder();

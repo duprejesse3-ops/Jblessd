@@ -185,8 +185,61 @@ const APPS: Record<Product['category'], (p: Product, topic: string) => ProductAp
   agents: agentApp,
 }
 
+// ---- per-SKU overrides -------------------------------------------------
+//
+// Almost every product is content, and the category form above describes it
+// exactly. A product that ships *software* does not fit: the generic agent app
+// offers to answer a task "in character", which would be a straightforwardly
+// false description of a Node CLI the buyer installs and schedules themselves.
+//
+// So AI-AG-065 gets its own form. It deliberately does not run a live audit from
+// here — the buyer bought the auditor to run on their own infrastructure, and
+// crawling their site on our metered host would recreate the exact recurring
+// cost the product exists to avoid. What it does instead is the part that
+// genuinely needs judgement: turn their stack into a concrete install-and-
+// schedule plan and tell them which of the sixteen checks matter most for the
+// kind of site they run.
+
+const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
+  'AI-AG-065': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your monitoring setup',
+    tagline:
+      'Describe your site and where you want the auditor to run, and this returns the exact install and schedule plan for your stack — plus which checks to treat as blocking.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'site',
+        label: 'What site are you monitoring?',
+        type: 'text',
+        placeholder: 'e.g. a Shopify storefront, a docs site on Vercel, a WordPress shop',
+        required: true,
+      },
+      {
+        id: 'where',
+        label: 'Where should it run?',
+        type: 'textarea',
+        placeholder:
+          'e.g. a Linux box with cron / GitHub Actions / a Netlify scheduled function — and whether you want Slack or Discord alerts.',
+        required: true,
+      },
+      {
+        id: 'concerns',
+        label: 'What breaks on your site, or what worries you? (optional)',
+        type: 'textarea',
+        placeholder:
+          'e.g. product pages 404 after a catalog sync, the sitemap goes stale, images ship without alt text.',
+      },
+    ],
+  }),
+}
+
 /** Build the interactive app definition for a product, from its metadata alone. */
 export function buildProductApp(product: Product): ProductApp {
+  const authored = SKU_APPS[product.sku]
+  if (authored) return authored(product)
   const topic = topicOf(product)
   const make = APPS[product.category] ?? templateApp
   return make(product, topic)
@@ -208,6 +261,14 @@ const RUN_BRIEF: Record<Product['category'], string> = {
     'Return the template fully filled in with the buyer\'s facts — a finished, ready-to-send document. Keep the template\'s structure, but every section should contain real content, not brackets or guidance.',
   agents:
     'Act as this agent and handle the buyer\'s task end to end, in character, following the configuration\'s operating rules. Return the agent\'s actual response — the work product, not a description of what it would do.',
+}
+
+// A SKU whose app is not "be the product" but "configure the software the buyer
+// owns" needs its own brief, or the generic one tells Claude to role-play an
+// agent that does not exist.
+const SKU_RUN_BRIEF: Record<string, string> = {
+  'AI-AG-065':
+    'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
 }
 
 function summariseInputs(app: ProductApp, inputs: Record<string, string>): string {
@@ -237,7 +298,7 @@ export function buildRunPrompt(
     `from MULTINICHE AI built for ${NICHE_LABEL[product.niche]}. A paying buyer is using it as an ` +
     `app: they have filled in a short form and you produce the finished result they can use immediately.\n\n` +
     `Rules:\n` +
-    `- ${RUN_BRIEF[product.category]}\n` +
+    `- ${SKU_RUN_BRIEF[product.sku] ?? RUN_BRIEF[product.category]}\n` +
     `- Use everything the buyer gave you. If something important is missing, make one reasonable, ` +
     `clearly stated assumption and continue — do not stall by asking questions.\n` +
     `- Be concrete and genuinely useful. This is the paid product, not a teaser: deliver real, ` +

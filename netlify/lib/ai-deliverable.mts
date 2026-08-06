@@ -28,6 +28,7 @@ import { CATEGORY_LABEL, NICHE_LABEL, type Product } from './catalog.mjs'
 import {
   buildDeliverable,
   deliverableToMarkdown,
+  hasAuthoredDeliverable,
   type Deliverable,
   type DeliverableSection,
 } from './deliverables.mjs'
@@ -294,6 +295,14 @@ export async function upgradeDeliverable(
   product: Product,
   fallback: { deliverable: Deliverable; markdown: string },
 ): Promise<{ deliverable: Deliverable; markdown: string; aiCrafted: boolean }> {
+  // Some SKUs ship hand-authored content — source code, a license — where the
+  // exact bytes are the product. Rewriting those with a model would corrupt what
+  // the customer paid for, so they skip the upgrade entirely. It also saves the
+  // inference cost on the most expensive item in the catalog.
+  if (hasAuthoredDeliverable(product.sku)) {
+    return { ...fallback, aiCrafted: false }
+  }
+
   try {
     const ai = await getAiDeliverable(product)
     if (ai) return { ...ai, aiCrafted: true }

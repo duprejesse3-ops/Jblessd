@@ -19,6 +19,7 @@ import type { Context, Config } from '@netlify/functions'
 import { fulfilOrder } from '../lib/fulfillment.mjs'
 import { deliverOrderEmail } from '../lib/order-email.mjs'
 import { deliverableSlug } from '../lib/deliverables.mjs'
+import { archiveFilename, hasArchive } from '../lib/product-archive.mjs'
 import { buildProductApp } from '../lib/product-app.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
@@ -96,6 +97,12 @@ export default async (req: Request, _context: Context) => {
           // page can tell the buyer their download is bespoke, not boilerplate.
           aiCrafted: aiCrafted === true,
           filename: `${deliverableSlug(deliverable)}.md`,
+          // Set for products that ship real files rather than a document. The
+          // success page renders a .zip button alongside the .md one, and the
+          // archive is served by /api/download against this same session id.
+          archive: hasArchive(product.sku)
+            ? { filename: archiveFilename(product.sku), url: `/api/download?session_id=${encodeURIComponent(sessionId)}&sku=${encodeURIComponent(product.sku)}` }
+            : null,
           // The interactive "use it as an app" form. Rendered on the success
           // page so the buyer can run the product on their own input instead of
           // just reading the document. Runs are served by /api/run-product.
