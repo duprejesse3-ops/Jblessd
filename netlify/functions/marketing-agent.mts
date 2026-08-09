@@ -8,8 +8,15 @@
 // Every campaign also carries a direct link to the product (or store) page and a
 // shareable image, so posts and emails drive traffic instead of dead-ending.
 //
-//   POST — generate a campaign for { sku?, goal? } and persist it.
-//   GET  — list recent campaigns.
+//   POST — generate a campaign for { sku?, goal? } and persist it. Owner only:
+//          it spends model credits and every campaign it saves is published as a
+//          public, indexed /updates/:id page under the store's own byline, so
+//          anonymous callers must not be able to put words in the store's mouth.
+//          Driven from the operator console at /admin (`campaign` command).
+//   GET  — list recent campaigns, or look one up by id. Stays public: the pages
+//          edge function renders /updates and /updates/:id from it, and the
+//          sitemap enumerates the ids. It only exposes copy that is already
+//          published on those pages.
 //
 // It uses Anthropic (Claude) through Netlify AI Gateway — no API key management.
 // If the gateway isn't active yet (AI Gateway needs at least one production
@@ -20,6 +27,7 @@ import type { Context, Config } from '@netlify/functions'
 import { purgeCache } from '@netlify/functions'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
+import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
@@ -317,6 +325,24 @@ export default async (req: Request, _context: Context) => {
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST' } })
+  }
+
+  // ---- POST is owner-only ----
+  // Generating a campaign spends model credits and writes a row that /updates
+  // publishes as an indexed page attributed to the store. Both are things only
+  // the owner should be able to trigger, so require the same admin session the
+  // rest of the operator console uses.
+  if (!isConfigured()) {
+    return Response.json(
+      { error: 'Admin console is not configured. Set the ADMIN_PASSWORD environment variable.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+  if (!isAuthed(req, Date.now())) {
+    return Response.json(
+      { error: 'Not authorized. Sign in at /admin first.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   // ---- POST: generate a campaign ----

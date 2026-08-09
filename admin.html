@@ -233,6 +233,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var CONSOLE = "/api/admin-console";
   var BUILDER = "/api/product-builder";
   var ADS = "/api/google-ads-builder";
+  var CAMPAIGNS = "/api/marketing-agent";
   var ADIMG = "/api/ad-image";
   var PRODUCTS = "/api/products";
 
@@ -284,6 +285,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  drafts          list products the builder has designed",
     "  ads [sku] [| goal]   build a paste-ready Google Ads plan (headlines, keywords…)",
     "  adplans         list Google Ads plans the builder has generated",
+    "  campaign [sku] [| goal]   write a full marketing campaign (posts, email, SEO, ad headlines)",
+    "  campaigns       list campaigns already published to /updates",
     "  creatives [sku]   generate Google Ads product images (PNG, all 3 sizes)",
     "  creatives all     one Google Ads image file per product (whole catalog)",
     "  clear           clear the screen",
@@ -305,6 +308,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  ads                          whole-store Google Ads plan",
     "  ads AI-PP-046                plan for one product",
     "  ads AI-AG-012 | push the launch discount",
+    "  campaign                     campaign for the whole store",
+    "  campaign AI-PP-046           campaign for one product",
+    "  campaign AI-AG-012 | target developers",
     "  creatives                    ad images for the whole store",
     "  creatives AI-AG-058          ad images for one product",
     "  creatives all                one ad image per product, catalog-wide",
@@ -420,6 +426,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower === "drafts") { listDrafts(); return; }
     if (lower === "ads" || lower.indexOf("ads ") === 0) { buildAds(raw.slice(3).trim()); return; }
     if (lower === "adplans") { listAdPlans(); return; }
+    if (lower === "campaigns" || lower === "updates") { listCampaigns(); return; }
+    if (lower === "campaign" || lower.indexOf("campaign ") === 0) { buildCampaign(raw.slice(8).trim()); return; }
     if (lower === "creatives" || lower === "adimages") { showCreatives(""); return; }
     if (lower === "creatives all" || lower === "adimages all" ||
         lower === "creatives *" || lower === "creatives every" ||
@@ -691,6 +699,125 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     } catch (_) {
       thinking.remove();
       print("reply err", "network error — the ads builder is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // ---------- marketing campaigns ----------
+  // The AI Marketing Agent used to be a modal in the storefront nav, which put a
+  // tool for promoting the store in front of the people being marketed to — and
+  // left an unauthenticated endpoint that spent model credits and published an
+  // indexed /updates page on every click. It lives here now: same agent, owner
+  // only, driven by `campaign` / `campaigns`.
+  function renderCampaign(c) {
+    var a = c.assets || {};
+    var lines = [];
+
+    lines.push("<span class='accent'>" + escapeHtml(c.productName) + "</span> "
+      + "<span class='sys'>· campaign" + (c.goal ? " · goal: " + escapeHtml(c.goal) : "") + "</span>");
+    if (c.id) {
+      lines.push("<span class='amber'>Published:</span> /updates/" + escapeHtml(c.id));
+    }
+    if (a.link) { lines.push("<span class='amber'>Links to:</span> " + escapeHtml(a.link)); }
+    if (a.tagline) {
+      lines.push("");
+      lines.push("<span class='cyan'>TAGLINE</span>");
+      lines.push("  " + escapeHtml(a.tagline));
+    }
+
+    if (a.tweets && a.tweets.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>X / TWITTER</span>");
+      a.tweets.forEach(function (t) { lines.push("  " + escapeHtml(t)); });
+    }
+    if (a.linkedin) {
+      lines.push("");
+      lines.push("<span class='cyan'>LINKEDIN</span>");
+      lines.push("  " + escapeHtml(a.linkedin));
+    }
+    if (a.instagram) {
+      lines.push("");
+      lines.push("<span class='cyan'>INSTAGRAM</span>");
+      lines.push("  " + escapeHtml(a.instagram));
+    }
+    if (a.email && a.email.subject) {
+      lines.push("");
+      lines.push("<span class='cyan'>EMAIL</span>");
+      lines.push("  <b>" + escapeHtml(a.email.subject) + "</b>");
+      lines.push("  " + escapeHtml(a.email.body || ""));
+    }
+    if (a.seo && a.seo.metaTitle) {
+      lines.push("");
+      lines.push("<span class='cyan'>SEO</span>");
+      lines.push("  " + escapeHtml(a.seo.metaTitle)
+        + " <span class='sys'>(" + a.seo.metaTitle.length + ")</span>");
+      lines.push("  " + escapeHtml(a.seo.metaDescription || "")
+        + " <span class='sys'>(" + String(a.seo.metaDescription || "").length + ")</span>");
+    }
+    if (a.adHeadlines && a.adHeadlines.length) {
+      lines.push("");
+      lines.push("<span class='cyan'>AD HEADLINES</span>");
+      a.adHeadlines.forEach(function (h) { lines.push("  " + escapeHtml(h)); });
+    }
+
+    printHTML("reply", lines.join("\n"));
+  }
+
+  async function buildCampaign(arg) {
+    if (busy) return;
+    var parsed = parseAdsArgs(arg);
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "marketing agent writing your campaign");
+    try {
+      var r = await fetch(CAMPAIGNS, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sku: parsed.sku, goal: parsed.goal })
+      });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) {
+        if (r.status === 401) {
+          print("reply err", (j.error || "session expired") + " — reloading…");
+          setTimeout(function(){ location.reload(); }, 1200);
+        } else {
+          print("reply err", j.error || ("error " + r.status));
+        }
+        return;
+      }
+      var c = j.campaign;
+      print("tools", "▸ written via " + (c && c.source === "heuristic" ? "template fallback" : "claude-sonnet-4-5") +
+        (j.persisted ? " · published to /updates" : " · not saved (db unavailable)"));
+      if (c) renderCampaign(c);
+      printHTML("sys", "this campaign is live on <b>/updates</b> and in the sitemap. run <b>campaigns</b> to review past ones.");
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the marketing agent is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  async function listCampaigns() {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading campaigns");
+    try {
+      var r = await fetch(CAMPAIGNS, { headers: { "accept": "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", j.error || ("error " + r.status)); return; }
+      var list = j.campaigns || [];
+      if (!list.length) {
+        printHTML("sys", "no campaigns yet. run <b>campaign</b> (optionally with a sku) to write one.");
+        return;
+      }
+      print("sys", list.length + " campaign" + (list.length === 1 ? "" : "s") + " (newest first):");
+      list.forEach(renderCampaign);
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the marketing agent is unreachable.");
     } finally {
       busy = false; input.disabled = false; input.focus();
     }
