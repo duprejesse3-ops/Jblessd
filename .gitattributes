@@ -1,0 +1,45 @@
+# Line endings. This repository is checked out on Windows to run the container
+# under Podman, and Git's Windows default (core.autocrlf=true) rewrites text
+# files to CRLF on the way out. Several files here break when that happens, in
+# ways whose error messages do not mention line endings at all:
+#
+#   - container/*.sh gain a CR on the shebang, so WSL and Git Bash report
+#     "bad interpreter: /bin/sh^M: no such file or directory" — or, more
+#     confusingly, "cannot execute: required file not found".
+#   - container/Dockerfile with CRLF makes buildah mis-parse RUN continuations.
+#   - container/.env.example copied to .env carries CR into every value, so a
+#     password becomes "secret\r" and DATABASE_URL fails to authenticate.
+#     container/podman.sh strips CR defensively, but the runtimes' own
+#     --env-file parsers do not.
+#
+# Marking them binary would also avoid the rewrite but would lose diffs, so
+# they are text with an explicit LF checkout instead.
+
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.ps1 text eol=crlf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+*.mjs text eol=lf
+*.mts text eol=lf
+*.ts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env text eol=lf
+.env.example text eol=lf
+
+# Genuinely binary — never touch these.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.aab binary
+*.apk binary
+*.keystore binary
+*.jks binary
+*.tar binary
+*.gz binary

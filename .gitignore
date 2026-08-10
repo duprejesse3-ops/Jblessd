@@ -12,6 +12,10 @@ app-release-*.jks
 # Local Netlify folder
 .netlify
 
+# Exported container image tars from container/save.sh. Hundreds of megabytes
+# each, and rebuildable from the Dockerfile at any commit.
+dist/
+
 # Container runtime secrets — container/.env holds the Stripe, Anthropic,
 # Resend and admin credentials. Only .env.example belongs in the repository.
 .env

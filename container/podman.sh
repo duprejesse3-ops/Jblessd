@@ -30,7 +30,11 @@ set -eu
 cd "$(dirname "$0")/.."
 
 POD=${POD_NAME:-jblessd}
-IMAGE=${APP_IMAGE:-jblessd-store:local}
+# `localhost/` is not decoration. Podman resolves an unqualified name as a short
+# name against registries.conf, so a bare `jblessd-store:local` either fails to
+# resolve or is looked for on Docker Hub; `localhost/` is the name Podman gives
+# an image it built itself, so this matches what `build_image` below produces.
+IMAGE=${APP_IMAGE:-localhost/jblessd-store:local}
 PG_IMAGE=${PG_IMAGE:-docker.io/library/postgres:17-alpine}
 ENV_FILE=${ENV_FILE:-container/.env}
 
@@ -92,8 +96,10 @@ build_image() {
   podman build --file container/Dockerfile --tag "$IMAGE" .
 }
 
-# A bare name means a local build; a registry reference means someone set
-# APP_IMAGE to a published tag and wants that, not a rebuild of it.
+# A local-only name means build it here; a registry reference means someone set
+# APP_IMAGE to a published tag and wants that, not a rebuild of it. `localhost/`
+# has to be tested before the general `*/*` case: it contains a slash but there
+# is no registry behind it, so pulling it can only ever fail.
 ensure_image() {
   if [ "${1:-}" = "--build" ]; then
     build_image
@@ -101,6 +107,7 @@ ensure_image() {
   fi
   podman image exists "$IMAGE" && return 0
   case "$IMAGE" in
+    localhost/*) build_image ;;
     */*) echo "==> Pulling $IMAGE"; podman pull "$IMAGE" ;;
     *) build_image ;;
   esac

@@ -12,6 +12,11 @@
 # default branch publish `edge` only, so `latest` never moves without a release.
 # The manual run builds without publishing, which is the cheap way to check that
 # a Dockerfile change still builds on both architectures.
+#
+# Every run also exports the image as a loadable .tar.gz per architecture, for
+# targets that cannot pull from a registry. Those are uploaded as workflow
+# artifacts, and attached to the GitHub release when the trigger is a v* tag.
+# container/save.sh does the same thing on a laptop.
 
 name: Container image
 
@@ -92,3 +97,79 @@ jobs:
             IMAGE_VERSION=${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Offline artifacts: one loadable image tar per architecture, for a target that
+  # cannot reach GHCR. Split from the publish job because the exporters are
+  # mutually exclusive — a build can push a multi-arch manifest or write a
+  # single-platform archive, not both — and because a matrix builds the two
+  # architectures in parallel rather than serially behind QEMU. The layers
+  # themselves are not rebuilt: cache-from picks up what the job above cached.
+  tarball:
+    needs: smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only to attach the archives to a v* release
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      # The reference baked into the archive has to be the one a registry pull
+      # would have produced, so a stack that sets APP_IMAGE to the GHCR tag works
+      # unchanged after `docker load`. GHCR rejects an uppercase path, and
+      # repository_owner is spelled however the account is.
+      - id: ref
+        run: |
+          mkdir -p dist   # buildx will not create the dest directory itself
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          case "${{ github.ref }}" in
+            refs/tags/v*) version="${GITHUB_REF#refs/tags/v}" ;;
+            refs/heads/main) version=edge ;;
+            *) version="sha-$(git rev-parse --short HEAD)" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$owner/jblessd-store:$version" >> "$GITHUB_OUTPUT"
+          echo "file=jblessd-store-$version-linux-${{ matrix.arch }}.tar" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: container/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          tags: ${{ steps.ref.outputs.image }}
+          build-args: |
+            IMAGE_VERSION=${{ steps.ref.outputs.version }}
+          # type=docker is a docker-archive on disk: `docker load` and
+          # `podman load` both read it, and nothing is pushed anywhere.
+          outputs: type=docker,dest=dist/${{ steps.ref.outputs.file }}
+          cache-from: type=gha
+
+      # Layers are stored uncompressed in a docker-archive, so this roughly
+      # halves the upload and the download. Both runtimes load the .gz directly.
+      - run: |
+          gzip -f "dist/${{ steps.ref.outputs.file }}"
+          cd dist && sha256sum "${{ steps.ref.outputs.file }}.gz" \
+            > "${{ steps.ref.outputs.file }}.gz.sha256"
+          ls -lh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-linux-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 30
+          compression-level: 0 # already gzipped
+
+      # Release assets outlive artifacts, which expire, so a tag also gets a
+      # permanent copy. `create` is tolerated failing: on a tag pushed after the
+      # release was made by hand, the release already exists.
+      - if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" --title "$tag" --generate-notes --verify-tag || true
+          gh release upload "$tag" dist/* --clobber

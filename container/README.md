@@ -19,6 +19,14 @@ cp container/.env.example container/.env      # then fill it in
 container/podman.sh up --build
 ```
 
+On Windows, where that shell script cannot run, use the PowerShell equivalent —
+see **Windows** below:
+
+```powershell
+Copy-Item container\.env.example container\.env
+.\container\podman.ps1 up -Build
+```
+
 Either way that brings up three things: Postgres, a one-shot migration job, and
 the app on `http://localhost:8080`. The app does not start until the migrations
 have finished, so a fresh volume is fully migrated before the first request.
@@ -61,6 +69,42 @@ expected mode; nothing here needs `sudo`.
 `docker` or `podman` is on `PATH`, and `CONTAINER_ENGINE=podman` forces it on a
 machine that has both.
 
+### Windows
+
+`podman.sh` is POSIX shell and will not run in PowerShell or cmd, so Windows has
+its own entry point with the same commands:
+
+```powershell
+Copy-Item container\.env.example container\.env    # then fill it in
+.\container\podman.ps1 up -Build                   # build the image, then start
+.\container\podman.ps1 logs
+.\container\podman.ps1 status
+.\container\podman.ps1 migrate
+.\container\podman.ps1 down                        # -Volumes to delete data too
+```
+
+Note the switch is `-Build`, not `--build`. Three things differ from Linux and
+account for most Windows-only failures:
+
+- **The Podman machine has to be running.** `podman` on Windows is a client for
+  a Linux VM: `podman machine init` once, then `podman machine start`. Without it
+  every command fails with a connection error that never mentions the machine.
+  `podman.ps1` checks this first and says so.
+- **Execution policy.** If PowerShell refuses to run the script at all, that is
+  the machine's default policy, not the script:
+  `powershell -ExecutionPolicy Bypass -File .\container\podman.ps1 up -Build`.
+- **Line endings.** Git on Windows checks text files out as CRLF unless told
+  otherwise, which breaks the shell scripts under WSL and puts a stray carriage
+  return at the end of every value in `container/.env`. The repository's
+  `.gitattributes` pins the affected files to LF; a checkout made before it
+  existed keeps the old endings, so refresh it with
+  `git rm --cached -r . && git reset --hard`.
+
+`podman.ps1` reads `container/.env` itself and passes the values with `-e`
+instead of handing the file to `--env-file`, so a CRLF `.env` cannot poison
+`POSTGRES_PASSWORD` with a trailing carriage return — the failure that shows up
+as a password error against a database whose password is right.
+
 **Why not just point compose at Podman.** `docker-compose.yml` gates the app on
 Postgres reporting healthy and on the migration job exiting 0. Under
 `podman-compose` those conditions are not reliably honoured, and when they are
@@ -74,7 +118,14 @@ the compose file works as written, but run it from inside `container/` so that
 
 | Symptom | Cause |
 | --- | --- |
-| `short-name "node:24-alpine" did not resolve` | Podman does not assume Docker Hub for a bare image name. Both image references are now fully qualified; if a local edit reintroduces one, spell out `docker.io/library/`. |
+| `short-name "jblessd-store:local" did not resolve` | Podman resolves an unqualified name against `registries.conf`, not against local storage, so a bare name is looked for on a registry that has never heard of it. The local image is `localhost/jblessd-store:local` — that is now the default everywhere. Set `APP_IMAGE` to the `localhost/` form if a local edit dropped it. |
+| `unauthorized` or `manifest unknown` pulling `ghcr.io/...jblessd-store` | The package does not exist yet — the publish workflow is a one-time activation away, see **Publishing**. GHCR reports a missing package as an auth failure, so this looks like a credentials or URL problem and is neither. `podman login` will not help. Build locally instead. |
+| `pull access denied` for `jblessd-store:local` from Docker Hub | Same short-name cause as above, on a machine whose `registries.conf` lists `docker.io`. Podman resolved the bare name to `docker.io/library/jblessd-store` and asked Docker Hub for it. |
+| `short-name "node:24-alpine" did not resolve` | Podman does not assume Docker Hub for a bare image name. Both image references are fully qualified; if a local edit reintroduces one, spell out `docker.io/library/`. |
+| `Cannot connect to Podman` / connection refused, on Windows | The Podman machine is not running. `podman machine init` once, then `podman machine start`. See **Windows** above. |
+| `/bin/sh^M: bad interpreter`, or `cannot execute: required file not found` | A CRLF checkout of a `.sh` script. `.gitattributes` now pins these to LF; refresh an older checkout with `git rm --cached -r . && git reset --hard`. |
+| `running scripts is disabled on this system` | PowerShell execution policy, not `podman.ps1`. Run it as `powershell -ExecutionPolicy Bypass -File .\container\podman.ps1 up -Build`. |
+| Password errors from Postgres when the password is correct | A CRLF `container/.env` gave `--env-file` a value with a trailing carriage return. `podman.ps1` and `podman.sh` both strip it; `docker compose` and raw `--env-file` do not. |
 | `docker: command not found` from `image.sh` | Fixed — the script now detects the engine. Set `CONTAINER_ENGINE=podman` if detection picks wrong. |
 | Hangs at "waiting for healthy" | Podman runs `HEALTHCHECK` on a systemd timer. Without a user systemd session (WSL without it, a CI runner) health never leaves `starting`. `podman.sh` polls `pg_isready` instead and does not depend on it. |
 | `EACCES` / permission denied writing `/data/blobs` | A rootless bind mount maps the container's `node` user to a subuid that does not own the host directory. Use the named volume `podman.sh` creates, or add `:U` to the mount, or run with `--userns=keep-id`. |
@@ -84,13 +135,25 @@ the compose file works as written, but run it from inside `container/` so that
 
 ## The image
 
+**Which reference to use right now:** `localhost/jblessd-store:local`, built on
+your own machine. Nothing has been published to a registry yet, so the GHCR URL
+below is a destination, not something you can pull today.
+
+```sh
+container/podman.sh up --build          # Linux/macOS — builds, then starts
+.\container\podman.ps1 up -Build        # Windows
+```
+
+Once **Publishing** below has been activated, the registry URL for this
+repository is:
+
 ```
 ghcr.io/duprejesse3-ops/jblessd-store
 ```
 
-That is the image URL for this repository — GitHub Container Registry, under
-the account that owns it. Built for `linux/amd64` and `linux/arm64`, so it runs
-on both a normal server and an Apple-silicon laptop from the same tag.
+GitHub Container Registry, under the account that owns the repository. Built for
+`linux/amd64` and `linux/arm64`, so it runs on both a normal server and an
+Apple-silicon laptop from the same tag.
 
 | Tag | Points at | Full URL |
 | --- | --- | --- |
@@ -102,17 +165,26 @@ on both a normal server and an Apple-silicon laptop from the same tag.
 Pin `1.4` in production. `latest` moves under you on the next release, and
 `edge` is not release-gated.
 
-Nothing answers that URL until the first publish — see **Publishing** below,
-which is still a one-time activation away. To print the URL and its tags for
-whatever you are about to build, without a Docker daemon and without hardcoding
-the account name anywhere:
+**Nothing answers any of those URLs yet.** The publish workflow is still a
+one-time activation away — see **Publishing** below. Until it runs, `podman pull
+ghcr.io/duprejesse3-ops/jblessd-store:1.4` fails, and because GHCR does not
+distinguish "no such package" from "you may not see it", the error is a
+misleading `unauthorized` or `manifest unknown` rather than a plain 404. That is
+not a wrong URL and `podman login` will not fix it; the image simply does not
+exist yet. Build locally, or activate the workflow.
+
+To print the URL and its tags for whatever you are about to build, without a
+Docker daemon and without hardcoding the account name anywhere:
 
 ```sh
 container/image.sh --url                 # ghcr.io/<owner>/jblessd-store:dev, :sha-<short>
 container/image.sh --url 1.4.0           # the four release tags
 ```
 
-It derives the owner from `git remote origin`, so a fork prints its own URL.
+It derives the owner from `git remote origin`, so a fork prints its own URL. In a
+checkout with no GitHub remote it prints `localhost/jblessd-store:…` instead —
+the name Podman gives a locally built image, and one that `PUSH=1` refuses to
+publish so a local-only build cannot be pushed anywhere by accident.
 
 Running it needs only the image, a Postgres, and somewhere to keep blobs:
 
@@ -188,6 +260,61 @@ It builds for the host architecture only; the multi-arch manifest comes from
 CI. Note that a new GHCR package is **private** until you make it public in the
 repository's package settings — the first `docker pull` from an unauthenticated
 machine is what usually surfaces this.
+
+### Offline: an image tar file for Linux
+
+For a target that cannot reach a registry — an air-gapped server, a customer's
+box, a machine behind a proxy that blocks GHCR — `container/save.sh` writes the
+whole image to a single file you copy over:
+
+```sh
+container/save.sh                       # dist/jblessd-store-dev-linux-amd64.tar
+container/save.sh --gzip 1.4.0          # dist/jblessd-store-1.4.0-linux-amd64.tar.gz
+container/save.sh --platform linux/arm64 --gzip 1.4.0
+container/save.sh --pull 1.4            # export the published tag, build nothing
+```
+
+Then on the Linux target, with no network involved:
+
+```sh
+sha256sum -c jblessd-store-1.4.0-linux-amd64.tar.gz.sha256
+docker load -i jblessd-store-1.4.0-linux-amd64.tar.gz     # podman load -i works too
+```
+
+The archive carries the same image reference `image.sh` would have pushed, so
+after a `load` the tag is already what the compose stack expects — nothing needs
+retagging:
+
+```sh
+APP_IMAGE=ghcr.io/duprejesse3-ops/jblessd-store:1.4 \
+  docker compose -f container/docker-compose.yml up
+```
+
+Details worth knowing:
+
+- **It defaults to `linux/amd64`, not to your machine.** The point of the file is
+  to be carried to a server, and that server is usually amd64. On an
+  Apple-silicon laptop that means an emulated build: Docker Desktop ships the
+  binfmt handlers so it just works but is slow, while a bare Linux arm64 host
+  needs `qemu-user-static` first. `--platform linux/arm64` avoids emulation when
+  the target really is arm64.
+- **`--gzip` is worth it.** Layers sit uncompressed inside a `docker save`
+  archive, so gzip typically halves the file, and both runtimes load the `.gz`
+  directly.
+- **A `.sha256` is written beside the archive** in `sha256sum -c` format, since a
+  file that travelled by USB stick gets no other integrity check.
+- **`--pull` exports instead of rebuilding**, so the bytes on the target are the
+  released ones, digest and all. Without it the tar is built from your working
+  tree, and a dirty tree gets the same warning `image.sh` gives.
+- **`--oci` writes an OCI archive** rather than a docker-archive, for tooling
+  that wants one. It needs Podman or buildx — plain `docker save` has only the
+  one format, and both runtimes load a docker-archive anyway.
+- Output goes to `dist/`, which is gitignored and excluded from the build
+  context. `--output some/path.tar.gz` puts it elsewhere.
+
+When CI is active (see above), the same tars are attached to every release and
+to each manual run, so the usual way to get one is to download it rather than to
+build it.
 
 ## How it works
 
