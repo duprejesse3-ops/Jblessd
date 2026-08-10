@@ -40,4 +40,11 @@ container/.env
 # Build and run the image from outside; they have no job inside one.
 container/image.sh
 container/podman.sh
+container/podman.ps1
+container/save.sh
 container/ci
+
+# Exported image tars. Excluded mainly so they are not re-uploaded as build
+# context on the next build — an image that contains the previous export of
+# itself would double in size with every round.
+dist

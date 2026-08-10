@@ -41,8 +41,10 @@ VERSION=${VERSION#v}
 
 # Default destination is the GHCR namespace of whoever owns `origin`, so a fork
 # publishes under its own account without editing this file. With no GitHub
-# remote the name stays bare, which is right for a purely local build — an
-# accidental `docker push` then fails loudly instead of reaching Docker Hub.
+# remote the name is `localhost/<name>`, which is right for a purely local build:
+# Podman refuses to resolve an unqualified name and would otherwise look the
+# image up on Docker Hub, and the PUSH guard below rejects `localhost/` outright
+# so an accidental publish still fails loudly instead of reaching a registry.
 if [ -z "${IMAGE_REPO:-}" ]; then
   origin=$(git config --get remote.origin.url 2>/dev/null || true)
   case "$origin" in
@@ -51,7 +53,7 @@ if [ -z "${IMAGE_REPO:-}" ]; then
       IMAGE_REPO="ghcr.io/$owner/$IMAGE_NAME"
       ;;
     *)
-      IMAGE_REPO="$IMAGE_NAME"
+      IMAGE_REPO="localhost/$IMAGE_NAME"
       ;;
   esac
 fi
@@ -113,9 +115,15 @@ for tag in $tags; do
 done
 
 # Checked before the build rather than after it, so a missing registry costs a
-# second instead of a full image.
+# second instead of a full image. `localhost/` is caught separately: it has the
+# shape of a registry reference but names only this machine's image store.
 if [ "${PUSH:-}" = "1" ]; then
   case "$IMAGE_REPO" in
+    localhost/*)
+      echo "error: IMAGE_REPO='$IMAGE_REPO' is a local-only name; refusing to push" >&2
+      echo "       Set IMAGE_REPO=ghcr.io/<owner>/$IMAGE_NAME, or add a GitHub" >&2
+      echo "       'origin' remote so it is derived automatically." >&2
+      exit 1 ;;
     */*) ;;
     *) echo "error: IMAGE_REPO='$IMAGE_REPO' has no registry; refusing to push" >&2; exit 1 ;;
   esac

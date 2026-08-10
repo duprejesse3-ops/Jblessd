@@ -30,7 +30,7 @@ services:
   # Runs the migrations to completion, then exits. The app waits for it, so a
   # fresh volume is fully migrated before the first request is served.
   migrate:
-    image: ${APP_IMAGE:-jblessd-store:local}
+    image: ${APP_IMAGE:-localhost/jblessd-store:local}
     build:
       context: ..
       dockerfile: container/Dockerfile
@@ -45,8 +45,17 @@ services:
   # Both services run the same image; only the command differs. Setting
   # APP_IMAGE to a published tag and running `docker compose pull` uses that
   # instead of building — see "Publishing the image" in README.md.
+  #
+  # The default is spelled `localhost/` rather than a bare `jblessd-store:local`
+  # because Podman does not treat an unqualified name as local. Under
+  # podman-compose a bare name is looked up as a short name, which either fails
+  # with `short-name "jblessd-store:local" did not resolve to an alias` or —
+  # where registries.conf lists docker.io — tries to pull it from Docker Hub and
+  # returns an authentication error for an image that was never meant to leave
+  # this machine. `localhost/` is the name Podman itself gives a locally built
+  # image, and Docker accepts it as an ordinary local tag.
   app:
-    image: ${APP_IMAGE:-jblessd-store:local}
+    image: ${APP_IMAGE:-localhost/jblessd-store:local}
     build:
       context: ..
       dockerfile: container/Dockerfile
