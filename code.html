@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow, noarchive" />
+<meta name="referrer" content="no-referrer" />
+<title>MULTINICHE AI · Code Workspace</title>
+<link rel="icon" href="/favicon.ico" />
+<!-- Home-screen support via meta tags only, deliberately with no
+     <link rel="manifest">: the site manifest is public and scoped to the
+     storefront, while this workspace is noindex/no-store. iOS honours these tags
+     on their own, so "Add to Home Screen" here gives a standalone editor window
+     without advertising the route in a file every visitor downloads. -->
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#05070a" />
+<meta name="apple-mobile-web-app-title" content="Workspace" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<style>
+  :root {
+    --bg: #05070a;
+    --panel: #0a0e14;
+    --panel-2: #070b10;
+    --edge: #16202c;
+    --fg: #cdd9e5;
+    --dim: #5c6b7a;
+    --amber: #ffb454;
+    --green: #52d18b;
+    --red: #ff5f6b;
+    --cyan: #58c7f3;
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(120% 80% at 50% -10%, #0d1420 0%, var(--bg) 60%) fixed;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  button, input, textarea, select { font-family: var(--mono); }
+  /* 16px inputs stop iOS Safari zooming in when a field is focused, which on a
+     phone otherwise leaves the editor scrolled sideways after every tap. */
+  input, textarea { font-size: 16px; }
+
+  /* ---- top bar ---- */
+  header {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    background: linear-gradient(180deg, #0b111a, #080b11);
+    border-bottom: 1px solid var(--edge);
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: .1em; font-size: 12px; white-space: nowrap; }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+  .brand small { color: var(--dim); font-weight: 400; }
+  .spacer { flex: 1 1 auto; }
+  .status { font-size: 11px; color: var(--dim); letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
+  .status.ok { color: var(--green); }
+  .status.warn { color: var(--amber); }
+  .status.err { color: var(--red); }
+
+  .btn {
+    background: transparent; color: var(--fg); border: 1px solid var(--edge);
+    font-size: 12px; padding: 6px 10px; border-radius: 5px; cursor: pointer;
+    letter-spacing: .05em; transition: .15s; white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { border-color: var(--amber); color: var(--amber); }
+  .btn.primary:hover:not(:disabled) { background: rgba(255,180,84,.1); }
+  .btn.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .btn.icon { padding: 6px 9px; }
+  [hidden] { display: none !important; }
+
+  /* ---- layout ---- */
+  main { flex: 1 1 auto; min-height: 0; display: flex; position: relative; }
+
+  /* app list: a sidebar on a wide screen, a slide-over drawer on a phone */
+  aside {
+    flex: 0 0 232px; min-width: 0;
+    display: flex; flex-direction: column;
+    background: var(--panel-2);
+    border-right: 1px solid var(--edge);
+  }
+  .aside-head { padding: 10px 12px; border-bottom: 1px solid var(--edge); display: flex; gap: 8px; align-items: center; }
+  .aside-head span { font-size: 11px; color: var(--dim); letter-spacing: .12em; }
+  .applist { flex: 1 1 auto; overflow-y: auto; padding: 6px; -webkit-overflow-scrolling: touch; }
+  .app {
+    width: 100%; text-align: left; background: transparent; border: 1px solid transparent;
+    color: var(--fg); padding: 8px 9px; border-radius: 5px; cursor: pointer; display: block;
+    margin-bottom: 2px;
+  }
+  .app:hover { background: rgba(255,255,255,.03); }
+  .app.active { background: rgba(255,180,84,.08); border-color: rgba(255,180,84,.35); }
+  .app .name { font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app .meta { font-size: 10px; color: var(--dim); letter-spacing: .05em; }
+  .app .meta .live { color: var(--green); }
+  .empty { color: var(--dim); font-size: 12px; padding: 14px 10px; line-height: 1.7; }
+
+  /* editor column */
+  section.work { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .filebar {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px; border-bottom: 1px solid var(--edge); background: var(--panel);
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .tab {
+    background: transparent; border: 1px solid var(--edge); color: var(--dim);
+    font-size: 12px; padding: 5px 9px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .tab.active { color: var(--amber); border-color: rgba(255,180,84,.5); background: rgba(255,180,84,.07); }
+  .tab .dirty { color: var(--amber); }
+
+  .panes { flex: 1 1 auto; min-height: 0; display: flex; }
+  .pane { min-width: 0; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+  .pane.preview { border-left: 1px solid var(--edge); background: #000; }
+  textarea#code {
+    flex: 1 1 auto; width: 100%; min-height: 0; resize: none;
+    background: var(--panel-2); color: var(--fg);
+    border: 0; outline: none; padding: 12px;
+    font-size: 13px; line-height: 1.6; tab-size: 2;
+    white-space: pre; overflow: auto; -webkit-overflow-scrolling: touch;
+  }
+  @media (max-width: 700px) { textarea#code { font-size: 16px; } }
+  iframe#preview { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+  .preview-bar {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-bottom: 1px solid var(--edge); background: var(--panel);
+    font-size: 11px; color: var(--dim);
+  }
+  .preview-bar code { color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* bottom bar: the primary controls on a phone, where header space runs out */
+  footer {
+    flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
+    padding: 8px 10px calc(8px + var(--safe-b));
+    border-top: 1px solid var(--edge);
+    background: linear-gradient(180deg, #080b11, #05070a);
+  }
+
+  /* ---- login gate ---- */
+  .gate { flex: 1 1 auto; display: grid; place-items: center; padding: 24px; }
+  .gate-box { width: 100%; max-width: 380px; text-align: center; }
+  .gate-box .lock { font-size: 30px; color: var(--amber); }
+  .gate-box h1 { font-size: 16px; letter-spacing: .2em; margin: 10px 0 6px; }
+  .gate-box p { color: var(--dim); font-size: 12px; line-height: 1.7; }
+  .gate-box form { display: flex; gap: 8px; margin-top: 14px; }
+  .gate-box input {
+    flex: 1 1 auto; background: #05080c; border: 1px solid var(--edge); color: var(--fg);
+    padding: 10px; border-radius: 5px; outline: none;
+  }
+  .gate-box input:focus { border-color: var(--amber); }
+  .msg { min-height: 18px; margin-top: 10px; font-size: 12px; color: var(--red); }
+
+  /* ---- phone layout ---- */
+  @media (max-width: 860px) {
+    aside {
+      position: absolute; inset: 0 auto 0 0; z-index: 20; width: 82vw; max-width: 300px;
+      box-shadow: 30px 0 60px -20px rgba(0,0,0,.9);
+      transform: translateX(-102%); transition: transform .18s ease-out;
+    }
+    body.drawer aside { transform: translateX(0); }
+    .scrim { position: absolute; inset: 0; z-index: 15; background: rgba(0,0,0,.55); }
+    /* Only one pane at a time — a split view on a 390px screen is two unusable
+       halves rather than one workable editor. */
+    .panes.split .pane.preview { display: none; }
+  }
+  @media (min-width: 861px) {
+    .scrim { display: none; }
+    .panes:not(.split) .pane.preview { display: none; }
+    .only-phone { display: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <button class="btn icon only-phone" id="drawerBtn" aria-label="Apps" hidden>☰</button>
+    <div class="brand"><span class="dot"></span>WORKSPACE <small id="brandSlug"></small></div>
+    <div class="spacer"></div>
+    <div class="status" id="status">…</div>
+    <button class="btn" id="logoutBtn" hidden>lock</button>
+  </header>
+
+  <main>
+    <!-- gate -->
+    <div class="gate" id="gate">
+      <div class="gate-box">
+        <div class="lock">⌘</div>
+        <h1>WORKSPACE</h1>
+        <p id="gateInfo">
+          Write code in this browser and the site serves it back at
+          <code>/p/&lt;name&gt;</code>. No laptop, no toolchain, no container.
+          Enter the owner password to start.
+        </p>
+        <form id="loginForm" autocomplete="off">
+          <input type="password" id="password" placeholder="owner password"
+                 autocomplete="current-password" aria-label="Owner password" />
+          <button type="submit" class="btn primary" id="loginBtn">enter</button>
+        </form>
+        <div class="msg" id="gateMsg"></div>
+      </div>
+    </div>
+
+    <!-- workspace -->
+    <aside id="aside" hidden>
+      <div class="aside-head">
+        <span>APPS</span>
+        <div class="spacer"></div>
+        <button class="btn" id="newAppBtn">+ new</button>
+      </div>
+      <div class="applist" id="applist"></div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <section class="work" id="work" hidden>
+      <div class="filebar" id="filebar"></div>
+      <div class="panes split" id="panes">
+        <div class="pane">
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocorrect="off"
+                    autocomplete="off" wrap="off" aria-label="Source code"></textarea>
+        </div>
+        <div class="pane preview">
+          <div class="preview-bar">
+            <span>live</span><code id="previewUrl"></code>
+            <div class="spacer"></div>
+            <button class="btn icon" id="reloadBtn" title="Reload preview">⟳</button>
+          </div>
+          <iframe id="preview" title="App preview"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="footer" hidden>
+    <button class="btn primary" id="saveBtn">save</button>
+    <button class="btn" id="viewBtn">preview</button>
+    <div class="spacer"></div>
+    <button class="btn" id="openBtn" title="Open the live app in a new tab">open ↗</button>
+    <button class="btn" id="linkBtn" title="Copy the public link">link</button>
+    <button class="btn" id="pubBtn">publish</button>
+    <button class="btn" id="moreBtn" title="Rename, add or delete files, delete app">⋯</button>
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var AUTH = "/api/admin-auth";
+  var API = "/api/code";
+  var DRAFT_PREFIX = "codeworkspace:draft:";
+
+  var el = function (id) { return document.getElementById(id); };
+  var gate = el("gate"), gateMsg = el("gateMsg"), gateInfo = el("gateInfo");
+  var loginForm = el("loginForm"), password = el("password"), loginBtn = el("loginBtn");
+  var aside = el("aside"), work = el("work"), footer = el("footer"), scrim = el("scrim");
+  var applist = el("applist"), filebar = el("filebar"), code = el("code");
+  var preview = el("preview"), previewUrl = el("previewUrl"), panes = el("panes");
+  var statusEl = el("status"), brandSlug = el("brandSlug");
+
+  var state = {
+    apps: [],
+    app: null,          // { slug, title, published, files: [{path, content}] }
+    path: null,         // path of the file being edited
+    limits: null,
+    dirty: false,
+    saving: false,
+    view: "split"       // split | code | preview
+  };
+  var saveTimer = null;
+
+  // ---------- small helpers ----------
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = "status" + (kind ? " " + kind : "");
+  }
+  function isPhone() { return window.matchMedia("(max-width: 860px)").matches; }
+  function closeDrawer() { document.body.classList.remove("drawer"); scrim.hidden = true; }
+  function openDrawer() { document.body.classList.add("drawer"); scrim.hidden = false; }
+
+  function draftKey(slug, path) { return DRAFT_PREFIX + slug + ":" + path; }
+  function saveDraft(slug, path, content) {
+    try { localStorage.setItem(draftKey(slug, path), content); } catch (e) { /* private mode / full quota */ }
+  }
+  function readDraft(slug, path) {
+    try { return localStorage.getItem(draftKey(slug, path)); } catch (e) { return null; }
+  }
+  function clearDraft(slug, path) {
+    try { localStorage.removeItem(draftKey(slug, path)); } catch (e) { /* nothing to clean up */ }
+  }
+
+  // ---------- API ----------
+  function api(method, body, query) {
+    var url = API + (query || "");
+    var opts = { method: method, credentials: "same-origin", headers: {} };
+    if (body) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(url, opts).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (res.status === 401) { showGate("Session expired. Enter the password again."); throw new Error("unauthorised"); }
+        if (!res.ok) throw new Error(data.error || ("Request failed (" + res.status + ")"));
+        return data;
+      });
+    });
+  }
+
+  // ---------- gate ----------
+  function showGate(message) {
+    gate.hidden = false;
+    aside.hidden = true; work.hidden = true; footer.hidden = true;
+    el("logoutBtn").hidden = true; el("drawerBtn").hidden = true;
+    closeDrawer();
+    gateMsg.textContent = message || "";
+    setStatus("locked");
+  }
+  function showWorkspace() {
+    gate.hidden = true;
+    aside.hidden = false; work.hidden = false; footer.hidden = false;
+    el("logoutBtn").hidden = false;
+    el("drawerBtn").hidden = !isPhone();
+    setStatus("ready", "ok");
+  }
+
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var value = password.value;
+    if (!value) return;
+    loginBtn.disabled = true;
+    gateMsg.textContent = "";
+    fetch(AUTH, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: value })
+    })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) throw new Error(data.error || "Sign-in failed.");
+          return data;
+        });
+      })
+      .then(function () {
+        password.value = "";
+        showWorkspace();
+        return loadApps();
+      })
+      .catch(function (err) { gateMsg.textContent = err.message; })
+      .then(function () { loginBtn.disabled = false; });
+  });
+
+  el("logoutBtn").addEventListener("click", function () {
+    fetch(AUTH, { method: "DELETE", credentials: "same-origin" })
+      .then(function () { state.app = null; state.path = null; showGate("Locked."); });
+  });
+
+  // ---------- app list ----------
+  function loadApps(selectSlug) {
+    return api("GET").then(function (data) {
+      state.apps = data.apps || [];
+      state.limits = data.limits || state.limits;
+      renderApps();
+      var target = selectSlug ||
+        (state.app && state.app.slug) ||
+        (new URLSearchParams(location.search).get("app")) ||
+        (state.apps[0] && state.apps[0].slug);
+      if (target) return openApp(target);
+      renderEditor();
+    }).catch(function (err) { setStatus(err.message, "err"); });
+  }
+
+  function renderApps() {
+    applist.textContent = "";
+    if (state.apps.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No apps yet. Tap “+ new” and you get a working page you can edit and open anywhere.";
+      applist.appendChild(empty);
+      return;
+    }
+    state.apps.forEach(function (app) {
+      var btn = document.createElement("button");
+      btn.className = "app" + (state.app && state.app.slug === app.slug ? " active" : "");
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = app.title;
+      var meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = "/p/" + app.slug + " · " + app.fileCount + " files · ";
+      var flag = document.createElement("span");
+      flag.className = app.published ? "live" : "";
+      flag.textContent = app.published ? "live" : "draft";
+      meta.appendChild(flag);
+      btn.appendChild(name);
+      btn.appendChild(meta);
+      btn.addEventListener("click", function () {
+        closeDrawer();
+        openApp(app.slug);
+      });
+      applist.appendChild(btn);
+    });
+  }
+
+  function openApp(slug) {
+    return flushSave().then(function () {
+      return api("GET", null, "?slug=" + encodeURIComponent(slug));
+    }).then(function (data) {
+      state.app = data.app;
+      state.limits = data.limits || state.limits;
+      state.path = pickPath(data.app);
+      state.dirty = false;
+      history.replaceState(null, "", "/code?app=" + encodeURIComponent(slug));
+      renderApps();
+      renderEditor();
+      refreshPreview();
+      setStatus("opened " + slug, "ok");
+    }).catch(function (err) { setStatus(err.message, "err"); });
+  }
+
+  function pickPath(app) {
+    if (!app || !app.files.length) return null;
+    var keep = state.path && app.files.some(function (f) { return f.path === state.path; });
+    if (keep) return state.path;
+    var index = app.files.filter(function (f) { return f.path === "index.html"; })[0];
+    return index ? index.path : app.files[0].path;
+  }
+
+  // ---------- editor ----------
+  function currentFile() {
+    if (!state.app || !state.path) return null;
+    return state.app.files.filter(function (f) { return f.path === state.path; })[0] || null;
+  }
+
+  function renderEditor() {
+    filebar.textContent = "";
+    if (!state.app) {
+      code.value = "";
+      code.disabled = true;
+      brandSlug.textContent = "";
+      previewUrl.textContent = "";
+      return;
+    }
+    code.disabled = false;
+    brandSlug.textContent = "// " + state.app.slug;
+
+    state.app.files.forEach(function (file) {
+      var tab = document.createElement("button");
+      tab.className = "tab" + (file.path === state.path ? " active" : "");
+      tab.dataset.path = file.path;
+      tab.textContent = file.path;
+      tab.addEventListener("click", function () {
+        if (file.path === state.path) return;
+        flushSave().then(function () {
+          state.path = file.path;
+          renderEditor();
+        });
+      });
+      filebar.appendChild(tab);
+    });
+
+    var add = document.createElement("button");
+    add.className = "tab";
+    add.textContent = "+";
+    add.title = "Add a file";
+    add.addEventListener("click", addFile);
+    filebar.appendChild(add);
+
+    var file = currentFile();
+    if (file) {
+      // An unsaved draft from a previous visit wins over the stored copy: a phone
+      // can discard the tab at any moment, and losing typed code to that would
+      // make the workspace untrustworthy.
+      var draft = readDraft(state.app.slug, file.path);
+      code.value = draft !== null ? draft : file.content;
+      state.dirty = draft !== null && draft !== file.content;
+      if (state.dirty) setStatus("unsaved draft restored", "warn");
+    } else {
+      code.value = "";
+    }
+
+    previewUrl.textContent = "/p/" + state.app.slug + "/";
+    el("pubBtn").textContent = state.app.published ? "unpublish" : "publish";
+    updateTabDots();
+    applyView();
+  }
+
+  /**
+   * Mark tabs that hold an unsaved draft. Kept separate from renderEditor so it
+   * can run on every keystroke and after every save: re-rendering the editor
+   * would reassign the textarea's value and throw away the cursor position and
+   * scroll offset mid-sentence.
+   */
+  function updateTabDots() {
+    if (!state.app) return;
+    var tabs = filebar.querySelectorAll("[data-path]");
+    for (var i = 0; i < tabs.length; i += 1) {
+      var tab = tabs[i];
+      var existing = tab.querySelector(".dirty");
+      var pending = readDraft(state.app.slug, tab.dataset.path) !== null;
+      if (pending && !existing) {
+        var dot = document.createElement("span");
+        dot.className = "dirty";
+        dot.textContent = " •";
+        tab.appendChild(dot);
+      } else if (!pending && existing) {
+        existing.remove();
+      }
+    }
+  }
+
+  code.addEventListener("input", function () {
+    if (!state.app || !state.path) return;
+    state.dirty = true;
+    saveDraft(state.app.slug, state.path, code.value);
+    updateTabDots();
+    setStatus("editing…", "warn");
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { save(false); }, 1400);
+  });
+
+  // Tab indents instead of moving focus out of the editor.
+  code.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var start = code.selectionStart, end = code.selectionEnd;
+      code.value = code.value.slice(0, start) + "  " + code.value.slice(end);
+      code.selectionStart = code.selectionEnd = start + 2;
+      code.dispatchEvent(new Event("input"));
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      save(true);
+    }
+  });
+
+  function save(showPreview) {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    if (!state.app || !state.path || state.saving) return Promise.resolve();
+    var slug = state.app.slug, path = state.path, content = code.value;
+    state.saving = true;
+    setStatus("saving…", "warn");
+    return api("POST", { action: "save", slug: slug, files: [{ path: path, content: content }] })
+      .then(function (data) {
+        state.saving = false;
+        clearDraft(slug, path);
+        state.dirty = false;
+        if (state.app && state.app.slug === slug) {
+          state.app = data.app;
+          // Keep what is on screen; the server copy of this file is now identical.
+          updateTabDots();
+          renderApps();
+        }
+        setStatus("saved", "ok");
+        if (showPreview !== false) refreshPreview();
+        return loadAppsQuiet();
+      })
+      .catch(function (err) {
+        state.saving = false;
+        setStatus(err.message, "err");
+      });
+  }
+
+  /** Save silently if there is anything pending — used before switching context. */
+  function flushSave() {
+    if (state.dirty && state.app && state.path) return save(false);
+    return Promise.resolve();
+  }
+
+  function loadAppsQuiet() {
+    return api("GET").then(function (data) {
+      state.apps = data.apps || [];
+      renderApps();
+    }).catch(function () { /* the list refreshing is not worth an error banner */ });
+  }
+
+  // ---------- preview ----------
+  function refreshPreview() {
+    if (!state.app) return;
+    // The preview loads the real /p/ route, not a synthesised copy, so what is on
+    // screen is exactly what the URL serves — including its sandbox.
+    preview.src = "/p/" + state.app.slug + "/?t=" + Date.now();
+  }
+  el("reloadBtn").addEventListener("click", function () { save(true); });
+
+  function applyView() {
+    if (isPhone()) {
+      panes.className = "panes" + (state.view === "preview" ? "" : " split");
+      el("viewBtn").textContent = state.view === "preview" ? "code" : "preview";
+    } else {
+      panes.className = "panes" + (state.view === "code" ? "" : " split");
+      el("viewBtn").textContent = state.view === "code" ? "preview" : "editor only";
+    }
+  }
+
+  el("viewBtn").addEventListener("click", function () {
+    if (isPhone()) {
+      state.view = state.view === "preview" ? "code" : "preview";
+      if (state.view === "preview") save(true);
+    } else {
+      state.view = state.view === "code" ? "split" : "code";
+      if (state.view === "split") save(true);
+    }
+    applyView();
+  });
+
+  window.addEventListener("resize", function () {
+    el("drawerBtn").hidden = !isPhone() || gate.hidden === false;
+    applyView();
+  });
+
+  // ---------- app actions ----------
+  el("newAppBtn").addEventListener("click", function () {
+    var title = window.prompt("Name this app (e.g. “Invoice calculator”)");
+    if (!title) return;
+    setStatus("creating…", "warn");
+    api("POST", { action: "create", title: title })
+      .then(function (data) {
+        closeDrawer();
+        state.app = data.app;
+        state.path = null;
+        return loadApps(data.app.slug);
+      })
+      .catch(function (err) { setStatus(err.message, "err"); });
+  });
+
+  el("drawerBtn").addEventListener("click", function () {
+    if (document.body.classList.contains("drawer")) closeDrawer(); else openDrawer();
+  });
+  scrim.addEventListener("click", closeDrawer);
+
+  el("saveBtn").addEventListener("click", function () { save(true); });
+
+  el("openBtn").addEventListener("click", function () {
+    if (!state.app) return;
+    var slug = state.app.slug;
+    save(false).then(function () { window.open("/p/" + slug + "/", "_blank", "noopener"); });
+  });
+
+  el("linkBtn").addEventListener("click", function () {
+    if (!state.app) return;
+    var url = location.origin + "/p/" + state.app.slug + "/";
+    var done = function () { setStatus("link copied: " + url, "ok"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { window.prompt("Copy this link", url); });
+    } else {
+      window.prompt("Copy this link", url);
+    }
+  });
+
+  el("pubBtn").addEventListener("click", function () {
+    if (!state.app) return;
+    var publishing = !state.app.published;
+    if (publishing && !window.confirm("Publish " + state.app.slug + "? Anyone with the link will be able to open it.")) return;
+    flushSave()
+      .then(function () {
+        return api("POST", { action: publishing ? "publish" : "unpublish", slug: state.app.slug });
+      })
+      .then(function (data) {
+        state.app = data.app;
+        renderEditor();
+        return loadAppsQuiet();
+      })
+      .then(function () { setStatus(publishing ? "published" : "unpublished", "ok"); })
+      .catch(function (err) { setStatus(err.message, "err"); });
+  });
+
+  function addFile() {
+    if (!state.app) return;
+    var name = window.prompt("New file name (index.html, style.css, app.js, data.json …)");
+    if (!name) return;
+    flushSave()
+      .then(function () { return api("POST", { action: "newFile", slug: state.app.slug, path: name.trim() }); })
+      .then(function (data) {
+        state.app = data.app;
+        state.path = name.trim();
+        renderEditor();
+        return loadAppsQuiet();
+      })
+      .catch(function (err) { setStatus(err.message, "err"); });
+  }
+
+  el("moreBtn").addEventListener("click", function () {
+    if (!state.app) return;
+    var choice = window.prompt(
+      "Type a number:\n" +
+      "1 — rename this app\n" +
+      "2 — add a file\n" +
+      "3 — delete the open file (" + (state.path || "none") + ")\n" +
+      "4 — delete this app\n" +
+      "5 — how this works"
+    );
+    if (choice === "1") {
+      var title = window.prompt("New name", state.app.title);
+      if (!title) return;
+      api("POST", { action: "rename", slug: state.app.slug, title: title })
+        .then(function (data) { state.app = data.app; renderEditor(); return loadAppsQuiet(); })
+        .then(function () { setStatus("renamed", "ok"); })
+        .catch(function (err) { setStatus(err.message, "err"); });
+    } else if (choice === "2") {
+      addFile();
+    } else if (choice === "3") {
+      if (!state.path) return;
+      if (!window.confirm("Delete " + state.path + "? This cannot be undone.")) return;
+      var gone = state.path;
+      api("POST", { action: "deleteFile", slug: state.app.slug, path: gone })
+        .then(function (data) {
+          clearDraft(state.app.slug, gone);
+          state.app = data.app;
+          state.path = pickPath(data.app);
+          renderEditor();
+          refreshPreview();
+          return loadAppsQuiet();
+        })
+        .then(function () { setStatus("deleted " + gone, "ok"); })
+        .catch(function (err) { setStatus(err.message, "err"); });
+    } else if (choice === "4") {
+      if (!window.confirm("Delete the whole app “" + state.app.title + "”? This cannot be undone.")) return;
+      var slug = state.app.slug;
+      api("POST", { action: "delete", slug: slug })
+        .then(function () {
+          state.app.files.forEach(function (f) { clearDraft(slug, f.path); });
+          state.app = null; state.path = null;
+          history.replaceState(null, "", "/code");
+          return loadApps();
+        })
+        .then(function () { setStatus("deleted " + slug, "ok"); })
+        .catch(function (err) { setStatus(err.message, "err"); });
+    } else if (choice === "5") {
+      window.alert(
+        "Write code here; the site serves it at /p/" + state.app.slug + "/.\n\n" +
+        "• Save is instant — no build and no deploy.\n" +
+        "• Draft apps are visible only to you. Publish to share the link.\n" +
+        "• index.html is the page; other files load beside it (href=\"style.css\").\n" +
+        "• Apps run sandboxed, so cookies and localStorage are unavailable inside them.\n" +
+        "• CDN libraries over https work normally.\n\n" +
+        "Full notes: /docs/writing-code-on-the-site.md in the repository."
+      );
+    }
+  });
+
+  // A phone can discard this tab without warning. Persist the draft on the way
+  // out and try one last save; the draft is what actually guarantees no loss.
+  window.addEventListener("pagehide", function () {
+    if (state.app && state.path && state.dirty) {
+      saveDraft(state.app.slug, state.path, code.value);
+      try {
+        navigator.sendBeacon && navigator.sendBeacon(
+          API,
+          new Blob([JSON.stringify({
+            action: "save", slug: state.app.slug,
+            files: [{ path: state.path, content: code.value }]
+          })], { type: "application/json" })
+        );
+      } catch (e) { /* the local draft already covers this */ }
+    }
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") flushSave();
+  });
+
+  // ---------- boot ----------
+  setStatus("checking session…");
+  fetch(AUTH, { credentials: "same-origin" })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (!data.configured) {
+        gate.hidden = false;
+        gateInfo.textContent =
+          "This workspace is locked until an owner password exists. Add an ADMIN_PASSWORD " +
+          "environment variable in the Netlify site settings, redeploy, then reload this page.";
+        loginForm.hidden = true;
+        setStatus("not configured", "err");
+        return;
+      }
+      if (data.authed) {
+        showWorkspace();
+        return loadApps();
+      }
+      showGate("");
+    })
+    .catch(function () { showGate("Could not reach the site. Check the connection and reload."); });
+})();
+</script>
+</body>
+</html>

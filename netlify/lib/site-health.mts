@@ -35,6 +35,10 @@ function failed(name: string, latencyMs: number, detail: string): HealthCheck {
   return { name, status: 'failed', latencyMs, detail }
 }
 
+function warned(name: string, latencyMs: number, detail: string): HealthCheck {
+  return { name, status: 'warning', latencyMs, detail }
+}
+
 async function fetchWithTimeout(url: URL, accept: string): Promise<{ response: Response; latencyMs: number }> {
   const startedAt = performance.now()
   const response = await fetch(url, {
@@ -59,47 +63,47 @@ async function checkHomepage(origin: string): Promise<HealthCheck> {
   }
 }
 
-async function checkProducts(origin: string): Promise<{ check: HealthCheck; firstSku: string | null; count: number }> {
+async function checkProducts(origin: string): Promise<{ check: HealthCheck; skus: string[] }> {
   const name = 'Catalog API'
   const startedAt = performance.now()
   try {
     const { response, latencyMs } = await fetchWithTimeout(new URL('/api/products', origin), 'application/json')
-    if (!response.ok) return { check: failed(name, latencyMs, `HTTP ${response.status}`), firstSku: null, count: 0 }
+    if (!response.ok) {
+      return { check: failed(name, latencyMs, `HTTP ${response.status}`), skus: [] }
+    }
     const data = (await response.json()) as { products?: Array<{ sku?: unknown }> }
     const products = Array.isArray(data.products) ? data.products : []
-    const firstSku = typeof products[0]?.sku === 'string' ? products[0].sku : null
-    if (!products.length || !firstSku) {
-      return { check: failed(name, latencyMs, 'Catalog returned no valid products'), firstSku: null, count: 0 }
+    const skus = products.map((p) => p.sku).filter((sku): sku is string => typeof sku === 'string')
+    if (!skus.length) {
+      return { check: failed(name, latencyMs, 'Catalog returned no valid products'), skus: [] }
     }
     return {
       check: passed(name, latencyMs, `${products.length} products available`),
-      firstSku,
-      count: products.length,
+      skus,
     }
   } catch (error) {
     return {
       check: failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed'),
-      firstSku: null,
-      count: 0,
+      skus: [],
     }
   }
 }
 
-async function checkReviews(origin: string): Promise<{ check: HealthCheck; ratedProducts: number }> {
+async function checkReviews(origin: string): Promise<{ check: HealthCheck; rated: Set<string> }> {
   const name = 'Review data'
   const startedAt = performance.now()
   try {
     const { response, latencyMs } = await fetchWithTimeout(new URL('/api/reviews', origin), 'application/json')
-    if (!response.ok) return { check: failed(name, latencyMs, `HTTP ${response.status}`), ratedProducts: 0 }
+    if (!response.ok) return { check: failed(name, latencyMs, `HTTP ${response.status}`), rated: new Set() }
     const data = (await response.json()) as { aggregates?: Record<string, { count?: unknown }> }
     const aggregates = data.aggregates && typeof data.aggregates === 'object' ? data.aggregates : {}
-    const ratedProducts = Object.values(aggregates).filter((entry) => Number(entry?.count) > 0).length
-    if (!ratedProducts) return { check: failed(name, latencyMs, 'No product ratings are available'), ratedProducts: 0 }
-    return { check: passed(name, latencyMs, `${ratedProducts} products have ratings`), ratedProducts }
+    const rated = new Set(Object.entries(aggregates).filter(([, entry]) => Number(entry?.count) > 0).map(([sku]) => sku))
+    if (!rated.size) return { check: failed(name, latencyMs, 'No product ratings are available'), rated }
+    return { check: passed(name, latencyMs, `${rated.size} products have ratings`), rated }
   } catch (error) {
     return {
       check: failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed'),
-      ratedProducts: 0,
+      rated: new Set(),
     }
   }
 }
@@ -120,9 +124,18 @@ async function checkSitemap(origin: string): Promise<HealthCheck> {
   }
 }
 
+// Verifies that a product page really does carry rating and review markup.
+//
+// The SKU to sample has to be one that *has* reviews. Sampling the first
+// catalog product regardless meant that the moment a newly added, not-yet
+// reviewed product sorted to the front, this check failed with "aggregateRating
+// markup is missing" — reporting the storefront as broken because a product was
+// new. pages.ts deliberately omits aggregateRating when the review count is
+// zero (emitting one with count 0 is invalid structured data and Google rejects
+// it), so its absence there is the correct behaviour, not a defect.
 async function checkProductSchema(origin: string, sku: string | null): Promise<HealthCheck> {
   const name = 'Product review schema'
-  if (!sku) return failed(name, 0, 'Skipped because no catalog product was available')
+  if (!sku) return warned(name, 0, 'Skipped: no product has reviews yet, so there is no rating markup to verify')
 
   const startedAt = performance.now()
   try {
@@ -146,14 +159,47 @@ export async function inspectSite(origin: string): Promise<HealthReport> {
     checkReviews(origin),
     checkSitemap(origin),
   ])
-  if (catalog.count > 0 && reviews.check.status !== 'failed' && reviews.ratedProducts < catalog.count) {
-    reviews.check = failed(
-      reviews.check.name,
-      reviews.check.latencyMs,
-      `${catalog.count - reviews.ratedProducts} catalog product${catalog.count - reviews.ratedProducts === 1 ? '' : 's'} missing ratings`,
-    )
+  // A product nobody has reviewed yet is a content gap, not an outage. This used
+  // to flip the whole check to `failed`, which made the site read as unhealthy —
+  // and, because failures are what get sent to the model for a repair
+  // recommendation, produced confident advice about fixing "missing ratings
+  // data" that no code change could satisfy. Nothing is broken: pages.ts only
+  // emits an aggregateRating when the count is above zero, so an unreviewed
+  // product renders correctly and its structured data stays valid. It is a
+  // warning, and it names the products so the owner can go collect reviews for
+  // exactly those.
+  //
+  // The one shape here that *is* a real failure is aggregates existing while not
+  // one of them matches a catalog SKU — that means the two datasets have drifted
+  // apart (a renamed SKU, a stale review table) and every rating on the site is
+  // being attached to nothing.
+  if (catalog.skus.length && reviews.check.status !== 'failed') {
+    const ratedInCatalog = catalog.skus.filter((sku) => reviews.rated.has(sku))
+    const unrated = catalog.skus.filter((sku) => !reviews.rated.has(sku))
+    if (!ratedInCatalog.length) {
+      reviews.check = failed(
+        reviews.check.name,
+        reviews.check.latencyMs,
+        `${reviews.rated.size} review aggregate${reviews.rated.size === 1 ? '' : 's'} exist but none match a catalog SKU`,
+      )
+    } else if (unrated.length) {
+      const named = unrated.slice(0, 5).join(', ')
+      reviews.check = warned(
+        reviews.check.name,
+        reviews.check.latencyMs,
+        `${ratedInCatalog.length} of ${catalog.skus.length} products have ratings; no reviews yet for ${named}` +
+          (unrated.length > 5 ? ` and ${unrated.length - 5} more` : ''),
+      )
+    }
   }
-  const productSchema = await checkProductSchema(origin, catalog.firstSku)
+  // Sample a product that actually has ratings — see checkProductSchema. When
+  // none does, the check is skipped rather than failed: the review check above
+  // has already said why (no ratings anywhere, or the review API is down), and
+  // failing here as well would report the same single problem twice.
+  const productSchema = await checkProductSchema(
+    origin,
+    catalog.skus.find((sku) => reviews.rated.has(sku)) ?? null,
+  )
   const checks = [homepage, catalog.check, reviews.check, productSchema, sitemap]
   const failures = checks.filter((check) => check.status === 'failed').length
   const warnings = checks.filter((check) => check.status === 'warning').length
