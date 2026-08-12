@@ -39,6 +39,37 @@ function contentType(file) {
   return CONTENT_TYPES[extname(file).toLowerCase()] || 'application/octet-stream'
 }
 
+// The publish directory is the repository root (netlify.toml: publish = "."), so
+// every server-side file sits inside the directory this handler serves from.
+// Netlify's CDN strips the functions tree before publishing; nothing strips it
+// here, which meant a plain GET returned the site's own source — the function
+// and edge-function TypeScript, the database migrations, container/.env.example,
+// and the licensed package under packages/. Requests for these are refused
+// before the path is ever resolved against the filesystem.
+const DENIED_DIRS = new Set(['netlify', 'container', 'node_modules', 'packages'])
+const DENIED_FILES = new Set(['netlify.toml', 'package.json', 'package-lock.json', 'deno.lock'])
+// Dotfiles are denied wholesale (.env, .git, .netlify), with an exception for
+// the one the site legitimately publishes.
+const DOTFILE_EXCEPTIONS = new Set(['.well-known'])
+
+/** True when a repository-relative path is server-side material, not a site asset. */
+export function isDeniedPath(relative) {
+  const segments = relative.split(/[/\\]/).filter(Boolean)
+  if (!segments.length) return false
+
+  // Compared lower-cased because macOS and Windows resolve NETLIFY/ to the same
+  // directory as netlify/. A case-sensitive check would pass the request through
+  // and the filesystem would then happily open the file.
+  const lower = segments.map((segment) => segment.toLowerCase())
+
+  for (const segment of lower) {
+    if (segment.startsWith('.') && !DOTFILE_EXCEPTIONS.has(segment)) return true
+    if (DENIED_FILES.has(segment)) return true
+  }
+
+  return DENIED_DIRS.has(lower[0])
+}
+
 /**
  * Applies every matching [[headers]] rule from netlify.toml, in declaration
  * order, so later and more specific rules win — the same precedence Netlify
@@ -71,6 +102,7 @@ export function createStaticHandler({ root, headerRules }) {
     if (decoded.includes('\0')) return []
 
     const relative = normalize(decoded).replace(/^(\.\.[/\\])+/, '').replace(/^[/\\]+/, '')
+    if (isDeniedPath(relative)) return []
     const target = resolve(publishRoot, relative)
     if (target !== publishRoot && !target.startsWith(publishRoot + sep)) return []
 

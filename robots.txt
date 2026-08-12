@@ -2,6 +2,15 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin.html
+# The browser code workspace and the apps it serves. These are the owner's own
+# tools and drafts rather than storefront pages, so keeping them out of indexes
+# stops them competing with the catalog for the domain's ranking. The /p/
+# responses carry a matching X-Robots-Tag from netlify/functions/code-serve.mts,
+# which is what actually removes an already-known URL — robots.txt only stops the
+# crawl.
+Disallow: /code
+Disallow: /code.html
+Disallow: /p/
 
 User-agent: Bingbot
 Allow: /

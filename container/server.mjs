@@ -106,6 +106,31 @@ async function main() {
       (loadFailures.length ? `, ${loadFailures.length} failed to load` : ''),
   )
 
+  /**
+   * Serves a file's bytes under an error status. Netlify's `status = 404` +
+   * `force = true` rules do exactly this: the visitor gets the 404 page's HTML,
+   * and crawlers get the 404 status that keeps the URL out of the index. Serving
+   * it as a rewrite instead would return 200 and invite indexing.
+   *
+   * Validators are dropped because they describe the file, not this response —
+   * a cached 404.html must not be replayed as a 200 for some other URL.
+   */
+  async function errorPage(status, target, url, method) {
+    const page = await serveStatic(new Request(new URL(target, url), { method }))
+    if (!page) {
+      return textResponse(status, 'Not found', headersFor(url.pathname, config.headers))
+    }
+    const headers = new Headers(page.headers)
+    headers.delete('etag')
+    headers.delete('last-modified')
+    const type = headers.get('content-type')
+    for (const [key, value] of Object.entries(headersFor(url.pathname, config.headers))) {
+      headers.set(key, value)
+    }
+    if (type) headers.set('content-type', type)
+    return new Response(method === 'HEAD' ? null : page.body, { status, headers })
+  }
+
   /** Terminal handler: redirects, functions, forms, then static files. */
   async function origin(request, ip) {
     const url = new URL(request.url)
@@ -123,6 +148,13 @@ async function main() {
 
       if (status >= 300 && status < 400) {
         return new Response(null, { status, headers: { location: target } })
+      }
+
+      // A 4xx/5xx rule points at a page to render *under that status* — the
+      // shape netlify.toml uses to refuse the source paths. Handled before the
+      // rewrite branch below, which would otherwise serve the page as a 200.
+      if (status >= 400) {
+        return errorPage(status, target, url, request.method)
       }
 
       // A 200 redirect is a rewrite: the URL the visitor sees does not change,
@@ -156,7 +188,7 @@ async function main() {
       return new Response(file.body, { status: file.status, headers })
     }
 
-    return textResponse(404, 'Not found', headersFor(url.pathname, config.headers))
+    return errorPage(404, '/404.html', url, request.method)
   }
 
   async function invoke(fn, request, ip) {

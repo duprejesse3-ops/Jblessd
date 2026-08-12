@@ -28,6 +28,17 @@ f.parentNode.insertBefore(j,f);
 <meta name="referrer" content="no-referrer" />
 <title>MULTINICHE AI · Operator Console</title>
 <link rel="icon" href="/favicon.ico" />
+<!-- Home-screen support for the owner, via meta tags only — deliberately no
+     <link rel="manifest">. The site manifest is public and scoped to the
+     storefront, and this console is noindex/no-store; iOS honours these tags on
+     their own, so "Add to Home Screen" here gives a standalone console window
+     without advertising the route in a file every visitor downloads. -->
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#05070a" />
+<meta name="apple-mobile-web-app-title" content="Operator" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <style>
   :root {
     --bg: #05070a;
@@ -289,6 +300,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  campaigns       list campaigns already published to /updates",
     "  creatives [sku]   generate Google Ads product images (PNG, all 3 sizes)",
     "  creatives all     one Google Ads image file per product (whole catalog)",
+    "  code            list the apps in the browser code workspace, and open it",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -434,6 +446,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         lower === "creatives everything") { showAllCreatives(); return; }
     if (lower.indexOf("creatives ") === 0) { showCreatives(raw.slice(10).trim()); return; }
     if (lower.indexOf("adimages ") === 0) { showCreatives(raw.slice(9).trim()); return; }
+    if (lower === "code" || lower === "workspace" || lower === "apps") { listWorkspace(); return; }
     ask(raw);
   }
 
@@ -560,8 +573,54 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
   }
 
-  // ---------- google ads builder ----------
-  // Turn a keyword {text, matchType} into the exact token you paste into Google
+  // ---------- code workspace ----------
+  // The browser code workspace at /code writes apps that the site serves at
+  // /p/<slug>. This command is here for reach rather than for capability: the
+  // console is where the owner already is, and an app written on a phone is easy
+  // to forget about. The workspace API takes the same admin session as this page.
+  async function listWorkspace() {
+    if (busy) return;
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading workspace");
+    try {
+      var r = await fetch("/api/code", { headers: { "accept": "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", j.error || ("error " + r.status)); return; }
+      var apps = j.apps || [];
+      if (!apps.length) {
+        printHTML("sys", "no apps yet. open <a href=\"/code\" target=\"_blank\" rel=\"noopener\">/code</a> " +
+          "and tap “+ new” — you write the code in the browser and the site serves it at /p/&lt;name&gt;.");
+        return;
+      }
+      print("sys", apps.length + " app" + (apps.length === 1 ? "" : "s") + " (most recently edited first):");
+      apps.forEach(function (app) {
+        var line = document.createElement("div");
+        line.className = "line";
+        var name = document.createElement("b");
+        name.textContent = app.title;
+        line.appendChild(name);
+        line.appendChild(document.createTextNode("  "));
+        var link = document.createElement("a");
+        link.href = "/p/" + app.slug + "/";
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "/p/" + app.slug + "/";
+        line.appendChild(link);
+        line.appendChild(document.createTextNode(
+          "  " + app.fileCount + " files · " + (app.published ? "live" : "draft")));
+        screen.appendChild(line);
+      });
+      printHTML("sys", "edit any of them at <a href=\"/code\" target=\"_blank\" rel=\"noopener\">/code</a>.");
+    } catch (_) {
+      thinking.remove();
+      print("reply err", "network error — the workspace is unreachable.");
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // ---------- google ads builder ----------  // Turn a keyword {text, matchType} into the exact token you paste into Google
   // Ads: broad = plain, phrase = "quoted", exact = [bracketed].
   function kwToken(k) {
     var t = String(k && k.text != null ? k.text : "");

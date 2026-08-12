@@ -7,6 +7,70 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Refuse the site's own source. publish = "." above means the repository root is
+# the published directory, so every one of these paths is a real file sitting in
+# it: Netlify strips the functions tree on its way to the CDN but nothing else,
+# and a plain GET for /netlify/lib/admin-auth.mts returned the TypeScript source
+# of the owner session logic. Also exposed: the edge functions, the database
+# migrations, container/.env.example, and packages/, which holds a product sold
+# under a single-purchaser licence.
+#
+# force = true is what makes these work and is not optional. Without it a
+# redirect rule loses to a file that actually exists on disk, which is precisely
+# the case here — the CDN would go on serving the source and the rule would
+# never fire.
+#
+# status = 404 with a `to` serves that file's bytes under a 404, so a person
+# gets the site's 404 page and a crawler gets the status that keeps the path out
+# of the index.
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/container/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/packages/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/node_modules/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/package.json"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/package-lock.json"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/netlify.toml"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/deno.lock"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # Google tag gateway for advertisers ("first-party mode"): /metrics is reserved as
 # the tag serving path and proxied to Google's gateway endpoint by
 # netlify/edge-functions/tag-gateway.ts, so tag libraries and measurement hits are
@@ -44,6 +108,17 @@
 # view, that was a large multiple on our busiest paths for no benefit. The
 # baseline security headers in the [[headers]] block below are applied by the CDN
 # and still cover every excluded path, so nothing is left unprotected.
+#
+# /p/* is excluded for a different reason than the asset paths: those are skipped
+# because the function would do nothing useful, while workspace apps are skipped
+# because it would do the wrong thing. Pages under /p/ are code the owner wrote in
+# the browser workspace at /code, and netlify/functions/code-serve.mts serves them
+# under their own, much stricter CSP — a `sandbox` policy with no
+# `allow-same-origin`, which drops them into an opaque origin where they cannot
+# reach this origin's cookies or storage. Two Content-Security-Policy headers are
+# enforced as their intersection, so letting csp.ts add the storefront policy on
+# top would block the CDN libraries those apps legitimately load while adding
+# nothing the sandbox has not already covered.
 [[edge_functions]]
   path = "/*"
   excludedPath = [
@@ -51,6 +126,7 @@
     "/.netlify/*",
     "/.well-known/*",
     "/icons/*",
+    "/p/*",
     "/*.js",
     "/*.json",
     "/*.xml",
@@ -105,6 +181,18 @@
 [[redirects]]
   from = "/admin"
   to = "/admin.html"
+  status = 200
+
+# Browser code workspace. This is where the site hosts its own development
+# environment: source is written here on any device, stored in Netlify Database,
+# and served straight back at /p/<slug> by netlify/functions/code-serve.mts with
+# no build and no deploy in between.
+#
+# Like /admin it is a static login gate behind the same ADMIN_PASSWORD session,
+# so the rewrite is public while the workspace behind it is not.
+[[redirects]]
+  from = "/code"
+  to = "/code.html"
   status = 200
 
 # Baseline security headers applied to every response. Scoped to /* so both the
@@ -169,6 +257,25 @@
   [headers.values]
     Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
 
+# Apps written in the browser workspace, served by
+# netlify/functions/code-serve.mts. Never cached, at any layer.
+#
+# Declared after the /*.js rule above and deliberately so. Netlify's `*` matches
+# across path segments, so "/*.js" also matches "/p/my-app/app.js" — without this
+# block an app's script and stylesheet would be handed an hour-long browser cache
+# while its index.html revalidated, which shows up as a save that took effect for
+# the markup and silently did not for the code. The whole promise of the workspace
+# is that a save is live on the next load, so nothing under /p/ is cacheable.
+#
+# The function sets the same value on its own responses; this rule is what makes
+# it hold regardless of how the CDN merges the two, and it covers a draft app
+# (owner-only) as well as a published one.
+[[headers]]
+  for = "/p/*"
+  [headers.values]
+    Cache-Control = "no-store"
+    X-Robots-Tag = "noindex, nofollow"
+
 # Agent studio: always revalidate. Credit pack pricing and tier costs are fetched
 # from /api/credits at runtime, but the page also renders a balance and an access
 # key for a signed-in customer, so a cached copy must never be reused blindly.
@@ -191,6 +298,21 @@
 
 [[headers]]
   for = "/admin.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
+
+# The code workspace — private to the owner, and never cached: it renders the
+# source of whatever is being worked on right now, and a stale copy would show
+# yesterday's code as though it were live.
+[[headers]]
+  for = "/code"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/code.html"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "no-store"

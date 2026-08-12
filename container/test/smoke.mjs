@@ -14,7 +14,7 @@ import pg from 'pg'
 import { loadNetlifyConfig, parseToml } from '../lib/config.mjs'
 import { matchesPath, splat } from '../lib/match.mjs'
 import { cronMatches, parseCron } from '../lib/scheduler.mjs'
-import { headersFor } from '../lib/static.mjs'
+import { headersFor, isDeniedPath } from '../lib/static.mjs'
 import { isFormSubmission } from '../lib/forms.mjs'
 
 const APP_ROOT = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
@@ -119,6 +119,58 @@ check('global security headers still apply', Boolean(faviconHeaders['X-Content-T
 
 const adminHeaders = headersFor('/admin.html', config.headers)
 equal('admin is never cached', adminHeaders['Cache-Control'], 'no-store')
+
+// --- publish-root exposure ------------------------------------------------
+//
+// publish = "." means the repository root is the served directory, so the
+// server's own source sits inside it. These paths must never resolve to a file.
+
+for (const path of [
+  'netlify/lib/admin-auth.mts',
+  'netlify/functions/code-serve.mts',
+  'netlify/edge-functions/csp.ts',
+  'netlify/database/migrations/001_init.sql',
+  'container/server.mjs',
+  'container/.env',
+  'container/.env.example',
+  'packages/site-audit-agent/lib/audit.mjs',
+  'node_modules/pg/package.json',
+  'package.json',
+  'package-lock.json',
+  'netlify.toml',
+  'deno.lock',
+  '.env',
+  '.git/config',
+  '.netlify/state.json',
+]) {
+  check(`denied: ${path}`, isDeniedPath(path))
+}
+
+// Case folding: on macOS and Windows these open the same files as the
+// lower-cased paths above, so the check cannot be case-sensitive.
+check('denied case-insensitively: NETLIFY/', isDeniedPath('NETLIFY/lib/admin-auth.mts'))
+check('denied case-insensitively: Container/.Env', isDeniedPath('Container/.Env'))
+
+for (const path of [
+  'index.html',
+  '404.html',
+  'admin.html',
+  'code.html',
+  'agent.html',
+  'sw.js',
+  'sitemap.xml',
+  'robots.txt',
+  'favicon.ico',
+  'icons/icon-192.png',
+]) {
+  check(`still served: ${path}`, !isDeniedPath(path))
+}
+
+check('the published dotfile is still served', !isDeniedPath('.well-known/assetlinks.json'))
+check('an empty path is not denied', !isDeniedPath(''))
+// Segment match, not substring: a page whose name merely contains a denied word
+// is an ordinary page.
+check('denial matches whole segments only', !isDeniedPath('netlify-guide.md'))
 
 // --- form detection -------------------------------------------------------
 

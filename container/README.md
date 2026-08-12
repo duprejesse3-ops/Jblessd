@@ -1,5 +1,20 @@
 # Running jblessd.com in a container
 
+> **You probably don't need this.** The deployed Netlify site already hosts itself:
+> the code lives on the site, Netlify runs every part of it, and using it means
+> opening a URL on a phone or a computer — optionally installed as an app window.
+> See [`docs/running-without-a-container.md`](../docs/running-without-a-container.md).
+>
+> The one thing this directory used to offer that the live site could not was a
+> place to *write and run code* without deploying. That is now on the site too, at
+> `/code`: you write an app in the browser and it is served at `/p/<name>` as soon
+> as it saves — see
+> [`docs/writing-code-on-the-site.md`](../docs/writing-code-on-the-site.md).
+>
+> This directory is for the separate case of running the same code *off* Netlify,
+> on hardware you control. If Docker or Podman will not cooperate, nothing about
+> the live site is blocked on it.
+
 This directory runs the storefront on plain Node, with no Netlify account, no
 build step, and no changes to the application source. The site's own files —
 `index.html`, `netlify/functions/*.mts`, `netlify/edge-functions/*.ts`,
@@ -45,6 +60,10 @@ DATABASE_URL=postgres://... \
 
 Node 22.6 or newer is required — the server relies on native TypeScript type
 stripping to load the `.mts` and `.ts` sources directly. The image pins Node 24.
+
+For the full version of that path — systemd, TLS, the scheduler, Stripe
+webhooks, backups, and what to check at each step — see
+[`docs/self-hosting-checklist.md`](../docs/self-hosting-checklist.md).
 
 ## Podman
 

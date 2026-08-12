@@ -47,6 +47,16 @@ f.parentNode.insertBefore(j,f);
 <link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
 <link rel="icon" href="/favicon.ico" />
 <link rel="manifest" href="/manifest.webmanifest" />
+<!-- PWA / mobile app. Mirrors index.html so the studio can be installed directly
+     from this page: iOS only reads these tags (it ignores the manifest's name and
+     icons), so without them "Add to Home Screen" from /agent produced a
+     browser-chrome bookmark instead of the standalone app. -->
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="application-name" content="MULTINICHE AI" />
+<meta name="apple-mobile-web-app-title" content="MultiNiche AI" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -163,6 +173,14 @@ f.parentNode.insertBefore(j,f);
   .chip:hover{border-color:var(--brass);color:var(--paper)}
   .chip .led{width:6px;height:6px;border-radius:50%;background:var(--muted-2)}
   .chip.live .led{background:var(--brass);box-shadow:0 0 8px var(--brass)}
+  /* The header bar is brand + install + balance, and the install button only shows
+     up on browsers that can install — on a phone, Android Chrome. Narrow screens
+     get the icon alone so three controls still fit on one line; the aria-label
+     carries the name for anyone who cannot see the icon. */
+  @media (max-width:600px){
+    header.top .bar{gap:10px}
+    #install-app .install-label{display:none}
+  }
 
   /* ---------- hero ---------- */
   .hero{padding:46px 0 10px}
@@ -360,6 +378,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </span>
     </a>
     <span class="grow"></span>
+    <!-- Revealed only when the browser says the app can be installed (Chrome,
+         Edge, Android). Hidden on browsers with no install API rather than shown
+         as a dead control — see the script at the end of the page. -->
+    <button class="btn line small" id="install-app" type="button" aria-label="Install app" hidden>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      <span class="install-label">Install app</span>
+    </button>
     <button class="chip" id="balance-chip" type="button" aria-describedby="balance-help">
       <span class="led"></span><span id="balance-label">No credits</span>
     </button>
@@ -1251,5 +1276,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   loadState().then(claimIfReturning);
 })();
 </script>
+<!-- Install + offline: registers the service worker and reveals the header's
+     "Install app" button once the browser reports the app is installable.
+     Shared with index.html — see install-app.js. -->
+<script src="/install-app.js" defer></script>
+
 </body>
 </html>
