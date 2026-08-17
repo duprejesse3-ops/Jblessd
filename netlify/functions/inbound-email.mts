@@ -1,15 +1,18 @@
 // Netlify Function: POST /api/inbound-email
 // Resend calls this endpoint when an email arrives at any @jblessd.com
-// address (via the inbound MX record). Verifies the request actually came
-// from Resend using their svix-based webhook signature, then stores the
-// message for later use.
+// address (via the inbound MX record). The webhook payload is metadata
+// only — sender, recipients, subject, attachment filenames — so the full
+// body is fetched separately via resend.emails.receiving.get().
 //
 // Set RESEND_WEBHOOK_SECRET in Netlify environment variables to the signing
 // secret Resend gives you when you register this endpoint (starts with
-// "whsec_").
+// "whsec_"). Uses the same RESEND_API_KEY already configured for sending.
 
 import type { Context } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY as string)
 
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
@@ -21,41 +24,45 @@ export default async (req: Request, _context: Context) => {
 
   const rawBody = await req.text()
 
-  const verified = await verifyResendSignature(req, rawBody)
-  if (!verified) {
-    console.error('inbound-email: signature verification failed')
+  let event: any
+  try {
+    event = resend.webhooks.verify({
+      payload: rawBody,
+      headers: {
+        id: req.headers.get('svix-id') ?? '',
+        timestamp: req.headers.get('svix-timestamp') ?? '',
+        signature: req.headers.get('svix-signature') ?? '',
+      },
+      webhookSecret: process.env.RESEND_WEBHOOK_SECRET as string,
+    })
+  } catch (err) {
+    console.error('inbound-email: signature verification failed —', (err as Error).message)
     return new Response('Invalid signature', { status: 401 })
   }
 
-  let payload: any
-  try {
-    payload = JSON.parse(rawBody)
-  } catch (err) {
-    console.error('inbound-email: could not parse payload —', (err as Error).message)
-    return new Response('Bad request', { status: 400 })
-  }
-
-  // Only inbound mail events matter here; ignore anything else Resend might
-  // send to the same endpoint in the future.
-  if (payload.type !== 'email.received') {
+  if (event.type !== 'email.received') {
     return Response.json({ received: true })
   }
 
-  await storeInboundEmail(payload.data)
+  await storeInboundEmail(event.data)
 
   return Response.json({ received: true })
 }
 
-// Persist the inbound message. Deduplicated on message_id so Resend's
-// automatic webhook retries can't create duplicate rows. Never throws —
-// a storage hiccup shouldn't turn into a failed webhook response, since
-// Resend will just retry and hit the same dedupe path.
-async function storeInboundEmail(email: any): Promise<void> {
+// Fetches the full body/attachments (not included in the webhook payload)
+// and persists the message. Deduplicated on email_id so Resend's automatic
+// webhook retries can't create duplicate rows. Never throws — a storage
+// hiccup shouldn't fail the webhook response, since Resend will just retry.
+async function storeInboundEmail(data: any): Promise<void> {
   try {
-    const attachments = (email.attachments || []).map((a: any) => ({
+    const { data: full, error } = await resend.emails.receiving.get(data.email_id)
+    if (error) {
+      console.error('inbound-email: could not fetch full email —', error.message)
+    }
+
+    const attachments = (data.attachments || []).map((a: any) => ({
       filename: a.filename,
       content_type: a.content_type,
-      size: a.content?.length ?? null,
     }))
 
     const db = getDatabase()
@@ -63,48 +70,12 @@ async function storeInboundEmail(email: any): Promise<void> {
       INSERT INTO inbound_emails (
         message_id, from_address, to_address, subject, text_body, html_body, attachments
       ) VALUES (
-        ${email.message_id}, ${email.from}, ${email.to}, ${email.subject},
-        ${email.text ?? null}, ${email.html ?? null}, ${JSON.stringify(attachments)}
+        ${data.email_id}, ${data.from}, ${(data.to ?? []).join(', ')}, ${data.subject},
+        ${full?.text ?? null}, ${full?.html ?? null}, ${JSON.stringify(attachments)}
       )
       ON CONFLICT (message_id) DO NOTHING
     `
   } catch (err) {
     console.error('inbound-email: could not store message —', (err as Error).message)
   }
-}
-
-// Resend signs webhooks the same way Svix does: HMAC-SHA256 over
-// "{id}.{timestamp}.{body}" using the base64 portion of the whsec_ secret.
-async function verifyResendSignature(req: Request, rawBody: string): Promise<boolean> {
-  const secret = process.env.RESEND_WEBHOOK_SECRET
-  const svixId = req.headers.get('svix-id')
-  const svixTimestamp = req.headers.get('svix-timestamp')
-  const svixSignature = req.headers.get('svix-signature')
-
-  if (!secret || !svixId || !svixTimestamp || !svixSignature) return false
-
-  const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`
-  const secretBytes = base64ToBytes(secret.split('_')[1] ?? secret)
-
-  const key = await crypto.subtle.importKey(
-    'raw',
-    secretBytes,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const sigBytes = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent))
-  const expected = bytesToBase64(new Uint8Array(sigBytes))
-
-  return svixSignature
-    .split(' ')
-    .map((s) => s.split(',')[1])
-    .includes(expected)
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-}
-function bytesToBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
 }
