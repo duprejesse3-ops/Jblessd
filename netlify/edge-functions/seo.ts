@@ -104,7 +104,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
       category: p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category,
       description: p.blurb,
       brand: { '@type': 'Brand', name: 'MULTINICHE AI' },
-      image: `${SITE}/multiniche-ai-og.png`,
+      image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
       url,
       offers: {
         '@type': 'Offer',
