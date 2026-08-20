@@ -22,7 +22,7 @@ import { startScheduler } from './lib/scheduler.mjs'
 import { matchesPath, splat } from './lib/match.mjs'
 import { sendWebResponse, textResponse, toWebRequest } from './lib/http.mjs'
 import { closeDatabase } from './adapters/netlify-database.mjs'
-
+import { startCampaignScheduler } from './ads/campaign-scheduler.mjs'
 installNetlifyGlobal()
 
 const HERE = dirname(fileURLToPath(import.meta.url))
