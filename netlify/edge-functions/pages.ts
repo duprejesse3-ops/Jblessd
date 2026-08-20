@@ -678,7 +678,33 @@ function renderNiche(niche: string, all: ApiProduct[], aggs: Record<string, Aggr
     body,
   })
 }
+// ---- /blog ----
+function renderBlog(): Response {
+  const url = `${SITE}/blog`
+  const intro = 'Guides, product updates, and AI workflow ideas from the MULTINICHE AI team.'
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Blog</nav>` +
+    `<h1>Blog</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    `<div id="soro-blog"></div>` +
+    `<script src="https://app.trysoro.com/api/embed/781e67fc-d9d3-433d-8f18-761c67f869c8" defer></script>`
 
+  return page({
+    title: `Blog | ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        name: `${STORE} Blog`,
+        url,
+        description: intro,
+      },
+    ],
+    body,
+  })
+}
 // ---- /proof/:id ----
 function renderProof(p: Proof): Response {
   const url = `${SITE}/proof/${p.id}`
@@ -1033,7 +1059,9 @@ export default async (req: Request, _context: Context) => {
   if (parts[0] === 'free-tool') {
     return renderFreeTool()
   }
-
+  if (parts[0] === 'blog') {
+  return renderBlog()
+  }
   // ---- /proof (index) and /proof/:id ----  handled first: these don't need
   // the catalog, so a shared proof still renders even if /api/products is slow.
   if (parts[0] === 'proof') {
@@ -1106,7 +1134,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches
