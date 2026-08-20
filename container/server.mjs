@@ -254,7 +254,7 @@ async function main() {
   })
 
   const scheduler = startScheduler({ functions, siteUrl: SITE_URL, enabled: SCHEDULER_ENABLED })
-
+  const multiAdsScheduler = startCampaignScheduler() 
   server.listen(PORT, HOST, () => {
     console.log(`storefront listening on http://${HOST}:${PORT} (public URL ${SITE_URL})`)
   })
@@ -266,6 +266,7 @@ async function main() {
       shuttingDown = true
       console.log(`${signal} received, shutting down`)
       scheduler.stop()
+      multiAdsScheduler.stop()
       server.close(async () => {
         await closeDatabase()
         process.exit(0)
