@@ -77,7 +77,40 @@ const NICHE_INTRO: Record<string, string> = {
   finance: 'Money decisions, done in the browser — valuation, rebalancing, cashflow, and the models investors expect, run live on your own numbers.',
   stores: 'Keep your own storefront healthy — monitoring, SEO, and link checks you run on your own infrastructure, owned outright instead of rented monthly.',
 }
+interface NicheFaqItem { q: string; a: string }
 
+// Optional deeper SEO/documentation content for specific niches. Only niches
+// with real workflows worth explaining get an entry — other niche pages stay
+// lean with just the catalog grid.
+const NICHE_DEEP_DIVE: Record<string, string> = {
+  developers:
+    `<p>Every tool here runs the way your team already works: no dashboards to learn, no new accounts — just a prompt, an automation, or an agent config that plugs into what you're already doing.</p>` +
+    `<p><strong>PR &amp; code review</strong> — prompt packs and agent configs that read a diff and return the review a senior engineer would leave: what's risky, what's missing tests, what to rename before merge.</p>` +
+    `<p><strong>Standups &amp; release notes</strong> — automation blueprints that turn a raw commit log or async check-in into a one-paragraph digest, so the meeting is optional instead of mandatory.</p>` +
+    `<p><strong>Grounded Q&amp;A over your own docs</strong> — agent configs built for retrieval: point one at a knowledge base or a repo's docs folder and get answers that cite where they came from, not guesses.</p>` +
+    `<p><strong>Incident &amp; postmortem write-ups</strong> — doc templates that turn a timeline of what happened into a clean, blameless postmortem in the format your team already uses.</p>`,
+}
+
+const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
+  developers: [
+    {
+      q: 'Do these tools require an API key or account setup?',
+      a: 'No signup for the prompt packs and doc templates — download and use them in whatever model you already have access to. Agent Configs and Automation Blueprints include their own setup instructions where a key or webhook is needed.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. You can also describe your own task on the free tool page and watch a tool run on it live, no signup required.',
+    },
+    {
+      q: 'Are these one-time purchases or subscriptions?',
+      a: 'One-time purchase per tool. You get the prompt pack, blueprint, template, or agent config outright — no recurring fee to keep using what you bought.',
+    },
+    {
+      q: "What's the difference between a Prompt Pack and an Agent Config?",
+      a: 'A Prompt Pack is a set of ready-to-paste prompts for a specific job. An Agent Config goes a step further: a configured agent that runs a workflow rather than answering one prompt at a time.',
+    },
+  ],
+}
 // Outcome-based landing pages (/use-cases/:slug). These sit orthogonal to the
 // role pages: instead of "who are you", they answer "what do you want to get
 // done". Each matches products by keyword against name/blurb/spec so it tracks
@@ -662,19 +695,37 @@ function renderNiche(niche: string, all: ApiProduct[], aggs: Record<string, Aggr
     .filter((n) => n !== niche)
     .map((n) => `<a href="/tools/${n}">${esc(NICHE_LABEL[n])}</a>`)
     .join('')
-
+  const faqs = NICHE_FAQ[niche]
+const deepDiveHtml = NICHE_DEEP_DIVE[niche] ? `<h2>How teams use this</h2>${NICHE_DEEP_DIVE[niche]}` : ''
+const faqHtml = faqs
+  ? `<h2>FAQ</h2>` +
+    faqs.map((f) => `<div class="rev"><div class="who">${esc(f.q)}</div><p class="txt">${esc(f.a)}</p></div>`).join('')
+  : ''
+const faqLd = faqs
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }
+  : null
+  
   const body =
-    `<nav class="crumbs"><a href="/">Home</a> / Tools for ${esc(nl)}</nav>` +
-    `<h1>AI tools for ${esc(nl)}</h1>` +
-    `<p class="lede">${esc(intro)}</p>` +
-    `<div class="grid">${cards}</div>` +
-    `<h2>Browse by role</h2><div class="roles">${otherRoles}</div>`
-
+  `<nav class="crumbs"><a href="/">Home</a> / Tools for ${esc(nl)}</nav>` +
+  `<h1>AI tools for ${esc(nl)}</h1>` +
+  `<p class="lede">${esc(intro)}</p>` +
+  `<div class="grid">${cards}</div>` +
+  deepDiveHtml +
+  faqHtml +
+  `<h2>Browse by role</h2><div class="roles">${otherRoles}</div>`
   return page({
     title: `AI tools for ${nl} — prompt packs, automations & agents | ${STORE}`,
     description: intro,
     canonical: url,
-    jsonld: [itemListLd, breadcrumb],
+    jsonld: [itemListLd, breadcrumb, ...(faqLd ? [faqLd] : [])],
     body,
   })
 }
