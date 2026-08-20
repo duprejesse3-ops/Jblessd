@@ -345,7 +345,7 @@ export default async (req: Request, _context: Context) => {
     )
   }
 
-  // ---- POST: generate a campaign ----
+    // ---- POST: generate a campaign ----
   let sku = ''
   let goal = ''
   try {
@@ -356,12 +356,25 @@ export default async (req: Request, _context: Context) => {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
+  try {
+    const result = await generateCampaign({ sku, goal })
+    return Response.json(result)
+  } catch (err) {
+    return Response.json({ error: (err as Error).message }, { status: 404 })
+  }
+}
+
+// Generates a campaign for a sku (or the whole store) and persists it. Shared
+// by the POST handler above (owner-triggered from /admin, requires a session)
+// and MultiAds' scheduler (container/ads/campaign-scheduler.mjs), which calls
+// this directly in-process — no HTTP round-trip, so no admin session needed.
+export async function generateCampaign({ sku = '', goal = '' }: { sku?: string; goal?: string }) {
   const { products } = await loadCatalog()
   const isStore = !sku || sku === STORE_SKU
   const target = isStore ? null : products.find((p) => p.sku === sku) ?? null
 
   if (!isStore && !target) {
-    return Response.json({ error: 'That product is no longer in the catalog.' }, { status: 404 })
+    throw new Error('That product is no longer in the catalog.')
   }
 
   const productName = target ? target.name : `${STORE_NAME} (whole store)`
@@ -400,7 +413,7 @@ export default async (req: Request, _context: Context) => {
     // Still return the generated campaign even if persistence failed.
   }
 
-  return Response.json({
+  return {
     campaign: saved ?? {
       id: 0,
       sku: storedSku,
@@ -411,7 +424,7 @@ export default async (req: Request, _context: Context) => {
       createdAt: null,
     },
     persisted: saved !== null,
-  })
+  }
 }
 
 export const config: Config = {
