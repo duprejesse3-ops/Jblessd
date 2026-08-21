@@ -177,7 +177,7 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
           description: 'A short marketing email.',
           properties: {
             subject: { type: 'string', description: 'A compelling subject line under 60 characters.' },
-            body: { type: 'string', description: 'The email body: warm, benefit-led, and concise, ending with a clear call to action that includes the exact page URL provided.' },
+               body: { type: 'string', description: 'The email body: warm, benefit-led, and concise, ending with a clear call to action that includes the exact page URL provided. Must open with a different angle than the tagline — a scenario, a question, or a concrete detail, not a restatement.' },
           },
           required: ['subject', 'body'],
         },
@@ -209,12 +209,26 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
       {
         role: 'user',
         content:
+                  content:
           `You are the in-house marketing agent for ${STORE_NAME}, a store of ready-to-use AI ` +
           `productivity tools (prompt packs, automation blueprints, doc templates, and agent configs). ` +
           `The brand voice is confident and credible, but warm and sales-oriented: lead with the outcome ` +
           `and the benefit, make the value obvious, and always close with a clear call to action. Keep it ` +
           `grounded in the real specs — written to convert, not to hype. Use tasteful energy; avoid spammy ` +
           `buzzwords and exclamation-point overload.\n\n` +
+          `CRITICAL — every field must say something DIFFERENT, not restate the tagline or each other. ` +
+          `A reader skimming all seven fields back to back should learn something new from each one, not ` +
+          `hear the same sentence rephrased seven times. Specifically:\n` +
+          `- The tagline is the hook. Nothing else may repeat it, even loosely paraphrased.\n` +
+          `- Every field must include at least one CONCRETE detail pulled from the format or spec fields ` +
+          `below (a number, a tool name, a file type, a specific capability) — not just the blurb restated. ` +
+          `If the product has no useful spec/format detail, use a specific real-world scenario instead of a ` +
+          `vague claim.\n` +
+          `- Vary sentence structure and opening word across the tweets, linkedin, instagram, and email — no ` +
+          `two should start the same way.\n` +
+          `- Never use these clichés or anything equivalent: "no fluff", "game-changer", "unlock", ` +
+          `"supercharge", "in today's fast-paced world", "take it to the next level", "seamless", "elevate", ` +
+          `"revolutionize". If you catch yourself about to write one, replace it with a concrete detail instead.\n\n` +
           (goal ? `The store owner's goal for this campaign: """${goal}"""\n\n` : '') +
           `Compose a complete marketing campaign for the following ${target ? 'product' : 'store'}. ` +
           `Ground every claim in the details provided — do not invent features, prices, or specs.\n\n` +
