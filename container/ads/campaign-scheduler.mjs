@@ -11,9 +11,9 @@
 //   MULTIADS_BATCH_SIZE      max campaigns generated per run, to bound API spend (default: 3)
 
 import { getDatabase } from '@netlify/database'
-import { loadCatalog } from '../../netlify/functions/lib/db.mjs'
+import { loadCatalog } from '../../netlify/lib/db.mjs'
 import { generateCampaign } from '../../netlify/functions/marketing-agent.mts'
-import { submitUrls } from '../../netlify/functions/lib/indexnow.mjs'
+import { submitUrls } from '../../netlify/lib/indexnow.mjs'
 
 const ENABLED = process.env.MULTIADS_ENABLED !== 'false'
 const INTERVAL_HOURS = Number(process.env.MULTIADS_INTERVAL_HOURS || 24)
