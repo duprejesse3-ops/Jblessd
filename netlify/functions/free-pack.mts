@@ -54,12 +54,13 @@ export default async (req: Request, context: Context) => {
 
   // Persist the signup. Delivery does not depend on this succeeding — if the DB
   // is briefly unavailable we still hand over the pack rather than failing the
-  // user, and just log the miss.
+  // user, and just log the miss. next_email_at schedules the first email of the
+  // nurture sequence (see lib/nurture-sequence.mjs) two days out.
   try {
     const db = getDatabase()
     await db.sql`
-      INSERT INTO subscribers (email, source)
-      VALUES (${email}, 'free-pack')
+      INSERT INTO subscribers (email, source, next_email_at)
+      VALUES (${email}, 'free-pack', now() + interval '2 days')
       ON CONFLICT (lower(email)) DO UPDATE
         SET request_count = subscribers.request_count + 1,
             last_requested_at = now()
@@ -77,6 +78,7 @@ export default async (req: Request, context: Context) => {
     `${FREE_PACK.intro}\n\n` +
     `${packToMarkdown(FREE_PACK)}\n\n` +
     `Want the full 120-prompt set and the rest of the catalog? Browse it at https://jblessd.com`
+
   context.waitUntil(
     sendEmail({
       to: email,
