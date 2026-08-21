@@ -209,7 +209,6 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
       {
         role: 'user',
         content:
-                  content:
           `You are the in-house marketing agent for ${STORE_NAME}, a store of ready-to-use AI ` +
           `productivity tools (prompt packs, automation blueprints, doc templates, and agent configs). ` +
           `The brand voice is confident and credible, but warm and sales-oriented: lead with the outcome ` +
