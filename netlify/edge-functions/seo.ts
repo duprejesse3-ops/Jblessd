@@ -202,7 +202,7 @@ export default async (req: Request, context: Context) => {
   let html = await res.text()
 
   try {
-    const apiUrl = new URL('/api/products', req.url)
+    const apiUrl = internalUrl('/api/products', req)
     // Kick off the ratings fetch in parallel with the catalog fetch so the
     // homepage render waits on the slower of the two, not the sum — crawlers
     // (Bingbot especially) enforce a strict fetch timeout on this page.
