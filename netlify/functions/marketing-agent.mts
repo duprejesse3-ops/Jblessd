@@ -200,9 +200,9 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
     },
   }
 
-  const message = await anthropic.messages.create({
+      const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'compose_campaign' },
     messages: [
