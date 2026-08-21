@@ -31,7 +31,16 @@ const END = '<!-- SEO_JSONLD_END -->'
 // response: if the live catalog isn't back in time we serve the static fallback
 // ItemList that already ships in index.html.
 const CATALOG_TIMEOUT_MS = 1200
-
+// In the self-hosted container, req.url is the public domain, which sends
+// this same-origin fetch out over the real internet instead of staying local
+// — turning a near-instant call into a slow round-trip against the same
+// 1200ms budget above. INTERNAL_BASE_URL (set only in the container's env)
+// lets it hit localhost directly instead; unset in real Netlify deploys,
+// where req.url is already correct.
+function internalUrl(pathname: string, req: Request): URL {
+  const base = process.env.INTERNAL_BASE_URL
+  return base ? new URL(pathname, base) : new URL(pathname, req.url)
+}
 const CATEGORY_LABEL: Record<string, string> = {
   prompts: 'Prompt Packs',
   automations: 'Automation Blueprints',
@@ -173,7 +182,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
 // ratings. Never blocks the response for long — falls back to no ratings.
 async function fetchAggregates(req: Request): Promise<Record<string, Aggregate>> {
   try {
-    const res = await fetch(new URL('/api/reviews', req.url), {
+    const res = await fetch(internalUrl('/api/reviews', req), {
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS),
     })
