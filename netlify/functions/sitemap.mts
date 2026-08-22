@@ -93,9 +93,31 @@ async function recentUpdateIds(req: Request): Promise<number[]> {
   }
 }
 
+// Guide pages (/guides/:niche/:category) are generated and auto-published by
+// guides-generator.mts and served by the pages edge function, but same as
+// proofs and updates they need to be listed here explicitly or crawlers never
+// discover them.
+async function recentGuideSlugs(req: Request): Promise<string[]> {
+  try {
+    const res = await fetch(new URL('/api/guides', req.url), {
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(1500),
+    })
+    if (!res.ok) return []
+    const data = (await res.json()) as { guides?: Array<{ slug: string }> }
+    return (data.guides ?? []).map((g) => g.slug).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 export default async (req: Request) => {
   const { products } = await loadCatalog()
-  const [proofIds, updateIds] = await Promise.all([recentProofIds(req), recentUpdateIds(req)])
+  const [proofIds, updateIds, guideSlugs] = await Promise.all([
+    recentProofIds(req),
+    recentUpdateIds(req),
+    recentGuideSlugs(req),
+  ])
 
   const urls = [
     `  <url>\n    <loc>${SITE}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>${imageBlock()}\n  </url>`,
@@ -128,6 +150,10 @@ export default async (req: Request) => {
     ...updateIds.map((id) => {
       const loc = `${SITE}/updates/${encodeURIComponent(String(id))}`
       return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`
+    }),
+    ...guideSlugs.map((slug) => {
+      const loc = `${SITE}/guides/${slug}`
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`
     }),
   ]
 
