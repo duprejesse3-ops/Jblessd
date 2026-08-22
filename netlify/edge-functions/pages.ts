@@ -221,6 +221,18 @@ interface Proof {
   url: string
 }
 
+interface Guide {
+  slug: string
+  niche: string
+  category: string
+  title: string
+  metaDescription: string
+  bodyHtml: string
+  productSkus: string[]
+  generatedAt: string | null
+  publishedAt: string | null
+}
+
 const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c])
@@ -841,6 +853,73 @@ function renderProofIndex(proofs: Proof[]): Response {
   })
 }
 
+// ---- /guides/:niche/:category ----
+function renderGuide(g: Guide): Response {
+  const url = `${SITE}/guides/${g.slug}`
+  const nl = NICHE_LABEL[g.niche] ?? g.niche
+  const cl = CATEGORY_LABEL[g.category] ?? g.category
+
+  const jsonld = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: g.title.slice(0, 110),
+    url,
+    ...(g.publishedAt ? { datePublished: g.publishedAt } : {}),
+    publisher: { '@type': 'Organization', name: STORE, url: SITE },
+    about: { '@type': 'Thing', name: `${cl} for ${nl}` },
+  }
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: `Tools for ${nl}`, item: `${SITE}/tools/${g.niche}` },
+      { '@type': 'ListItem', position: 3, name: g.title, item: url },
+    ],
+  }
+
+  // body_html is written by guides-generator.mts (our own scheduled job, not
+  // raw user input) and constrained by prompt to h1/p/ul/li/a only — trusted
+  // the same way the /blog embed script is. Rendered verbatim, no escaping.
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / <a href="/tools/${esc(g.niche)}">Tools for ${esc(nl)}</a> / ${esc(g.title)}</nav>` +
+    `<span class="tag">Guide</span>` +
+    g.bodyHtml +
+    `<div class="buy"><a class="btn" href="/tools/${esc(g.niche)}">See ${esc(cl)} for ${esc(nl)} →</a></div>`
+
+  return page({
+    title: titleWithStore(g.title, 65),
+    description: g.metaDescription,
+    canonical: url,
+    jsonld: [jsonld, breadcrumb],
+    body,
+  })
+}
+
+// ---- /guides (index) ----
+function renderGuideIndex(guides: Guide[]): Response {
+  const url = `${SITE}/guides`
+  const intro = 'Guides for getting the most out of MULTINICHE AI tools, organized by role and category.'
+  const cards = guides
+    .map(
+      (g) =>
+        `<a class="pcard" href="/guides/${encodeURIComponent(g.slug)}"><div class="n">${esc(g.title)}</div><div class="b">${esc(g.metaDescription)}</div><div class="p">Read →</div></a>`,
+    )
+    .join('')
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Guides</nav>` +
+    `<h1>Guides</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    (cards ? `<div class="grid">${cards}</div>` : `<p style="color:var(--muted)">No guides published yet.</p>`)
+  return page({
+    title: `Guides — ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Guides', url, description: intro }],
+    body,
+  })
+}
+
 // ---- /use-cases/:slug and /use-cases ----
 function matchUseCase(uc: UseCase, all: ApiProduct[]): ApiProduct[] {
   // Word-boundary match (not naive substring) so short tokens like "rag" or
@@ -1152,6 +1231,23 @@ export default async (req: Request, _context: Context) => {
     return renderUpdatesIndex(res.data.campaigns ?? [])
   }
 
+  // ---- /guides (index) and /guides/:niche/:category ----  also catalog-independent.
+  if (parts[0] === 'guides') {
+    if (parts[1] && parts[2]) {
+      const niche = decodeURIComponent(parts[1])
+      const category = decodeURIComponent(parts[2])
+      const res = await getJsonOrFail<{ guide?: Guide | null }>(
+        new URL(`/api/guides?niche=${encodeURIComponent(niche)}&category=${encodeURIComponent(category)}`, req.url),
+      )
+      if (!res.ok) return unavailable()
+      if (!res.data.guide) return notFound()
+      return renderGuide(res.data.guide)
+    }
+    const res = await getJsonOrFail<{ guides?: Guide[] }>(new URL('/api/guides', req.url))
+    if (!res.ok) return unavailable()
+    return renderGuideIndex(res.data.guides ?? [])
+  }
+
   const products = await getCatalog(req)
   if (!products) return unavailable()
 
@@ -1185,7 +1281,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog', '/guides', '/guides/*'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches
