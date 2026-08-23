@@ -638,7 +638,14 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     `<a class="btn" data-product-cta rel="nofollow" href="/?product=${encodeURIComponent(p.sku)}">Add to cart in store →</a></div>` +
     `<p style="font-size:13px;color:var(--muted)">Digital delivery is immediate. Sales are final after access is provided, subject to the <a href="/refund-policy/">refund policy</a>.</p>` +
     reviewsHtml +
-    relatedHtml
+    relatedHtml +
+    // The store's own ad-network slot (see ads-network-autopilot.mts, which
+    // registers this deterministic slot key). Shows an ad from another
+    // network tenant when one exists; hides itself automatically when none
+    // do (see ads-network-embed.js's render()), so this is inert — not
+    // broken — until a second tenant joins the network.
+    `<div id="mnads-slot_self_jblessd" style="margin-top:28px"></div>` +
+    `<script src="/ads-network-embed.js" data-slot="slot_self_jblessd" data-container-id="mnads-slot_self_jblessd"></script>`
   return page({
     title: `${p.name} — ${cat} | ${STORE}`,
     description: p.blurb,
@@ -768,6 +775,74 @@ function renderBlog(): Response {
     body,
   })
 }
+
+// ---- /guides/:niche/:category ----
+function renderGuide(g: Guide): Response {
+  const url = `${SITE}/guides/${g.slug}`
+  const nl = NICHE_LABEL[g.niche] ?? g.niche
+  const cl = CATEGORY_LABEL[g.category] ?? g.category
+
+  const jsonld = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: g.title.slice(0, 110),
+    url,
+    ...(g.publishedAt ? { datePublished: g.publishedAt } : {}),
+    publisher: { '@type': 'Organization', name: STORE, url: SITE },
+    about: { '@type': 'Thing', name: `${cl} for ${nl}` },
+  }
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: `Tools for ${nl}`, item: `${SITE}/tools/${g.niche}` },
+      { '@type': 'ListItem', position: 3, name: g.title, item: url },
+    ],
+  }
+
+  // body_html is written by guides-generator.mts (our own scheduled job, not
+  // raw user input) and constrained by prompt to h1/p/ul/li/a only — trusted
+  // the same way the /blog embed script is. Rendered verbatim, no escaping.
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / <a href="/tools/${esc(g.niche)}">Tools for ${esc(nl)}</a> / ${esc(g.title)}</nav>` +
+    `<span class="tag">Guide</span>` +
+    g.bodyHtml +
+    `<div class="buy"><a class="btn" href="/tools/${esc(g.niche)}">See ${esc(cl)} for ${esc(nl)} →</a></div>`
+
+  return page({
+    title: titleWithStore(g.title, 65),
+    description: g.metaDescription,
+    canonical: url,
+    jsonld: [jsonld, breadcrumb],
+    body,
+  })
+}
+
+// ---- /guides (index) ----
+function renderGuideIndex(guides: Guide[]): Response {
+  const url = `${SITE}/guides`
+  const intro = 'Guides for getting the most out of MULTINICHE AI tools, organized by role and category.'
+  const cards = guides
+    .map(
+      (g) =>
+        `<a class="pcard" href="/guides/${encodeURIComponent(g.slug)}"><div class="n">${esc(g.title)}</div><div class="b">${esc(g.metaDescription)}</div><div class="p">Read →</div></a>`,
+    )
+    .join('')
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Guides</nav>` +
+    `<h1>Guides</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    (cards ? `<div class="grid">${cards}</div>` : `<p style="color:var(--muted)">No guides published yet.</p>`)
+  return page({
+    title: `Guides — ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Guides', url, description: intro }],
+    body,
+  })
+}
+
 // ---- /proof/:id ----
 function renderProof(p: Proof): Response {
   const url = `${SITE}/proof/${p.id}`
@@ -849,73 +924,6 @@ function renderProofIndex(proofs: Proof[]): Response {
         description: intro,
       },
     ],
-    body,
-  })
-}
-
-// ---- /guides/:niche/:category ----
-function renderGuide(g: Guide): Response {
-  const url = `${SITE}/guides/${g.slug}`
-  const nl = NICHE_LABEL[g.niche] ?? g.niche
-  const cl = CATEGORY_LABEL[g.category] ?? g.category
-
-  const jsonld = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: g.title.slice(0, 110),
-    url,
-    ...(g.publishedAt ? { datePublished: g.publishedAt } : {}),
-    publisher: { '@type': 'Organization', name: STORE, url: SITE },
-    about: { '@type': 'Thing', name: `${cl} for ${nl}` },
-  }
-  const breadcrumb = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE}/` },
-      { '@type': 'ListItem', position: 2, name: `Tools for ${nl}`, item: `${SITE}/tools/${g.niche}` },
-      { '@type': 'ListItem', position: 3, name: g.title, item: url },
-    ],
-  }
-
-  // body_html is written by guides-generator.mts (our own scheduled job, not
-  // raw user input) and constrained by prompt to h1/p/ul/li/a only — trusted
-  // the same way the /blog embed script is. Rendered verbatim, no escaping.
-  const body =
-    `<nav class="crumbs"><a href="/">Home</a> / <a href="/tools/${esc(g.niche)}">Tools for ${esc(nl)}</a> / ${esc(g.title)}</nav>` +
-    `<span class="tag">Guide</span>` +
-    g.bodyHtml +
-    `<div class="buy"><a class="btn" href="/tools/${esc(g.niche)}">See ${esc(cl)} for ${esc(nl)} →</a></div>`
-
-  return page({
-    title: titleWithStore(g.title, 65),
-    description: g.metaDescription,
-    canonical: url,
-    jsonld: [jsonld, breadcrumb],
-    body,
-  })
-}
-
-// ---- /guides (index) ----
-function renderGuideIndex(guides: Guide[]): Response {
-  const url = `${SITE}/guides`
-  const intro = 'Guides for getting the most out of MULTINICHE AI tools, organized by role and category.'
-  const cards = guides
-    .map(
-      (g) =>
-        `<a class="pcard" href="/guides/${encodeURIComponent(g.slug)}"><div class="n">${esc(g.title)}</div><div class="b">${esc(g.metaDescription)}</div><div class="p">Read →</div></a>`,
-    )
-    .join('')
-  const body =
-    `<nav class="crumbs"><a href="/">Home</a> / Guides</nav>` +
-    `<h1>Guides</h1>` +
-    `<p class="lede">${esc(intro)}</p>` +
-    (cards ? `<div class="grid">${cards}</div>` : `<p style="color:var(--muted)">No guides published yet.</p>`)
-  return page({
-    title: `Guides — ${STORE}`,
-    description: intro,
-    canonical: url,
-    jsonld: [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Guides', url, description: intro }],
     body,
   })
 }
@@ -1098,11 +1106,19 @@ function renderUpdatesIndex(campaigns: Campaign[]): Response {
 function renderFreeTool(): Response {
   const url = `${SITE}/free-tool`
   const intro = 'Describe something you need to get done. We’ll pick the right AI tool and run it on your task, live — free, no signup. Then you decide if it’s worth owning.'
+  // Pre-filled so the demo is one tap away instead of a blank box — a
+  // concrete, relatable "chaotic notes" scenario that shows real value on
+  // the first run. Visitors can still clear it and describe their own task.
+  const EXAMPLE_TASK =
+    "Notes from today's call: John said pricing needs to go up, maybe 10%. Sarah worried about churn if we do that. " +
+    'Need to decide by Friday. Someone needs to email the design team about the new mockups. Q3 roadmap still not ' +
+    'finalized, revisit next week. Action items unclear, follow up needed.'
 
   const script =
     `(function(){` +
-    `var f=document.getElementById('ft-form'),i=document.getElementById('ft-input'),b=document.getElementById('ft-run');` +
+    `var f=document.getElementById('ft-form'),i=document.getElementById('ft-input'),b=document.getElementById('ft-run'),clr=document.getElementById('ft-clear');` +
     `var term=document.getElementById('ft-term'),out=document.getElementById('ft-out'),lab=document.getElementById('ft-lab'),cta=document.getElementById('ft-cta');` +
+    `clr&&clr.addEventListener('click',function(){i.value='';i.focus();});` +
     `var esc=function(s){return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});};` +
     `var busy=false,lastOut='',lastSku='',lastTask='';` +
     `function setOut(t){out.innerHTML=esc(t)+'<span class=\"ft-cursor\"></span>';out.scrollTop=out.scrollHeight;}` +
@@ -1130,7 +1146,7 @@ function renderFreeTool(): Response {
     // quote) and report a phantom 404. Interpolating a variable keeps a quote
     // immediately after href=" so nothing bogus is captured.
     `var storeHref='/?product='+encodeURIComponent(sku),detailHref='/product/'+encodeURIComponent(sku);` +
-    `cta.innerHTML='<p>That was <b>'+esc(name)+'</b> ($'+parseFloat(price).toFixed(2)+') running on your task.</p>'+` +
+    `cta.innerHTML='<div style=\"background:var(--brass);color:var(--ink);padding:14px 18px;border-radius:6px;margin-bottom:14px;font-size:14.5px\"><strong>That\\'s '+esc(name)+'</strong> — running on your own task, live. $'+parseFloat(price).toFixed(2)+' gets you the full version, permanently.</div>'+` +
     `'<a class=\"btn\" href=\"'+storeHref+'\">Get '+esc(name)+' →</a> '+` +
     `'<a class=\"btn ghost\" href=\"'+detailHref+'\">See details</a> '+` +
     `'<button class=\"btn ghost\" id=\"ft-share\" type=\"button\">Share this result</button><span id=\"ft-link\"></span>';cta.hidden=false;` +
@@ -1151,8 +1167,9 @@ function renderFreeTool(): Response {
     `<p class="lede">${esc(intro)}</p>` +
     `<form id="ft-form" style="margin:18px 0">` +
     `<textarea id="ft-input" rows="3" maxlength="600" placeholder="e.g. Turn my messy meeting notes into decisions, owners, and deadlines" ` +
-    `style="width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea>` +
-    `<button class="btn" id="ft-run" type="submit" style="margin-top:10px">▶ Run it on my task</button></form>` +
+    `style="width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical">${esc(EXAMPLE_TASK)}</textarea>` +
+    `<button class="btn" id="ft-run" type="submit" style="margin-top:10px">▶ Run it on my task</button>` +
+    `<button class="btn ghost" id="ft-clear" type="button" style="margin-top:10px;margin-left:8px">Clear and write my own</button></form>` +
     `<div class="proof" id="ft-term" hidden><div class="proof-bar" id="ft-lab">demo · idle</div><div class="proof-out" id="ft-out"></div></div>` +
     `<div id="ft-cta" class="buy" hidden></div>` +
     `<p style="font-size:13px;color:var(--muted)">Prefer to browse? <a href="/">See the full catalog</a> or explore <a href="/use-cases">tools by use case</a>.</p>` +
