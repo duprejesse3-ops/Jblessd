@@ -1,0 +1,31 @@
+{
+  "name": "file-organizer-agent",
+  "version": "1.0.0",
+  "description": "A portable, zero-dependency file organizer. Sorts any folder into categorized subfolders — no account, no API key required, nothing phoning home.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "organize": "./bin/organize.mjs"
+  },
+  "main": "./lib/organize.mjs",
+  "exports": {
+    ".": "./lib/organize.mjs",
+    "./ai": "./lib/ai.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "organize": "node bin/organize.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
