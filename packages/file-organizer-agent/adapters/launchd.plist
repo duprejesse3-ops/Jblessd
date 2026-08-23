@@ -1,0 +1,52 @@
+<!-- Copyright (c) 2026 [SELLER]. All rights reserved. -->
+<!-- Licensed to a single purchaser under the terms in LICENSE.md. -->
+<!-- Redistribution or resale of this source, in whole or in part, is not permitted. -->
+
+<!--
+  Adapter: launchd, the native scheduler on macOS. Preferred over cron there —
+  launchd runs your jobs even after the machine sleeps and wakes, which plain
+  cron on macOS does not handle well.
+
+  Install:
+    1. Copy this file to ~/Library/LaunchAgents/com.fileorganizer.agent.plist
+    2. Edit the three placeholders below: YOUR_USERNAME (twice) and the
+       package path (twice) to match where you unzipped this product.
+    3. Load it:
+         launchctl load ~/Library/LaunchAgents/com.fileorganizer.agent.plist
+    4. Check it's running:
+         launchctl list | grep fileorganizer
+
+  Runs once an hour by default (StartInterval, in seconds — 3600 = 1 hour).
+  To run at a specific time instead, replace the StartInterval key with a
+  StartCalendarInterval key — see `man launchd.plist` for the syntax.
+
+  To stop it:
+    launchctl unload ~/Library/LaunchAgents/com.fileorganizer.agent.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fileorganizer.agent</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/YOUR_USERNAME/file-organizer-agent/bin/organize.mjs</string>
+    <string>/Users/YOUR_USERNAME/Downloads</string>
+    <string>--apply</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/file-organizer-agent/organize.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/file-organizer-agent/organize.log</string>
+</dict>
+</plist>
