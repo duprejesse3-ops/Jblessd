@@ -234,6 +234,37 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-AG-093': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your organizing setup',
+    tagline:
+      'Describe your platform and which folder you want organized, and this returns the exact setup plan for your machine — which adapter to use, the exact commands, and a sensible schedule.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'platform',
+        label: 'What OS are you on?',
+        type: 'text',
+        placeholder: 'e.g. macOS, Windows 11, Ubuntu Linux',
+        required: true,
+      },
+      {
+        id: 'folder',
+        label: 'Which folder, and how often should it run?',
+        type: 'textarea',
+        placeholder: 'e.g. my Downloads folder, once an hour — or my Desktop, once a day',
+        required: true,
+      },
+      {
+        id: 'rules',
+        label: 'Any custom categories or file types you care about? (optional)',
+        type: 'textarea',
+        placeholder: 'e.g. I get a lot of client PSD files, or I want tax documents split out from other PDFs',
+      },
+    ],
+  }),
 }
 
 /** Build the interactive app definition for a product, from its metadata alone. */
@@ -269,6 +300,8 @@ const RUN_BRIEF: Record<Product['category'], string> = {
 const SKU_RUN_BRIEF: Record<string, string> = {
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
+  'AI-AG-093':
+    'The buyer owns the source of a zero-dependency Node file organizer and needs it running on their own machine. Return a concrete setup plan for the platform they described: which adapter to use (bin/organize.mjs run by hand, adapters/cron.sh on Linux/Mac, adapters/launchd.plist on macOS specifically, or adapters/windows-task.ps1 on Windows), the exact commands and any environment variables or parameters that adapter needs (cron.sh reads ORGANIZE_FOLDER, ORGANIZE_DEST, ORGANIZE_LOG, ORGANIZE_AI; launchd.plist needs its YOUR_USERNAME and path placeholders edited; windows-task.ps1 takes -Folder and -UseAI and is run once via PowerShell to self-register), and a sensible schedule for the frequency they asked for. If they mentioned custom categories or file types, tell them exactly which lines to edit in lib/organize.mjs (the EXT_CATEGORY object or KEYWORD_RULES array) and give a concrete example line for what they described. Do not pretend to have run the organizer on their files — you have not touched their filesystem — and do not invent file counts or results.',
 }
 
 function summariseInputs(app: ProductApp, inputs: Record<string, string>): string {
