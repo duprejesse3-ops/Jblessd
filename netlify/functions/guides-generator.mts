@@ -28,7 +28,7 @@ import { submitUrls } from '../lib/indexnow.mjs'
 const ENABLED = process.env.GUIDES_ENABLED !== 'false'
 const STALE_DAYS = Number(process.env.GUIDES_STALE_DAYS || 30)
 const BATCH_SIZE = Number(process.env.GUIDES_BATCH_SIZE || 4)
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 
 interface Group {
