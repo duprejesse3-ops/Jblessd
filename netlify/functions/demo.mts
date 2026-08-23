@@ -24,7 +24,12 @@ import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
 const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
-const MAX_TOKENS = 900
+const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
+// A shopper's own submitted task gets real room to work through it. This
+// matters most for genuinely hard scenarios (see "Stump the Agent" style
+// challenges) — the old single 900-token cap cut off a real attempt at a hard
+// task mid-thought, which reads as broken rather than as an honest limitation.
+const MAX_TOKENS_SCENARIO = 1700
 
 // Custom-scenario demos are the one path here that always pays for fresh
 // flagship inference — the default per-SKU demo is served from the Blobs cache,
@@ -81,6 +86,9 @@ function fallbackDemo(p: Product, scenario: string): string {
 // Build the system + user prompt that makes Claude *demonstrate* the product.
 function buildPrompt(p: Product, scenario: string): { system: string; user: string } {
   const play = PLAYBOOK[p.category]
+  const lengthRule = scenario
+    ? 'Give this real, submitted task room to breathe: roughly 250–450 words — enough to actually work through it, not just gesture at it.'
+    : 'Keep it tight: roughly 150–260 words. This renders in a small terminal panel.'
   const system =
     `You are the live demonstration engine for ${STORE_NAME}, a store of ready-to-use ` +
     `AI productivity tools. Your job is to PROVE a specific product works by showing it ` +
@@ -89,7 +97,12 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `- ${play.brief}\n` +
     `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
     `feels like a real run, but never claim capabilities beyond what the product is.\n` +
-    `- Keep it tight: roughly 150–260 words. This renders in a small terminal panel.\n` +
+    `- If the shopper's own task is genuinely a stretch for what this specific product format ` +
+    `can do, say so plainly and specifically — name the exact limitation — rather than papering ` +
+    `over the gap with generic filler. Give your best real attempt first, then the honest ` +
+    `assessment. "Here's how far this gets, and here's what would close the rest" builds more ` +
+    `trust than pretending a poor fit is a perfect one.\n` +
+    `- ${lengthRule}\n` +
     `- Plain text only. No markdown headers or code fences. You may use simple line ` +
     `breaks, short labels ending in a colon, and "▸" or "—" as light structure.\n` +
     `- Do not greet the user, do not mention price, and do not tell them to buy. Let the ` +
@@ -183,7 +196,7 @@ export default async (req: Request, context: Context) => {
         const { system, user } = buildPrompt(product, scenario)
         const modelStream = anthropic.messages.stream({
           model: MODEL,
-          max_tokens: MAX_TOKENS,
+          max_tokens: scenario ? MAX_TOKENS_SCENARIO : MAX_TOKENS_PREVIEW,
           system,
           messages: [{ role: 'user', content: user }],
         })
