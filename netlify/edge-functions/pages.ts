@@ -928,6 +928,113 @@ function renderProofIndex(proofs: Proof[]): Response {
   })
 }
 
+// ---- /scorecard/:sku ----
+interface ScorecardRun {
+  id: string
+  outcome: 'success' | 'partial' | 'failed'
+  duration_ms: number | null
+  created_at: string
+}
+interface Scorecard {
+  sku: string
+  scenarioPrompt: string
+  methodologyVersion: number
+  rollingStats: {
+    total_runs: number
+    success_rate: number | null
+    avg_duration_ms: number | null
+    last_run_at: string | null
+  }
+  runs: ScorecardRun[]
+}
+
+function outcomeTag(o: string): string {
+  const color = o === 'success' ? 'var(--brass)' : o === 'partial' ? 'var(--muted)' : '#ff786e'
+  return `<span style="color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${esc(o)}</span>`
+}
+
+function renderScorecard(sc: Scorecard, product: ApiProduct | undefined): Response {
+  const url = `${SITE}/scorecard/${encodeURIComponent(sc.sku)}`
+  const name = product?.name ?? sc.sku
+  const stats = sc.rollingStats
+  const lastRunStr = stats.last_run_at ? stats.last_run_at.slice(0, 10) : 'never'
+
+  const jsonld = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: `Benchmark scorecard — ${name}`,
+    url,
+    description: `A running, dated record of ${name} run on a fixed test scenario — including failures.`,
+  }
+
+  const runsHtml = sc.runs.length
+    ? sc.runs
+        .map(
+          (r) =>
+            `<div class="rev"><div class="who">${esc(r.created_at.slice(0, 10))} · ${outcomeTag(r.outcome)}${r.duration_ms ? ` · ${r.duration_ms}ms` : ''}</div></div>`,
+        )
+        .join('')
+    : `<p style="color:var(--muted)">No runs recorded yet.</p>`
+
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / <a href="/proof">Live proofs</a> / Scorecard: ${esc(name)}</nav>` +
+    `<span class="tag">Benchmark scorecard</span>` +
+    `<h1>${esc(name)} — benchmark scorecard</h1>` +
+    `<p class="lede">A running, dated record of this product run on the same fixed test scenario every time — successes and failures both. See <a href="/methodology">how this is scored</a>.</p>` +
+    `<div class="specs">` +
+    `<div class="row"><span>Fixed scenario</span><span>${esc(sc.scenarioPrompt)}</span></div>` +
+    `<div class="row"><span>Success rate</span><span>${stats.success_rate !== null ? stats.success_rate + '%' : '—'}</span></div>` +
+    `<div class="row"><span>Total runs</span><span>${stats.total_runs}</span></div>` +
+    `<div class="row"><span>Avg. duration</span><span>${stats.avg_duration_ms ? stats.avg_duration_ms + 'ms' : '—'}</span></div>` +
+    `<div class="row"><span>Last run</span><span>${esc(lastRunStr)}</span></div>` +
+    `<div class="row"><span>Methodology</span><span>v${sc.methodologyVersion}</span></div>` +
+    `</div>` +
+    `<h2>Run history</h2>` +
+    runsHtml +
+    (product
+      ? `<div class="buy"><a class="btn" rel="nofollow" href="/?product=${encodeURIComponent(sc.sku)}">Get ${esc(name)} →</a>` +
+        `<a class="btn ghost" href="/product/${encodeURIComponent(sc.sku)}">See product page</a></div>`
+      : '')
+
+  return page({
+    title: titleWithStore(`${name} — benchmark scorecard`, 65),
+    description: `Success rate, run history, and failures for ${name} — a dated benchmark run on a fixed scenario.`,
+    canonical: url,
+    jsonld: [jsonld],
+    body,
+  })
+}
+
+// ---- /methodology ----
+function renderMethodology(): Response {
+  const url = `${SITE}/methodology`
+  const intro = 'How every benchmark scorecard on this site is run and scored — in full, including the current limits.'
+
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Methodology</nav>` +
+    `<h1>How we score a benchmark run</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    `<h2>The scenario is fixed</h2>` +
+    `<p class="lede">Each benchmarked product is tested against the same written scenario every time, so results are comparable week over week. Changing the scenario bumps a version number — a v1 result and a v2 result are never blended together.</p>` +
+    `<h2>How a run is judged</h2>` +
+    `<p class="lede">A run is marked <strong>success</strong> if the tool produced substantive output for the fixed scenario, and <strong>failed</strong> if it returned nothing usable or errored. Nothing is hidden: every run — including failures — is stored and shown in the product's run history.</p>` +
+    `<h2>Current limitations</h2>` +
+    `<p class="lede">Right now, outcome is judged mechanically (did the tool return real output for the scenario) — it is not yet independently graded for output quality by a human reviewer. That's the honest state of this today; we'll note here if and when that changes.</p>` +
+    `<h2>Cadence</h2>` +
+    `<p class="lede">Benchmarked products are re-run automatically once a week. A product with no runs yet simply hasn't been added to the benchmark set.</p>` +
+    `<div class="buy"><a class="btn ghost" href="/proof">See all live proofs →</a></div>`
+
+  return page({
+    title: `Methodology — how benchmark scorecards are scored | ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [
+      { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Methodology', url, description: intro },
+    ],
+    body,
+  })
+}
+
 // ---- /use-cases/:slug and /use-cases ----
 function matchUseCase(uc: UseCase, all: ApiProduct[]): ApiProduct[] {
   // Word-boundary match (not naive substring) so short tokens like "rag" or
@@ -1227,6 +1334,27 @@ export default async (req: Request, _context: Context) => {
     return renderProofIndex(res.data.proofs ?? [])
   }
 
+  // ---- /methodology ----  static, no data dependency.
+  if (parts[0] === 'methodology') {
+    return renderMethodology()
+  }
+
+  // ---- /scorecard/:sku ----  catalog-independent for the scorecard data
+  // itself; the product lookup below (for name/CTA) reuses getCatalog(), which
+  // fetches after this block runs — so it needs its own small catalog call.
+  if (parts[0] === 'scorecard') {
+    const sku = decodeURIComponent(parts[1] ?? '')
+    if (!sku) return notFound()
+    const res = await getJsonOrFail<{ scorecard?: Scorecard | null }>(
+      new URL(`/api/scorecard?sku=${encodeURIComponent(sku)}`, req.url),
+    )
+    if (!res.ok) return unavailable()
+    if (!res.data.scorecard) return notFound()
+    const catalogProducts = await getCatalog(req)
+    const product = catalogProducts?.find((p) => p.sku === sku)
+    return renderScorecard(res.data.scorecard, product)
+  }
+
   // ---- /updates (index) and /updates/:id ----  also catalog-independent.
   if (parts[0] === 'updates') {
     if (parts[1]) {
@@ -1298,7 +1426,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog', '/guides', '/guides/*'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches
