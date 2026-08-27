@@ -39,21 +39,32 @@ function shortId(): string {
 
 // Find the freshest real thing to write about: prefer a scorecard run from
 // the last 24h (especially a failure — that's the strongest, least-fakeable
-// hook), fall back to the most recent shared proof.
+// hook), fall back to the most recent shared proof. Scorecard events are
+// joined against products so the content can refer to a readable product
+// name instead of an internal SKU.
 async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
-  | { type: 'scorecard'; sku: string; outcome: string; durationMs: number | null; createdAt: string }
+  | { type: 'scorecard'; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
   | { type: 'proof'; id: string; sku: string; productName: string; scenario: string; output: string; createdAt: string }
   | null
 > {
   const recentRuns = (await db.sql`
-    SELECT sku, outcome, duration_ms, created_at FROM benchmark_runs
-    WHERE created_at > now() - interval '2 days'
-    ORDER BY (outcome = 'failed') DESC, created_at DESC
+    SELECT r.sku, r.outcome, r.duration_ms, r.created_at, p.name AS product_name
+    FROM benchmark_runs r
+    LEFT JOIN products p ON p.sku = r.sku
+    WHERE r.created_at > now() - interval '2 days'
+    ORDER BY (r.outcome = 'failed') DESC, r.created_at DESC
     LIMIT 1
-  `) as ScorecardChangeRow[]
+  `) as (ScorecardChangeRow & { product_name: string | null })[]
   if (recentRuns.length) {
     const r = recentRuns[0]
-    return { type: 'scorecard', sku: r.sku, outcome: r.outcome, durationMs: r.duration_ms, createdAt: r.created_at }
+    return {
+      type: 'scorecard',
+      sku: r.sku,
+      productName: r.product_name || r.sku,
+      outcome: r.outcome,
+      durationMs: r.duration_ms,
+      createdAt: r.created_at,
+    }
   }
 
   const recentProofs = (await db.sql`
@@ -72,7 +83,8 @@ function buildFactSheet(source: NonNullable<Awaited<ReturnType<typeof pickSource
     const url = `${SITE}/scorecard/${encodeURIComponent(source.sku)}`
     return (
       `Real, verifiable event: a benchmark run just completed.\n` +
-      `Product SKU: ${source.sku}\n` +
+      `Product name (use this in the post, not the SKU): ${source.productName}\n` +
+      `Product SKU (for reference only, don't lead with it): ${source.sku}\n` +
       `Outcome: ${source.outcome}\n` +
       `Duration: ${source.durationMs ? source.durationMs + 'ms' : 'unknown'}\n` +
       `Timestamp: ${source.createdAt}\n` +
@@ -107,6 +119,8 @@ async function generateVariants(factSheet: string): Promise<Variant[]> {
     `copy ("check out our amazing tool"). Every post you write must center on the one verifiable fact ` +
     `given to you, and must include the public URL so a reader can check it themselves. If the fact is a ` +
     `failure, do not spin it — a public failure log is the actual credibility asset here, treat it as one.\n\n` +
+    `Always refer to the product by its name (e.g. "Meeting Notes Agent"), never by its raw SKU (e.g. ` +
+    `"AI-AG-003") — the SKU is internal, not reader-friendly.\n\n` +
     `Write three DIFFERENT platform-native pieces, not one piece copy-pasted three times:\n\n` +
     `1. X (Twitter): a single post, under 280 characters, or the opening post of a thread if it needs more ` +
     `room. Must open with the fact, not a greeting. Include the URL.\n\n` +
