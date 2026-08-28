@@ -15,6 +15,7 @@ import { deliverOrderEmail } from '../lib/order-email.mjs'
 import { findPack, grantPurchase, isEmail, normalizeEmail, packTotal } from '../lib/credits.mjs'
 import { sendAccessKeyEmail } from '../lib/credit-email.mjs'
 import { uploadGoogleAdsPurchase } from '../lib/google-ads.mjs'
+import { fulfilCustomOrder, attachOrderEmail } from '../lib/custom-orders.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
 
@@ -69,6 +70,20 @@ export default async (req: Request, _context: Context) => {
     // ever came back to the site.
     if (session.metadata?.kind === 'credits') {
       await grantCreditPurchase(session)
+      return Response.json({ received: true })
+    }
+
+    // Custom orders: a paid, AI-generated deliverable built for one buyer's
+    // described need. Attach the email Stripe now has (the order row was
+    // created before checkout, so it had no email yet), then generate and
+    // deliver. Idempotent via fulfilCustomOrder's own status check, so this
+    // and the browser-side trigger on /custom can't double-generate.
+    if (session.metadata?.kind === 'custom_order' && session.metadata?.order_id) {
+      const email = session.customer_details?.email
+      if (email) {
+        await attachOrderEmail(session.metadata.order_id, email)
+      }
+      await fulfilCustomOrder(session.metadata.order_id)
       return Response.json({ received: true })
     }
 
