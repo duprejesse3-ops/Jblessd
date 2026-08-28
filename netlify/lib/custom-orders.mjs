@@ -1,17 +1,16 @@
 // Shared logic for fulfilling a paid custom order: generates a real,
 // structured deliverable via Claude (not a quick chat answer — a document
 // matching the store's catalog-product quality bar), saves it, and emails it
-// to the buyer. Called from both the webhook (reliable, server-triggered)
-// and the success-page browser trigger (fast, user-triggered) — idempotent
-// on status, so whichever path gets there first does the work and the other
-// is a no-op.
+// to the buyer using the site's shared email module. Called from both the
+// webhook (reliable, server-triggered) and the success-page browser trigger
+// (fast, user-triggered) — idempotent on status, so whichever path gets
+// there first does the work and the other is a no-op.
 
 import { getDatabase } from '@netlify/database'
 import Anthropic from '@anthropic-ai/sdk'
-import { Resend } from 'resend'
+import { sendEmail } from './email.mts'
 
 const MODEL = 'claude-opus-4-8'
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 const CATEGORY_GUIDANCE = {
   prompts: 'a complete, ready-to-use prompt (or short set of prompts) with clear instructions for how and where to use it',
@@ -70,26 +69,16 @@ export async function fulfilCustomOrder(orderId) {
     `
 
     if (order.email) {
-      await sendCustomOrderEmail(order.email, order.category, output)
+      const categoryLabel = order.category.charAt(0).toUpperCase() + order.category.slice(1)
+      await sendEmail({
+        to: order.email,
+        subject: `Your custom ${categoryLabel} is ready`,
+        text: `Your custom deliverable is ready. Here it is:\n\n${output}`,
+      })
     }
   } catch (err) {
     console.error(`fulfilCustomOrder: generation failed for ${orderId} —`, err.message)
     await db.sql`UPDATE custom_orders SET status = 'failed' WHERE id = ${orderId}`
-  }
-}
-
-async function sendCustomOrderEmail(to, category, output) {
-  const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1)
-  try {
-    await resend.emails.send({
-      from: process.env.ORDER_EMAIL_FROM || 'MULTINICHE AI <orders@jblessd.com>',
-      to,
-      subject: `Your custom ${categoryLabel} is ready`,
-      text: `Your custom deliverable is ready. Here it is:\n\n${output}`,
-      html: `<div style="font-family:sans-serif;white-space:pre-wrap">${output.replace(/</g, '&lt;')}</div>`,
-    })
-  } catch (err) {
-    console.error('sendCustomOrderEmail failed:', err.message)
   }
 }
 
