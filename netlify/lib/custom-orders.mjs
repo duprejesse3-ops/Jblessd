@@ -27,8 +27,6 @@ export async function fulfilCustomOrder(orderId) {
     console.error(`fulfilCustomOrder: no order found for id ${orderId}`)
     return
   }
-  // Idempotent: if another trigger already delivered (or is delivering)
-  // this order, don't do the work twice.
   if (order.status === 'delivered' || order.status === 'generating') {
     return
   }
