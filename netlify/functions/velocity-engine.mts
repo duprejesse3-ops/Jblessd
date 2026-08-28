@@ -121,15 +121,27 @@ async function generateVariants(factSheet: string): Promise<Variant[]> {
     `failure, do not spin it — a public failure log is the actual credibility asset here, treat it as one.\n\n` +
     `Always refer to the product by its name (e.g. "Meeting Notes Agent"), never by its raw SKU (e.g. ` +
     `"AI-AG-003") — the SKU is internal, not reader-friendly.\n\n` +
+    `Every piece must end with an explicit, visible call-to-action around the URL — not just a bare link ` +
+    `dropped in. Readers who engage (like, expand, visit a profile) but never click the link are the failure ` +
+    `mode to avoid: a link with no verb next to it gets scrolled past. Pair the URL with a direct action phrase ` +
+    `("See the run:", "Check it yourself:", "Full log here:") suited to the fact being shared — never a vague ` +
+    `sign-off like "check it out" or "link in bio" with no visible URL. This still has to read as evidence, not ` +
+    `a sales pitch — the CTA is "go verify this," not "buy now."\n\n` +
     `Write three DIFFERENT platform-native pieces, not one piece copy-pasted three times:\n\n` +
     `1. X (Twitter): a single post, under 280 characters, or the opening post of a thread if it needs more ` +
-    `room. Must open with the fact, not a greeting. Include the URL.\n\n` +
+    `room. Must open with the fact, not a greeting. The URL must appear on its own line at the end, immediately ` +
+    `preceded by a short action phrase (e.g. "Full run here:") on the same or preceding line — never buried ` +
+    `mid-sentence.\n\n` +
     `2. YouTube Shorts script: a beat-sheet for a 30-45 second vertical video. Format as timestamped beats ` +
     `(0:00-0:02 HOOK, 0:02-0:15 SHOW, etc). The hook (first 1.5s) must be spoken, punchy, and specific — no ` +
-    `text-on-screen fluff. Reference showing the actual URL/page on screen.\n\n` +
+    `text-on-screen fluff. Include a final beat (e.g. 0:40-0:45 CTA) with an explicit spoken/on-screen line ` +
+    `telling the viewer to go check the page themselves, plus a note to show the actual URL on screen large ` +
+    `enough to read, not just a passing mention.\n\n` +
     `3. Reddit: a text post title + body suited to a startup/AI-tools subreddit. Reddit punishes obvious ` +
     `marketing — write it like a genuine "here's something I found/built" post, first person, plain, ` +
-    `slightly self-deprecating if the fact is a failure.\n\n` +
+    `slightly self-deprecating if the fact is a failure. Still end the body with a clear, low-pressure ` +
+    `invitation to click through and verify the fact themselves (e.g. "Full log's here if you want to see the ` +
+    `raw output:"), not just an unlabeled link.\n\n` +
     `Return ONLY valid JSON: {"x": "...", "youtube_shorts": "...", "reddit": {"title": "...", "body": "..."}}`
 
   const res = await anthropic.messages.create({
