@@ -1303,6 +1303,119 @@ function renderFreeTool(): Response {
   })
 }
 
+// ---- /custom ----  Paid, one-off custom-generated deliverable. Two states on
+// one page: an intake form that starts a Stripe Checkout session for the
+// flat $49 price, and — after Stripe redirects back with ?checkout=success —
+// a "generating" state that calls /api/generate-custom-order and shows the
+// result once it lands. Mirrors /free-tool's live, app-like feel, but the
+// output here is paid-for and delivered by email as well as shown on screen.
+function renderCustom(): Response {
+  const url = `${SITE}/custom`
+  const intro =
+    'Describe exactly what you need — a prompt, an automation, a template, or an agent — and we build it for you. ' +
+    'Not a demo of something in the catalog: a real, complete deliverable made for your situation. $49, delivered instantly and by email.'
+
+  const script =
+    `(function(){` +
+    `var params=new URLSearchParams(location.search);` +
+    `var form=document.getElementById('co-form'),cat=document.getElementById('co-category'),need=document.getElementById('co-need');` +
+    `var policy=document.getElementById('co-policy'),submitBtn=document.getElementById('co-submit'),err=document.getElementById('co-err');` +
+    `var esc=function(s){return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});};` +
+    `if(form){form.addEventListener('submit',function(e){e.preventDefault();startCheckout();});}` +
+    `async function startCheckout(){` +
+    `err.hidden=true;` +
+    `if(!cat.value){err.textContent='Please choose a category.';err.hidden=false;return;}` +
+    `if(need.value.trim().length<20){err.textContent='Please describe your need in a bit more detail (at least 20 characters).';err.hidden=false;return;}` +
+    `if(!policy.checked){err.textContent='Please acknowledge the digital delivery and refund policy.';err.hidden=false;return;}` +
+    `submitBtn.disabled=true;submitBtn.textContent='Starting checkout…';` +
+    `try{` +
+    `var r=await fetch('/api/create-custom-checkout-session',{method:'POST',headers:{'Content-Type':'application/json'},` +
+    `body:JSON.stringify({category:cat.value,needDescription:need.value.trim(),digitalPolicyAccepted:true})});` +
+    `var d=await r.json().catch(function(){return {};});` +
+    `if(!r.ok||!d.url){throw new Error(d.error||'checkout-failed');}` +
+    `location.href=d.url;` +
+    `}catch(ex){err.textContent='Unable to start checkout. Please try again.';err.hidden=false;submitBtn.disabled=false;submitBtn.textContent='Get my custom deliverable — $49';}` +
+    `}` +
+    `if(params.get('checkout')==='success'){` +
+    `var sessionId=params.get('session_id');` +
+    `var intake=document.getElementById('co-intake'),gen=document.getElementById('co-generating'),result=document.getElementById('co-result');` +
+    `if(intake)intake.hidden=true;if(gen)gen.hidden=false;` +
+    `(async function(){` +
+    `try{` +
+    `var r=await fetch('/api/generate-custom-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sessionId})});` +
+    `var d=await r.json().catch(function(){return {};});` +
+    `if(!r.ok||!d.output){throw new Error(d.error||'generation-failed');}` +
+    `if(gen)gen.hidden=true;` +
+    `if(result){` +
+    `result.hidden=false;` +
+    `result.querySelector('.co-output').innerHTML=esc(d.output);` +
+    `var blob=new Blob([d.output],{type:'text/markdown'});` +
+    `var dl=result.querySelector('#co-download');` +
+    `dl.href=URL.createObjectURL(blob);dl.download='custom-deliverable.md';` +
+    `}` +
+    `}catch(ex){` +
+    `if(gen)gen.hidden=true;` +
+    `if(result){result.hidden=false;result.querySelector('.co-output').innerHTML='<span class=\"co-hint\">Generation is taking a little longer than expected — your deliverable will still arrive by email shortly. If you don\\'t see it within a few minutes, reply to that email and we\\'ll sort it out.</span>';}` +
+    `}` +
+    `})();` +
+    `}` +
+    `})();`
+
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Custom deliverable</nav>` +
+    `<span class="tag">Paid · built for you</span>` +
+    `<h1>Get something built just for your need</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    `<div id="co-intake">` +
+    `<form id="co-form" style="margin:18px 0">` +
+    `<label style="display:block;margin-bottom:12px">Category` +
+    `<select id="co-category" style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
+    `<option value="">Choose one…</option>` +
+    `<option value="prompts">Prompt Pack</option>` +
+    `<option value="automations">Automation Blueprint</option>` +
+    `<option value="templates">Doc Template</option>` +
+    `<option value="agents">Agent Config</option>` +
+    `</select></label>` +
+    `<label style="display:block;margin-bottom:12px">What do you need?` +
+    `<textarea id="co-need" rows="5" maxlength="4000" placeholder="Describe your situation in detail — the more specific, the better the result." ` +
+    `style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea></label>` +
+    `<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px">` +
+    `<input type="checkbox" id="co-policy" style="margin-top:3px">` +
+    `<span>I understand this is a custom digital product delivered instantly upon generation, and I acknowledge the <a href="/refund-policy">refund policy</a>.</span></label>` +
+    `<p id="co-err" hidden style="color:#ff786e;font-size:13.5px;margin-bottom:12px"></p>` +
+    `<button class="btn" id="co-submit" type="submit">Get my custom deliverable — $49</button></form>` +
+    `</div>` +
+    `<div class="proof" id="co-generating" hidden><div class="proof-bar">generating · building your deliverable, this takes about 20 seconds</div><div class="proof-out"><span class="co-cursor"></span></div></div>` +
+    `<div id="co-result" hidden>` +
+    `<h2>Your custom deliverable</h2>` +
+    `<div class="proof"><div class="co-output" style="white-space:pre-wrap;padding:16px"></div></div>` +
+    `<div class="buy"><a class="btn ghost" id="co-download" href="#">Download as .md</a></div>` +
+    `<p style="font-size:13px;color:var(--muted)">This has also been emailed to you.</p>` +
+    `</div>` +
+    `<p style="font-size:13px;color:var(--muted)">Prefer something ready-made? <a href="/">Browse the full catalog</a>.</p>` +
+    `<style>.co-cursor{display:inline-block;width:8px;height:14px;background:var(--brass);vertical-align:text-bottom;animation:cob 1s step-end infinite}` +
+    `@keyframes cob{0%,100%{opacity:1}50%{opacity:0}}.co-hint{color:var(--muted)}</style>` +
+    `<script>${script}</script>`
+
+  return page({
+    title: `Get a custom deliverable — built for your need, $49 | ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: 'Custom deliverable',
+        url,
+        applicationCategory: 'BusinessApplication',
+        offers: { '@type': 'Offer', price: '49', priceCurrency: 'USD' },
+        description: intro,
+      },
+    ],
+    body,
+  })
+}
+
 export default async (req: Request, _context: Context) => {
   const { pathname } = new URL(req.url)
   const parts = pathname.split('/').filter(Boolean) // ["product","SKU"] or ["tools","niche"]
@@ -1312,6 +1425,12 @@ export default async (req: Request, _context: Context) => {
   // server data — render the shell and let the browser do the work.
   if (parts[0] === 'free-tool') {
     return renderFreeTool()
+  }
+  // ---- /custom ----  paid custom-generated deliverable. Also purely
+  // client-driven (calls /api/create-custom-checkout-session, then
+  // /api/generate-custom-order after Stripe redirects back) — no server data.
+  if (parts[0] === 'custom') {
+    return renderCustom()
   }
   if (parts[0] === 'blog') {
   return renderBlog()
@@ -1426,7 +1545,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/custom', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches
@@ -1439,4 +1558,4 @@ export const config: Config = {
   // Safe against the "cached edge responses shadow static files" caveat — none of
   // the paths above have a static file behind them.
   cache: 'manual',
-}
+        }
