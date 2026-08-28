@@ -13,6 +13,10 @@
 //
 // A product only gets scored once a benchmark_scenarios row exists for it —
 // seeding those is a manual/admin step for phase 1.
+//
+// Picks the LEAST RECENTLY RUN products each call (never-run products first),
+// not just alphabetically-first ones — otherwise every run just re-scores
+// the same early-sorting SKUs and the rest of the catalog never gets covered.
 
 import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
@@ -75,9 +79,17 @@ export default async (req: Request) => {
   }
 
   const db = getDatabase()
+  // Least-recently-run first (never-run products surface via NULLS FIRST),
+  // so repeated manual or scheduled calls sweep across the whole catalog
+  // instead of re-scoring whatever sorts first alphabetically every time.
   const scenarios = (await db.sql`
-    SELECT id, sku, prompt FROM benchmark_scenarios
-    WHERE active = true ORDER BY sku LIMIT ${BATCH_SIZE}
+    SELECT s.id, s.sku, s.prompt
+    FROM benchmark_scenarios s
+    WHERE s.active = true
+    ORDER BY (
+      SELECT MAX(r.created_at) FROM benchmark_runs r WHERE r.scenario_id = s.id
+    ) ASC NULLS FIRST
+    LIMIT ${BATCH_SIZE}
   `) as ScenarioRow[]
 
   if (!scenarios.length) {
