@@ -1,142 +1,118 @@
-// Scheduled function: benchmark scorecard runner.
+// Netlify Function: /api/scorecard
 //
-// Re-runs each product's fixed, versioned benchmark scenario and appends the
-// result to benchmark_runs. Results — including failures — accumulate into
-// the public scorecard at /scorecard/:sku and /api/scorecard. This is what
-// turns "Live Proof" (a one-off demo a shopper triggers) into a benchmark
-// (a comparable, dated record over time).
+// Read-only GET endpoint for a single product's benchmark scorecard, used by
+// the /scorecard/:sku edge page (netlify/edge-functions/pages.ts).
 //
-// Picks the LEAST RECENTLY RUN products each call (never-run products first),
-// not just the alphabetically-first ones — otherwise every run just re-scores
-// the same early-sorting SKUs and the rest of the catalog never gets covered.
+//   GET ?sku=ABC123 — returns { scorecard } built from the accumulated
+//                      benchmark_runs history for that SKU's active scenario,
+//                      or { scorecard: null } if no active scenario exists
+//                      for it yet.
 //
-// Calls /api/demo the same way a shopper's browser does (POST + read the
-// ndjson stream) rather than duplicating its prompt/streaming logic — so a
-// benchmark run is always exactly what a shopper would see, never a
-// second, unverified code path that can drift from the real one.
+// This is intentionally just a fast DB read. The actual benchmark runs (which
+// call /api/demo and can take real time) happen on a weekly schedule in
+// scorecard-runner.mts — this endpoint never triggers new runs, it only
+// reports on ones already recorded, so a page view stays cheap and fast.
+//
+// Reachable at /api/scorecard via the /api/* rewrite in netlify.toml.
 
 import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
-import { loadCatalog } from '../lib/db.mjs'
 
-const ENABLED = process.env.SCORECARD_ENABLED !== 'false'
-const BATCH_SIZE = Number(process.env.SCORECARD_BATCH_SIZE || 10)
-const MIN_OUTPUT_LENGTH = 20 // mirrors /api/proof's own "nothing to save yet" floor
+const RUN_HISTORY_LIMIT = 20
 
 interface ScenarioRow {
   id: string
-  sku: string
   prompt: string
+  version: number
 }
-
-function shortId(): string {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+interface RunRow {
+  id: string
+  outcome: 'success' | 'partial' | 'failed'
+  duration_ms: number | null
+  created_at: string | Date
 }
-
-// Runs the fixed scenario through /api/demo exactly as a shopper's browser
-// would, and collects the full streamed text.
-async function runScenario(origin: string, sku: string, prompt: string): Promise<{ text: string; outcome: 'success' | 'failed' }> {
-  const res = await fetch(`${origin}/api/demo`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sku, scenario: prompt }),
-  })
-  if (!res.ok || !res.body) return { text: '', outcome: 'failed' }
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let text = ''
-
-  while (true) {
-    const chunk = await reader.read()
-    if (chunk.done) break
-    buffer += decoder.decode(chunk.value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-      try {
-        const ev = JSON.parse(trimmed)
-        if (ev.type === 'text') text += ev.text
-      } catch {
-        // malformed line — skip it, don't fail the whole run over one bad chunk
-      }
-    }
-  }
-
-  return { text, outcome: text.trim().length >= MIN_OUTPUT_LENGTH ? 'success' : 'failed' }
+interface StatsRow {
+  total_runs: number
+  success_runs: number
+  avg_duration_ms: number | null
+  last_run_at: string | Date | null
 }
 
 export default async (req: Request) => {
-  if (!ENABLED) {
-    console.log('[scorecard-runner] disabled (SCORECARD_ENABLED=false)')
-    return Response.json({ ran: 0, skipped: 'disabled' })
+  if (req.method !== 'GET') {
+    return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET' } })
   }
 
-  const db = getDatabase()
-  // Least-recently-run first (never-run products surface via NULLS FIRST),
-  // so repeated manual or scheduled calls sweep across the whole catalog
-  // instead of re-scoring whatever sorts first alphabetically.
-  const scenarios = (await db.sql`
-    SELECT s.id, s.sku, s.prompt
-    FROM benchmark_scenarios s
-    WHERE s.active = true
-    ORDER BY (
-      SELECT MAX(r.created_at) FROM benchmark_runs r WHERE r.scenario_id = s.id
-    ) ASC NULLS FIRST
-    LIMIT ${BATCH_SIZE}
-  `) as ScenarioRow[]
+  const sku = new URL(req.url).searchParams.get('sku')?.trim()
+  if (!sku) return Response.json({ scorecard: null }, { status: 400 })
 
-  if (!scenarios.length) {
-    console.log('[scorecard-runner] no active benchmark scenarios — nothing to run')
-    return Response.json({ ran: 0 })
-  }
+  try {
+    const db = getDatabase()
 
-  const { products } = await loadCatalog()
-  const origin = new URL(req.url).origin
-  let ran = 0
+    // The active scenario for this SKU is what defines the scorecard at all —
+    // no active scenario means this product isn't benchmarked yet.
+    const [scenario] = (await db.sql`
+      SELECT id, prompt, version FROM benchmark_scenarios
+      WHERE sku = ${sku} AND active = true
+      ORDER BY created_at DESC LIMIT 1
+    `) as ScenarioRow[]
 
-  for (const s of scenarios) {
-    const product = products.find((p) => p.sku === s.sku)
-    if (!product) {
-      console.error(`[scorecard-runner] scenario ${s.id} references unknown sku ${s.sku} — skipping`)
-      continue
+    if (!scenario) {
+      return Response.json(
+        { scorecard: null },
+        { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' } },
+      )
     }
 
-    const start = Date.now()
-    try {
-      const result = await runScenario(origin, s.sku, s.prompt)
-      const durationMs = Date.now() - start
+    const [stats] = (await db.sql`
+      SELECT
+        COUNT(*)::int AS total_runs,
+        COUNT(*) FILTER (WHERE outcome = 'success')::int AS success_runs,
+        AVG(duration_ms)::int AS avg_duration_ms,
+        MAX(created_at) AS last_run_at
+      FROM benchmark_runs
+      WHERE scenario_id = ${scenario.id}
+    `) as StatsRow[]
 
-      await db.sql`
-        INSERT INTO benchmark_runs (id, scenario_id, sku, output, duration_ms, outcome)
-        VALUES (${shortId()}, ${s.id}, ${s.sku}, ${result.text || '(no output)'}, ${durationMs}, ${result.outcome})
-      `
-      console.log(`[scorecard-runner] ${s.sku}: ${result.outcome} in ${durationMs}ms`)
-      ran++
-    } catch (err) {
-      const durationMs = Date.now() - start
-      console.error(`[scorecard-runner] ${s.sku} failed:`, (err as Error).message)
-      // A run that errors is itself a data point — a benchmark that hides its
-      // own failures isn't credible. Recorded as 'failed', not skipped.
-      try {
-        await db.sql`
-          INSERT INTO benchmark_runs (id, scenario_id, sku, output, duration_ms, outcome)
-          VALUES (${shortId()}, ${s.id}, ${s.sku}, ${'Run failed: ' + (err as Error).message}, ${durationMs}, 'failed')
-        `
-      } catch (writeErr) {
-        console.error(`[scorecard-runner] could not even record the failure for ${s.sku}:`, (writeErr as Error).message)
-      }
+    const runs = (await db.sql`
+      SELECT id, outcome, duration_ms, created_at
+      FROM benchmark_runs
+      WHERE scenario_id = ${scenario.id}
+      ORDER BY created_at DESC
+      LIMIT ${RUN_HISTORY_LIMIT}
+    `) as RunRow[]
+
+    const totalRuns = stats?.total_runs ?? 0
+    const successRuns = stats?.success_runs ?? 0
+
+    const scorecard = {
+      sku,
+      scenarioPrompt: scenario.prompt,
+      methodologyVersion: scenario.version,
+      rollingStats: {
+        total_runs: totalRuns,
+        success_rate: totalRuns > 0 ? Math.round((successRuns / totalRuns) * 1000) / 10 : null,
+        avg_duration_ms: stats?.avg_duration_ms ?? null,
+        last_run_at: stats?.last_run_at ? new Date(stats.last_run_at).toISOString() : null,
+      },
+      runs: (runs ?? []).map((r) => ({
+        id: r.id,
+        outcome: r.outcome,
+        duration_ms: r.duration_ms,
+        created_at: new Date(r.created_at).toISOString(),
+      })),
     }
-  }
 
-  return Response.json({ ran, attempted: scenarios.length })
+    return Response.json(
+      { scorecard },
+      { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' } },
+    )
+  } catch (err) {
+    console.error('scorecard GET error:', (err as Error).message)
+    return Response.json({ scorecard: null }, { status: 500 })
+  }
 }
 
 export const config: Config = {
-  // Weekly, off-peak Sunday — separate from multiads-scheduler's daily 13:00
-  // slot so the two never contend for the same cold-start window.
-  schedule: '0 11 * * 0',
+  path: '/api/scorecard',
 }
