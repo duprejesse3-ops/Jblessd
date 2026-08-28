@@ -1,0 +1,3164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/privacy-consent.js"></script>
+<!-- Google tag (gtag.js) — Google Ads. Loaded eagerly at the very top of <head>
+     rather than behind the /api/analytics-config fetch below, so the conversion
+     linker reads the gclid/gbraid/wbraid off the landing URL before anything can
+     strip it. This is the page's ONE gtag.js load: the config block further down
+     adds the GA4 measurement ID on the same tag instead of loading a second copy,
+     because two gtag.js loads double-configure the Ads account and double-count
+     conversions.
+     allow_enhanced_conversions is the flag that actually permits the tag to send
+     the hashed user_data the success-page handler supplies. Without it gtag
+     silently discards that data and Google Ads reports enhanced conversions as
+     receiving nothing, which is what "advanced conversions not working" looks
+     like in the Ads diagnostics panel. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17866165108"></script>
+<script>window.GOOGLE_ADS_TAG_ID='AW-17866165108';</script>
+<script src="/marketing-measurement.js"></script>
+<!-- Taboola pixel (account 2081418). Loaded after marketing-measurement.js so the
+     shared trackMarketingEvent hub can hand it every funnel event, and after
+     privacy-consent.js because the pixel asks that script whether it may load at
+     all — Taboola has no Consent Mode equivalent, so consent is enforced by
+     withholding the library rather than by muting it. -->
+<script src="/taboola-pixel.js"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', window.GOOGLE_ADS_TAG_ID, { allow_enhanced_conversions: true });
+</script>
+<!-- Google Tag Manager. The `n` lines are the nonce-propagation addition from
+     Google's CSP guide: the CSP served by netlify/edge-functions/csp.ts admits
+     script elements by nonce, and this snippet creates the gtm.js element itself,
+     so it has to copy the nonce onto it. gtm.js then reuses that nonce for every
+     script it injects — without this, Custom HTML tags in the container would be
+     blocked. The nonce content attribute is hidden from getAttribute() once the
+     page has loaded, hence reading the .nonce property first. -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;
+var n=d.querySelector('[nonce]');
+n&&j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));
+f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-M746RK4R');</script>
+<!-- End Google Tag Manager -->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#080000" />
+
+<!-- Core SEO tags first: title, description, and an explicit language
+     declaration. Kept at the very top of <head> so any crawler that reads
+     only a partial head (or renders under a strict timeout) still captures
+     them. The content-language meta pairs with the Content-Language HTTP
+     header and satisfies Bing's "Meta Language tag" check, which the
+     <html lang> attribute alone does not. -->
+<meta http-equiv="content-language" content="en-US" />
+<title>MULTINICHE AI | AI Prompt Packs &amp; Automations</title>
+<meta name="description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
+
+<!-- Search engine verification -->
+<meta name="google-site-verification" content="iXRkySFIpS5i8oBRLXjfRQEq3wcY5miqpMGD_z3BWFA" />
+<meta name="msvalidate.01" content="C4D43F833D0D10EF24FC967F7ED7BD87" />
+
+<!-- PWA / mobile app -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="application-name" content="MULTINICHE AI" />
+<meta name="apple-mobile-web-app-title" content="MultiNiche AI" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<link rel="canonical" href="https://jblessd.com/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MULTINICHE AI" />
+<meta property="og:title" content="MULTINICHE AI | AI Prompt Packs & Automations" />
+<meta property="og:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
+<meta property="og:url" content="https://jblessd.com/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="https://jblessd.com/multiniche-ai-og.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="MULTINICHE AI — a catalog of AI prompt packs, automations, templates, and agent configs." />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="MULTINICHE AI | AI Productivity Tools" />
+<meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
+<meta name="twitter:image" content="https://jblessd.com/multiniche-ai-og.png" />
+<meta name="twitter:image:alt" content="MULTINICHE AI — AI productivity tools, organized by role." />
+
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Structured data: helps Google, Bing, and AI answer engines (ChatGPT, Perplexity) understand this page -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://jblessd.com/#website",
+  "name": "MULTINICHE AI",
+  "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
+  "url": "https://jblessd.com/",
+  "inLanguage": "en-US",
+  "publisher": { "@id": "https://jblessd.com/#organization" },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://jblessd.com/?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+<!-- Organization / OnlineStore: one brand entity, not two. Giving it a stable
+     @id and merging the former separate OnlineStore node lets Google and Bing
+     resolve every reference on the page — the WebSite publisher, each product's
+     seller, the page's "about" — to a single Knowledge-Graph node instead of
+     two competing ones. alternateName lists the ways people type "Multi-Niche
+     AI" so brand searches (multiniche, multi niche ai) resolve here. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["Organization", "OnlineStore"],
+  "@id": "https://jblessd.com/#organization",
+  "name": "MULTINICHE AI",
+  "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
+  "url": "https://jblessd.com/",
+  "logo": {
+    "@type": "ImageObject",
+    "@id": "https://jblessd.com/#logo",
+    "url": "https://jblessd.com/icons/icon-512.png",
+    "width": 512,
+    "height": 512,
+    "caption": "MULTINICHE AI"
+  },
+  "image": "https://jblessd.com/multiniche-ai-og.png",
+  "description": "MULTINICHE AI sells AI productivity tools — prompt packs, automation blueprints, doc templates, and agent configs — as ready-to-use digital downloads.",
+  "disambiguatingDescription": "MULTINICHE AI (jblessd.com) is a digital storefront for AI prompt packs, automations, templates, and agent configs. It is a distinct brand and is not affiliated with, or the same as, \"Multiverse AI\" or any similarly named service.",
+  "slogan": "Load any tool you need.",
+  "knowsAbout": ["AI prompt engineering", "Workflow automation", "Productivity templates", "AI agents", "Generative AI tools"],
+  "currenciesAccepted": "USD",
+  "priceRange": "$12–$49",
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "url": "https://jblessd.com/#contact",
+    "availableLanguage": ["English"]
+  }
+}
+</script>
+<!-- WebPage: the homepage node itself, wiring the site, the brand, and the
+     on-page FAQ into the same graph so crawlers read them as one document. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["WebPage", "CollectionPage"],
+  "@id": "https://jblessd.com/#webpage",
+  "url": "https://jblessd.com/",
+  "name": "MULTINICHE AI | AI Prompt Packs & Automations",
+  "description": "Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role.",
+  "isPartOf": { "@id": "https://jblessd.com/#website" },
+  "about": { "@id": "https://jblessd.com/#organization" },
+  "inLanguage": "en-US",
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://jblessd.com/multiniche-ai-og.png",
+    "width": 1200,
+    "height": 630
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://jblessd.com/#faq",
+  "isPartOf": { "@id": "https://jblessd.com/#webpage" },
+  "about": { "@id": "https://jblessd.com/#organization" },
+  "inLanguage": "en-US",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does MULTINICHE AI sell?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role." }
+    },
+    {
+      "@type": "Question",
+      "name": "How are the products delivered?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Everything is a digital download. The moment your payment clears you get your tools instantly on the confirmation page — use each one right there, and download a copy to save and reopen anytime, so your access never depends on email. We email you a copy as well." }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the refund policy for digital products?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which AI models do the tools work with?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for." }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer discounts for buying more than one tool?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is MULTINICHE AI the same as Multiverse AI?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. MULTINICHE AI (spelled M-U-L-T-I-N-I-C-H-E, at jblessd.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for \"Multi-Niche AI,\" \"Multiniche AI,\" or \"Multi Niche AI,\" you are in the right place." }
+    }
+  ]
+}
+</script>
+<!-- SEO_JSONLD_START: the product ItemList below is a static fallback. On
+     Netlify, the seo edge function replaces this block at request time with the
+     live catalog from the database, so structured data never drifts. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "MULTINICHE AI — catalog",
+  "numberOfItems": 14,
+  "itemListElement": [
+    {"@type":"ListItem","position":1,"item":{"@type":"Product","name":"Deep Work Prompt Pack","sku":"AI-PP-001","category":"Prompt Packs","description":"120 prompts for prioritization, focus blocks, and end-of-day resets.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-001","offers":{"@type":"Offer","price":"19.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-001","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":2,"item":{"@type":"Product","name":"Inbox Zero Automation","sku":"AI-AB-002","category":"Automation Blueprints","description":"Auto-sorts, drafts replies, and flags what needs a human.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-002","offers":{"@type":"Offer","price":"29.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-002","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":3,"item":{"@type":"Product","name":"Meeting Notes Agent","sku":"AI-AG-003","category":"Agent Configs","description":"Turns raw transcripts into decisions, owners, and deadlines.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-003","offers":{"@type":"Offer","price":"15.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-003","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":4,"item":{"@type":"Product","name":"Weekly Planning Template","sku":"AI-TP-004","category":"Doc Templates","description":"A weekly operating rhythm: plan Monday, review Friday.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-004","offers":{"@type":"Offer","price":"12.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-004","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":5,"item":{"@type":"Product","name":"Content Calendar Autopilot","sku":"AI-AB-005","category":"Automation Blueprints","description":"Drafts posts from your notes and queues them by channel.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-005","offers":{"@type":"Offer","price":"24.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-005","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":6,"item":{"@type":"Product","name":"Research Assistant Prompts","sku":"AI-PP-006","category":"Prompt Packs","description":"Structured prompts for literature scans and source comparison.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-006","offers":{"@type":"Offer","price":"22.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-006","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":7,"item":{"@type":"Product","name":"Client Onboarding Kit","sku":"AI-TP-007","category":"Doc Templates","description":"Intake form, welcome sequence, and kickoff checklist in one kit.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-007","offers":{"@type":"Offer","price":"34.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-007","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":8,"item":{"@type":"Product","name":"Daily Standup Bot","sku":"AI-AG-008","category":"Agent Configs","description":"Collects async updates and posts a one-line team digest.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-008","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-008","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":9,"item":{"@type":"Product","name":"OKR Tracker Template","sku":"AI-TP-009","category":"Doc Templates","description":"Quarterly objectives with auto-calculated confidence scores.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-009","offers":{"@type":"Offer","price":"14.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-009","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":10,"item":{"@type":"Product","name":"Personal CRM Automation","sku":"AI-AB-010","category":"Automation Blueprints","description":"Reminds you to follow up before a relationship goes cold.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-010","offers":{"@type":"Offer","price":"25.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-010","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":11,"item":{"@type":"Product","name":"Writing Style Prompt Kit","sku":"AI-PP-011","category":"Prompt Packs","description":"Locks tone and voice so drafts sound like you, not a template.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-011","offers":{"@type":"Offer","price":"16.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-011","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":12,"item":{"@type":"Product","name":"Financial Categorizer Agent","sku":"AI-AG-012","category":"Agent Configs","description":"Reads bank exports and sorts spend into categories you define.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-012","offers":{"@type":"Offer","price":"27.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-012","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":13,"item":{"@type":"Product","name":"Code Review Digest","sku":"AI-AB-013","category":"Automation Blueprints","description":"Summarizes open PRs into a daily digest with risk flags.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-013","offers":{"@type":"Offer","price":"26.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-013","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":14,"item":{"@type":"Product","name":"Landing Page Copy Prompts","sku":"AI-PP-014","category":"Prompt Packs","description":"Headline, hero, and CTA variants tuned for conversion testing.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-014","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-014","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}}
+  ]
+}
+</script>
+<!-- SEO_JSONLD_END -->
+
+<style>
+  :root{
+    --ink:#080000;
+    --panel:#110807;
+    --panel-2:#0A0303;
+    --line:#4A1212;
+    --line-soft:#2A0A0A;
+    --paper:#FFD4D4;
+    --muted:#E86A6A;
+    --muted-2:#9A3C3C;
+    --brass:#FF2A2A;
+    --brass-soft:#E03A3A;
+    --teal:#FF7A7A;
+    /* Placeholder / hint text — kept lighter than --muted-2 so it stays legible
+       on the near-black panels (the darker red failed contrast, notably on the
+       concierge field and search box on mobile). */
+    --placeholder:#D46A6A;
+    --radius:2px;
+    --serif:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', -apple-system, sans-serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth; scroll-padding-top:76px;}
+  body{
+    margin:0; background:var(--ink); color:var(--paper);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size:44px 44px;
+    opacity:.18;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  #matrix-rain{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.42;}
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(ellipse 100% 80% at 50% 40%, transparent 55%, rgba(0,0,0,.65) 100%);
+  }
+  a{color:inherit;}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px; position:relative; z-index:1;}
+
+  /* header */
+  header{border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(4,0,0,.88); backdrop-filter:blur(10px); z-index:40;}
+  .headrow{display:flex; align-items:center; justify-content:space-between; padding:18px 0;}
+  .brand{display:flex; align-items:center; gap:10px; text-decoration:none;}
+  .brand-mark{width:30px; height:30px; border:1px solid var(--brass); display:flex; align-items:center; justify-content:center; font-family:var(--mono); color:var(--brass); font-size:14px; box-shadow:0 0 12px rgba(255,42,42,.35); text-shadow:0 0 8px var(--brass);}
+  .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.12em; color:var(--paper); text-shadow:0 0 10px rgba(255,42,42,.35);}
+  .brand-sub{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--muted-2); display:block; margin-top:1px;}
+  nav.actions{display:flex; align-items:center; gap:10px;}
+  .btn{
+    font-family:var(--sans); font-size:13px; font-weight:500; cursor:pointer;
+    border:1px solid var(--line); background:transparent; color:var(--muted);
+    padding:9px 15px; border-radius:var(--radius); transition:.18s ease; display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn:hover{border-color:var(--teal); color:var(--paper);}
+  .btn-solid{background:var(--teal); border-color:var(--teal); color:var(--ink); font-weight:600;}
+  .btn-solid:hover{background:#ffb0b0; color:var(--ink);}
+  .btn-gold{background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600;}
+  .btn-gold:hover{background:#ff5a5a;}
+  .cart-count{font-family:var(--mono); font-size:11px; background:var(--brass); color:var(--ink); min-width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;}
+
+  /* hero */
+  .hero{padding:88px 0 56px;}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.28em; color:var(--teal); margin-bottom:20px; text-transform:uppercase;}
+  h1{
+    font-family:var(--serif); font-weight:500; font-size:clamp(34px,5vw,54px); line-height:1.08;
+    max-width:760px; margin:0 0 22px; color:var(--paper); letter-spacing:-.01em;
+  }
+  h1 em{color:var(--brass); font-style:italic; text-shadow:0 0 14px rgba(255,42,42,.4);}
+  .lede{font-size:17px; line-height:1.65; color:var(--muted); max-width:560px; margin:0 0 36px;}
+  .search-row{display:flex; flex-direction:column; align-items:flex-start; gap:9px; max-width:480px; margin-top:26px;}
+  .search-lead{font-family:var(--mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted-2);}
+  .search-box{position:relative; width:100%;}
+  .search-box svg{position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--muted-2);}
+  #search{
+    width:100%; background:var(--panel); border:1px solid var(--line-soft); color:var(--paper);
+    font-family:var(--sans); font-size:13.5px; padding:11px 14px 11px 38px; border-radius:var(--radius);
+  }
+  #search:focus{outline:none; border-color:var(--teal);}
+  #search::placeholder{color:var(--placeholder);}
+
+  /* Mobile hero: pull the headline fully above the fold (it was landing
+     mid-sentence under the sticky header) and give the two CTAs a clear
+     stacked hierarchy so the primary action reads as the single next step. */
+  @media (max-width:600px){
+    /* The install button only ever appears on browsers that support installing,
+       which on a phone means Android Chrome — a fourth control in a nav that does
+       not wrap. Drop to the icon alone there; the aria-label carries the name. */
+    nav.actions{gap:8px;}
+    #install-app .install-label{display:none;}
+    .hero{padding:44px 0 40px;}
+    h1{font-size:clamp(30px,8vw,40px);}
+    .lede{font-size:16px; margin-bottom:26px;}
+    .hero-cta{gap:10px; margin:18px 0 4px;}
+    .hero-cta .btn{flex:1 1 100%; justify-content:center; padding:13px 16px;}
+    .search-row{max-width:none; margin-top:22px;}
+  }
+
+  /* trust strip */
+  .trust{border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:22px 0; margin-bottom:56px;}
+  .trust-row{display:flex; flex-wrap:wrap; gap:28px; align-items:center; justify-content:space-between;}
+  .trust-item{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted-2); display:flex; align-items:center; gap:8px;}
+  .trust-item svg{color:var(--brass); flex-shrink:0;}
+
+  /* filters */
+  .filters{margin-bottom:44px;}
+  .filter-label{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--muted-2); margin:0 0 10px; text-transform:uppercase;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
+  .chip{
+    font-family:var(--sans); font-size:12.5px; font-weight:500; padding:7px 14px;
+    border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; border-radius:var(--radius);
+    transition:.15s ease; display:inline-flex; align-items:center; gap:6px;
+  }
+  .chip:hover{border-color:var(--teal); color:var(--paper);}
+  .chip.active{border-color:var(--brass); color:var(--brass);}
+  .chip.active.teal-active{border-color:var(--teal); color:var(--teal);}
+
+  /* AI concierge */
+  .concierge{
+    border:1px solid var(--line); border-radius:var(--radius); background:
+      radial-gradient(120% 140% at 0% 0%, rgba(199,72,72,.08), transparent 55%),
+      radial-gradient(120% 140% at 100% 0%, rgba(255,42,42,.10), transparent 55%),
+      var(--panel);
+    padding:26px 26px 24px; margin:0 0 56px; position:relative; overflow:hidden;
+  }
+  .concierge-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--teal); text-transform:uppercase; display:inline-flex; align-items:center; gap:7px;}
+  .concierge-title{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:12px 0 4px; letter-spacing:-.01em;}
+  .concierge-sub{font-size:14px; color:var(--muted); margin:0 0 18px; max-width:560px;}
+  .concierge-form{display:flex; gap:10px; align-items:stretch; flex-wrap:wrap;}
+  #concierge-input{
+    flex:1; min-width:240px; background:var(--panel-2); border:1px solid var(--line); color:var(--paper);
+    font-family:var(--sans); font-size:14px; line-height:1.5; padding:12px 14px; border-radius:var(--radius); resize:vertical; min-height:52px;
+  }
+  #concierge-input:focus{outline:none; border-color:var(--teal);}
+  #concierge-input::placeholder{color:var(--placeholder);}
+  #concierge-submit{white-space:nowrap; align-self:flex-start;}
+  #concierge-submit:disabled{opacity:.6; cursor:default;}
+  .concierge-suggestions{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px;}
+  .mini-chip{
+    font-family:var(--sans); font-size:12px; color:var(--muted); background:transparent;
+    border:1px dashed var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; transition:.15s ease;
+  }
+  .mini-chip:hover{border-color:var(--teal); color:var(--paper); border-style:solid;}
+  .concierge-result{margin-top:22px; border-top:1px solid var(--line-soft); padding-top:20px;}
+  .concierge-summary{font-size:14.5px; line-height:1.6; color:var(--paper); margin:0 0 16px;}
+  .concierge-summary .src-tag{font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; display:block; margin-bottom:8px;}
+  .rec-list{display:grid; gap:10px; margin-bottom:18px;}
+  .rec{display:flex; gap:14px; align-items:flex-start; border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; background:var(--panel-2);}
+  .rec-body{flex:1; min-width:0;}
+  .rec-name{font-family:var(--serif); font-size:15.5px; color:var(--paper); margin:0;}
+  .rec-sku{font-family:var(--mono); font-size:10px; color:var(--muted-2); margin-left:8px;}
+  .rec-reason{font-size:13px; line-height:1.55; color:var(--muted); margin:6px 0 0;}
+  .rec-side{display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0;}
+  .rec-price{font-family:var(--mono); font-size:14px; color:var(--paper);}
+  .rec-add{font-size:12px; padding:6px 12px;}
+  .bundle-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .bundle-total{font-size:14px; color:var(--muted);}
+  .bundle-total b{font-family:var(--mono); color:var(--paper); font-size:16px; font-weight:400; margin-left:6px;}
+  .concierge-loading{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13.5px; margin-top:22px;}
+  .concierge-spinner{width:16px; height:16px; border:2px solid var(--line); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .concierge-error{color:var(--brass-soft); font-size:13.5px; margin-top:18px;}
+
+  /* Claude Agent Studio band — the second revenue line (rented agent runs paid
+     for in prepaid credits) sits in the main scroll path, not just in the nav,
+     because a visitor who isn't ready to buy a $19 pack may still spend $9 on
+     credits to get one job done today. */
+  .studio-band{
+    border:1px solid var(--line); border-radius:var(--radius); background:
+      radial-gradient(130% 150% at 100% 0%, rgba(255,42,42,.13), transparent 58%),
+      var(--panel);
+    padding:24px 26px; margin:0 0 40px; display:flex; gap:26px; align-items:center; flex-wrap:wrap;
+  }
+  .studio-band .sb-main{flex:1 1 340px; min-width:0;}
+  .studio-band .sb-eyebrow{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--brass); text-transform:uppercase; margin:0;}
+  .studio-band h2{font-family:var(--serif); font-weight:500; font-size:clamp(20px,2.6vw,26px); color:var(--paper); margin:10px 0 6px; letter-spacing:-.01em;}
+  .studio-band p{font-size:14px; color:var(--muted); margin:0; max-width:56ch;}
+  .studio-band .sb-facts{display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 0; padding:0; list-style:none;}
+  .studio-band .sb-facts li{font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted-2); border:1px dashed var(--line); border-radius:var(--radius); padding:5px 9px;}
+  .studio-band .sb-cta{display:flex; flex-direction:column; gap:9px; align-items:stretch;}
+  .studio-band .sb-cta .btn{justify-content:center;}
+  .studio-band .sb-price{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted-2); text-align:center;}
+
+  /* catalog */
+  #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper);}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-bottom:40px;}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    position:relative; border:1px solid var(--line); background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    padding:22px; display:flex; flex-direction:column; cursor:pointer; transition:.2s ease; border-radius:var(--radius);
+  }
+  .card:hover{border-color:var(--brass); transform:translateY(-2px); box-shadow:0 14px 34px rgba(0,0,0,.35);}
+  .card.hidden{display:none;}
+  /* Procedural cover art: a blueprint-style banner per product, keyed to its
+     category. Rendered as .card::before so every card — static or live from the
+     API — gets an image with no extra markup. Colors stay in the crimson family
+     so the art harmonizes with the theme; each category has its own glyph. */
+  .card::before{
+    content:""; display:block; height:104px; margin:-22px -22px 18px;
+    border-bottom:1px solid var(--line);
+    border-radius:var(--radius) var(--radius) 0 0;
+    background-color:var(--panel-2);
+    background-image:
+      var(--art-glyph, none),
+      radial-gradient(120% 130% at var(--art-x,78%) -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-repeat:no-repeat, no-repeat, repeat, repeat;
+    background-position:right 20px center, 0 0, 0 0, 0 0;
+    background-size:auto 60%, cover, 22px 22px, 22px 22px;
+    transition:filter .2s ease;
+  }
+  .card:hover::before{filter:brightness(1.12) saturate(1.08);}
+  /* Nudge the glow across the grid so identical categories don't line up. */
+  .card:nth-of-type(4n+2)::before{--art-x:26%;}
+  .card:nth-of-type(4n+3)::before{--art-x:52%;}
+  .card:nth-of-type(4n)::before{--art-x:92%;}
+  [data-cat="prompts"]{--art-glow:rgba(255,42,42,.22); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF6A6A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M16 20 28 32 16 44'/><path d='M34 44h16'/></svg>");}
+  [data-cat="automations"]{--art-glow:rgba(255,106,58,.18); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF8A5A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='15' cy='32' r='6'/><circle cx='49' cy='32' r='6'/><path d='M21 32h16'/><path d='M33 26l6 6-6 6'/></svg>");}
+  [data-cat="templates"]{--art-glow:rgba(255,92,138,.16); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF7DA6' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><rect x='19' y='12' width='26' height='40' rx='3'/><path d='M25 24h14M25 32h14M25 40h9'/></svg>");}
+  [data-cat="agents"]{--art-glow:rgba(199,31,58,.24); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF5A6E' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M32 9 52 20.5v23L32 55 12 43.5v-23z'/><circle cx='32' cy='32' r='5.5'/></svg>");}
+  .corner{position:absolute; width:9px; height:9px; border-color:var(--brass); opacity:0; transition:.2s;}
+  .card:hover .corner{opacity:1;}
+  .c-tl{top:-1px; left:-1px; border-top:1px solid; border-left:1px solid;}
+  .c-tr{top:-1px; right:-1px; border-top:1px solid; border-right:1px solid;}
+  .c-bl{bottom:-1px; left:-1px; border-bottom:1px solid; border-left:1px solid;}
+  .c-br{bottom:-1px; right:-1px; border-bottom:1px solid; border-right:1px solid;}
+  .card-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .sku{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; color:var(--muted-2);}
+  .niche-tag{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--brass);
+    border:1px solid #5C1C1C; padding:2px 7px; width:fit-content; margin-bottom:11px; border-radius:var(--radius);
+  }
+  /* Trend-responsive merchandising badge — shown on cards matched by
+     trend-scanner.mts and hidden by default via the [hidden] attribute set
+     in buildCard(); applyFeaturedProducts() reveals it on a match. */
+  .trend-badge{
+    display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9px;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--ink); background:var(--teal);
+    padding:3px 8px; width:fit-content; margin-bottom:9px; border-radius:999px; font-weight:600;
+  }
+  .trend-badge::before{content:'▲'; font-size:8px;}
+  .card.is-trending{border-color:var(--teal); box-shadow:0 0 0 1px var(--teal);}
+  .card h3{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 8px; color:var(--paper); line-height:1.3;}
+  .card p{font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;}
+  .card-format{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); border-top:1px dashed var(--line); padding-top:11px; margin-bottom:11px;}
+  .card-bottom{display:flex; align-items:center; justify-content:space-between;}
+  .card-rating{display:flex; align-items:center; gap:7px; margin:-2px 0 11px; font-size:13px;}
+  .card-rating .rating-meta{font-family:var(--mono); font-size:10.5px; color:var(--muted-2);}
+  .bundle-offer{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(255,42,42,.05), rgba(255,42,42,.01)); margin-top:8px;}
+  .bundle-offer-inner{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .bundle-offer h2{margin:10px 0 6px;}
+  .bundle-offer p{color:var(--muted); max-width:58ch; margin:0;}
+  .bundle-offer-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .bundle-offer-value{font-family:var(--mono); font-size:25px; color:var(--paper); line-height:1;}
+  .bundle-offer-value span{display:block; margin-top:7px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-2); text-align:right;}
+  .price{font-family:var(--mono); font-size:15px; color:var(--brass);}
+  .add-btn{
+    font-family:var(--sans); font-size:11.5px; font-weight:600; background:var(--teal); color:var(--ink);
+    border:none; padding:8px 13px; border-radius:var(--radius); cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+    transition:.15s;
+  }
+  .add-btn:hover{background:#ffb0b0;}
+
+  .empty-state{text-align:center; padding:60px 0; color:var(--muted-2); font-size:14px;}
+
+  /* modal / overlay shared */
+  .overlay{position:fixed; inset:0; background:rgba(6,10,17,.78); z-index:80; display:none; align-items:center; justify-content:center; padding:16px;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--panel); border:1px solid var(--line); max-width:480px; width:100%; padding:28px; position:relative; border-radius:var(--radius); max-height:90vh; overflow-y:auto;}
+  .modal-close{position:absolute; top:16px; right:16px; background:none; border:none; color:var(--muted-2); cursor:pointer; padding:4px;}
+  /* Hero cover art at the top of the product modal, using the same per-category
+     glyph/glow vars as the cards (set on #pm-media via its data-cat). */
+  .pm-media{
+    height:150px; margin:-28px -28px 22px; border-bottom:1px solid var(--line);
+    border-radius:var(--radius) var(--radius) 0 0; background-color:var(--panel-2);
+    background-image:
+      var(--art-glyph, none),
+      radial-gradient(120% 130% at 74% -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-repeat:no-repeat, no-repeat, repeat, repeat;
+    background-position:right 30px center, 0 0, 0 0, 0 0;
+    background-size:auto 64%, cover, 24px 24px, 24px 24px;
+  }
+  .modal-close:hover{color:var(--paper);}
+  .modal h2{font-family:var(--serif); font-weight:500; font-size:24px; margin:10px 0 12px; color:var(--paper);}
+  .modal p.desc{font-size:14px; color:var(--muted); line-height:1.6; margin:0 0 20px;}
+  .spec-table{border-top:1px dashed var(--line); padding-top:16px; margin-bottom:24px;}
+  .spec-row{display:flex; justify-content:space-between; font-size:13.5px; padding:5px 0;}
+  .spec-row span:first-child{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); letter-spacing:.06em;}
+  .spec-row span:last-child{color:var(--paper); text-align:right;}
+  .modal-bottom{display:flex; align-items:center; justify-content:space-between;}
+  .price-lg{font-family:var(--mono); font-size:22px; color:var(--brass);}
+
+  /* Live Proof — the "watch it work" terminal */
+  .pm-proof{border-top:1px solid var(--line); margin-top:22px; padding-top:20px;}
+  .proof-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .proof-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--brass); display:inline-flex; align-items:center; gap:7px; text-shadow:0 0 8px rgba(255,42,42,.4);}
+  .proof-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
+  @keyframes proof-pulse{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.35; transform:scale(.8);}}
+  .proof-sub{font-size:12.5px; color:var(--muted); line-height:1.4;}
+  .proof-scenario{margin-bottom:10px;}
+  .proof-scenario .field{margin-bottom:0; font-size:12.5px;}
+  .proof-terminal{position:relative; background:#110000; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:inset 0 0 40px rgba(255,42,42,.06);}
+  .proof-topbar{display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line-soft); background:rgba(255,42,42,.03);}
+  .proof-tdot{width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .proof-tdot:nth-child(1){background:#7a1f1f;} .proof-tdot:nth-child(2){background:#5e1515;}
+  .proof-tlabel{margin-left:8px; font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted-2);}
+  .proof-output{margin:0; padding:14px 15px; max-height:300px; overflow-y:auto; font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--paper); white-space:pre-wrap; word-wrap:break-word; text-shadow:0 0 6px rgba(255,42,42,.18); min-height:64px;}
+  .proof-hint{color:var(--muted-2); text-shadow:none; font-family:var(--sans); font-size:12.5px; line-height:1.5;}
+  .proof-hint b{color:var(--brass); font-family:var(--mono); font-size:11px;}
+  .proof-terminal[data-empty="false"] .proof-output{color:var(--teal);}
+  .proof-cursor{display:inline-block; width:8px; height:14px; background:var(--brass); box-shadow:0 0 8px var(--brass); vertical-align:text-bottom; animation:proof-blink 1s step-end infinite;}
+  @keyframes proof-blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  .proof-run{margin-top:12px; width:100%; justify-content:center; padding:11px;}
+  .proof-share{margin-top:10px; text-align:center;}
+  .proof-share-btn,.proof-copy{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:8px 14px; cursor:pointer;}
+  .proof-share-btn:hover,.proof-copy:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+  .proof-share-link{margin-top:10px; font-family:var(--mono); font-size:11.5px; word-break:break-all; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .proof-share-link a{color:var(--teal);}
+  .proof-copy{padding:4px 10px;}
+  .proof-run[disabled]{opacity:.6; cursor:progress;}
+  .proof-run.secondary{background:transparent; color:var(--brass); border:1px solid var(--line);}
+  .proof-run.secondary:hover{border-color:var(--brass); background:rgba(255,42,42,.05);}
+
+  /* form fields */
+  .field{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); margin-bottom:10px;}
+  .field:focus{outline:none; border-color:var(--teal);}
+  .field::placeholder{color:var(--placeholder);}
+  textarea.field{resize:none; font-family:var(--sans);}
+  select.field{appearance:none;}
+
+  /* cart drawer */
+  #cart-drawer{position:fixed; top:0; right:0; height:100%; width:100%; max-width:390px; background:var(--panel-2); border-left:1px solid var(--line); z-index:90; transform:translateX(100%); transition:transform .28s ease; display:flex; flex-direction:column;}
+  #cart-drawer.open{transform:translateX(0);}
+  #cart-scrim{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:85; display:none;}
+  #cart-scrim.open{display:block;}
+  .cart-head{display:flex; justify-content:space-between; align-items:center; padding:20px 22px; border-bottom:1px solid var(--line);}
+  .cart-head h3{font-family:var(--serif); font-weight:500; font-size:17px; margin:0; letter-spacing:.02em;}
+  .cart-items{flex:1; overflow-y:auto; padding:18px 22px;}
+  .cart-line{display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed var(--line); padding-bottom:12px; margin-bottom:12px;}
+  .cart-line .name{font-size:13.5px; color:var(--paper); font-weight:500;}
+  .cart-line .id{font-family:var(--mono); font-size:10px; color:var(--muted-2);}
+  .cart-foot{border-top:1px solid var(--line); padding:18px 22px;}
+  .cart-total-row{display:flex; justify-content:space-between; margin-bottom:14px; font-size:14px; color:var(--muted);}
+  .cart-total-row[hidden]{display:none;}
+  .cart-total-row b{color:var(--paper); font-family:var(--mono); font-size:17px; font-weight:400;}
+  .cart-total-row.savings{margin-bottom:8px; color:var(--teal);}
+  .cart-total-row.savings b{color:var(--teal); font-size:14px;}
+  .cart-bundle-note{font-family:var(--mono); font-size:10.5px; line-height:1.5; color:var(--muted-2); margin:-4px 0 14px;}
+  .cart-policy{display:flex; align-items:flex-start; gap:9px; margin:0 0 14px; color:var(--muted); font-size:11.5px; line-height:1.45;}
+  .cart-policy input{width:16px; height:16px; margin:1px 0 0; flex:none; accent-color:var(--teal);}
+  .cart-policy a{color:var(--teal);}
+
+  .brand-about{border-top:1px solid var(--line); margin-top:48px; padding-top:36px; max-width:720px;}
+  .brand-about h2{margin:0 0 14px;}
+  .brand-about p{font-size:15px; line-height:1.7; color:var(--muted); margin:0 0 14px;}
+  .brand-about p strong{color:var(--paper); font-weight:500;}
+  .brand-about-note{font-size:12.5px; color:var(--muted-2);}
+
+  footer{border-top:1px solid var(--line); padding:36px 0; margin-top:20px;}
+  .foot-row{display:flex; flex-wrap:wrap; justify-content:space-between; gap:20px; align-items:center;}
+  .foot-note{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2);}
+  .foot-links{display:flex; gap:18px; font-size:12.5px; color:var(--muted);}
+  .foot-links a{text-decoration:none; color:var(--muted);}
+  .foot-links a:hover{color:var(--teal);}
+  .foot-copy{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2); margin:22px 0 0; padding-top:20px; border-top:1px solid var(--line-soft); display:flex; align-items:center; gap:9px;}
+  .foot-logo{width:22px; height:22px; flex:none; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--brass); border-radius:var(--radius); box-shadow:0 0 9px rgba(255,42,42,.28);}
+
+  #toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--paper); color:var(--ink); font-size:13.5px; font-weight:500; padding:11px 18px; border-radius:var(--radius); z-index:100; opacity:0; pointer-events:none; transition:.25s ease; display:flex; align-items:center; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,.4);}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important; scroll-behavior:auto !important;}}
+
+  /* Lead magnet / newsletter */
+  .lead{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
+  .lead h2{margin:0 0 6px;}
+  .lead p{font-size:14px; color:var(--muted); margin:0 0 16px; max-width:560px;}
+  .lead form{display:flex; gap:10px; flex-wrap:wrap;}
+  .lead input[type=email]{flex:1; min-width:220px; background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:12px 14px; font:inherit;}
+  .lead input[type=email]:focus{outline:none; border-color:var(--teal);}
+  .lead .lead-note{font-size:12px; color:var(--muted-2); margin-top:10px;}
+  .lead-pack{margin-top:20px; border-top:1px solid var(--line-soft); padding-top:20px;}
+  .lead-pack h3{margin:0 0 6px; color:var(--paper);}
+  .lead-pack .lead-pack-intro{font-size:14px; color:var(--muted); max-width:640px;}
+  .lead-pack-item{margin:14px 0;}
+  .lead-pack-item h4{margin:0 0 6px; font-size:14px; color:var(--brass);}
+  .lead-pack-item pre{white-space:pre-wrap; word-break:break-word; font:13px/1.6 var(--mono); background:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; color:var(--paper); margin:0;}
+
+  /* Order information / receipt on the success page — also the elements Google
+     Ads' order-information setup selects (transaction id, value, currency, email). */
+  #order-info{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:14px 16px; margin:14px 0 4px;}
+  .oi-title{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-2); margin:0 0 10px;}
+  .oi-row{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:6px 0; border-top:1px solid var(--line-soft); font-size:13px;}
+  .oi-row:first-of-type{border-top:none;}
+  .oi-label{color:var(--muted); letter-spacing:.03em;}
+  .oi-value{color:var(--paper); font-family:var(--mono); text-align:right; word-break:break-all;}
+
+  /* Product-as-app — the interactive "use it now" form on the success page */
+  .pa{border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(135deg, rgba(255,42,42,.05), rgba(255,42,42,.01)); padding:16px 17px; margin:16px 0 4px;}
+  .pa-head{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
+  .pa-badge{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink); background:var(--brass); border-radius:999px; padding:3px 9px; font-weight:600;}
+  .pa-title{font-family:var(--serif); font-weight:500; font-size:15px; color:var(--paper);}
+  .pa-tagline{font-size:12.5px; color:var(--muted); margin:2px 0 14px; line-height:1.55;}
+  .pa-field{margin-bottom:12px;}
+  .pa-field label{display:block; font-size:11px; letter-spacing:.04em; color:var(--paper); margin-bottom:5px;}
+  .pa-field .pa-help{display:block; font-size:11px; color:var(--muted-2); margin-top:4px;}
+  .pa-input{width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); resize:vertical;}
+  .pa-input:focus{outline:none; border-color:var(--teal);}
+  textarea.pa-input{min-height:60px; line-height:1.5;}
+  .pa-run{width:100%; justify-content:center; padding:11px; margin-top:2px;}
+  .pa-run[disabled]{opacity:.6; cursor:progress;}
+  .pa-out-wrap{margin-top:14px;}
+  .pa-out-bar{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:8px;}
+  .pa-out-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
+  .pa-output{white-space:pre-wrap; word-wrap:break-word; font:13px/1.65 var(--mono); background:#110000; border:1px solid var(--line); border-radius:var(--radius); padding:14px 15px; color:var(--teal); margin:0; max-height:340px; overflow-y:auto; text-shadow:0 0 6px rgba(255,42,42,.14);}
+  .pa-out-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .pa-out-actions button{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:7px 13px; cursor:pointer;}
+  .pa-out-actions button:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+  .pa-cursor{display:inline-block; width:7px; height:14px; background:var(--teal); margin-left:2px; vertical-align:middle; animation:proof-pulse 1s steps(2) infinite;}
+  /* Teaser shown in the product modal so shoppers know it becomes an app once owned */
+  .pm-app-note{margin-top:12px; font-size:12px; color:var(--muted); border-left:2px solid var(--brass); padding:2px 0 2px 11px; line-height:1.55;}
+
+  /* Contact */
+  .contact{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel-2); padding:24px; margin-bottom:56px;}
+  .contact h2{margin:0 0 6px;}
+  .contact .contact-lead{font-size:14px; color:var(--muted); margin:0 0 16px; max-width:560px;}
+  .contact form{display:flex; flex-direction:column; gap:10px;}
+  .contact .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .contact .field{background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:12px 14px; font:inherit;}
+  .contact .row .field{flex:1; min-width:220px;}
+  .contact textarea.field{min-height:120px; resize:vertical;}
+  .contact .field:focus{outline:none; border-color:var(--teal);}
+  .contact .contact-actions{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .contact .contact-note{font-size:12px; color:var(--muted-2);}
+
+  /* FAQ */
+  .faq{margin-bottom:56px;}
+  .faq details{border-bottom:1px solid var(--line-soft); padding:14px 0;}
+  .faq summary{cursor:pointer; font-size:15px; color:var(--paper); font-weight:500; list-style:none;}
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::before{content:'+'; color:var(--brass); font-family:var(--mono); margin-right:10px;}
+  .faq details[open] summary::before{content:'–';}
+  .faq p{font-size:14px; color:var(--muted); margin:10px 0 2px; line-height:1.6;}
+
+  /* Footer role links */
+  .foot-roles{display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:6px;}
+  .foot-roles a{font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted-2);}
+  .foot-roles a:hover{color:var(--brass);}
+
+  /* Product-modal reviews */
+  .pm-reviews{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
+  .pm-reviews h3{font-family:var(--serif); font-weight:500; font-size:16px; margin:0 0 10px;}
+  .rev-summary{display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--muted); margin-bottom:12px;}
+  .stars{color:var(--brass); letter-spacing:2px;}
+  .rev-item{border-top:1px dashed var(--line-soft); padding:11px 0;}
+  .rev-item .who{font-size:12.5px; color:var(--muted); font-weight:600;}
+  .rev-item .txt{font-size:13.5px; color:var(--paper); margin:5px 0 0;}
+  .rev-form{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
+  .rev-form .field{background:var(--ink); border:1px solid var(--line); color:var(--paper); border-radius:var(--radius); padding:10px 12px; font:inherit;}
+  .rev-form .field:focus{outline:none; border-color:var(--teal);}
+  .star-pick{display:flex; gap:4px; font-size:22px; cursor:pointer;}
+  .star-pick span{color:var(--muted-2); transition:color .1s;}
+  .star-pick span.on{color:var(--brass);}
+
+  /* Shared: wide modal + hero call-to-action row */
+  .modal.modal-wide{max-width:680px;}
+  .hero-cta{display:flex; flex-wrap:wrap; gap:12px; margin:20px 0 6px;}
+  .btn-line{background:transparent; color:var(--brass); border:1px solid var(--line);}
+  .btn-line:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+
+  /* AI "write the description" button + highlights (list-a-product modal) */
+  .ai-write-btn{width:100%; justify-content:center; padding:9px; margin-bottom:10px; border-style:dashed; color:var(--teal);}
+  .ai-write-btn:hover{border-color:var(--teal); background:rgba(255,122,122,.06);}
+  .ai-write-btn[disabled]{opacity:.6; cursor:progress;}
+  .ai-highlights{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px;}
+  .ai-hl{font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--line-soft); padding:4px 8px; border-radius:var(--radius);}
+
+  /* Floating chat assistant (Claude agent) */
+  #chat-fab{
+    position:fixed; right:20px; bottom:20px; z-index:70;
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
+    background:var(--brass); color:var(--ink); border:1px solid var(--brass);
+    padding:11px 16px; border-radius:999px; box-shadow:0 0 20px rgba(255,42,42,.35);
+    transition:.18s ease;
+  }
+  #chat-fab:hover{background:#ffb0b0; box-shadow:0 0 26px rgba(255,42,42,.5);}
+  #chat-fab.hidden{display:none;}
+  #chat-panel{
+    position:fixed; right:20px; bottom:20px; z-index:71;
+    width:min(400px, calc(100vw - 32px)); height:min(600px, calc(100vh - 40px));
+    display:flex; flex-direction:column;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:0 24px 60px rgba(0,0,0,.6); overflow:hidden;
+  }
+  #chat-panel[hidden]{display:none;}
+  .chat-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line);}
+  .chat-title{font-family:var(--serif); font-weight:500; font-size:15px; color:var(--paper); margin:6px 0 0;}
+  .chat-log{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px;}
+  .chat-msg{max-width:85%; font-size:13.5px; line-height:1.55; padding:9px 12px; border-radius:8px; white-space:pre-wrap; word-wrap:break-word;}
+  .chat-msg.user{align-self:flex-end; background:var(--teal); color:var(--ink); border-bottom-right-radius:2px;}
+  .chat-msg.bot{align-self:flex-start; background:var(--panel-2); border:1px solid var(--line-soft); color:var(--paper); border-bottom-left-radius:2px;}
+  .chat-status{align-self:flex-start; font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-2); display:flex; align-items:center; gap:8px;}
+  .chat-status .concierge-spinner{width:12px; height:12px;}
+  .chat-cards{align-self:flex-start; width:100%; display:flex; flex-direction:column; gap:8px;}
+  .chat-card{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:var(--radius);}
+  .chat-card-name{font-size:13px; color:var(--paper); font-weight:500;}
+  .chat-card-blurb{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .chat-card-side{display:flex; flex-direction:column; align-items:flex-end; gap:6px; white-space:nowrap;}
+  .chat-card-price{font-family:var(--mono); font-size:12px; color:var(--teal);}
+  .chat-card-add{font-size:11px; padding:5px 10px;}
+  .chat-input-row{display:flex; gap:8px; padding:12px; border-top:1px solid var(--line);}
+  #chat-input{flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius);}
+  #chat-input:focus{outline:none; border-color:var(--teal);}
+  #chat-input::placeholder{color:var(--placeholder);}
+  #chat-send{padding:10px 13px;}
+  #chat-send[disabled]{opacity:.6; cursor:progress;}
+  @media (max-width:520px){
+    #chat-panel{right:8px; bottom:8px; width:calc(100vw - 16px); height:calc(100vh - 16px);}
+    #chat-fab{right:14px; bottom:14px;}
+  }
+</style>
+
+<!-- Google tag configuration from server env vars. The Google Ads tag itself is
+     already loaded and configured at the top of <head>; this block only adds what
+     has to come from the environment and must NOT load gtag.js again:
+       - the GA4 measurement ID (configured on the same already-loaded tag)
+       - the Google Ads purchase conversion label, which the checkout-success
+         handler awaits before reporting the conversion
+     IDs are public (they ship in the page HTML) but come from env vars so the
+     same markup deploys against test and live Google Ads accounts. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function(){ dataLayer.push(arguments); };
+  // Resolves with the configured Google Ads purchase destination once the
+  // tag is live, or "" when tracking isn't configured. The checkout-success
+  // handler awaits this before reporting the conversion, so it also guarantees
+  // the GA4 config command below has run before any purchase event is pushed.
+  window.analyticsReady = Promise.resolve(window.marketingAnalyticsReady)
+    .then(function(cfg){ return (cfg && cfg.purchaseSendTo) || ''; })
+    .catch(function(){ return ''; });
+</script>
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M746RK4R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<canvas id="matrix-rain" aria-hidden="true"></canvas>
+
+<header>
+  <div class="wrap headrow">
+    <a href="#top" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V6l8 7 8-7v12"/><path d="M9 21h6"/></svg>
+      </span>
+      <span>
+        <span class="brand-name">MULTINICHE AI</span>
+        <span class="brand-sub">LOAD THE TOOL YOU NEED</span>
+      </span>
+    </a>
+    <nav class="actions" aria-label="Primary">
+      <a class="btn" href="/agent">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+        Agent studio
+      </a>
+      <!-- Revealed by install-app.js only once the browser confirms the app can be
+           installed (Chrome, Edge, Android), so it is never a dead control. -->
+      <button class="btn" id="install-app" type="button" aria-label="Install app" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span class="install-label">Install app</span>
+      </button>
+      <button class="btn" id="open-add-desktop" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        List a product
+      </button>
+      <button class="btn" id="open-cart" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span class="cart-count" id="cart-count">0</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <p class="eyebrow">&gt; MULTINICHE AI // jack in — AI productivity instruments loaded</p>
+    <h1>Prompt packs, automations, and agent configs — <em>built once, sold as instruments.</em></h1>
+    <p class="lede">Every listing is a spec sheet, not a pitch: what it does, what it runs on, what it costs. And you don't take our word for any of it — <strong>watch any tool run on your own task before you pay a cent.</strong></p>
+    <div class="hero-cta">
+      <a class="btn btn-gold" href="/free-tool">▶ Watch AI do your task — free</a>
+      <a class="btn btn-line" href="/custom">Get a custom deliverable built for you →</a>
+      <a class="btn btn-line" href="/agent">Rent a Claude agent by the run →</a>
+      <a class="btn btn-line" href="/proof">See live proofs →</a>
+    </div>
+    <div class="search-row">
+      <span class="search-lead">Already know what you want?</span>
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search" type="search" placeholder="Search the catalog…" aria-label="Search products" />
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section class="concierge" id="concierge" aria-label="AI shopping concierge">
+      <span class="concierge-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+        AI Concierge
+      </span>
+      <p class="concierge-title">Describe your work. Get a tailored toolkit.</p>
+      <p class="concierge-sub">Tell the concierge what you're trying to get done and it hand-picks the products that fit — with a reason for each, ready to add as a bundle.</p>
+      <form class="concierge-form" id="concierge-form">
+        <textarea id="concierge-input" rows="2" placeholder="e.g. I run a 3-person agency and spend half my day on client email, proposals, and status updates." aria-label="Describe what you're working on"></textarea>
+        <button type="submit" class="btn btn-gold" id="concierge-submit">Build my toolkit</button>
+      </form>
+      <div class="concierge-suggestions" id="concierge-suggestions">
+        <button type="button" class="mini-chip" data-q="I'm a solo founder losing hours to email, meetings, and follow-ups.">Solo founder, too many meetings</button>
+        <button type="button" class="mini-chip" data-q="I run marketing and need to ship more content across channels without burning out.">Marketer shipping content</button>
+        <button type="button" class="mini-chip" data-q="I'm a developer who wants to automate code reviews and standups.">Developer automating chores</button>
+        <button type="button" class="mini-chip" data-q="I'm a grad student doing literature reviews and need to research faster.">Researcher, faster lit reviews</button>
+      </div>
+      <div class="concierge-result" id="concierge-result" hidden></div>
+    </section>
+
+    <section class="studio-band" aria-labelledby="studio-band-title">
+      <div class="sb-main">
+        <p class="sb-eyebrow">Claude Agent Studio · new</p>
+        <h2 id="studio-band-title">Don't want a tool? Rent the agent that uses them.</h2>
+        <p>Brief a real Claude agent on your actual job — the investor update, the pricing analysis, the migration plan — and it does the work and hands you the finished document. Metered in prepaid credits, so there's nothing to subscribe to.</p>
+        <ul class="sb-facts">
+          <li>First run free</li>
+          <li>From $9</li>
+          <li>Credits never expire</li>
+          <li>No account needed</li>
+        </ul>
+      </div>
+      <div class="sb-cta">
+        <a class="btn btn-gold" href="/agent">Open the agent studio</a>
+        <span class="sb-price">1 credit per quick run · 3 per deliverable</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap trust">
+    <div class="trust-row">
+      <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Instant digital delivery</span>
+      <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Built for Claude, ChatGPT &amp; Gemini</span>
+      <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Spec sheet on every listing</span>
+      <span class="trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>New tools listed weekly</span>
+    </div>
+  </div>
+
+  <div class="wrap filters">
+    <p class="filter-label">Format</p>
+    <div class="chip-row" id="category-chips" role="group" aria-label="Filter by format">
+      <button class="chip active" data-cat="all" aria-pressed="true">All</button>
+      <button class="chip" data-cat="prompts" aria-pressed="false">Prompt Packs</button>
+      <button class="chip" data-cat="automations" aria-pressed="false">Automation Blueprints</button>
+      <button class="chip" data-cat="templates" aria-pressed="false">Doc Templates</button>
+      <button class="chip" data-cat="agents" aria-pressed="false">Agent Configs</button>
+    </div>
+    <p class="filter-label">Built for</p>
+    <div class="chip-row" id="niche-chips" role="group" aria-label="Filter by role">
+      <button class="chip teal-active active" data-niche="all" aria-pressed="true">Everyone</button>
+      <button class="chip" data-niche="founders" aria-pressed="false">Founders &amp; Ops</button>
+      <button class="chip" data-niche="sales" aria-pressed="false">Sales &amp; CS</button>
+      <button class="chip" data-niche="marketers" aria-pressed="false">Marketers</button>
+      <button class="chip" data-niche="developers" aria-pressed="false">Developers</button>
+      <button class="chip" data-niche="writers" aria-pressed="false">Writers</button>
+      <button class="chip" data-niche="students" aria-pressed="false">Students &amp; Researchers</button>
+      <button class="chip" data-niche="office" aria-pressed="false">Office &amp; Admin</button>
+      <button class="chip" data-niche="finance" aria-pressed="false">Finance &amp; Investing</button>
+      <button class="chip" data-niche="architects" aria-pressed="false">Architects</button>
+      <button class="chip" data-niche="engineers" aria-pressed="false">Engineers</button>
+      <button class="chip" data-niche="stores" aria-pressed="false">Store &amp; Site Owners</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h2 id="catalog-heading">Full catalog</h2>
+    <section class="grid" id="catalog" aria-labelledby="catalog-heading">
+
+      <article class="card" data-cat="prompts" data-niche="founders" data-id="AI-PP-001" data-name="Deep Work Prompt Pack" data-price="19" data-format="120 prompts · PDF + Notion" data-spec="Works with Claude, ChatGPT, Gemini" data-catlabel="Prompt Packs" data-nichelabel="Founders & Ops">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-PP-001</span></div>
+        <span class="niche-tag">Founders &amp; Ops</span>
+        <h3>Deep Work Prompt Pack</h3>
+        <p>Prompts for prioritization, focus blocks, and end-of-day resets.</p>
+        <p class="card-format">120 prompts · PDF + Notion</p>
+        <div class="card-bottom"><span class="price">$19.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="automations" data-niche="sales" data-id="AI-AB-002" data-name="Inbox Zero Automation" data-price="29" data-format="Make.com blueprint" data-spec="Gmail + Outlook compatible" data-catlabel="Automation Blueprints" data-nichelabel="Sales & CS">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AB-002</span></div>
+        <span class="niche-tag">Sales &amp; CS</span>
+        <h3>Inbox Zero Automation</h3>
+        <p>Auto-sorts, drafts replies, and flags what needs a human.</p>
+        <p class="card-format">Make.com blueprint</p>
+        <div class="card-bottom"><span class="price">$29.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="agents" data-niche="founders" data-id="AI-AG-003" data-name="Meeting Notes Agent" data-price="15" data-format="System prompt + template" data-spec="Tuned for Claude Projects" data-catlabel="Agent Configs" data-nichelabel="Founders & Ops">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AG-003</span></div>
+        <span class="niche-tag">Founders &amp; Ops</span>
+        <h3>Meeting Notes Agent</h3>
+        <p>Turns raw transcripts into decisions, owners, and deadlines.</p>
+        <p class="card-format">System prompt + template</p>
+        <div class="card-bottom"><span class="price">$15.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="templates" data-niche="students" data-id="AI-TP-004" data-name="Weekly Planning Template" data-price="12" data-format="Notion template" data-spec="Duplicate-and-go setup" data-catlabel="Doc Templates" data-nichelabel="Students & Researchers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-TP-004</span></div>
+        <span class="niche-tag">Students &amp; Researchers</span>
+        <h3>Weekly Planning Template</h3>
+        <p>A weekly operating rhythm: plan Monday, review Friday.</p>
+        <p class="card-format">Notion template</p>
+        <div class="card-bottom"><span class="price">$12.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="automations" data-niche="marketers" data-id="AI-AB-005" data-name="Content Calendar Autopilot" data-price="24" data-format="Zapier blueprint" data-spec="Buffer + Notion + Sheets" data-catlabel="Automation Blueprints" data-nichelabel="Marketers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AB-005</span></div>
+        <span class="niche-tag">Marketers</span>
+        <h3>Content Calendar Autopilot</h3>
+        <p>Drafts posts from your notes and queues them by channel.</p>
+        <p class="card-format">Zapier blueprint</p>
+        <div class="card-bottom"><span class="price">$24.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="prompts" data-niche="students" data-id="AI-PP-006" data-name="Research Assistant Prompts" data-price="22" data-format="45 prompts · PDF" data-spec="Citation-aware formatting" data-catlabel="Prompt Packs" data-nichelabel="Students & Researchers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-PP-006</span></div>
+        <span class="niche-tag">Students &amp; Researchers</span>
+        <h3>Research Assistant Prompts</h3>
+        <p>Structured prompts for literature scans and source comparison.</p>
+        <p class="card-format">45 prompts · PDF</p>
+        <div class="card-bottom"><span class="price">$22.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="templates" data-niche="sales" data-id="AI-TP-007" data-name="Client Onboarding Kit" data-price="34" data-format="Notion + email templates" data-spec="Editable branding block" data-catlabel="Doc Templates" data-nichelabel="Sales & CS">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-TP-007</span></div>
+        <span class="niche-tag">Sales &amp; CS</span>
+        <h3>Client Onboarding Kit</h3>
+        <p>Intake form, welcome sequence, and kickoff checklist in one kit.</p>
+        <p class="card-format">Notion + email templates</p>
+        <div class="card-bottom"><span class="price">$34.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="agents" data-niche="developers" data-id="AI-AG-008" data-name="Daily Standup Bot" data-price="18" data-format="Slack agent config" data-spec="Slack + Claude API" data-catlabel="Agent Configs" data-nichelabel="Developers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AG-008</span></div>
+        <span class="niche-tag">Developers</span>
+        <h3>Daily Standup Bot</h3>
+        <p>Collects async updates and posts a one-line team digest.</p>
+        <p class="card-format">Slack agent config</p>
+        <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="templates" data-niche="founders" data-id="AI-TP-009" data-name="OKR Tracker Template" data-price="14" data-format="Sheets template" data-spec="Google Sheets, no add-ons" data-catlabel="Doc Templates" data-nichelabel="Founders & Ops">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-TP-009</span></div>
+        <span class="niche-tag">Founders &amp; Ops</span>
+        <h3>OKR Tracker Template</h3>
+        <p>Quarterly objectives with auto-calculated confidence scores.</p>
+        <p class="card-format">Sheets template</p>
+        <div class="card-bottom"><span class="price">$14.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="automations" data-niche="sales" data-id="AI-AB-010" data-name="Personal CRM Automation" data-price="25" data-format="Make.com blueprint" data-spec="Contacts + Calendar sync" data-catlabel="Automation Blueprints" data-nichelabel="Sales & CS">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AB-010</span></div>
+        <span class="niche-tag">Sales &amp; CS</span>
+        <h3>Personal CRM Automation</h3>
+        <p>Reminds you to follow up before a relationship goes cold.</p>
+        <p class="card-format">Make.com blueprint</p>
+        <div class="card-bottom"><span class="price">$25.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="prompts" data-niche="writers" data-id="AI-PP-011" data-name="Writing Style Prompt Kit" data-price="16" data-format="30 prompts · PDF" data-spec="Includes 3 worked examples" data-catlabel="Prompt Packs" data-nichelabel="Writers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-PP-011</span></div>
+        <span class="niche-tag">Writers</span>
+        <h3>Writing Style Prompt Kit</h3>
+        <p>Locks tone and voice so drafts sound like you, not a template.</p>
+        <p class="card-format">30 prompts · PDF</p>
+        <div class="card-bottom"><span class="price">$16.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="agents" data-niche="founders" data-id="AI-AG-012" data-name="Financial Categorizer Agent" data-price="27" data-format="Sheets + agent config" data-spec="CSV in, clean ledger out" data-catlabel="Agent Configs" data-nichelabel="Founders & Ops">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AG-012</span></div>
+        <span class="niche-tag">Founders &amp; Ops</span>
+        <h3>Financial Categorizer Agent</h3>
+        <p>Reads bank exports and sorts spend into categories you define.</p>
+        <p class="card-format">Sheets + agent config</p>
+        <div class="card-bottom"><span class="price">$27.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="automations" data-niche="developers" data-id="AI-AB-013" data-name="Code Review Digest" data-price="26" data-format="GitHub Actions blueprint" data-spec="GitHub + Slack webhook" data-catlabel="Automation Blueprints" data-nichelabel="Developers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-AB-013</span></div>
+        <span class="niche-tag">Developers</span>
+        <h3>Code Review Digest</h3>
+        <p>Summarizes open PRs into a daily digest with risk flags.</p>
+        <p class="card-format">GitHub Actions blueprint</p>
+        <div class="card-bottom"><span class="price">$26.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+      <article class="card" data-cat="prompts" data-niche="marketers" data-id="AI-PP-014" data-name="Landing Page Copy Prompts" data-price="18" data-format="35 prompts · PDF" data-spec="A/B-ready output format" data-catlabel="Prompt Packs" data-nichelabel="Marketers">
+        <span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>
+        <div class="card-top"><span class="sku">AI-PP-014</span></div>
+        <span class="niche-tag">Marketers</span>
+        <h3>Landing Page Copy Prompts</h3>
+        <p>Headline, hero, and CTA variants tuned for conversion testing.</p>
+        <p class="card-format">35 prompts · PDF</p>
+        <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
+      </article>
+
+    </section>
+    <p class="empty-state" id="empty-state" style="display:none;">No products match — try another search or filter.</p>
+  </div>
+
+  <div class="wrap">
+    <section class="bundle-offer" id="bundle-offer" aria-label="Bundle savings">
+      <div class="bundle-offer-inner">
+        <div>
+          <span class="niche-tag">Build a bundle</span>
+          <h2>Choose the tools you need. Keep them for good.</h2>
+          <p>Combine three or more different prompt packs, automations, templates, or agent configs and save 15% automatically. One payment, permanent access, no recurring charge.</p>
+        </div>
+        <div class="bundle-offer-buy">
+          <span class="bundle-offer-value">15% off<span>3+ tools</span></span>
+          <a class="btn btn-gold" href="#concierge">Build my bundle →</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="lead" id="lead-magnet" aria-label="Free prompt pack">
+      <h2>Get a free prompt pack</h2>
+      <p>Drop your email and we'll unlock a free starter prompt pack right here — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
+      <form id="newsletter-form">
+        <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+        <input type="email" name="email" placeholder="you@work.com" aria-label="Your email" required />
+        <button type="submit" class="btn btn-gold" id="newsletter-submit" style="padding:12px 20px;">Get my free pack</button>
+      </form>
+      <p class="lead-note" id="newsletter-note"></p>
+      <div id="newsletter-pack" class="lead-pack" hidden></div>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="contact" id="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Contact us</h2>
+      <p class="contact-lead">Questions about a tool, a bulk order, or need a hand after checkout? Send us a note and we'll reply by email — usually within one business day.</p>
+      <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="contact-form">
+        <input type="hidden" name="form-name" value="contact" />
+        <input type="hidden" name="subject" value="New contact message from the storefront" />
+        <p style="display:none;"><label>Don't fill this out: <input name="bot-field" /></label></p>
+        <div class="row">
+          <input class="field" type="text" name="name" placeholder="Your name" aria-label="Your name" autocomplete="name" required />
+          <input class="field" type="email" name="email" placeholder="you@work.com" aria-label="Your email" autocomplete="email" required />
+        </div>
+        <textarea class="field" name="message" placeholder="How can we help?" aria-label="Your message" required></textarea>
+        <div class="contact-actions">
+          <button type="submit" class="btn btn-gold" id="contact-submit" style="padding:12px 20px;">Send message</button>
+          <span class="contact-note" id="contact-note"></span>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="faq" id="faq" aria-label="Frequently asked questions">
+      <h2 id="faq-heading">Questions, answered</h2>
+      <details><summary>What does MULTINICHE AI sell?</summary><p>Ready-to-use AI productivity tools: prompt packs, automation blueprints (Make.com, Zapier, GitHub Actions), Notion and Sheets doc templates, and agent configs. Every listing is a spec sheet — what it does, what it runs on, and what it costs — organized by role.</p></details>
+      <details><summary>How are the products delivered?</summary><p>Everything is a digital download. The moment your payment clears you get your tools instantly on the confirmation page — use each one right there, and download a copy to save and reopen anytime, so your access never depends on email. We email you a copy as well.</p></details>
+      <details><summary>What is the refund policy for digital products?</summary><p>Because products are delivered digitally and cannot be returned, sales are final once access is provided. We will resolve failed delivery, defective or inaccessible files, duplicate charges, and products materially different from their description when reported within 14 days. Read the full <a href="/refund-policy/">refund policy</a>.</p></details>
+      <details><summary>Which AI models do the tools work with?</summary><p>The prompt packs and agent configs are built to work with Claude, ChatGPT, and Gemini. Each listing's spec line notes any specific model or platform it's tuned for.</p></details>
+      <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
+      <details><summary>Can I try a tool before I buy it?</summary><p>Yes. Open any product and hit “Run live demo,” or use the free <a href="/free-tool">Watch AI do your task</a> tool — Claude runs the actual product on a real example (or your own situation) and streams the result, before you spend anything. Browse saved runs on the <a href="/proof">live proofs</a> page. Need something that doesn't exist in the catalog yet? <a href="/custom">Get a custom deliverable</a> built for your exact need.</p></details>
+      <details><summary>Can I build a custom bundle?</summary><p>Yes — use the <a href="#concierge">AI concierge</a> to get a tailored set of tools, or choose any three or more different products from the catalog. The 15% savings are automatic and every purchase is a one-time payment.</p></details>
+      <details><summary>Is MULTINICHE AI the same as Multiverse AI?</summary><p>No. <strong>MULTINICHE AI</strong> (spelled M-U-L-T-I-N-I-C-H-E, here at jblessd.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for “Multi-Niche AI,” “Multiniche AI,” or “Multi Niche AI,” you’re in the right place.</p></details>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="brand-about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About MULTINICHE AI</h2>
+      <p><strong>MULTINICHE AI</strong> — “multi” + “niche,” one storefront covering every corner where AI does real work — is a digital storefront for AI productivity instruments: prompt packs, automation blueprints, doc templates, and agent configs. Load any tool you need, watch it run on your own task, then buy the ones that earn their place. Everything is a digital download that works with Claude, ChatGPT, and Gemini.</p>
+      <p class="brand-about-note">Also written Multi-Niche AI, Multiniche AI, or Multi Niche AI. MULTINICHE AI is an independent brand at jblessd.com and is not affiliated with Multiverse AI or any similarly named service.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <span class="foot-note">MULTINICHE AI — LOAD ANY TOOL YOU NEED</span>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#catalog">Catalog</a>
+      <a href="/agent">Agent studio</a>
+      <a href="/use-cases">Use cases</a>
+      <a href="/proof">Live proofs</a>
+      <a href="/updates">Updates</a>
+      <a href="#contact">Contact</a>
+      <a href="/privacy-policy/">Privacy</a>
+      <a href="/terms/">Terms</a>
+      <a href="/refund-policy/">Refund policy</a>
+      <a href="#" id="open-add-footer" aria-haspopup="dialog" aria-expanded="false">List a product</a>
+      <a href="#top">Back to top</a>
+    </nav>
+  </div>
+  <div class="wrap">
+    <nav class="foot-roles" aria-label="Browse tools by role">
+      <a href="/tools/founders">AI tools for founders</a>
+      <a href="/tools/sales">AI tools for sales</a>
+      <a href="/tools/marketers">AI tools for marketers</a>
+      <a href="/tools/developers">AI tools for developers</a>
+      <a href="/tools/writers">AI tools for writers</a>
+      <a href="/tools/students">AI tools for students</a>
+      <a href="/tools/office">AI tools for office &amp; admin</a>
+      <a href="/tools/architects">AI tools for architects</a>
+      <a href="/tools/engineers">AI tools for engineers</a>
+      <a href="/tools/finance">AI tools for finance &amp; investing</a>
+      <a href="/tools/stores">AI tools for store &amp; site owners</a>
+    </nav>
+  </div>
+  <div class="wrap">
+    <p class="foot-copy">
+      <span class="foot-logo" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V6l8 7 8-7v12"/><path d="M9 21h6"/></svg></span>
+      © 2026 MultiNiche AI. All rights reserved.
+    </p>
+  </div>
+</footer>
+
+<!-- Product detail modal -->
+<div class="overlay" id="product-overlay" role="dialog" aria-modal="true" aria-labelledby="pm-name">
+  <div class="modal">
+    <button class="modal-close" id="pm-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="pm-media" id="pm-media"></div>
+    <span class="sku" id="pm-sku"></span>
+    <h2 id="pm-name"></h2>
+    <p class="desc" id="pm-desc"></p>
+    <div class="spec-table">
+      <div class="spec-row"><span>BUILT FOR</span><span id="pm-niche"></span></div>
+      <div class="spec-row"><span>CATEGORY</span><span id="pm-cat"></span></div>
+      <div class="spec-row"><span>FORMAT</span><span id="pm-format"></span></div>
+      <div class="spec-row"><span>SPEC</span><span id="pm-spec"></span></div>
+    </div>
+    <div class="modal-bottom">
+      <span class="price-lg" id="pm-price"></span>
+      <button class="btn btn-solid" id="pm-add">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add to cart
+      </button>
+    </div>
+
+    <!-- Live Proof: watch the product actually work before you buy it -->
+    <div class="pm-proof" id="pm-proof">
+      <div class="proof-head">
+        <span class="proof-badge"><span class="proof-dot" aria-hidden="true"></span>Live proof</span>
+        <span class="proof-sub">Don't take our word for it — watch it run.</span>
+      </div>
+      <div class="proof-scenario">
+        <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
+      </div>
+      <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
+        <div class="proof-topbar"><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tlabel" id="pm-proof-label">demo · idle</span></div>
+        <pre class="proof-output" id="pm-proof-output"><span class="proof-hint">Press <b>Run live demo</b> and Claude will run this product on a real example, streamed here in real time.</span></pre>
+      </div>
+      <button class="btn btn-gold proof-run" id="pm-proof-run">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 5v14l11-7z"/></svg>
+        <span id="pm-proof-run-label">Run live demo</span>
+      </button>
+      <div class="proof-share" id="pm-proof-share" hidden>
+        <button class="proof-share-btn" id="pm-proof-share-btn" type="button">Share this proof</button>
+        <div class="proof-share-link" id="pm-proof-share-link" hidden></div>
+      </div>
+      <p class="pm-app-note">This is a free preview. Own it and you can run it as a full app — fill in a short form and it does the work on your own input, right on your download page, as many times as you like.</p>
+    </div>
+
+    <div class="pm-reviews" id="pm-reviews">
+      <h3>Reviews</h3>
+      <div class="rev-summary" id="pm-rev-summary"></div>
+      <div id="pm-rev-list"></div>
+      <form class="rev-form" id="pm-rev-form">
+        <div class="star-pick" id="pm-star-pick" role="radiogroup" aria-label="Your rating">
+          <span data-v="1" role="radio" aria-checked="false" tabindex="0" aria-label="1 star">★</span>
+          <span data-v="2" role="radio" aria-checked="false" tabindex="-1" aria-label="2 stars">★</span>
+          <span data-v="3" role="radio" aria-checked="false" tabindex="-1" aria-label="3 stars">★</span>
+          <span data-v="4" role="radio" aria-checked="false" tabindex="-1" aria-label="4 stars">★</span>
+          <span data-v="5" role="radio" aria-checked="false" tabindex="-1" aria-label="5 stars">★</span>
+        </div>
+        <input class="field" id="pm-rev-author" placeholder="Your name" maxlength="80" />
+        <textarea class="field" id="pm-rev-body" rows="2" placeholder="Share how this tool worked for you (optional)" maxlength="1000"></textarea>
+        <button type="submit" class="btn btn-gold" id="pm-rev-submit" style="justify-content:center; padding:10px;">Post review</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- List-a-product modal -->
+<div class="overlay" id="add-overlay" role="dialog" aria-modal="true" aria-labelledby="add-title">
+  <div class="modal">
+    <button class="modal-close" id="add-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <h2 id="add-title" style="margin-top:0;">List a new product</h2>
+    <input class="field" id="f-name" placeholder="Product name" />
+    <select class="field" id="f-category">
+      <option value="prompts">Prompt Packs</option>
+      <option value="automations">Automation Blueprints</option>
+      <option value="templates">Doc Templates</option>
+      <option value="agents">Agent Configs</option>
+    </select>
+    <select class="field" id="f-niche">
+      <option value="founders">Founders &amp; Ops</option>
+      <option value="sales">Sales &amp; CS</option>
+      <option value="marketers">Marketers</option>
+      <option value="developers">Developers</option>
+      <option value="writers">Writers</option>
+      <option value="students">Students &amp; Researchers</option>
+      <option value="office">Office &amp; Admin</option>
+      <option value="finance">Finance &amp; Investing</option>
+      <option value="architects">Architects</option>
+      <option value="engineers">Engineers</option>
+      <option value="stores">Store &amp; Site Owners</option>
+    </select>
+    <input class="field" id="f-format" placeholder="Format (e.g. Notion template)" />
+    <input class="field" id="f-price" type="number" placeholder="Price (USD)" />
+    <button type="button" class="btn ai-write-btn" id="f-describe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+      Write the description with AI
+    </button>
+    <textarea class="field" id="f-blurb" rows="2" placeholder="Short description"></textarea>
+    <input class="field" id="f-spec" placeholder="Spec line (e.g. Works with Claude)" />
+    <div id="f-highlights" class="ai-highlights" hidden></div>
+    <button class="btn btn-gold" style="width:100%; justify-content:center; padding:11px;" id="f-submit">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+      List product
+    </button>
+  </div>
+</div>
+
+<!-- Order delivery: shown on return from a successful checkout so the buyer
+     gets their purchase instantly, can download each tool as a self-contained
+     app to reopen later, and can re-run any time via their order link — with the
+     confirmation email as an extra copy, not the only way back in. -->
+<div class="overlay" id="order-overlay" role="dialog" aria-modal="true" aria-labelledby="order-title">
+  <div class="modal modal-wide">
+    <button class="modal-close" id="order-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <h2 id="order-title" style="margin:6px 0 4px; font-family:var(--serif); font-weight:500;">Your tools are ready to use</h2>
+    <p class="concierge-sub" id="order-sub">Thanks for your purchase — here's everything you bought, ready to use right now.</p>
+    <!-- Order information: the buyer's receipt and, at the same time, the stable
+         set of elements Google Ads' "select website element" order-information
+         setup binds to (transaction id, value, currency, email). Populated on a
+         paid return; empty and hidden until then. -->
+    <div id="order-info" hidden></div>
+    <div id="order-body"></div>
+  </div>
+</div>
+
+<!-- Cart drawer -->
+<div id="cart-scrim"></div>
+<aside id="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+  <div class="cart-head">
+    <h3 id="cart-title">Cart</h3>
+    <button class="modal-close" style="position:static;" id="cart-close" aria-label="Close cart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-foot">
+    <div class="cart-total-row savings" id="bundle-savings-row" hidden><span>Bundle savings (15%)</span><b id="bundle-savings">−$0.00</b></div>
+    <div class="cart-total-row"><span>Total</span><b id="cart-total">$0.00</b></div>
+    <p class="cart-bundle-note" id="cart-bundle-note">Add 3 different tools to save 15%.</p>
+    <label class="cart-policy">
+      <input type="checkbox" id="digital-policy-accept" />
+      <span>I request immediate digital delivery and acknowledge that once access is provided, I lose any cancellation right that applicable law allows me to waive, subject to the <a href="/refund-policy/" target="_blank" rel="noopener">refund policy</a>.</span>
+    </label>
+    <button class="btn btn-solid" style="width:100%; justify-content:center; padding:12px;" id="cart-checkout" disabled>
+      Checkout
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+</aside>
+
+<!-- AI chat assistant (Claude agent) -->
+<button id="chat-fab" aria-label="Open AI assistant" aria-haspopup="dialog" aria-expanded="false">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span>Ask AI</span>
+</button>
+<div id="chat-panel" role="dialog" aria-modal="true" aria-labelledby="chat-title" hidden>
+  <div class="chat-head">
+    <div>
+      <span class="concierge-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+        Claude Agent
+      </span>
+      <p id="chat-title" class="chat-title">Store assistant</p>
+    </div>
+    <button class="modal-close" style="position:static;" id="chat-close" aria-label="Close assistant"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="chat-log" id="chat-log"></div>
+  <form class="chat-input-row" id="chat-form">
+    <input id="chat-input" autocomplete="off" placeholder="Ask about a tool, or describe your work…" aria-label="Message the assistant" />
+    <button type="submit" class="btn btn-gold" id="chat-send" aria-label="Send">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var cart = [];
+
+  // ---- persistence (localStorage; falls back to in-memory if unavailable) ----
+  var STORE_KEY = 'osc:cart';
+  function loadCart(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(raw){ cart = JSON.parse(raw) || []; renderCart(); }
+    }catch(e){ /* no saved cart yet */ }
+  }
+  function saveCart(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(cart)); }catch(e){}
+  }
+
+  // ---- Google Ads click-ID capture (conversion URL attribution) ----
+  // Google Ads auto-tagging appends a click identifier to the landing URL:
+  // gclid (search/display), or gbraid / wbraid (iOS app + web privacy paths).
+  // Persisting it on landing and attaching it to the paid order lets the
+  // purchase conversion be attributed to the exact ad click — the basis for
+  // enhanced / offline conversion import, which survives cookie loss and
+  // closed tabs. Kept for 90 days to match Google's default conversion window.
+  var CLICK_ID_KEY = 'osc:adclick';
+  var ATTRIB_KEY = 'osc:attrib';
+  var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  var CLICK_ID_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+  function captureAdClickId(){
+    try{
+      var params = new URLSearchParams(window.location.search);
+      for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+        var name = CLICK_ID_PARAMS[i];
+        var value = params.get(name);
+        if(value){
+          // Most recent click wins; overwrite any older stored id.
+          localStorage.setItem(CLICK_ID_KEY, JSON.stringify({ id: value.slice(0, 200), source: name, ts: Date.now() }));
+          break;
+        }
+      }
+      // Persist utm_* campaign params (present on manually-tagged links; Google
+      // auto-tagging uses gclid instead). Attaching these to the paid order lets
+      // a purchase be attributed to the campaign / keyword that produced it.
+      var utm = {}, hasUtm = false;
+      for(var j = 0; j < UTM_PARAMS.length; j++){
+        var uv = params.get(UTM_PARAMS[j]);
+        if(uv){ utm[UTM_PARAMS[j]] = uv.slice(0, 200); hasUtm = true; }
+      }
+      if(hasUtm){ utm.ts = Date.now(); localStorage.setItem(ATTRIB_KEY, JSON.stringify(utm)); }
+    }catch(e){ /* storage or URL unavailable — attribution is best-effort */ }
+  }
+  function getAdClickId(){
+    try{
+      var raw = localStorage.getItem(CLICK_ID_KEY);
+      if(!raw){ return null; }
+      var rec = JSON.parse(raw);
+      if(!rec || !rec.id){ return null; }
+      if(typeof rec.ts === 'number' && (Date.now() - rec.ts) > CLICK_ID_MAX_AGE_MS){
+        localStorage.removeItem(CLICK_ID_KEY);
+        return null;
+      }
+      return { id: rec.id, source: rec.source || 'gclid' };
+    }catch(e){ return null; }
+  }
+  // The stored utm_* attribution, mapped to the camelCase keys the checkout and
+  // landing-beacon endpoints expect. Null once the 90-day window has lapsed.
+  function getAttribution(){
+    try{
+      var raw = localStorage.getItem(ATTRIB_KEY);
+      if(!raw){ return null; }
+      var rec = JSON.parse(raw);
+      if(!rec){ return null; }
+      if(typeof rec.ts === 'number' && (Date.now() - rec.ts) > CLICK_ID_MAX_AGE_MS){
+        localStorage.removeItem(ATTRIB_KEY);
+        return null;
+      }
+      var out = {};
+      if(rec.utm_source) out.utmSource = rec.utm_source;
+      if(rec.utm_medium) out.utmMedium = rec.utm_medium;
+      if(rec.utm_campaign) out.utmCampaign = rec.utm_campaign;
+      if(rec.utm_term) out.utmTerm = rec.utm_term;
+      if(rec.utm_content) out.utmContent = rec.utm_content;
+      return out;
+    }catch(e){ return null; }
+  }
+  // A coarse device class for the landing record. No fingerprinting — just a
+  // viewport bucket so the report can show mobile-vs-desktop ad traffic.
+  function deviceHint(){
+    try{
+      var w = window.innerWidth || (screen && screen.width) || 0;
+      if(w > 0 && w < 768) return 'mobile';
+      if(w >= 768 && w < 1024) return 'tablet';
+      return 'desktop';
+    }catch(e){ return null; }
+  }
+  // Fire a first-party landing beacon when this visit arrived from an ad (a
+  // click id) or a tagged link (utm_*). Recorded server-side in ad_events so the
+  // owner's ad-performance report can divide real order revenue by the traffic
+  // each campaign and landing page brought in — data that survives ad blockers
+  // and lives in the store's own database, not just inside Google Ads.
+  function trackLanding(){
+    try{
+      var params = new URLSearchParams(window.location.search);
+      var clickId = null, clickSource = null;
+      for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+        var v = params.get(CLICK_ID_PARAMS[i]);
+        if(v){ clickId = v.slice(0, 200); clickSource = CLICK_ID_PARAMS[i]; break; }
+      }
+      var hasUtm = UTM_PARAMS.some(function(p){ return params.get(p); });
+      if(!clickId && !hasUtm){ return; } // not an ad / tagged arrival — nothing to learn
+      var referrerHost = null;
+      try{ if(document.referrer){ referrerHost = new URL(document.referrer).hostname; } }catch(e){}
+      var payload = {
+        clickId: clickId || undefined,
+        clickSource: clickSource || undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmTerm: params.get('utm_term') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        landingPath: (window.location.pathname || '/').slice(0, 512),
+        referrerHost: referrerHost || undefined,
+        device: deviceHint() || undefined
+      };
+      var body = JSON.stringify(payload);
+      // sendBeacon survives the page unloading; fall back to a keepalive fetch.
+      if(navigator.sendBeacon){
+        navigator.sendBeacon('/api/track-landing', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/track-landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function(){});
+      }
+    }catch(e){ /* analytics is best-effort; never block the page */ }
+  }
+
+  var catalog = document.getElementById('catalog');
+  var emptyState = document.getElementById('empty-state');
+  var search = document.getElementById('search');
+  var activeCat = 'all', activeNiche = 'all';
+
+  var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs'};
+  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin', finance:'Finance & Investing'};
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  // Keep aria-expanded in sync on dialog triggers (a dialog can have more than one).
+  function setExpanded(ids, open){
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  function applyFilters(){
+    var q = search.value.trim().toLowerCase();
+    var cards = catalog.querySelectorAll('.card');
+    var visible = 0;
+    cards.forEach(function(c){
+      var matchCat = activeCat === 'all' || c.dataset.cat === activeCat;
+      var matchNiche = activeNiche === 'all' || c.dataset.niche === activeNiche;
+      var text = (c.dataset.name + ' ' + c.querySelector('p').textContent).toLowerCase();
+      var matchQ = !q || text.indexOf(q) !== -1;
+      var show = matchCat && matchNiche && matchQ;
+      c.classList.toggle('hidden', !show);
+      if(show) visible++;
+    });
+    emptyState.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  document.getElementById('category-chips').addEventListener('click', function(e){
+    var btn = e.target.closest('.chip'); if(!btn) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    activeCat = btn.dataset.cat;
+    applyFilters();
+  });
+  document.getElementById('niche-chips').addEventListener('click', function(e){
+    var btn = e.target.closest('.chip'); if(!btn) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    activeNiche = btn.dataset.niche;
+    applyFilters();
+  });
+  search.addEventListener('input', applyFilters);
+
+  // ---- product detail modal ----
+  var productOverlay = document.getElementById('product-overlay');
+  var pendingProduct = null;
+
+  function openProductModal(data){
+    pendingProduct = data;
+    document.getElementById('pm-sku').textContent = data.id;
+    document.getElementById('pm-name').textContent = data.name;
+    document.getElementById('pm-desc').textContent = data.blurb;
+    document.getElementById('pm-niche').textContent = data.nicheLabel;
+    document.getElementById('pm-cat').textContent = data.catLabel;
+    document.getElementById('pm-format').textContent = data.format;
+    document.getElementById('pm-spec').textContent = data.spec;
+    document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
+    // Set the modal's cover art to match the product's category. Fall back to
+    // inferring it from the SKU prefix so shared/deep-linked opens still show art.
+    var cat = data.category;
+    if(!cat && data.id){
+      var pfx = { PP:'prompts', AB:'automations', TP:'templates', AG:'agents' };
+      var m = String(data.id).match(/-(PP|AB|TP|AG)-/);
+      cat = m ? pfx[m[1]] : '';
+    }
+    document.getElementById('pm-media').dataset.cat = cat || '';
+    productOverlay.classList.add('open');
+    loadProductReviews(data.id);
+    resetProof(data);
+    // Reflect the open product in the URL so it can be shared and indexed.
+    if(data.id){
+      try{ history.replaceState(null, '', '/?product=' + encodeURIComponent(data.id)); }catch(_){}
+    }
+  }
+  function closeProductModal(){
+    productOverlay.classList.remove('open');
+    // Restore the canonical homepage URL when the product is dismissed.
+    if(location.search.indexOf('product=') !== -1){
+      try{ history.replaceState(null, '', '/'); }catch(_){}
+    }
+  }
+  // Open the modal for a given SKU if its card is present in the catalog.
+  function openProductBySku(sku){
+    if(!sku) return false;
+    var card = catalog.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]');
+    if(!card) return false;
+    openProductModal(cardToData(card));
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
+  }
+  document.getElementById('pm-close').addEventListener('click', closeProductModal);
+  productOverlay.addEventListener('click', function(e){ if(e.target === productOverlay) closeProductModal(); });
+  document.getElementById('pm-add').addEventListener('click', function(){
+    if(pendingProduct){ addToCart(pendingProduct); closeProductModal(); }
+  });
+
+  catalog.addEventListener('click', function(e){
+    var addBtn = e.target.closest('.add-btn');
+    var card = e.target.closest('.card');
+    if(!card) return;
+    var data = cardToData(card);
+    if(addBtn){ addToCart(data); }
+    else{ openProductModal(data); }
+  });
+
+  function cardToData(card){
+    return {
+      id: card.dataset.id, name: card.dataset.name, price: card.dataset.price,
+      format: card.dataset.format, spec: card.dataset.spec, blurb: card.querySelector('p').textContent,
+      catLabel: card.dataset.catlabel, nicheLabel: card.dataset.nichelabel,
+      category: card.dataset.cat, niche: card.dataset.niche
+    };
+  }
+
+  // ---- cart ----
+  function addToCart(data){
+    cart.push(data);
+    if(window.trackMarketingEvent){
+      window.trackMarketingEvent('add_to_cart', {
+        currency: 'USD', value: Number(data.price || 0),
+        items: [{ item_id: data.id, item_name: data.name, price: Number(data.price || 0), quantity: 1 }],
+        ecomm_prodid: data.id, ecomm_pagetype: 'cart', ecomm_totalvalue: Number(data.price || 0)
+      });
+    }
+    renderCart();
+    saveCart();
+    toast('Added "' + data.name + '"');
+  }
+  function removeFromCart(idx){
+    cart.splice(idx,1);
+    renderCart();
+    saveCart();
+  }
+  function renderCart(){
+    var wrap = document.getElementById('cart-items');
+    var count = document.getElementById('cart-count');
+    var totalEl = document.getElementById('cart-total');
+    var savingsRow = document.getElementById('bundle-savings-row');
+    var savingsEl = document.getElementById('bundle-savings');
+    var bundleNote = document.getElementById('cart-bundle-note');
+    count.textContent = cart.length;
+    var subtotal = 0;
+    wrap.innerHTML = '';
+    if(cart.length === 0){
+      wrap.innerHTML = '<p style="color:var(--muted-2); font-size:13.5px;">Nothing here yet. Add a tool to get started.</p>';
+    }
+    cart.forEach(function(item, idx){
+      subtotal += parseFloat(item.price);
+      var line = document.createElement('div');
+      line.className = 'cart-line';
+      line.innerHTML = '<div><div class="name">'+item.name+'</div><div class="id">'+item.id+'</div></div>'+
+        '<div style="display:flex; align-items:center; gap:10px;"><span class="price">$'+parseFloat(item.price).toFixed(2)+'</span>'+
+        '<button aria-label="Remove" data-idx="'+idx+'" class="cart-remove" style="background:none; border:none; color:var(--muted-2); cursor:pointer;">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button></div>';
+      wrap.appendChild(line);
+    });
+    var uniqueTools = new Set(cart.map(function(item){ return item.id; })).size;
+    var bundleEligible = uniqueTools >= 3;
+    var discountedTotal = bundleEligible ? cart.reduce(function(sum, item){
+      return sum + Math.round(parseFloat(item.price) * 100 * .85) / 100;
+    }, 0) : subtotal;
+    var savings = subtotal - discountedTotal;
+    totalEl.textContent = '$' + discountedTotal.toFixed(2);
+    savingsRow.hidden = !bundleEligible;
+    savingsEl.textContent = '−$' + savings.toFixed(2);
+    if(bundleEligible){
+      bundleNote.textContent = 'Bundle unlocked — 15% savings applied at checkout.';
+    } else {
+      var remaining = 3 - uniqueTools;
+      bundleNote.textContent = 'Add ' + remaining + ' more different tool' + (remaining === 1 ? '' : 's') + ' to save 15%.';
+    }
+    wrap.querySelectorAll('.cart-remove').forEach(function(btn){
+      btn.addEventListener('click', function(){ removeFromCart(parseInt(btn.dataset.idx,10)); });
+    });
+    updateCheckoutState();
+  }
+
+  var cartDrawer = document.getElementById('cart-drawer');
+  var cartScrim = document.getElementById('cart-scrim');
+  function openCart(){ cartDrawer.classList.add('open'); cartScrim.classList.add('open'); document.getElementById('open-cart').setAttribute('aria-expanded', 'true'); }
+  function closeCart(){ cartDrawer.classList.remove('open'); cartScrim.classList.remove('open'); document.getElementById('open-cart').setAttribute('aria-expanded', 'false'); }
+  document.getElementById('open-cart').addEventListener('click', openCart);
+  document.getElementById('cart-close').addEventListener('click', closeCart);
+  cartScrim.addEventListener('click', closeCart);
+  var checkoutBtn = document.getElementById('cart-checkout');
+  var policyCheckbox = document.getElementById('digital-policy-accept');
+  function updateCheckoutState(){
+    checkoutBtn.disabled = cart.length === 0 || !policyCheckbox.checked;
+  }
+  policyCheckbox.addEventListener('change', updateCheckoutState);
+  checkoutBtn.addEventListener('click', async function(){
+    if(cart.length === 0 || !policyCheckbox.checked || checkoutBtn.disabled) return;
+    var originalHTML = checkoutBtn.innerHTML;
+    checkoutBtn.disabled = true;
+    checkoutBtn.textContent = 'Redirecting…';
+    try{
+      var checkoutValue = cart.reduce(function(sum, item){ return sum + Number(item.price || 0); }, 0);
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('begin_checkout', {
+          currency: 'USD', value: checkoutValue,
+          items: cart.map(function(item){ return { item_id: item.id, item_name: item.name, price: Number(item.price || 0), quantity: 1 }; }),
+          ecomm_prodid: cart.map(function(item){ return item.id; }), ecomm_pagetype: 'cart', ecomm_totalvalue: checkoutValue
+        });
+      }
+      var adClick = getAdClickId();
+      var attribution = getAttribution();
+      var res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(function(i){ return { id: i.id, name: i.name, price: i.price }; }),
+          digitalPolicyAccepted: true,
+          clickId: adClick ? adClick.id : undefined,
+          clickSource: adClick ? adClick.source : undefined,
+          marketingConsent: window.getMarketingConsent ? window.getMarketingConsent() : 'unknown',
+          attribution: attribution || undefined
+        })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.url){ throw new Error(data.error || 'Unable to start checkout.'); }
+      // Hand off to Stripe's hosted checkout page. The cart is intentionally
+      // left intact so it survives a cancel; it's cleared on successful return.
+      window.location.href = data.url;
+    }catch(err){
+      toast(err.message || 'Something went wrong. Please try again.');
+      checkoutBtn.innerHTML = originalHTML;
+      updateCheckoutState();
+    }
+  });
+
+  // Build the Google Ads enhanced-conversions "in-page code" payload from the
+  // buyer's own checkout details. gtag normalizes and SHA-256 hashes every field
+  // in the browser, so raw values never reach Google; the hashes let Ads match
+  // the sale to the original ad click even when cookies were lost or the tab was
+  // closed. More fields means a higher match rate, so send whatever Stripe
+  // collected — but only non-empty ones, since blank values lower match quality.
+  function buildUserData(order){
+    var data = {};
+    if(order.email){ data.email = String(order.email).trim().toLowerCase(); }
+    // Phone must be E.164 ("+15551234567"); anything else is dropped rather than
+    // sent in a format Ads cannot match.
+    if(order.phone){
+      var phone = String(order.phone).replace(/[^\d+]/g, '');
+      if(/^\+[1-9]\d{7,14}$/.test(phone)){ data.phone_number = phone; }
+    }
+    var addr = order.address || {};
+    var street = [addr.line1, addr.line2].filter(Boolean).join(' ').trim();
+    var address = {};
+    if(order.firstName){ address.first_name = String(order.firstName).trim().toLowerCase(); }
+    if(order.lastName){ address.last_name = String(order.lastName).trim().toLowerCase(); }
+    if(street){ address.street = street.toLowerCase(); }
+    if(addr.city){ address.city = String(addr.city).trim().toLowerCase(); }
+    if(addr.state){ address.region = String(addr.state).trim().toLowerCase(); }
+    if(addr.postalCode){ address.postal_code = String(addr.postalCode).trim(); }
+    if(addr.country){ address.country = String(addr.country).trim().toUpperCase(); }
+    // Ads only accepts an address block that can identify a person.
+    if(address.first_name && address.last_name && address.country){
+      data.address = address;
+    }
+    return Object.keys(data).length ? data : null;
+  }
+
+  // ---- return from Stripe Checkout ----
+  // Report a value-based purchase conversion to Google Ads / GA4 using the real
+  // order total fetched from Stripe. A real value (not a flat 1.0) is what lets
+  // Smart Bidding strategies like Target ROAS / Maximize Conversion Value
+  // optimize toward high-value orders instead of treating every sale the same.
+  //
+  // Two consumers are served here, deliberately:
+  //   1. the gtag.js tag hard-coded in <head>, which sends the conversion today;
+  //   2. the Google Tag Manager container (GTM-M746RK4R), via an explicit
+  //      "purchase" dataLayer event. gtag() calls do land in dataLayer, but as
+  //      an arguments array that GTM triggers cannot read, so a container has
+  //      nothing to fire on. Pushing a named event with an ecommerce object is
+  //      what Google Ads' guided purchase-conversion setup builds its tag and
+  //      variables from, and it is only meaningful on a page the container is
+  //      installed on — hence /order-confirmation.
+  // Both carry the same server-verified transaction_id, so Google de-duplicates
+  // the order if the container is later configured to send the conversion too.
+  function reportPurchaseConversion(sessionId, purchasedItems){
+    if(!sessionId){ return; }
+    fetch('/api/checkout-summary?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(order){
+        if(!order || !order.paid){ return; }
+        pushPurchaseToDataLayer(order, purchasedItems);
+        // Taboola's purchase conversion. Sent outside the analyticsReady gate
+        // below because that gate exists only to wait for Google's env-configured
+        // measurement IDs; the Taboola account is fixed in taboola-pixel.js, so
+        // there is nothing to wait for and no reason to lose the conversion if
+        // the Google config fetch fails.
+        if(window.trackTaboolaEvent){
+          window.trackTaboolaEvent('purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+        }
+        // Everything is reported inside analyticsReady: the GA4 measurement ID is
+        // configured from server env vars, so a purchase event pushed before that
+        // config command lands has no destination and is silently dropped. Both
+        // fetches race, and this one usually wins — which is why the purchase
+        // event used to go missing from GA4.
+        window.analyticsReady.then(function(sendTo){
+          // GA4 ecommerce purchase event.
+          gtag('event', 'purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+          // Google Ads conversion — only once a purchase conversion action is
+          // configured (send_to resolved from env vars).
+          if(!sendTo){ return; }
+          // Enhanced conversions: hand the buyer's hashed details to the tag
+          // BEFORE the conversion event, so gtag attaches them to it. Pairs with
+          // allow_enhanced_conversions on the config command in <head> — without
+          // that flag this data is accepted here and then thrown away, which is
+          // what the Ads diagnostic "add in-page code" warning is really about.
+          var userData = buildUserData(order);
+          if(userData){ gtag('set', 'user_data', userData); }
+          gtag('event', 'conversion', {
+            send_to: sendTo,
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency
+          });
+        });
+      })
+      .catch(function(){ /* tracking is best-effort; never block the buyer */ });
+  }
+
+  // Announce the purchase to Google Tag Manager in the GA4 ecommerce shape its
+  // guided setup expects. `ecommerce: null` first clears any previous ecommerce
+  // object so a reload can't blend two orders' data together — Google's own
+  // recommendation for dataLayer pushes. Item detail comes from the cart as it
+  // stood when the buyer left for Stripe; the money figures always come from the
+  // server-verified session, never from the browser.
+  function pushPurchaseToDataLayer(order, purchasedItems){
+    var items = (purchasedItems || []).map(function(item){
+      return {
+        item_id: item.id,
+        item_name: item.name,
+        item_category: item.catLabel || item.category,
+        price: parseFloat(item.price) || 0,
+        quantity: 1
+      };
+    });
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({
+      event: 'purchase',
+      ecommerce: {
+        transaction_id: order.transactionId,
+        value: order.value,
+        currency: order.currency,
+        items: items
+      }
+    });
+  }
+
+  function handleCheckoutReturn(){
+    var params = new URLSearchParams(window.location.search);
+    var status = params.get('checkout');
+    if(status === 'success'){
+      var sessionId = params.get('session_id');
+      // Snapshot the cart before it's emptied below: the conversion report is
+      // async, so by the time it runs `cart` is already cleared.
+      reportPurchaseConversion(sessionId, cart.slice());
+      cart = [];
+      policyCheckbox.checked = false;
+      renderCart();
+      saveCart();
+      deliverOrder(sessionId);
+    } else if(status === 'cancelled'){
+      toast('Checkout cancelled — your cart is still here.');
+    }
+    if(status){
+      // Clean the query string so a refresh doesn't re-trigger the message.
+      // Only the parameters are dropped — the path stays as it is, so a buyer
+      // returning from Stripe keeps the /order-confirmation URL in the address
+      // bar instead of being silently moved back to the homepage.
+      params.delete('checkout');
+      params.delete('session_id');
+      var qs = params.toString();
+      history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+    }
+  }
+
+  // ---- instant delivery on the success page ----
+  // Fetch the purchased items from /api/order (which re-verifies the paid Stripe
+  // session server-side) and hand them over immediately: the real content on the
+  // page plus a Markdown download per item. This is the fix for buyers not
+  // receiving their download — they get it here right away, and again by email.
+  var orderOverlay = document.getElementById('order-overlay');
+  var orderBody = document.getElementById('order-body');
+  var orderSub = document.getElementById('order-sub');
+  var orderSessionId = null;
+  function closeOrder(){ if(orderOverlay) orderOverlay.classList.remove('open'); }
+  (function(){
+    var oc = document.getElementById('order-close');
+    if(oc) oc.addEventListener('click', closeOrder);
+    if(orderOverlay) orderOverlay.addEventListener('click', function(e){ if(e.target === orderOverlay) closeOrder(); });
+  })();
+
+  function renderOrderItem(item){
+    var block = document.createElement('div');
+    block.className = 'lead-pack';
+    var h = document.createElement('h3');
+    h.textContent = item.name;
+    block.appendChild(h);
+    // When the deliverable was authored by Claude for this exact product (rather
+    // than filled from the generic template), tell the buyer — it's the reason
+    // their download reads like a finished tool, not a fill-in-the-blanks form.
+    if(item.aiCrafted){
+      var craft = document.createElement('p');
+      craft.style.margin = '2px 0 8px';
+      craft.innerHTML = '<span class="pa-badge">AI-crafted</span> ' +
+        '<span style="font-size:13px;color:var(--muted)">Written for this product — finished content, not a template.</span>';
+      block.appendChild(craft);
+    }
+    if(item.intro){
+      var intro = document.createElement('p');
+      intro.className = 'lead-pack-intro';
+      intro.textContent = item.intro;
+      block.appendChild(intro);
+    }
+    if(item.app && item.app.fields && item.app.fields.length){
+      block.appendChild(buildAppPanel(item));
+    }
+    (item.sections || []).forEach(function(s, i){
+      var wrap = document.createElement('div');
+      wrap.className = 'lead-pack-item';
+      var st = document.createElement('h4');
+      st.textContent = (i + 1) + '. ' + s.title;
+      var sb = document.createElement('pre');
+      sb.textContent = s.body;
+      wrap.appendChild(st);
+      wrap.appendChild(sb);
+      block.appendChild(wrap);
+    });
+    if(item.markdown){
+      var dl = document.createElement('a');
+      var blob = new Blob([item.markdown], { type: 'text/markdown' });
+      dl.href = URL.createObjectURL(blob);
+      dl.download = item.filename || ((item.sku || 'download') + '.md');
+      dl.className = 'btn btn-gold';
+      dl.style.marginTop = '14px';
+      dl.textContent = 'Download ' + item.name + ' (.md)';
+      block.appendChild(dl);
+    }
+    // Products that ship real files (source code) get a .zip of the actual
+    // package alongside the document, so "install it" means unzip and run the
+    // installer rather than copy thirteen files out of a Markdown file by hand.
+    // Served by /api/download, which re-verifies the paid session on every hit.
+    if(item.archive && item.archive.url){
+      var zipDl = document.createElement('a');
+      zipDl.href = item.archive.url;
+      zipDl.download = item.archive.filename || 'download.zip';
+      zipDl.className = 'btn btn-gold';
+      zipDl.style.marginTop = '14px';
+      zipDl.textContent = 'Download ' + (item.archive.filename || 'the files') + ' — unzip and run ./install.sh';
+      block.appendChild(zipDl);
+    }
+    // Download the product as a self-contained app: a single HTML file the buyer
+    // saves to their device. It holds the full content (usable offline) plus a
+    // permanent one-click link back to their live order page, so they can reopen
+    // and re-run the tool any time — even if the confirmation email never arrives.
+    var appDl = document.createElement('a');
+    var appBlob = new Blob([buildAppDownloadHtml(item)], { type: 'text/html' });
+    appDl.href = URL.createObjectURL(appBlob);
+    appDl.download = (item.sku || 'product') + '-app.html';
+    appDl.className = 'btn btn-solid';
+    appDl.style.marginTop = '10px';
+    appDl.textContent = 'Download the app (keep it forever)';
+    block.appendChild(appDl);
+    return block;
+  }
+
+  // Build a self-contained HTML file for one purchased tool — the buyer's own
+  // savable copy of the "product app". It bakes in the full deliverable content
+  // and a permanent link back to their live order page (the session recovery
+  // URL), so their access never depends on the confirmation email arriving.
+  function buildAppDownloadHtml(item){
+    var recoveryUrl = orderSessionId
+      ? (location.origin + '/order-confirmation?checkout=success&session_id=' + encodeURIComponent(orderSessionId))
+      : location.origin;
+    var app = item.app || {};
+    var fieldList = (app.fields || []).map(function(f){
+      return '<li>' + esc(f.label) + '</li>';
+    }).join('');
+    var sections = (item.sections || []).map(function(s, i){
+      return '<h3>' + (i + 1) + '. ' + esc(s.title) + '</h3>' +
+             '<pre>' + esc(s.body) + '</pre>';
+    }).join('');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"/>' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+      '<title>' + esc(item.name) + ' — MULTINICHE AI</title>' +
+      '<style>' +
+      'body{margin:0;background:#f6f3f3;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f0b0b;line-height:1.6}' +
+      '.wrap{max-width:760px;margin:0 auto;padding:0 0 48px}' +
+      'header{background:#0a0400;padding:18px 28px}' +
+      'header b{color:#FF2A2A;font-weight:700;letter-spacing:.04em}' +
+      'main{background:#fff;border:1px solid #e8e2e2;border-top:none;padding:28px}' +
+      'h1{font-size:1.5rem;margin:0 0 4px}' +
+      'h2{font-size:1.05rem;margin:28px 0 8px}' +
+      'h3{font-size:1rem;margin:22px 0 6px}' +
+      'pre{white-space:pre-wrap;word-wrap:break-word;background:#faf7f7;border:1px solid #f0eaea;border-radius:8px;padding:14px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}' +
+      '.cta{display:inline-block;margin:8px 0 4px;background:#FF2A2A;color:#080000;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px}' +
+      '.note{background:#fdf2f2;border:1px solid #f5cfcf;border-radius:8px;padding:14px 16px;font-size:14px;margin:18px 0}' +
+      '.muted{color:#7d6b6b;font-size:12px;margin-top:28px;border-top:1px solid #f0eaea;padding-top:14px}' +
+      'ul{margin:6px 0;padding-left:20px}' +
+      '</style></head><body><div class="wrap">' +
+      '<header><b>MULTINICHE AI</b></header>' +
+      '<main>' +
+      '<h1>' + esc(item.name) + '</h1>' +
+      (item.intro ? '<p>' + esc(item.intro) + '</p>' : '') +
+      (item.aiCrafted ? '<div class="note"><b>AI-crafted for this product.</b><br/>' +
+        'The content below was written specifically for this tool — finished and ready to use, not a template to fill in.</div>' : '') +
+      '<div class="note"><b>This is your app — keep this file.</b><br/>Open it any time to read and use your tool. ' +
+      'To run it live on your own input (as many times as you like), use the button below — it reopens your order page. ' +
+      'No email needed.</div>' +
+      '<a class="cta" href="' + esc(recoveryUrl) + '">Run it live on your own input →</a>' +
+      (app.tagline ? '<h2>' + esc(app.title || 'Run it') + '</h2><p>' + esc(app.tagline) + '</p>' : '') +
+      (fieldList ? '<p>It asks you for:</p><ul>' + fieldList + '</ul>' : '') +
+      (sections ? '<h2>Everything you bought</h2>' + sections : '') +
+      '<p class="muted">MULTINICHE AI · <a href="' + esc(location.origin) + '">' + esc(location.host) + '</a><br/>' +
+      'Keep this file safe — it is your permanent copy and your link back to the live app.</p>' +
+      '</main></div></body></html>';
+  }
+
+  // Build the interactive "use it as an app" panel: a short form the buyer fills
+  // in, a run button, and a live-streamed result from /api/run-product. This is
+  // the payoff — the product runs on their own input right here.
+  function buildAppPanel(item){
+    var app = item.app;
+    var panel = document.createElement('div');
+    panel.className = 'pa';
+    var head = document.createElement('div');
+    head.className = 'pa-head';
+    head.innerHTML = '<span class="pa-badge">Run it now</span><span class="pa-title">' + esc(app.title) + '</span>';
+    panel.appendChild(head);
+    if(app.tagline){
+      var tag = document.createElement('p');
+      tag.className = 'pa-tagline';
+      tag.textContent = app.tagline;
+      panel.appendChild(tag);
+    }
+
+    var form = document.createElement('form');
+    var controls = {};
+    app.fields.forEach(function(f){
+      var fw = document.createElement('div');
+      fw.className = 'pa-field';
+      var id = 'pa-' + esc(item.sku) + '-' + esc(f.id);
+      var lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      fw.appendChild(lab);
+      var input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      input.className = 'pa-input';
+      input.id = id;
+      if(f.type === 'textarea'){ input.rows = 3; } else { input.type = 'text'; }
+      if(f.placeholder){ input.placeholder = f.placeholder; }
+      if(f.required){ input.required = true; }
+      input.maxLength = 4000;
+      fw.appendChild(input);
+      if(f.help){
+        var help = document.createElement('span');
+        help.className = 'pa-help';
+        help.textContent = f.help;
+        fw.appendChild(help);
+      }
+      controls[f.id] = input;
+      form.appendChild(fw);
+    });
+
+    var btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'btn btn-gold pa-run';
+    btn.textContent = app.cta || 'Run';
+    form.appendChild(btn);
+    panel.appendChild(form);
+
+    var outWrap = document.createElement('div');
+    outWrap.className = 'pa-out-wrap';
+    outWrap.hidden = true;
+    panel.appendChild(outWrap);
+
+    var busy = false;
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(busy) return;
+      if(!orderSessionId){ toast('Reload this page from your order link to run it.'); return; }
+      var inputs = {};
+      var anyValue = false;
+      Object.keys(controls).forEach(function(k){
+        var v = controls[k].value.trim();
+        inputs[k] = v;
+        if(v) anyValue = true;
+      });
+      if(!anyValue){ toast('Fill in at least one field so it has something to work with.'); return; }
+      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; });
+    });
+
+    return panel;
+  }
+
+  function runProductApp(item, inputs, outWrap, btn, setBusy){
+    setBusy(true);
+    btn.disabled = true;
+    outWrap.hidden = false;
+    outWrap.innerHTML =
+      '<div class="pa-out-bar"><span class="pa-out-dot"></span><span class="pa-out-status">starting…</span></div>' +
+      '<pre class="pa-output"><span class="pa-cursor"></span></pre>';
+    var statusEl = outWrap.querySelector('.pa-out-status');
+    var outEl = outWrap.querySelector('.pa-output');
+
+    var answer = '';
+    var gotText = false;
+    function paint(){
+      outEl.innerHTML = esc(answer) + '<span class="pa-cursor"></span>';
+      outEl.scrollTop = outEl.scrollHeight;
+    }
+
+    fetch('/api/run-product', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs })
+    }).then(function(res){
+      if(!res.ok || !res.body){ throw new Error('unavailable'); }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump(){
+        return reader.read().then(function(chunk){
+          if(chunk.done){ return; }
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for(var i=0; i<lines.length; i++){
+            var line = lines[i].trim();
+            if(!line) continue;
+            var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+            if(ev.type === 'meta'){
+              statusEl.textContent = (ev.verb || 'running') + '…';
+            }else if(ev.type === 'text'){
+              gotText = true;
+              answer += ev.text;
+              paint();
+            }else if(ev.type === 'error'){
+              answer = ev.text || 'The live engine is warming up. Try again shortly.';
+              outEl.textContent = answer;
+            }
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).then(function(){
+      if(gotText){
+        outEl.textContent = answer; // drop the cursor
+        statusEl.textContent = 'done';
+        var actions = document.createElement('div');
+        actions.className = 'pa-out-actions';
+        var copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy result';
+        copyBtn.addEventListener('click', function(){
+          if(navigator.clipboard){ navigator.clipboard.writeText(answer).then(function(){ toast('Result copied'); }, function(){}); }
+        });
+        var dlBtn = document.createElement('button');
+        dlBtn.type = 'button';
+        dlBtn.textContent = 'Download result';
+        dlBtn.addEventListener('click', function(){
+          var blob = new Blob([answer], { type: 'text/plain' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = (item.sku || 'result') + '-result.txt';
+          document.body.appendChild(a); a.click(); a.remove();
+        });
+        actions.appendChild(copyBtn);
+        actions.appendChild(dlBtn);
+        outWrap.appendChild(actions);
+      }else if(!answer){
+        outEl.textContent = 'The live engine is warming up (it activates after the first production deploy). Your full item is in the Markdown download below.';
+        statusEl.textContent = 'offline';
+      }else{
+        statusEl.textContent = 'offline';
+      }
+    }).catch(function(){
+      outEl.textContent = 'Could not run it just now. Your full item is in the Markdown download below — try running it again in a moment.';
+      statusEl.textContent = 'offline';
+    }).finally(function(){
+      setBusy(false);
+      btn.disabled = false;
+      btn.textContent = 'Run again';
+    });
+  }
+
+  // Render the order-information block: the buyer's receipt, and the stable,
+  // labelled elements Google Ads' "select website element" order-information
+  // setup binds to. Each value carries a fixed id and a data-order-field hook so
+  // the element picker can target it reliably across renders. Value and currency
+  // are kept in separate elements (a bare number and a bare ISO code) so each can
+  // be selected on its own without stripping formatting.
+  var orderInfo = document.getElementById('order-info');
+  function orderInfoRow(label, id, field, value){
+    return '<div class="oi-row"><span class="oi-label">' + esc(label) + '</span>' +
+      '<span class="oi-value" id="' + id + '" data-order-field="' + field + '">' + esc(value) + '</span></div>';
+  }
+  function renderOrderInfo(data){
+    if(!orderInfo){ return; }
+    if(!data || !data.transactionId){ orderInfo.hidden = true; return; }
+    var rows = orderInfoRow('Transaction ID', 'order-info-transaction-id', 'transaction_id', data.transactionId);
+    if(typeof data.value === 'number'){
+      rows += orderInfoRow('Order value', 'order-info-value', 'value', data.value.toFixed(2));
+    }
+    if(data.currency){
+      rows += orderInfoRow('Currency', 'order-info-currency', 'currency', data.currency);
+    }
+    if(data.email){
+      rows += orderInfoRow('Email', 'order-info-email', 'email', data.email);
+    }
+    orderInfo.innerHTML = '<p class="oi-title">Order information</p>' + rows;
+    orderInfo.hidden = false;
+  }
+
+  function deliverOrder(sessionId){
+    orderSessionId = sessionId || null;
+    if(!sessionId){
+      toast('Payment successful — reopen this page from your order link to get your download.');
+      return;
+    }
+    toast('Payment successful — preparing your download…');
+    fetch('/api/order?session_id=' + encodeURIComponent(sessionId))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if(!data || !data.paid || !data.items || !data.items.length){
+          // Payment went through but delivery isn't ready yet. Email may not be
+          // active, so tell the buyer to reload rather than promise an email.
+          toast('Payment successful — reload this page in a moment to get your download.');
+          return;
+        }
+        orderBody.innerHTML = '';
+        renderOrderInfo(data);
+        var emailedLine = data.emailed
+          ? " We've also emailed everything to you."
+          : ' Use “Download the app” on each item to keep a copy you can reopen anytime.';
+        orderSub.textContent = (data.items.length > 1
+          ? "Thanks for your purchase — run each of your " + data.items.length + " tools right here on your own work, or download them below."
+          : "Thanks for your purchase — run it right here on your own work, or download it below.") + emailedLine;
+        data.items.forEach(function(item){ orderBody.appendChild(renderOrderItem(item)); });
+        if(orderOverlay) orderOverlay.classList.add('open');
+      })
+      .catch(function(){
+        toast('Payment successful — reload this page in a moment to get your download.');
+      });
+  }
+
+  // ---- list a product ----
+  var addOverlay = document.getElementById('add-overlay');
+  function openAdd(){ addOverlay.classList.add('open'); setExpanded(['open-add-desktop', 'open-add-footer'], true); }
+  function closeAdd(){ addOverlay.classList.remove('open'); setExpanded(['open-add-desktop', 'open-add-footer'], false); }
+  document.getElementById('open-add-desktop').addEventListener('click', openAdd);
+  document.getElementById('open-add-footer').addEventListener('click', function(e){ e.preventDefault(); openAdd(); });
+  document.getElementById('add-close').addEventListener('click', closeAdd);
+  addOverlay.addEventListener('click', function(e){ if(e.target === addOverlay) closeAdd(); });
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function buildCard(p){
+    var id = p.id || p.sku;
+    var catLabel = p.catlabel || p.catLabel || CAT_LABEL[p.category] || p.category;
+    var nicheLabel = p.nichelabel || p.nicheLabel || NICHE_LABEL[p.niche] || p.niche;
+    var card = document.createElement('article');
+    card.className = 'card';
+    card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
+    card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
+    card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
+    card.innerHTML =
+      '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
+      '<div class="card-top"><span class="sku">'+esc(id)+'</span></div>'+
+      '<span class="trend-badge" hidden>Trending</span>'+
+      '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
+      '<h3>'+esc(p.name)+'</h3><p>'+esc(p.blurb)+'</p>'+
+      '<p class="card-format">'+esc(p.format)+'</p>'+
+      '<div class="card-rating" data-rating-for="'+esc(id)+'" hidden></div>'+
+      '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
+    return card;
+  }
+
+  function appendCard(p, animate){
+    var card = buildCard(p);
+    catalog.prepend(card);
+    if(animate){ card.style.opacity = '0'; requestAnimationFrame(function(){ card.style.transition = '.3s ease'; card.style.opacity = '1'; }); }
+    return card;
+  }
+
+  // Replace the statically-rendered catalog with the live one from the database.
+  // If the API is unreachable, the server-rendered cards already in the page
+  // remain as a fallback.
+  async function loadCatalogFromApi(){
+    try{
+      var res = await fetch('/api/products');
+      if(!res.ok){ reconcileCartWithCatalog(); openDeepLinkedProduct(); return; }
+      var data = await res.json();
+      if(data && Array.isArray(data.products) && data.products.length){
+        catalog.innerHTML = '';
+        data.products.forEach(function(p){ catalog.appendChild(buildCard(p)); });
+        applyFilters();
+      }
+    }catch(e){ /* keep the static cards */ }
+    reconcileCartWithCatalog();
+    openDeepLinkedProduct();
+    loadCatalogRatings();
+    applyFeaturedProducts();
+  }
+
+  // Trend-responsive merchandising: reveal the "Trending" badge on any card
+  // whose SKU trend-scanner.mts currently has featured (real signal — an X
+  // trending topic or a spike in this store's own traffic — matched to that
+  // product), and move matched cards to the front of the grid so they're the
+  // first thing a visitor sees while the signal is live. Best-effort: any
+  // fetch/parse failure just leaves the catalog in its normal order.
+  async function applyFeaturedProducts(){
+    try{
+      var res = await fetch('/api/featured');
+      if(!res.ok) return;
+      var data = await res.json();
+      var featured = (data && Array.isArray(data.featured)) ? data.featured : [];
+      if(!featured.length) return;
+      var order = {};
+      featured.forEach(function(f, i){ order[f.sku] = i; });
+      catalog.querySelectorAll('.card[data-id]').forEach(function(card){
+        var sku = card.dataset.id;
+        if(Object.prototype.hasOwnProperty.call(order, sku)){
+          card.classList.add('is-trending');
+          var badge = card.querySelector('.trend-badge');
+          if(badge) badge.hidden = false;
+          catalog.prepend(card);
+        }
+      });
+    }catch(e){ /* trending is a nice-to-have; ignore failures */ }
+  }
+
+  // Reconcile a restored cart against the catalog that's actually on the page.
+  // A returning shopper can have items saved in localStorage from an earlier
+  // version of the store — SKUs that were renamed or retired across releases.
+  // Left in the cart, a single stale SKU makes the entire checkout fail
+  // server-side ("Invalid item in cart", HTTP 400), so Stripe never opens and
+  // the whole cart looks broken. Dropping retired items — and refreshing the
+  // name/price of the ones that remain from the authoritative catalog — keeps
+  // the cart limited to items that still exist, so Checkout always succeeds.
+  function reconcileCartWithCatalog(){
+    if(!cart.length) return;
+    var known = {};
+    catalog.querySelectorAll('.card[data-id]').forEach(function(card){
+      known[card.dataset.id] = { name: card.dataset.name, price: card.dataset.price };
+    });
+    // If the catalog failed to render at all, don't wipe an otherwise-valid cart.
+    if(Object.keys(known).length === 0) return;
+    var before = cart.length;
+    cart = cart.filter(function(item){ return item && item.id && known[item.id]; })
+               .map(function(item){
+                 var fresh = known[item.id];
+                 item.name = fresh.name;
+                 item.price = fresh.price;
+                 return item;
+               });
+    renderCart();
+    saveCart();
+    if(cart.length !== before){
+      toast('Your cart was updated — some items are no longer available.');
+    }
+  }
+
+  // Fetch review aggregates once and paint compact star ratings onto each card,
+  // so social proof shows on the grid — not only inside a product's modal.
+  async function loadCatalogRatings(){
+    try{
+      var res = await fetch('/api/reviews');
+      if(!res.ok) return;
+      var data = await res.json().catch(function(){ return {}; });
+      var aggs = (data && data.aggregates) || {};
+      catalog.querySelectorAll('.card-rating').forEach(function(el){
+        var sku = el.getAttribute('data-rating-for');
+        var agg = aggs[sku];
+        if(agg && agg.count > 0){
+          el.innerHTML = '<span class="stars">'+starString(agg.average)+'</span>'+
+            '<span class="rating-meta">'+agg.average+' ('+agg.count+')</span>';
+          el.hidden = false;
+        }
+      });
+    }catch(e){ /* ratings are a nice-to-have; ignore failures */ }
+  }
+
+  // If the page was opened with /?product=SKU (a shared or indexed link),
+  // surface that product immediately once the catalog is on the page.
+  function openDeepLinkedProduct(){
+    try{
+      var sku = new URLSearchParams(location.search).get('product');
+      if(sku) openProductBySku(sku);
+    }catch(_){}
+  }
+
+  document.getElementById('f-submit').addEventListener('click', async function(){
+    var name = document.getElementById('f-name').value.trim();
+    var price = document.getElementById('f-price').value;
+    if(!name || !price){ toast('Add a name and price first'); return; }
+    var btn = this;
+    btn.disabled = true;
+    var payload = {
+      name: name,
+      category: document.getElementById('f-category').value,
+      niche: document.getElementById('f-niche').value,
+      format: document.getElementById('f-format').value.trim(),
+      price: parseFloat(price) || 0,
+      blurb: document.getElementById('f-blurb').value.trim(),
+      spec: document.getElementById('f-spec').value.trim()
+    };
+    try{
+      var res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.product){ throw new Error(data.error || 'Could not list the product.'); }
+      appendCard(data.product, true);
+      applyFilters();
+      toast('Listed "' + data.product.name + '"');
+      ['f-name','f-format','f-price','f-blurb','f-spec'].forEach(function(id){ document.getElementById(id).value=''; });
+      closeAdd();
+    }catch(err){
+      toast(err.message || 'Could not list the product.');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // Esc closes any open overlay
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeProductModal(); closeAdd(); closeCart(); if(!chatPanel.hidden) closeChat(); }
+  });
+
+  // ---- AI product description generator (list-a-product modal) ----
+  var fDescribe = document.getElementById('f-describe');
+  var fHighlights = document.getElementById('f-highlights');
+  fDescribe.addEventListener('click', async function(){
+    var name = document.getElementById('f-name').value.trim();
+    if(name.length < 2){ toast('Add a product name first'); return; }
+    var original = fDescribe.innerHTML;
+    fDescribe.disabled = true;
+    fDescribe.innerHTML = '<span class="concierge-spinner"></span>Writing…';
+    try{
+      var res = await fetch('/api/describe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          category: document.getElementById('f-category').value,
+          niche: document.getElementById('f-niche').value,
+          format: document.getElementById('f-format').value.trim(),
+          price: parseFloat(document.getElementById('f-price').value) || 0
+        })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.blurb){ throw new Error(data.error || 'Could not write a description.'); }
+      document.getElementById('f-blurb').value = data.blurb;
+      if(data.spec){ document.getElementById('f-spec').value = data.spec; }
+      if(Array.isArray(data.highlights) && data.highlights.length){
+        fHighlights.innerHTML = data.highlights.map(function(h){ return '<span class="ai-hl">✦ '+esc(h)+'</span>'; }).join('');
+        fHighlights.hidden = false;
+      }else{
+        fHighlights.hidden = true;
+      }
+      toast(data.source === 'ai' ? 'Description written by Claude' : 'Draft description ready');
+    }catch(err){
+      toast(err.message || 'Could not write a description.');
+    }finally{
+      fDescribe.disabled = false;
+      fDescribe.innerHTML = original;
+    }
+  });
+
+  // ---- AI concierge ----
+  var conciergeForm = document.getElementById('concierge-form');
+  var conciergeInput = document.getElementById('concierge-input');
+  var conciergeSubmit = document.getElementById('concierge-submit');
+  var conciergeResult = document.getElementById('concierge-result');
+
+  document.getElementById('concierge-suggestions').addEventListener('click', function(e){
+    var chip = e.target.closest('.mini-chip'); if(!chip) return;
+    conciergeInput.value = chip.dataset.q;
+    conciergeInput.focus();
+    conciergeForm.requestSubmit ? conciergeForm.requestSubmit() : runConcierge();
+  });
+
+  conciergeForm.addEventListener('submit', function(e){ e.preventDefault(); runConcierge(); });
+
+  async function runConcierge(){
+    var query = conciergeInput.value.trim();
+    if(query.length < 3){ toast('Tell the concierge a bit about your work'); return; }
+    conciergeSubmit.disabled = true;
+    conciergeResult.hidden = false;
+    conciergeResult.innerHTML = '<div class="concierge-loading"><span class="concierge-spinner"></span>Reading your notes and picking your toolkit…</div>';
+    try{
+      var res = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !Array.isArray(data.recommendations)){ throw new Error(data.error || 'The concierge is unavailable right now.'); }
+      renderConcierge(data);
+    }catch(err){
+      conciergeResult.innerHTML = '<p class="concierge-error">'+esc(err.message || 'Something went wrong. Please try again.')+'</p>';
+    }finally{
+      conciergeSubmit.disabled = false;
+    }
+  }
+
+  function renderConcierge(data){
+    if(!data.recommendations.length){
+      conciergeResult.innerHTML = '<p class="concierge-error">No close matches — try describing your work in a bit more detail.</p>';
+      return;
+    }
+    var srcLabel = data.source === 'ai' ? 'Curated by Claude' : 'Curated for you';
+    var html = '<p class="concierge-summary"><span class="src-tag">✦ '+srcLabel+'</span>'+esc(data.summary || '')+'</p>';
+    html += '<div class="rec-list">';
+    data.recommendations.forEach(function(r){
+      html +=
+        '<div class="rec">'+
+          '<div class="rec-body">'+
+            '<p class="rec-name">'+esc(r.name)+'<span class="rec-sku">'+esc(r.sku)+'</span></p>'+
+            '<p class="rec-reason">'+esc(r.reason)+'</p>'+
+          '</div>'+
+          '<div class="rec-side">'+
+            '<span class="rec-price">$'+parseFloat(r.price).toFixed(2)+'</span>'+
+            '<button class="btn rec-add" data-sku="'+esc(r.sku)+'">+ Add</button>'+
+          '</div>'+
+        '</div>';
+    });
+    html += '</div>';
+    html +=
+      '<div class="bundle-row">'+
+        '<span class="bundle-total">Full bundle<b>$'+parseFloat(data.bundleTotal || 0).toFixed(2)+'</b></span>'+
+        '<button class="btn btn-solid" id="add-bundle">Add all to cart</button>'+
+      '</div>';
+    conciergeResult.innerHTML = html;
+
+    // Keep the product data around so the add buttons don't need the DOM cards.
+    var recs = data.recommendations;
+    conciergeResult.querySelectorAll('.rec-add').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var r = recs.filter(function(x){ return x.sku === btn.dataset.sku; })[0];
+        if(r){ addToCart({ id: r.sku, name: r.name, price: r.price }); }
+      });
+    });
+    document.getElementById('add-bundle').addEventListener('click', function(){
+      recs.forEach(function(r){ addToCart({ id: r.sku, name: r.name, price: r.price }); });
+      openCart();
+    });
+  }
+
+  // ---- AI chat assistant (Claude agent) ----
+  var chatFab = document.getElementById('chat-fab');
+  var chatPanel = document.getElementById('chat-panel');
+  var chatLog = document.getElementById('chat-log');
+  var chatForm = document.getElementById('chat-form');
+  var chatInput = document.getElementById('chat-input');
+  var chatSend = document.getElementById('chat-send');
+  var chatHistory = [];      // [{role, content}] sent to the agent
+  var chatBusy = false;
+  var chatGreeted = false;
+
+  function openChat(){
+    chatPanel.hidden = false;
+    chatFab.classList.add('hidden');
+    chatFab.setAttribute('aria-expanded', 'true');
+    if(!chatGreeted){
+      chatGreeted = true;
+      addChatBubble('bot', "Hey — I'm the store assistant, powered by a Claude agent. Tell me what you're working on or ask about any tool, and I'll pull the right picks from the catalog.");
+    }
+    setTimeout(function(){ chatInput.focus(); }, 50);
+  }
+  function closeChat(){ chatPanel.hidden = true; chatFab.classList.remove('hidden'); chatFab.setAttribute('aria-expanded', 'false'); }
+
+  chatFab.addEventListener('click', openChat);
+  document.getElementById('chat-close').addEventListener('click', closeChat);
+
+  function scrollChat(){ chatLog.scrollTop = chatLog.scrollHeight; }
+
+  function addChatBubble(role, text){
+    var el = document.createElement('div');
+    el.className = 'chat-msg ' + (role === 'user' ? 'user' : 'bot');
+    el.textContent = text || '';
+    chatLog.appendChild(el);
+    scrollChat();
+    return el;
+  }
+
+  function renderChatCards(items){
+    var wrap = document.createElement('div');
+    wrap.className = 'chat-cards';
+    items.forEach(function(r){
+      var card = document.createElement('div');
+      card.className = 'chat-card';
+      card.innerHTML =
+        '<div>'+
+          '<div class="chat-card-name">'+esc(r.name)+'</div>'+
+          '<div class="chat-card-blurb">'+esc(r.blurb || '')+'</div>'+
+        '</div>'+
+        '<div class="chat-card-side">'+
+          '<span class="chat-card-price">$'+parseFloat(r.price).toFixed(2)+'</span>'+
+          '<button class="btn chat-card-add" data-sku="'+esc(r.sku)+'">+ Add</button>'+
+        '</div>';
+      card.querySelector('.chat-card-add').addEventListener('click', function(){
+        addToCart({ id: r.sku, name: r.name, price: r.price });
+      });
+      wrap.appendChild(card);
+    });
+    chatLog.appendChild(wrap);
+    scrollChat();
+  }
+
+  var TOOL_LABEL = { search_catalog: 'Searching the catalog…', get_product: 'Looking up a product…' };
+
+  chatForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(chatBusy) return;
+    var text = chatInput.value.trim();
+    if(!text) return;
+
+    addChatBubble('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    chatInput.value = '';
+    chatBusy = true;
+    chatSend.disabled = true;
+
+    // Live status line while the agent thinks / uses tools.
+    var status = document.createElement('div');
+    status.className = 'chat-status';
+    status.innerHTML = '<span class="concierge-spinner"></span><span>Thinking…</span>';
+    chatLog.appendChild(status);
+    scrollChat();
+
+    var botEl = null;      // created lazily on first text delta
+    var answer = '';
+
+    function ensureBot(){
+      if(!botEl){ status.remove(); botEl = addChatBubble('bot', ''); }
+      return botEl;
+    }
+
+    try{
+      var res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: chatHistory })
+      });
+      if(!res.ok || !res.body){ throw new Error('unavailable'); }
+
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();     // keep the trailing partial line
+        for(var i=0; i<lines.length; i++){
+          var line = lines[i].trim();
+          if(!line) continue;
+          var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+          if(ev.type === 'text'){
+            answer += ev.text;
+            ensureBot().textContent = answer;
+            scrollChat();
+          }else if(ev.type === 'status'){
+            var lbl = status.querySelector('span:last-child');
+            if(lbl){ lbl.textContent = TOOL_LABEL[ev.tool] || 'Working…'; }
+          }else if(ev.type === 'products'){
+            renderChatCards(ev.items);
+            // Keep the spinner trailing below any cards until text arrives.
+            if(status.isConnected){ chatLog.appendChild(status); scrollChat(); }
+          }
+        }
+      }
+      if(status.isConnected) status.remove();
+      if(answer.trim()){ chatHistory.push({ role: 'assistant', content: answer }); }
+      if(!botEl && !answer.trim()){ addChatBubble('bot', 'Here are a few tools that might help.'); }
+    }catch(err){
+      if(status.isConnected) status.remove();
+      addChatBubble('bot', "I couldn't reach the assistant just now. Please try again in a moment.");
+    }finally{
+      chatBusy = false;
+      chatSend.disabled = false;
+      chatInput.focus();
+    }
+  });
+
+  // ---- Live Proof: stream a real, product-specific demo into the terminal ----
+  var proofTerminal = document.getElementById('pm-proof-terminal');
+  var proofOutput = document.getElementById('pm-proof-output');
+  var proofLabel = document.getElementById('pm-proof-label');
+  var proofScenario = document.getElementById('pm-proof-scenario');
+  var proofRun = document.getElementById('pm-proof-run');
+  var proofRunLabel = document.getElementById('pm-proof-run-label');
+  var proofShare = document.getElementById('pm-proof-share');
+  var proofShareBtn = document.getElementById('pm-proof-share-btn');
+  var proofShareLink = document.getElementById('pm-proof-share-link');
+  var proofSku = null;
+  var proofBusy = false;
+  var lastProofOutput = '';
+  var lastProofScenario = '';
+
+  var IDLE_HINT = 'Press <b>Run live demo</b> and Claude will run this product on a real example, streamed here in real time.';
+
+  // Reset the panel each time a new product opens.
+  function resetProof(data){
+    proofSku = data.id || null;
+    proofBusy = false;
+    proofScenario.value = '';
+    proofRun.disabled = false;
+    proofRun.classList.remove('secondary');
+    proofRunLabel.textContent = 'Run live demo';
+    proofTerminal.setAttribute('data-empty', 'true');
+    proofLabel.textContent = 'demo · idle';
+    proofOutput.innerHTML = '<span class="proof-hint">' + IDLE_HINT + '</span>';
+    lastProofOutput = '';
+    lastProofScenario = '';
+    if(proofShare){ proofShare.hidden = true; }
+    if(proofShareBtn){ proofShareBtn.hidden = false; proofShareBtn.disabled = false; proofShareBtn.textContent = 'Share this proof'; }
+    if(proofShareLink){ proofShareLink.hidden = true; proofShareLink.innerHTML = ''; }
+  }
+
+  function setProofCursor(text){
+    // Render streamed text with a blinking terminal cursor at the end.
+    proofOutput.innerHTML = esc(text) + '<span class="proof-cursor"></span>';
+    proofOutput.scrollTop = proofOutput.scrollHeight;
+  }
+
+  async function runProof(){
+    if(proofBusy || !proofSku) return;
+    proofBusy = true;
+    proofRun.disabled = true;
+    proofTerminal.setAttribute('data-empty', 'false');
+    proofLabel.textContent = 'demo · booting';
+    proofOutput.innerHTML = '<span class="proof-cursor"></span>';
+
+    var scenario = proofScenario.value.trim();
+    var answer = '';
+    var gotText = false;
+
+    try{
+      var res = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: proofSku, scenario: scenario })
+      });
+      if(!res.ok || !res.body){
+        // A 429 is the tailored-demo hourly cap, not an outage — surface the
+        // server's own explanation so the shopper knows the standard demo still
+        // works, rather than the generic "warming up" fallback below.
+        if(res.status === 429){
+          var capMsg = '';
+          try{ capMsg = (await res.json()).error || ''; }catch(_){ capMsg = ''; }
+          proofOutput.innerHTML = '<span class="proof-hint">' + esc(capMsg || 'Too many tailored demos for now. Please try again shortly.') + '</span>';
+          proofLabel.textContent = 'demo · limit reached';
+          proofTerminal.setAttribute('data-empty', 'true');
+          return;
+        }
+        throw new Error('unavailable');
+      }
+
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for(var i=0; i<lines.length; i++){
+          var line = lines[i].trim();
+          if(!line) continue;
+          var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+          if(ev.type === 'meta'){
+            proofLabel.textContent = 'demo · ' + (ev.verb || 'running').toLowerCase() + (ev.cached ? ' · replay' : '');
+          }else if(ev.type === 'text'){
+            gotText = true;
+            answer += ev.text;
+            setProofCursor(answer);
+          }
+        }
+      }
+      if(!gotText){ throw new Error('empty'); }
+      proofOutput.innerHTML = esc(answer);      // drop the cursor when done
+      proofLabel.textContent = 'demo · complete';
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('demo_complete', { item_id: proofSku, method: scenario ? 'custom_scenario' : 'sample' }, { lead: true });
+      }
+      // Capture the run so it can be published as a shareable permalink.
+      lastProofOutput = answer;
+      lastProofScenario = scenario;
+      if(proofShare){ proofShare.hidden = false; }
+      if(proofShareBtn){ proofShareBtn.hidden = false; proofShareBtn.disabled = false; proofShareBtn.textContent = 'Share this proof'; }
+      if(proofShareLink){ proofShareLink.hidden = true; proofShareLink.innerHTML = ''; }
+    }catch(err){
+      proofOutput.innerHTML = '<span class="proof-hint">The live engine is warming up (it activates after the first production deploy). Try again in a moment.</span>';
+      proofLabel.textContent = 'demo · offline';
+      proofTerminal.setAttribute('data-empty', 'true');
+    }finally{
+      proofBusy = false;
+      proofRun.disabled = false;
+      proofRun.classList.add('secondary');
+      proofRunLabel.textContent = scenario ? 'Run again' : 'Run on my own situation';
+    }
+  }
+
+  proofRun.addEventListener('click', runProof);
+  proofScenario.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); runProof(); }
+  });
+
+  // Publish the run just watched as a public, shareable permalink (/proof/:id).
+  if(proofShareBtn){
+    proofShareBtn.addEventListener('click', async function(){
+      if(!proofSku || !lastProofOutput){ return; }
+      proofShareBtn.disabled = true;
+      var original = proofShareBtn.textContent;
+      proofShareBtn.textContent = 'Publishing…';
+      try{
+        var res = await fetch('/api/proof', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku: proofSku, scenario: lastProofScenario, output: lastProofOutput })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if(!res.ok || !data.url){ throw new Error(data.error || 'Could not publish this proof.'); }
+        proofShareLink.hidden = false;
+        proofShareLink.innerHTML = '<a href="' + esc(data.url) + '" target="_blank" rel="noopener">' + esc(data.url) + '</a>' +
+          ' <button type="button" class="proof-copy" data-url="' + esc(data.url) + '">Copy</button>';
+        proofShareBtn.hidden = true;
+        toast('Proof published — share the link');
+      }catch(err){
+        toast(err.message || 'Could not publish this proof.');
+        proofShareBtn.textContent = original;
+      }finally{
+        proofShareBtn.disabled = false;
+      }
+    });
+    proofShareLink.addEventListener('click', function(e){
+      var copy = e.target.closest('.proof-copy');
+      if(!copy) return;
+      var url = copy.dataset.url || '';
+      if(navigator.clipboard && url){
+        navigator.clipboard.writeText(url).then(function(){ toast('Link copied'); }, function(){});
+      }
+    });
+  }
+
+  // ---- product reviews ----
+  var pmRevSummary = document.getElementById('pm-rev-summary');
+  var pmRevList = document.getElementById('pm-rev-list');
+  var pmRevForm = document.getElementById('pm-rev-form');
+  var pmStarPick = document.getElementById('pm-star-pick');
+  var pmRevAuthor = document.getElementById('pm-rev-author');
+  var pmRevBody = document.getElementById('pm-rev-body');
+  var pmRevSubmit = document.getElementById('pm-rev-submit');
+  var pmRating = 0;
+
+  function starString(n){
+    n = Math.round(n);
+    return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
+  }
+
+  function paintStarPick(){
+    pmStarPick.querySelectorAll('span').forEach(function(s){
+      var v = parseInt(s.dataset.v, 10);
+      s.classList.toggle('on', v <= pmRating);
+      var checked = v === pmRating;
+      s.setAttribute('aria-checked', checked ? 'true' : 'false');
+      // roving tabindex: the checked radio (or the first when none chosen) is focusable
+      s.tabIndex = checked || (pmRating === 0 && v === 1) ? 0 : -1;
+    });
+  }
+  function selectStar(s){
+    if(!s) return;
+    pmRating = parseInt(s.dataset.v, 10) || 0;
+    paintStarPick();
+    s.focus();
+  }
+  pmStarPick.addEventListener('click', function(e){
+    selectStar(e.target.closest('span'));
+  });
+  pmStarPick.addEventListener('keydown', function(e){
+    var stars = Array.prototype.slice.call(pmStarPick.querySelectorAll('span'));
+    var cur = stars.indexOf(e.target.closest('span'));
+    if(cur === -1) return;
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+      e.preventDefault(); selectStar(stars[Math.min(cur + 1, stars.length - 1)]);
+    }else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+      e.preventDefault(); selectStar(stars[Math.max(cur - 1, 0)]);
+    }else if(e.key === ' ' || e.key === 'Enter'){
+      e.preventDefault(); selectStar(stars[cur]);
+    }
+  });
+
+  function renderReviews(data){
+    var agg = data.aggregate || { count: 0, average: 0 };
+    if(agg.count > 0){
+      pmRevSummary.innerHTML = '<span class="stars">' + starString(agg.average) + '</span>' +
+        '<span>' + agg.average + ' out of 5 · ' + agg.count + ' review' + (agg.count === 1 ? '' : 's') + '</span>';
+    }else{
+      pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">No reviews yet — be the first.</span>';
+    }
+    var list = data.reviews || [];
+    pmRevList.innerHTML = list.slice(0, 8).map(function(r){
+      return '<div class="rev-item"><div class="who">' + esc(r.author) + ' · <span class="stars">' + starString(r.rating) + '</span></div>' +
+        (r.body ? '<p class="txt">' + esc(r.body) + '</p>' : '') + '</div>';
+    }).join('');
+  }
+
+  async function loadProductReviews(sku){
+    // Reset the form each time the modal opens.
+    pmRating = 0; paintStarPick();
+    pmRevAuthor.value = ''; pmRevBody.value = '';
+    pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">Loading reviews…</span>';
+    pmRevList.innerHTML = '';
+    if(!sku) return;
+    try{
+      var res = await fetch('/api/reviews?sku=' + encodeURIComponent(sku));
+      var data = await res.json().catch(function(){ return {}; });
+      renderReviews(data || {});
+    }catch(e){
+      pmRevSummary.innerHTML = '<span style="color:var(--muted-2);">Reviews are unavailable right now.</span>';
+    }
+  }
+
+  pmRevForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!pendingProduct || !pendingProduct.id){ return; }
+    if(pmRating < 1){ toast('Pick a star rating first'); return; }
+    var author = pmRevAuthor.value.trim();
+    if(!author){ toast('Add your name'); return; }
+    pmRevSubmit.disabled = true;
+    try{
+      var res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: pendingProduct.id, author: author, rating: pmRating, body: pmRevBody.value.trim() })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.review){ throw new Error(data.error || 'Could not post your review.'); }
+      toast('Thanks for the review!');
+      pmRating = 0; paintStarPick(); pmRevAuthor.value = ''; pmRevBody.value = '';
+      loadProductReviews(pendingProduct.id);
+    }catch(err){
+      toast(err.message || 'Could not post your review.');
+    }finally{
+      pmRevSubmit.disabled = false;
+    }
+  });
+
+  // ---- lead magnet / free prompt pack ----
+  var newsletterForm = document.getElementById('newsletter-form');
+  var newsletterNote = document.getElementById('newsletter-note');
+  var newsletterPack = document.getElementById('newsletter-pack');
+
+  function renderFreePack(data){
+    if(!newsletterPack || !data || !data.pack) return;
+    var pack = data.pack;
+    var frag = document.createElement('div');
+    var h = document.createElement('h3');
+    h.textContent = pack.title;
+    frag.appendChild(h);
+    if(pack.intro){
+      var intro = document.createElement('p');
+      intro.className = 'lead-pack-intro';
+      intro.textContent = pack.intro;
+      frag.appendChild(intro);
+    }
+    (pack.prompts || []).forEach(function(p, i){
+      var wrap = document.createElement('div');
+      wrap.className = 'lead-pack-item';
+      var pt = document.createElement('h4');
+      pt.textContent = (i + 1) + '. ' + p.title;
+      var pb = document.createElement('pre');
+      pb.textContent = p.body;
+      wrap.appendChild(pt);
+      wrap.appendChild(pb);
+      frag.appendChild(wrap);
+    });
+    if(data.markdown){
+      var dl = document.createElement('a');
+      var blob = new Blob([data.markdown], { type: 'text/markdown' });
+      dl.href = URL.createObjectURL(blob);
+      dl.download = (pack.slug || 'free-prompt-pack') + '.md';
+      dl.className = 'btn btn-gold';
+      dl.style.marginTop = '14px';
+      dl.textContent = 'Download the pack (.md)';
+      frag.appendChild(dl);
+    }
+    newsletterPack.innerHTML = '';
+    newsletterPack.appendChild(frag);
+    newsletterPack.hidden = false;
+  }
+
+  newsletterForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var submit = document.getElementById('newsletter-submit');
+    submit.disabled = true;
+    newsletterNote.textContent = 'Unlocking your pack…';
+    try{
+      var res = await fetch('/api/free-pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newsletterForm.email.value,
+          'bot-field': newsletterForm['bot-field'].value
+        })
+      });
+      var data = await res.json();
+      if(!res.ok){ throw new Error(data && data.error ? data.error : 'failed'); }
+      newsletterForm.reset();
+      newsletterNote.textContent = "You're in — here's your free pack. Save it below.";
+      if(window.trackMarketingEvent){ window.trackMarketingEvent('sign_up', { method: 'newsletter' }, { lead: true }); }
+      renderFreePack(data);
+    }catch(err){
+      newsletterNote.textContent = (err && err.message) ? err.message : "Something went wrong — please try again.";
+    }finally{
+      submit.disabled = false;
+    }
+  });
+
+  // ---- contact form (Netlify Forms + email notification) ----
+  var contactForm = document.getElementById('contact-form');
+  var contactNote = document.getElementById('contact-note');
+  if(contactForm){
+    contactForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var submit = document.getElementById('contact-submit');
+      submit.disabled = true;
+      contactNote.textContent = 'Sending…';
+      try{
+        // Static-site Netlify Forms: POST the encoded fields back to the origin
+        // so Netlify's form handler captures the submission and emails the owner.
+        var res = await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(new FormData(contactForm)).toString()
+        });
+        if(!res.ok){ throw new Error('failed'); }
+        contactForm.reset();
+        contactNote.textContent = "Thanks — your message is on its way. We'll reply by email.";
+        if(window.trackMarketingEvent){ window.trackMarketingEvent('generate_lead', { method: 'contact_form' }, { lead: true }); }
+        toast("Message sent — we'll be in touch.");
+      }catch(err){
+        contactNote.textContent = 'Something went wrong — please try again in a moment.';
+      }finally{
+        submit.disabled = false;
+      }
+    });
+  }
+
+  // ---- init ----
+  captureAdClickId();
+  trackLanding();
+  loadCart();
+  handleCheckoutReturn();
+  loadCatalogFromApi();
+})();
+</script>
+
+<script>
+/* Matrix digital rain — respects prefers-reduced-motion */
+(function(){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var canvas = document.getElementById('matrix-rain');
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext('2d');
+  var glyphs = 'アカサタナハマヤラワ0123456789ABCDEFｦｱｳｴｵｶｷｸｹｺ<>=/*+-{}[]$#'.split('');
+  var fontSize = 15, cols = 0, drops = [];
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cols = Math.floor(canvas.width / fontSize);
+    drops = [];
+    for (var i = 0; i < cols; i++){ drops[i] = Math.floor(Math.random() * -50); }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var last = 0;
+  function draw(now){
+    if (now - last > 55){
+      last = now;
+      ctx.fillStyle = 'rgba(8, 0, 0, 0.10)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = fontSize + 'px "JetBrains Mono", monospace';
+      for (var i = 0; i < drops.length; i++){
+        var ch = glyphs[Math.floor(Math.random() * glyphs.length)];
+        var x = i * fontSize, y = drops[i] * fontSize;
+        ctx.fillStyle = Math.random() > 0.975 ? '#FFD4D4' : '#FF2A2A';
+        ctx.fillText(ch, x, y);
+        if (y > canvas.height && Math.random() > 0.975){ drops[i] = 0; }
+        drops[i]++;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+
+<!-- Install + offline: registers the service worker so the site installs as an app
+     on a phone or a computer and works offline, and reveals the header's "Install
+     app" button once the browser reports it is installable. Shared with agent.html
+     so the two pages cannot drift — see install-app.js. -->
+<script src="/install-app.js" defer></script>
+
+</body>
+  </html>
