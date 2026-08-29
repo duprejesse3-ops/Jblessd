@@ -9,7 +9,7 @@
 // disconnected local run.
 //
 // Usage (inside the app container):
-//   node container/scripts/run-one.mjs <function-name> [--url "http://localhost/api/x"] [--method POST] [--body '{"a":1}']
+//   node container/run-one.mjs <function-name> [--url "http://localhost/api/x"] [--method POST] [--body '{"a":1}']
 //
 // Prints a single line "RUN_RESULT <json>" at the end so the Electron main
 // process can parse the outcome out of an otherwise free-form log stream;
@@ -19,15 +19,15 @@
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { installNetlifyGlobal } from '../lib/netlify-global.mjs'
-import { loadNetlifyConfig } from '../lib/config.mjs'
-import { loadFunctions } from '../lib/routes.mjs'
-import { closeDatabase } from '../adapters/netlify-database.mjs'
+import { installNetlifyGlobal } from './lib/netlify-global.mjs'
+import { loadNetlifyConfig } from './lib/config.mjs'
+import { loadFunctions } from './lib/routes.mjs'
+import { closeDatabase } from './adapters/netlify-database.mjs'
 
 installNetlifyGlobal()
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const APP_ROOT = resolve(process.env.APP_ROOT || join(HERE, '..', '..'))
+const APP_ROOT = resolve(process.env.APP_ROOT || join(HERE, '..'))
 const SITE_URL = (process.env.SITE_URL || 'http://localhost:8080').replace(/\/$/, '')
 
 function parseArgs(argv) {
