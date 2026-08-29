@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "jblessd.com storefront with Stripe checkout on Netlify Functions",
+  "scripts": {
+    "fn": "tsx scripts/run-function.mts"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
     "@netlify/blobs": "^8.2.0",
@@ -13,6 +16,8 @@
   },
   "devDependencies": {
     "@netlify/edge-functions": "^3.0.8",
-    "@netlify/functions": "^2.8.2"
+    "@netlify/functions": "^2.8.2",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.0"
   }
 }
