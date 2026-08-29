@@ -40,11 +40,22 @@ const ENABLED = process.env.SCORECARD_ENABLED !== 'false'
 // triggers. Still overridable via SCORECARD_BATCH_SIZE if the catalog grows
 // past what fits in the 15-minute background budget at the concurrency below.
 const BATCH_SIZE = Number(process.env.SCORECARD_BATCH_SIZE || 200)
-// How many scenarios run at once. Keeps this well under any per-function
-// outbound-connection ceiling while still cutting wall-clock time by roughly
-// this factor versus running one at a time.
-const CONCURRENCY = Number(process.env.SCORECARD_CONCURRENCY || 5)
+// Kept low deliberately: a burst of 5 concurrent /api/demo calls (each of
+// which calls the Anthropic API) was enough to trigger rate-limit rejections
+// on a large batch, which came back near-instantly (under ~300ms, vs. ~15-20s
+// for a real run) and were written into the permanent record as genuine
+// product failures. That's the opposite of what this system exists to do —
+// it publishes real failures on purpose, so a false one from infra overload
+// actively damages the credibility the whole scorecard is built on.
+const CONCURRENCY = Number(process.env.SCORECARD_CONCURRENCY || 2)
 const MIN_OUTPUT_LENGTH = 20 // mirrors /api/proof's own "nothing to save yet" floor
+// A run that fails in under this many ms almost certainly never reached the
+// model at all (a rate limit, a dropped connection, a cold-start rejection)
+// — not a real attempt that came back empty. Those get logged and skipped
+// rather than recorded, so a burst of infra pressure can't masquerade as the
+// product itself failing. A genuine failure (the model ran and produced
+// nothing usable) takes close to the same wall-clock time as a success.
+const INFRA_FAILURE_MS = 2000
 
 interface ScenarioRow {
   id: string
@@ -107,6 +118,14 @@ async function runOne(
   try {
     const result = await runScenario(origin, s.sku, s.prompt)
     const durationMs = Date.now() - start
+
+    if (result.outcome === 'failed' && durationMs < INFRA_FAILURE_MS) {
+      console.error(
+        `[scorecard-runner] ${s.sku}: failed in ${durationMs}ms — too fast to be a real attempt, ` +
+          `treating as infra pressure and NOT recording (will be retried next batch)`,
+      )
+      return
+    }
 
     await db.sql`
       INSERT INTO benchmark_runs (id, scenario_id, sku, output, duration_ms, outcome)
