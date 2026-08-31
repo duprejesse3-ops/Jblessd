@@ -42,6 +42,7 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   automations: 'AB',
   templates: 'TP',
   agents: 'AG',
+  connectors: 'CN',
 }
 
 // The design the agent produces — the same fields a real catalog row carries,
@@ -103,6 +104,7 @@ function heuristicDesign(brief: string, hints: Partial<Design>): Design {
     automations: 'Make.com blueprint',
     templates: 'Notion + Markdown template',
     agents: 'Agent config + guardrails',
+    connectors: 'Downloadable app · one-time license',
   }
 
   return {
@@ -155,8 +157,7 @@ async function aiDesign(brief: string, hints: Partial<Design>, catalog: Product[
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1024,
-    tools: [tool],
+    max_tokens: 1024,tools: [tool],
     tool_choice: { type: 'tool', name: 'design_product' },
     messages: [
       {
