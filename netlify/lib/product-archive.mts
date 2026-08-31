@@ -1,12 +1,14 @@
-// Turns a purchased digital product into a downloadable .zip archive when the
-// product ships as real source code rather than a generated document (see
-// netlify/lib/deliverables.mts for the Markdown-document path most SKUs use).
+// Maps a SKU to a downloadable archive of real files.
 //
-// AI-AG-065 (Site Audit Agent) and AI-CN-001 (MultiConnect: Zapier/Webhook
-// Bridge) are the current cases: each has its embedded source module
-// (site-audit-source.mts / multiconnect-webhook-bridge-source.mts) baked in
-// at build time via each package's tools/embed-source.mjs script, so
-// fulfilment never depends on reading the filesystem at request time.
+// Most products in this store are documents, and the Markdown deliverable plus
+// the self-contained HTML "app" file covers them completely. One product is
+// software — the Site Audit Agent (AI-AG-065) — and for that the buyer needs a
+// directory of files they can unzip and run, not a document they have to
+// transcribe.
+//
+// This keeps the mapping in one place so the download endpoint stays a thin
+// authorisation wrapper, and so adding a second source-code product later means
+// adding one entry here rather than touching the endpoint.
 
 import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
@@ -14,9 +16,12 @@ import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
   filename: string
-  bytes: Uint8Array
+  bytes: Buffer
 }
 
+// Files that have to arrive with the executable bit set. Everything else in an
+// archive unzips 0644. Paths are relative to the package root, before the
+// top-level directory is prefixed on.
 const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 
@@ -47,6 +52,23 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
 }
 
+/** Whether this SKU ships a downloadable archive in addition to its document. */
+export function hasArchive(sku: string): boolean {
+  return Object.prototype.hasOwnProperty.call(ARCHIVES, sku)
+}
+
+/** The download filename for a SKU's archive, or null if it has none. */
+export function archiveFilename(sku: string): string | null {
+  return ARCHIVES[sku]?.filename ?? null
+}
+
+/**
+ * Build the archive for a SKU. Returns null for a SKU that has none, so the
+ * caller can 404 rather than hand back an empty zip.
+ *
+ * Deterministic: the same SKU always produces byte-identical output, so the
+ * response is safe to cache and the buyer can verify a checksum.
+ */
 export function buildProductArchive(sku: string): ProductArchive | null {
   const spec = ARCHIVES[sku]
   if (!spec) return null
