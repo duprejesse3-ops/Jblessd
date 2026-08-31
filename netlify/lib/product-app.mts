@@ -192,8 +192,7 @@ const APPS: Record<Product['category'], (p: Product, topic: string) => ProductAp
 // offers to answer a task "in character", which would be a straightforwardly
 // false description of a Node CLI the buyer installs and schedules themselves.
 //
-// So AI-AG-065 gets its own form. It deliberately does not run a live audit from
-// here — the buyer bought the auditor to run on their own infrastructure, and
+// So AI-AG-065 gets its own form. It deliberately does not run a live audit from// here — the buyer bought the auditor to run on their own infrastructure, and
 // crawling their site on our metered host would recreate the exact recurring
 // cost the product exists to avoid. What it does instead is the part that
 // genuinely needs judgement: turn their stack into a concrete install-and-
@@ -201,6 +200,38 @@ const APPS: Record<Product['category'], (p: Product, topic: string) => ProductAp
 // kind of site they run.
 
 const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
+  'AI-CN-001': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your webhook setup',
+    tagline:
+      'Describe what you want to trigger and where, and this returns the exact field mapping and setup steps for your Zap or Scenario — before you even open the dashboard.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'direction',
+        label: 'Outbound (agent → Zapier/Make), inbound (Zapier/Make → agent), or both?',
+        type: 'text',
+        placeholder: 'e.g. both — I want order events out and support tickets in',
+        required: true,
+      },
+      {
+        id: 'payload',
+        label: 'What does the data look like on each side?',
+        type: 'textarea',
+        placeholder:
+          'e.g. my agent sends {orderId, status, total} — I want Zapier to see order_id, order_status, amount',
+        required: true,
+      },
+      {
+        id: 'platform',
+        label: 'Zapier, Make, or something else? (optional)',
+        type: 'text',
+        placeholder: 'e.g. Zapier, with a Slack action at the end',
+      },
+    ],
+  }),
   'AI-AG-065': (product) => ({
     sku: product.sku,
     name: product.name,
@@ -298,6 +329,8 @@ const RUN_BRIEF: Record<Product['category'], string> = {
 // owns" needs its own brief, or the generic one tells Claude to role-play an
 // agent that does not exist.
 const SKU_RUN_BRIEF: Record<string, string> = {
+  'AI-CN-001':
+    'The buyer owns the source of a local Zapier/Make webhook bridge with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which direction(s) they need (outbound via POST to /trigger, inbound via the /webhook URL pasted into a Zap or Scenario, or both), the exact field-mapping rules to enter in the dashboard for each direction (source path -> target field, based on the payload shapes they described), and — if they named a platform — the specific Zapier/Make step to pair it with (e.g. "Webhooks by Zapier -> Catch Hook" for inbound, or the action step for outbound). Reference the actual dashboard sections by name (Connect, outbound mapping, inbound mapping, test console). Do not pretend to have run their Zap or received real webhook traffic — you have not — and do not invent field names they never mentioned.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':
