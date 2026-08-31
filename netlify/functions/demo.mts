@@ -123,3 +123,129 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `- What it does: ${p.blurb}\n` +
     (scenario
       ? `\nTailor the demonstration to this shopper's own situation:\n"""${scenario}"""\n`
+: `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
+
+  return { system, user }
+}
+
+export default async (req: Request, context: Context) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
+  }
+
+  let sku = ''
+  let scenario = ''
+  try {
+    const body = await req.json()
+    sku = String(body?.sku ?? '').trim().slice(0, 32)
+    scenario = String(body?.scenario ?? '').trim().slice(0, 600)
+  } catch {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  if (!sku) return Response.json({ error: 'A product SKU is required.' }, { status: 400 })
+
+  // Only the uncacheable, always-fresh path is metered — see CUSTOM_DEMO_LIMIT.
+  if (scenario) {
+    const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
+    const limit = await checkRateLimit('demo-custom', ip, {
+      limit: CUSTOM_DEMO_LIMIT,
+      windowMs: CUSTOM_DEMO_WINDOW_MS,
+    })
+    if (!limit.allowed) {
+      return tooManyRequests(
+        limit.retryAfterSec,
+        'You have run a lot of tailored demos in the last hour. The standard demo for any product is still available — or try a tailored run again shortly.',
+      )
+    }
+  }
+
+  const { products } = await loadCatalog()
+  const product = products.find((p) => p.sku === sku)
+  if (!product) return Response.json({ error: 'No product with that SKU.' }, { status: 404 })
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
+
+      // Only the default (no-scenario) demo is cacheable — custom scenarios are
+      // unique to the shopper and always run fresh.
+      const cacheable = scenario.length === 0
+      const cacheKey = `${CACHE_VERSION}/${sku}`
+      let store: ReturnType<typeof getStore> | null = null
+      if (cacheable) {
+        try {
+          store = getStore('product-demos')
+          const cached = await store.get(cacheKey, { type: 'text' })
+          if (cached) {
+            send({ type: 'meta', verb: PLAYBOOK[product.category].verb, cached: true })
+            // Replay the cached demo in small chunks so it still feels live.
+            for (const piece of cached.match(/[\s\S]{1,24}/g) ?? [cached]) {
+              send({ type: 'text', text: piece })
+            }
+            send({ type: 'done' })
+            controller.close()
+            return
+          }
+        } catch (err) {
+          console.error('demo: blob read failed —', (err as Error).message)
+        }
+      }
+
+      send({ type: 'meta', verb: PLAYBOOK[product.category].verb, cached: false })
+
+      let full = ''
+      try {
+        const anthropic = new Anthropic()
+        const { system, user } = buildPrompt(product, scenario)
+        const modelStream = anthropic.messages.stream({
+          model: MODEL,
+          max_tokens: scenario ? MAX_TOKENS_SCENARIO : MAX_TOKENS_PREVIEW,
+          system,
+          messages: [{ role: 'user', content: user }],
+        })
+
+        for await (const event of modelStream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            full += event.delta.text
+            send({ type: 'text', text: event.delta.text })
+          }
+        }
+
+        // Persist the default demo so the next shopper gets it instantly.
+        if (cacheable && store && full.trim()) {
+          try {
+            await store.set(cacheKey, full)
+          } catch (err) {
+            console.error('demo: blob write failed —', (err as Error).message)
+          }
+        }
+      } catch (err) {
+        console.error('Demo engine failed:', (err as Error).message)
+        // Only fall back if nothing streamed, so we never double up on output.
+        if (!full.trim()) {
+          for (const piece of fallbackDemo(product, scenario).match(/[\s\S]{1,24}/g) ?? []) {
+            send({ type: 'text', text: piece })
+          }
+        } else {
+          send({ type: 'text', text: '\n\n(Cut off there — run it again for the full demo.)' })
+        }
+      } finally {
+        send({ type: 'done' })
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    },
+  })
+}
+
+export const config: Config = {
+  path: '/api/demo',
+}
