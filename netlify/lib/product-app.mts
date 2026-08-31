@@ -295,6 +295,37 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-CN-004': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your Email/CRM setup',
+    tagline:
+      'Describe what you want the agent to do with email, and this returns the exact SMTP setup, send-limit, and approval-flow plan for your situation.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'provider',
+        label: 'Which email provider? (Gmail, Outlook, other)',
+        type: 'text',
+        placeholder: 'e.g. Gmail with an app password',
+        required: true,
+      },
+      {
+        id: 'goal',
+        label: 'What do you want the agent to draft or respond to?',
+        type: 'textarea',
+        placeholder: 'e.g. follow up with leads who reply to a cold email, draft replies to support questions',
+        required: true,
+      },
+      {
+        id: 'volume',
+        label: 'Roughly how many emails a day/week? (optional, helps set the send limit)',
+        type: 'text',
+        placeholder: 'e.g. maybe 10-15 a day',
+      },
+    ],
+  }),
   'AI-AG-065': (product) => ({
     sku: product.sku,
     name: product.name,
@@ -398,6 +429,8 @@ const SKU_RUN_BRIEF: Record<string, string> = {
     'The buyer owns the source of a local Shopify connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: the exact Admin API scopes to grant when creating their Shopify app (read_products, read_orders always; write_products/write_inventory only if they said the agent needs to write), which webhook topics to add in Shopify Notifications settings (Order creation and/or Inventory level update, based on what they described needing), and whether safe mode should stay read-only or move to read-write given what they said. Reference the actual dashboard sections by name (Connect your store, Safe mode, Sync check). Do not pretend to have connected to their store or synced real data — you have not — and do not invent product counts or order numbers they never mentioned.',
   'AI-CN-003':
     'The buyer owns the source of a local Sheets/Airtable connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which platform(s) to enable in the dashboard (Google Sheets, Airtable, or both, based on what they said), for Sheets specifically remind them to share the sheet with their service account email and grant Editor access if they need writes, the exact read/write field-mapping rules to enter (source column/field name -> target field, based on the column names and agent field names they described), and whether safe mode should stay read-only or move to read-write given what they said about adding rows/records. Reference the actual dashboard sections by name (Google Sheets, Airtable, Field mapping, Safe mode). Do not pretend to have connected to their sheet/base or read real data — you have not — and do not invent row counts or column names they never mentioned.',
+  'AI-CN-004':
+    'The buyer owns the source of a local Email/CRM connector with its own dashboard UI, an approval queue, and a send-limit setting. Return a concrete setup plan: the SMTP host/port for the provider they named (Gmail: smtp.gmail.com, port 465, secure — remind them to use an App Password, not their normal password; Outlook: smtp.office365.com, port 587), a suggested sendLimitPerHour based on the volume they described (default 20 is fine unless they gave a much higher or lower number), and how their described use case maps onto the approval queue (every send the agent proposes lands as a pending draft — a human must open the dashboard, review it, and click Approve & send with safe mode set to read-write; nothing sends automatically no matter what they configure). If they mentioned reacting to inbound email, tell them to point their provider\'s inbound-parse webhook (e.g. SendGrid Inbound Parse, Mailgun Routes) at the URL shown in the dashboard\'s Inbound email section. Do not pretend to have sent a real email or connected to their mailbox — you have not — and do not invent contact names or message content they never mentioned.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':

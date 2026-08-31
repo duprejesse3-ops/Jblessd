@@ -14,6 +14,7 @@ import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
 import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
+import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -28,6 +29,7 @@ const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
+const EMAIL_EXECUTABLE = new Set(['bin/email-connect.mjs', 'install.sh'])
 
 // Unzipping into a single top-level directory rather than spraying thirteen
 // files into whatever the buyer's cwd happens to be. Standard courtesy, and it
@@ -36,6 +38,7 @@ const ROOT = 'site-audit-agent'
 const BRIDGE_ROOT = 'multiconnect-webhook-bridge'
 const SHOPIFY_ROOT = 'multiconnect-shopify'
 const SHEETS_ROOT = 'multiconnect-sheets-airtable'
+const EMAIL_ROOT = 'multiconnect-email-crm'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -69,11 +72,20 @@ function sheetsFiles(): ArchiveFile[] {
   }))
 }
 
+function emailFiles(): ArchiveFile[] {
+  return MULTICONNECT_EMAIL_CRM_SOURCE.map((file) => ({
+    path: `${EMAIL_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: EMAIL_EXECUTABLE.has(file.path),
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
   'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
   'AI-CN-003': { filename: 'multiconnect-sheets-airtable.zip', files: sheetsFiles },
+  'AI-CN-004': { filename: 'multiconnect-email-crm.zip', files: emailFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */

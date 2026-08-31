@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MultiConnect: Email/CRM</title>
+<style>
+  :root{--ink:#080000;--panel:#150808;--line:#4A1212;--paper:#FFD4D4;--muted:#E86A6A;--brass:#FF2A2A;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  section{border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px;background:var(--panel)}
+  h2{font-size:15px;margin:0 0 12px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input,select,textarea{width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-family:inherit;font-size:14px;margin-bottom:10px}
+  button{background:var(--brass);color:var(--ink);font-weight:600;font-size:13px;padding:8px 14px;border:none;border-radius:4px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--brass);border:1px solid var(--line)}
+  button.danger{background:transparent;color:#ff786e;border:1px solid #5a2020}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .safe-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .safe-badge.ro{background:#1a3d1a;color:#7cd67c}
+  .safe-badge.rw{background:#3d1a1a;color:#ff9c9c}
+  .draft{border:1px solid var(--line);border-radius:4px;padding:12px;margin-bottom:10px}
+  .draft .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .draft .status{font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px}
+  .status.pending{background:#3d3510;color:#e8c96a}
+  .status.sent{background:#1a3d1a;color:#7cd67c}
+  .status.rejected{background:#3d1a1a;color:#ff9c9c}
+  .log-entry{border-top:1px solid var(--line);padding:8px 0;font-size:12.5px;font-family:monospace}
+  .log-entry.error{color:#ff786e}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  #token-gate{text-align:center;padding-top:60px}
+  .contact{border-top:1px solid var(--line);padding:8px 0;font-size:13px}
+</style>
+</head>
+<body>
+<div id="token-gate">
+  <div class="wrap">
+    <h1>MultiConnect: Email/CRM</h1>
+    <p class="sub">Paste the token shown in your terminal when the connector started.</p>
+    <input id="token-input" placeholder="local auth token" style="max-width:340px;margin:0 auto 10px"/>
+    <div><button id="token-submit">Unlock dashboard</button></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <h1>MultiConnect: Email/CRM</h1>
+  <p class="sub">Running locally · nothing sends without your approval here.</p>
+
+  <section>
+    <h2>Safe mode <span id="safe-badge" class="safe-badge ro">read-only</span></h2>
+    <label for="safe-mode">Access level</label>
+    <select id="safe-mode">
+      <option value="read-only">Read-only — agent can draft and read contacts, nothing sends</option>
+      <option value="read-write">Read/write — you can approve drafts to send, and add contacts</option>
+    </select>
+    <label for="send-limit">Send limit per hour</label>
+    <input id="send-limit" type="number" value="20" min="1"/>
+    <button id="save-safe">Save</button>
+  </section>
+
+  <section>
+    <h2>SMTP connection</h2>
+    <label for="smtp-host">SMTP host</label>
+    <input id="smtp-host" placeholder="smtp.gmail.com"/>
+    <label for="smtp-port">Port</label>
+    <input id="smtp-port" type="number" value="465"/>
+    <label for="smtp-user">Username</label>
+    <input id="smtp-user" placeholder="you@yourdomain.com"/>
+    <label for="smtp-pass">Password / app password</label>
+    <input id="smtp-pass" type="password"/>
+    <label for="from-address">From address</label>
+    <input id="from-address" placeholder="you@yourdomain.com"/>
+    <label for="from-name">From name (optional)</label>
+    <input id="from-name" placeholder="Your Company"/>
+    <button id="save-smtp">Save SMTP connection</button>
+  </section>
+
+  <section>
+    <h2>Inbound email</h2>
+    <p class="sub">Point your email provider's inbound-parse webhook (e.g. SendGrid Inbound Parse, Mailgun Routes) at this URL:</p>
+    <input id="inbound-url" readonly/>
+  </section>
+
+  <section>
+    <h2>Approval queue</h2>
+    <div id="drafts"></div>
+  </section>
+
+  <section>
+    <h2>Contacts</h2>
+    <div class="row">
+      <input id="contact-name" placeholder="Name"/>
+      <input id="contact-email" placeholder="Email"/>
+      <button id="add-contact">Add</button>
+    </div>
+    <div id="contacts"></div>
+  </section>
+
+  <section>
+    <h2>Activity log</h2>
+    <button class="ghost" id="clear-log">Clear</button>
+    <div id="log"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
