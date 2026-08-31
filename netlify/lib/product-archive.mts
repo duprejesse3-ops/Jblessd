@@ -1,17 +1,17 @@
 // Maps a SKU to a downloadable archive of real files.
 //
 // Most products in this store are documents, and the Markdown deliverable plus
-// the self-contained HTML "app" file covers them completely. One product is
-// software — the Site Audit Agent (AI-AG-065) — and for that the buyer needs a
-// directory of files they can unzip and run, not a document they have to
-// transcribe.
+// the self-contained HTML "app" file covers them completely. Some products are
+// real software — the buyer needs a directory of files they can unzip and run,
+// not a document they have to transcribe.
 //
 // This keeps the mapping in one place so the download endpoint stays a thin
-// authorisation wrapper, and so adding a second source-code product later means
+// authorisation wrapper, and so adding another source-code product later means
 // adding one entry here rather than touching the endpoint.
 
 import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
+import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -24,12 +24,14 @@ export interface ProductArchive {
 // top-level directory is prefixed on.
 const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
+const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 
 // Unzipping into a single top-level directory rather than spraying thirteen
 // files into whatever the buyer's cwd happens to be. Standard courtesy, and it
 // means `unzip site-audit-agent.zip && cd site-audit-agent` just works.
 const ROOT = 'site-audit-agent'
 const BRIDGE_ROOT = 'multiconnect-webhook-bridge'
+const SHOPIFY_ROOT = 'multiconnect-shopify'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -47,9 +49,18 @@ function webhookBridgeFiles(): ArchiveFile[] {
   }))
 }
 
+function shopifyFiles(): ArchiveFile[] {
+  return MULTICONNECT_SHOPIFY_SOURCE.map((file) => ({
+    path: `${SHOPIFY_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: SHOPIFY_EXECUTABLE.has(file.path),
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
+  'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */
