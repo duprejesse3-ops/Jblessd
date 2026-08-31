@@ -1,0 +1,34 @@
+{
+  "name": "multiconnect-webhook-bridge",
+  "version": "1.0.0",
+  "description": "Connect your AI agent to Zapier/Make via inbound and outbound webhooks — a local dashboard, no account, no third-party service.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiconnect-bridge": "./bin/bridge.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./config": "./lib/config.mjs",
+    "./mapping": "./lib/mapping.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/bridge.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
