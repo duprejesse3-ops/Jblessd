@@ -22,6 +22,7 @@ import { getStore } from '@netlify/blobs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
+import { DEMO_LIBRARY } from '../lib/demo-library.mjs'
 
 const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
 const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
@@ -123,7 +124,7 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `- What it does: ${p.blurb}\n` +
     (scenario
       ? `\nTailor the demonstration to this shopper's own situation:\n"""${scenario}"""\n`
-: `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
+      : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
 
   return { system, user }
 }
@@ -168,6 +169,21 @@ export default async (req: Request, context: Context) => {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
+
+      // Free tier, checked first: a hand-written demo costs nothing to serve,
+      // no matter how much traffic it gets — no Blobs read, no model call.
+      // Only the default (no-scenario) view can use it; a shopper's own
+      // scenario is inherently something no static text can answer.
+      const libraryEntry = scenario.length === 0 ? DEMO_LIBRARY[product.sku] : undefined
+      if (libraryEntry) {
+        send({ type: 'meta', verb: libraryEntry.verb, cached: true })
+        for (const piece of libraryEntry.text.match(/[\s\S]{1,24}/g) ?? [libraryEntry.text]) {
+          send({ type: 'text', text: piece })
+        }
+        send({ type: 'done' })
+        controller.close()
+        return
+      }
 
       // Only the default (no-scenario) demo is cacheable — custom scenarios are
       // unique to the shopper and always run fresh.
