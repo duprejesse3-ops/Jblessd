@@ -21,6 +21,7 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   automations: 'AB',
   templates: 'TP',
   agents: 'AG',
+  connectors: 'CN',
 }
 
 function decorate(p: Product) {
