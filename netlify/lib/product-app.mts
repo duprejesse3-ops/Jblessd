@@ -326,6 +326,37 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-CN-005': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your Slack/Discord setup',
+    tagline:
+      'Describe what you want posted where, and this returns the exact routes, webhook setup, and slash-command plan for your workspace or server.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'platform',
+        label: 'Slack, Discord, or both?',
+        type: 'text',
+        placeholder: 'e.g. both — same alerts to each',
+        required: true,
+      },
+      {
+        id: 'events',
+        label: 'What events/alerts should post, and to which channel(s)?',
+        type: 'textarea',
+        placeholder: 'e.g. deploy finished -> #eng, new signup -> #sales',
+        required: true,
+      },
+      {
+        id: 'commands',
+        label: 'Any slash commands you want to receive? (optional)',
+        type: 'text',
+        placeholder: 'e.g. /status to check on a job',
+      },
+    ],
+  }),
   'AI-AG-065': (product) => ({
     sku: product.sku,
     name: product.name,
@@ -431,6 +462,8 @@ const SKU_RUN_BRIEF: Record<string, string> = {
     'The buyer owns the source of a local Sheets/Airtable connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which platform(s) to enable in the dashboard (Google Sheets, Airtable, or both, based on what they said), for Sheets specifically remind them to share the sheet with their service account email and grant Editor access if they need writes, the exact read/write field-mapping rules to enter (source column/field name -> target field, based on the column names and agent field names they described), and whether safe mode should stay read-only or move to read-write given what they said about adding rows/records. Reference the actual dashboard sections by name (Google Sheets, Airtable, Field mapping, Safe mode). Do not pretend to have connected to their sheet/base or read real data — you have not — and do not invent row counts or column names they never mentioned.',
   'AI-CN-004':
     'The buyer owns the source of a local Email/CRM connector with its own dashboard UI, an approval queue, and a send-limit setting. Return a concrete setup plan: the SMTP host/port for the provider they named (Gmail: smtp.gmail.com, port 465, secure — remind them to use an App Password, not their normal password; Outlook: smtp.office365.com, port 587), a suggested sendLimitPerHour based on the volume they described (default 20 is fine unless they gave a much higher or lower number), and how their described use case maps onto the approval queue (every send the agent proposes lands as a pending draft — a human must open the dashboard, review it, and click Approve & send with safe mode set to read-write; nothing sends automatically no matter what they configure). If they mentioned reacting to inbound email, tell them to point their provider\'s inbound-parse webhook (e.g. SendGrid Inbound Parse, Mailgun Routes) at the URL shown in the dashboard\'s Inbound email section. Do not pretend to have sent a real email or connected to their mailbox — you have not — and do not invent contact names or message content they never mentioned.',
+  'AI-CN-005':
+    'The buyer owns the source of a local Slack/Discord connector with its own dashboard UI, named routes, and a safe-mode write gate. Return a concrete setup plan: which platform(s) to set up based on what they named (for Slack: create an app, activate Incoming Webhooks, copy the Signing Secret into the dashboard\'s Slack section; for Discord: create an application, copy the Public Key into the dashboard\'s Discord section, create channel webhooks under a server\'s Integrations settings), the exact named routes to create in the dashboard (one per channel/event pairing they described, e.g. a route called "eng-alerts" for deploy events), and — if they mentioned slash commands — remind them the Slack request URL and Discord interactions URL shown in the dashboard are what to paste into each platform\'s developer settings, and that Discord specifically requires the connector to be running when that URL is saved because of its verification handshake. Reference the actual dashboard sections by name (Slack, Discord, Routes, Safe mode). Do not pretend to have posted a real message or received a real command — you have not — and do not invent channel names they never mentioned.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':
