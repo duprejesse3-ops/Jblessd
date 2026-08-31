@@ -192,7 +192,8 @@ const APPS: Record<Product['category'], (p: Product, topic: string) => ProductAp
 // offers to answer a task "in character", which would be a straightforwardly
 // false description of a Node CLI the buyer installs and schedules themselves.
 //
-// So AI-AG-065 gets its own form. It deliberately does not run a live audit from// here — the buyer bought the auditor to run on their own infrastructure, and
+// So AI-AG-065 gets its own form. It deliberately does not run a live audit from
+// here — the buyer bought the auditor to run on their own infrastructure, and
 // crawling their site on our metered host would recreate the exact recurring
 // cost the product exists to avoid. What it does instead is the part that
 // genuinely needs judgement: turn their stack into a concrete install-and-
@@ -229,6 +230,37 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
         label: 'Zapier, Make, or something else? (optional)',
         type: 'text',
         placeholder: 'e.g. Zapier, with a Slack action at the end',
+      },
+    ],
+  }),
+  'AI-CN-002': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your Shopify setup',
+    tagline:
+      'Describe your store and what you want your agent to do with it, and this returns the exact Admin API scopes, webhook topics, and safe-mode setting for your situation.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'goal',
+        label: 'What do you want the agent to do with your store?',
+        type: 'textarea',
+        placeholder: 'e.g. draft order confirmations, alert me on low stock, answer "what\'s in stock" questions',
+        required: true,
+      },
+      {
+        id: 'writes',
+        label: 'Does it need to change anything in Shopify, or just read?',
+        type: 'text',
+        placeholder: 'e.g. read-only is fine — or, yes, it should update inventory counts',
+        required: true,
+      },
+      {
+        id: 'scale',
+        label: 'Roughly how many orders/products are we talking about? (optional)',
+        type: 'text',
+        placeholder: 'e.g. ~50 orders/day, 200 SKUs',
       },
     ],
   }),
@@ -331,6 +363,8 @@ const RUN_BRIEF: Record<Product['category'], string> = {
 const SKU_RUN_BRIEF: Record<string, string> = {
   'AI-CN-001':
     'The buyer owns the source of a local Zapier/Make webhook bridge with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which direction(s) they need (outbound via POST to /trigger, inbound via the /webhook URL pasted into a Zap or Scenario, or both), the exact field-mapping rules to enter in the dashboard for each direction (source path -> target field, based on the payload shapes they described), and — if they named a platform — the specific Zapier/Make step to pair it with (e.g. "Webhooks by Zapier -> Catch Hook" for inbound, or the action step for outbound). Reference the actual dashboard sections by name (Connect, outbound mapping, inbound mapping, test console). Do not pretend to have run their Zap or received real webhook traffic — you have not — and do not invent field names they never mentioned.',
+  'AI-CN-002':
+    'The buyer owns the source of a local Shopify connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: the exact Admin API scopes to grant when creating their Shopify app (read_products, read_orders always; write_products/write_inventory only if they said the agent needs to write), which webhook topics to add in Shopify Notifications settings (Order creation and/or Inventory level update, based on what they described needing), and whether safe mode should stay read-only or move to read-write given what they said. Reference the actual dashboard sections by name (Connect your store, Safe mode, Sync check). Do not pretend to have connected to their store or synced real data — you have not — and do not invent product counts or order numbers they never mentioned.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':
