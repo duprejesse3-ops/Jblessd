@@ -264,6 +264,37 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-CN-003': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your Sheets/Airtable setup',
+    tagline:
+      'Describe what data you want synced and how, and this returns the exact platform, credentials, and field mapping to set up in the dashboard.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'platform',
+        label: 'Google Sheets, Airtable, or both?',
+        type: 'text',
+        placeholder: 'e.g. just Airtable — a Leads table',
+        required: true,
+      },
+      {
+        id: 'shape',
+        label: 'What columns/fields does your data have, and what does the agent need it named as?',
+        type: 'textarea',
+        placeholder: 'e.g. my sheet has "Full Name" and "Email" — the agent needs full_name and email',
+        required: true,
+      },
+      {
+        id: 'writes',
+        label: 'Does the agent need to add rows/records, or just read? (optional)',
+        type: 'text',
+        placeholder: 'e.g. read-only for now',
+      },
+    ],
+  }),
   'AI-AG-065': (product) => ({
     sku: product.sku,
     name: product.name,
@@ -365,6 +396,8 @@ const SKU_RUN_BRIEF: Record<string, string> = {
     'The buyer owns the source of a local Zapier/Make webhook bridge with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which direction(s) they need (outbound via POST to /trigger, inbound via the /webhook URL pasted into a Zap or Scenario, or both), the exact field-mapping rules to enter in the dashboard for each direction (source path -> target field, based on the payload shapes they described), and — if they named a platform — the specific Zapier/Make step to pair it with (e.g. "Webhooks by Zapier -> Catch Hook" for inbound, or the action step for outbound). Reference the actual dashboard sections by name (Connect, outbound mapping, inbound mapping, test console). Do not pretend to have run their Zap or received real webhook traffic — you have not — and do not invent field names they never mentioned.',
   'AI-CN-002':
     'The buyer owns the source of a local Shopify connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: the exact Admin API scopes to grant when creating their Shopify app (read_products, read_orders always; write_products/write_inventory only if they said the agent needs to write), which webhook topics to add in Shopify Notifications settings (Order creation and/or Inventory level update, based on what they described needing), and whether safe mode should stay read-only or move to read-write given what they said. Reference the actual dashboard sections by name (Connect your store, Safe mode, Sync check). Do not pretend to have connected to their store or synced real data — you have not — and do not invent product counts or order numbers they never mentioned.',
+  'AI-CN-003':
+    'The buyer owns the source of a local Sheets/Airtable connector with its own dashboard UI and needs to configure it for their situation. Return a concrete setup plan: which platform(s) to enable in the dashboard (Google Sheets, Airtable, or both, based on what they said), for Sheets specifically remind them to share the sheet with their service account email and grant Editor access if they need writes, the exact read/write field-mapping rules to enter (source column/field name -> target field, based on the column names and agent field names they described), and whether safe mode should stay read-only or move to read-write given what they said about adding rows/records. Reference the actual dashboard sections by name (Google Sheets, Airtable, Field mapping, Safe mode). Do not pretend to have connected to their sheet/base or read real data — you have not — and do not invent row counts or column names they never mentioned.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MultiConnect: Sheets/Airtable</title>
+<style>
+  :root{--ink:#080000;--panel:#150808;--line:#4A1212;--paper:#FFD4D4;--muted:#E86A6A;--brass:#FF2A2A;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  section{border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px;background:var(--panel)}
+  h2{font-size:15px;margin:0 0 12px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input,select,textarea{width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-family:inherit;font-size:14px;margin-bottom:10px}
+  textarea{min-height:70px;font-family:monospace;font-size:12px}
+  button{background:var(--brass);color:var(--ink);font-weight:600;font-size:13px;padding:8px 14px;border:none;border-radius:4px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--brass);border:1px solid var(--line)}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .row input{margin-bottom:0}
+  .mapping-list{margin-bottom:10px}
+  .safe-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .safe-badge.ro{background:#1a3d1a;color:#7cd67c}
+  .safe-badge.rw{background:#3d1a1a;color:#ff9c9c}
+  .log-entry{border-top:1px solid var(--line);padding:8px 0;font-size:12.5px;font-family:monospace}
+  .log-entry.error{color:#ff786e}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  #token-gate{text-align:center;padding-top:60px}
+  .toggle{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .toggle input{width:auto;margin:0}
+</style>
+</head>
+<body>
+<div id="token-gate">
+  <div class="wrap">
+    <h1>MultiConnect: Sheets/Airtable</h1>
+    <p class="sub">Paste the token shown in your terminal when the connector started.</p>
+    <input id="token-input" placeholder="local auth token" style="max-width:340px;margin:0 auto 10px"/>
+    <div><button id="token-submit">Unlock dashboard</button></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <h1>MultiConnect: Sheets/Airtable</h1>
+  <p class="sub">Running locally · your credentials never leave this machine.</p>
+
+  <section>
+    <h2>Safe mode <span id="safe-badge" class="safe-badge ro">read-only</span></h2>
+    <label for="safe-mode">Access level</label>
+    <select id="safe-mode">
+      <option value="read-only">Read-only — agent can see rows, never add or change them</option>
+      <option value="read-write">Read/write — agent can append rows/records</option>
+    </select>
+    <button id="save-safe">Save</button>
+  </section>
+
+  <section>
+    <div class="toggle"><input type="checkbox" id="sheets-enabled"/><h2 style="margin:0">Google Sheets</h2></div>
+    <label for="sa-email">Service account email</label>
+    <input id="sa-email" placeholder="my-bot@my-project.iam.gserviceaccount.com"/>
+    <label for="sa-key">Service account private key</label>
+    <textarea id="sa-key" placeholder="-----BEGIN PRIVATE KEY-----..."></textarea>
+    <label for="spreadsheet-id">Spreadsheet ID (from the sheet's URL)</label>
+    <input id="spreadsheet-id" placeholder="1BxiMVs0XRA5nFMd..."/>
+    <label for="sheet-name">Sheet/tab name</label>
+    <input id="sheet-name" value="Sheet1"/>
+    <button id="save-sheets">Save Sheets connection</button>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost" id="sheets-test">Fetch rows</button>
+    </div>
+    <div id="sheets-result" class="sub"></div>
+  </section>
+
+  <section>
+    <div class="toggle"><input type="checkbox" id="airtable-enabled"/><h2 style="margin:0">Airtable</h2></div>
+    <label for="at-key">Personal access token</label>
+    <input id="at-key" type="password" placeholder="pat..."/>
+    <label for="at-base">Base ID</label>
+    <input id="at-base" placeholder="app..."/>
+    <label for="at-table">Table name</label>
+    <input id="at-table" placeholder="Leads"/>
+    <button id="save-airtable">Save Airtable connection</button>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost" id="airtable-test">Fetch records</button>
+    </div>
+    <div id="airtable-result" class="sub"></div>
+  </section>
+
+  <section>
+    <h2>Field mapping</h2>
+    <p class="sub">Maps agent field names to your sheet columns / Airtable field names, both directions.</p>
+    <label>Read mapping (source column → agent field)</label>
+    <div id="read-mapping" class="mapping-list"></div>
+    <button class="ghost" id="add-read-rule">+ Add field</button>
+    <button id="save-read-mapping">Save</button>
+    <label style="margin-top:16px">Write mapping (agent field → target column)</label>
+    <div id="write-mapping" class="mapping-list"></div>
+    <button class="ghost" id="add-write-rule">+ Add field</button>
+    <button id="save-write-mapping">Save</button>
+  </section>
+
+  <section>
+    <h2>Activity log</h2>
+    <button class="ghost" id="clear-log">Clear</button>
+    <div id="log"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
