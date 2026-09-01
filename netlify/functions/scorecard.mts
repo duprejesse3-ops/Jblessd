@@ -91,11 +91,11 @@ export default async (req: Request) => {
       methodologyVersion: scenario.version,
       rollingStats: {
         total_runs: totalRuns,
-        success_rate: totalRuns > 0 ? Math.round((successRuns / totalRuns) * 1000) / 10 : null,
+        success_rate: totalRuns > 0 ? Math.round((successRuns / totalRuns) * 100) : null,
         avg_duration_ms: stats?.avg_duration_ms ?? null,
         last_run_at: stats?.last_run_at ? new Date(stats.last_run_at).toISOString() : null,
       },
-      runs: (runs ?? []).map((r) => ({
+      runs: runs.map((r) => ({
         id: r.id,
         outcome: r.outcome,
         duration_ms: r.duration_ms,
@@ -105,11 +105,11 @@ export default async (req: Request) => {
 
     return Response.json(
       { scorecard },
-      { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' } },
+      { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } },
     )
   } catch (err) {
-    console.error('scorecard GET error:', (err as Error).message)
-    return Response.json({ scorecard: null }, { status: 500 })
+    console.error('[scorecard] error:', err)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
