@@ -15,7 +15,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 
 interface Draft {
@@ -83,7 +83,7 @@ async function aiDescription(d: Draft): Promise<Description> {
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 670,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'write_description' },
     messages: [
