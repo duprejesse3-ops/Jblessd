@@ -53,17 +53,29 @@ actually paying for:
 
 The comment on each of these lines already says as much. They were deliberate.
 
-## The actual finding: seven sites on a model that costs more than its successor
+## Status: swap applied
 
-| Site | `max_tokens` | Now (Sonnet 4.5) | At Sonnet 5 | At Haiku 4.5 |
+All seven sites below have been switched from `claude-sonnet-4-5` to
+`claude-sonnet-5`, and each `max_tokens` cap was raised ~30% at the same time to
+offset the new tokenizer (see "If you make the swap" below for the exact before
+→ after values). The table stays as a record of what the move was worth.
+
+## The finding: seven sites on a model that cost more than its successor
+
+| Site | `max_tokens` (before) | Now (Sonnet 4.5) | At Sonnet 5 | At Haiku 4.5 |
 |---|---|---|---|---|
 | `google-ads-builder.mts` | 2048 | $25.11 | $21.76 | $8.37 |
-| `marketing-agent.mts` | 2048 | $25.11 | $21.76 | $8.37 |
+| `marketing-agent.mts` | 4096 | $46.61 | $40.39 | $15.54 |
 | `admin-console.mts` | 1400 | $18.30 | $15.86 | $6.10 |
 | `chat.mts` | 1024 | $14.36 | $12.44 | $4.79 |
 | `concierge.mts` | 1024 | $14.36 | $12.44 | $4.79 |
 | `product-builder.mts` | 1024 | $14.36 | $12.44 | $4.79 |
 | `describe.mts` | 512 | $8.97 | $7.77 | $2.99 |
+
+(`marketing-agent.mts` was corrected here from a previous version of this doc
+that listed `max_tokens: 2048` — the live code was actually `4096`, which is
+why its cost was understated below. The `google-ads-builder.mts` figures
+above are unaffected.)
 
 Sonnet 5 is **cheaper than Sonnet 4.5 on both input and output** ($2/$10 against
 $3/$15) and is the newer, more capable model. After the tokenizer difference the
@@ -97,17 +109,26 @@ Together these are the only calls that happen when nobody is visiting — roughl
 Quick / Standard / Deep agent tiers at 1 / 3 / 9 credits. That mapping is
 consistent with the prices above.
 
-## If you make the swap
+## The swap, as applied
 
 No call site in `netlify/` sets `temperature`, `top_p`, `top_k`, or a `thinking`
-block, so Sonnet 4.5 → Sonnet 5 is a one-line model-string change at each of the
-seven sites with no other edits required.
+block, so Sonnet 4.5 → Sonnet 5 was a one-line model-string change at each of
+the seven sites with no other edits required.
 
 The one thing to watch: **`max_tokens` counts the model's own tokens.** Sonnet 5
 produces ~30% more tokens for the same English, so leaving `max_tokens` where it
-is will make the output about 30% shorter and can truncate mid-sentence. Raise
-each cap by roughly a third when you switch — `describe.mts` from 512 to ~670,
-`chat.mts` from 1024 to ~1330, and so on.
+was would have made the output about 30% shorter and risked mid-sentence
+truncation. Each cap was raised by roughly a third alongside the model swap:
+
+| Site | `max_tokens` before → after |
+|---|---|
+| `google-ads-builder.mts` | 2048 → 2700 |
+| `marketing-agent.mts` | 4096 → 5300 |
+| `admin-console.mts` | 1400 → 1800 |
+| `chat.mts` | 1024 → 1330 |
+| `concierge.mts` | 1024 → 1330 |
+| `product-builder.mts` | 1024 → 1330 |
+| `describe.mts` | 512 → 670 |
 
 ## What this adds up to
 
