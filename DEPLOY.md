@@ -66,9 +66,20 @@ to the live store.
 
 That step is platform-side — it runs before the site's own build and there is nothing in this repository that can catch
 or skip it. When it fails the whole deploy stops with:
+
+```
+API error on "createSiteDatabaseBranch"
+  Error message: Internal Server Error
+```
+
 Nothing is wrong with the committed code when you see this. Two things cause it:
 
-1. **A transient Netlify API error.** Retry the deploy ("Retry with latest branch commit" in the Netlify UI, or push an empty commit). This clears it most of the time.
-2. **Stale database branches piling up.** Every branch deploy leaves a database branch behind, and each agent run and pull request creates a new one. Once the database's branch allowance is used up, new branch creation starts erroring instead of failing cleanly. Delete the branches for merged/abandoned work under **Site configuration → Database** in the Netlify dashboard, then retry. Production data is untouched by this — branches are copies.
+1. **A transient Netlify API error.** Retry the deploy ("Retry with latest branch commit" in the Netlify UI, or push an
+   empty commit). This clears it most of the time.
+2. **Stale database branches piling up.** Every branch deploy leaves a database branch behind, and each agent run and
+   pull request creates a new one. Once the database's branch allowance is used up, new branch creation starts erroring
+   instead of failing cleanly. Delete the branches for merged/abandoned work under **Site configuration → Database** in
+   the Netlify dashboard, then retry. Production data is untouched by this — branches are copies.
 
-Production deploys never call `createSiteDatabaseBranch` at all, so a live site already published is unaffected while you sort this out.
+Production deploys never call `createSiteDatabaseBranch` at all, so a live site already published is unaffected while
+you sort this out.
