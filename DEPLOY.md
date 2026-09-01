@@ -2,7 +2,7 @@
 
 This project has two parts:
 - **Static site**: `index.html`, `multiniche-ai-og.png`, `robots.txt`, `sitemap.xml`
-- **Serverless functions**: `netlify/functions/create-checkout-session.js` (required), `netlify/functions/webhook.js` (optional, for fulfillment)
+- **Serverless functions**: `netlify/functions/create-checkout-session.mts` (required), `netlify/functions/webhook.mts` (fulfillment — see section 7, already wired to Resend), `netlify/functions/create-custom-checkout-session.mts`, `netlify/functions/checkout-summary.mts`, and the rest of `netlify/functions/`
 - **`netlify.toml`**: tells Netlify where the functions live and redirects `/api/*` to them, so the frontend code doesn't need to change
 
 ## 1. Create a Stripe account
@@ -34,12 +34,10 @@ If `jblessd.com` isn't attached to this Netlify site yet: **Site configuration �
 3. In Netlify → Environment variables, update `STRIPE_SECRET_KEY` to the live key
 4. Redeploy
 
-## 6. Actually delivering the products (important — not yet wired up)
-Right now, checkout success just shows a message. Stripe does **not** know these are digital templates/prompts, so it won't email files automatically. Pick one:
+## 6. Delivering the products (already wired up)
+Checkout success triggers automated fulfillment: `netlify/functions/webhook.mts` listens for Stripe's payment event and emails the buyer their deliverable/download link via Resend (see section 7 below for the required environment variables). In Stripe Dashboard → Developers → Webhooks, add an endpoint pointing to `https://jblessd.com/api/webhook` and copy the signing secret into Netlify as `STRIPE_WEBHOOK_SECRET`.
 
-- **Easiest**: after each sale, manually email the buyer their download link (Stripe shows their email under Payments)
-- **Automated**: use `netlify/functions/webhook.js` — in Stripe Dashboard → Developers → Webhooks, add an endpoint pointing to `https://jblessd.com/api/webhook`, copy the signing secret into Netlify as `STRIPE_WEBHOOK_SECRET`, then have that function trigger an email via a service like Resend or Postmark with the download link
-- **Skip building this yourself**: this exact problem (checkout + automatic file delivery) is what Gumroad or Lemon Squeezy solve out of the box, if you'd rather not maintain the webhook/email piece
+If `RESEND_API_KEY` / `EMAIL_FROM` aren't set yet, email sends are a graceful no-op (logged, not sent) rather than an error — see section 7 — so you can deploy and test checkout before turning email on. Until then, fall back to manually emailing buyers their link (Stripe shows their email under Payments).
 
 ## Notes
 - The secret key must only ever live in Netlify's environment variables — never in the HTML or committed to your repo
@@ -68,21 +66,3 @@ to the live store.
 
 That step is platform-side — it runs before the site's own build and there is nothing in this repository that can catch
 or skip it. When it fails the whole deploy stops with:
-
-```
-API error on "createSiteDatabaseBranch"
-  Error message: Internal Server Error
-```
-
-Nothing is wrong with the committed code when you see this. Two things cause it:
-
-1. **A transient Netlify API error.** Retry the deploy ("Retry with latest branch commit" in the Netlify UI, or push an
-   empty commit). This clears it most of the time.
-2. **Stale database branches piling up.** Every branch deploy leaves a database branch behind, and each agent run and
-   pull request creates a new one. Once the database's branch allowance is used up, new branch creation starts erroring
-   instead of failing cleanly. Delete the branches for merged/abandoned work under **Site configuration → Database** in
-   the Netlify dashboard, then retry. Production data is untouched by this — branches are copies.
-
-Production deploys never call `createSiteDatabaseBranch` at all, so a live site already published is unaffected while
-you sort this out.
-
