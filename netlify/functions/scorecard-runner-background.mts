@@ -202,7 +202,7 @@ export default async (req: Request) => {
 }
 
 export const config: Config = {
-  // Weekly, off-peak Sunday — separate from multiads-scheduler's daily 13:00
-  // slot so the two never contend for the same cold-start window.
+  // Weekly, off-peak Sunday — separate from other scheduled functions
+  // so multiple jobs never contend for the same cold-start window.
   schedule: '0 11 * * 0',
 }
