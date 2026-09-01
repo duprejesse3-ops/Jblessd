@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MultiWitness</title>
+<style>
+  :root{--ink:#080000;--panel:#150808;--line:#4A1212;--paper:#FFD4D4;--muted:#E86A6A;--brass:#FF2A2A;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  section{border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px;background:var(--panel)}
+  h2{font-size:15px;margin:0 0 12px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input{width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-family:inherit;font-size:14px;margin-bottom:10px}
+  button{background:var(--brass);color:var(--ink);font-weight:600;font-size:13px;padding:8px 14px;border:none;border-radius:4px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--brass);border:1px solid var(--line)}
+  .entry{border-top:1px solid var(--line);padding:8px 0;font-size:12.5px;font-family:monospace}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .hash{color:#7a5252;font-size:10px;word-break:break-all}
+  .verify-status{padding:14px;border-radius:6px;margin-bottom:12px;font-size:14px}
+  .verify-status.ok{background:#1a3d1a;color:#7cd67c}
+  .verify-status.broken{background:#3d1a1a;color:#ff9c9c}
+  #token-gate{text-align:center;padding-top:60px}
+</style>
+</head>
+<body>
+<div id="token-gate">
+  <div class="wrap">
+    <h1>MultiWitness</h1>
+    <p class="sub">Paste the dashboard token shown in your terminal when it started.</p>
+    <input id="token-input" placeholder="dashboard token" style="max-width:340px;margin:0 auto 10px"/>
+    <div><button id="token-submit">Unlock dashboard</button></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <h1>MultiWitness</h1>
+  <p class="sub">A tamper-evident, hash-chained record of what your tools have done.</p>
+
+  <section>
+    <h2>Chain integrity</h2>
+    <div id="verify-status"></div>
+    <button id="run-verify">Verify chain now</button>
+  </section>
+
+  <section>
+    <h2>Ingest</h2>
+    <p class="sub">Give this token (not your dashboard token) to any tool you want logging events here.</p>
+    <label>Ingest endpoint</label>
+    <input id="ingest-url" readonly/>
+    <label>Ingest token</label>
+    <input id="ingest-token" readonly/>
+  </section>
+
+  <section>
+    <h2>Recent events</h2>
+    <button class="ghost" id="refresh">Refresh</button>
+    <div id="entries"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

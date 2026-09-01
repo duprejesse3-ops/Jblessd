@@ -20,6 +20,7 @@ import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
 import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.mjs'
 import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
+import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -535,6 +536,52 @@ function slackDiscordSections(product: Product): DeliverableSection[] {
   return sections
 }
 
+function witnessSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiwitness.zip\n` +
+        `    cd multiwitness\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts MultiWitness ` +
+        `and prints a dashboard token (for you) and a separate ingest token (to give to any ` +
+        `other tool you want logging events here). The ingest token can only ever append a ` +
+        `new event — there is no update or delete route for it to misuse even if it leaks.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiwitness\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, no database — the log is a ` +
+        `plain JSON Lines file. Just Node 18 or newer (\`node --version\` to check). ` +
+        `Skipping the installer is fine too:\n\n` +
+        `    node bin/witness.mjs start\n\n` +
+        `Verify it works on your machine, including the standalone verify command that ` +
+        `needs no server running:\n\n` +
+        `    npm test\n` +
+        `    node bin/witness.mjs verify\n\n` +
+        `Start with README.md — it covers logging your first event and what the hash chain ` +
+        `actually protects against.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIWITNESS_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIWITNESS_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
 const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
   'AI-AG-065': (product) => ({
     sku: product.sku,
@@ -607,6 +654,18 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
       'Yours to run on unlimited workspaces and servers you own, forever. See LICENSE.md ' +
       'at the end for the terms.',
     sections: slackDiscordSections(product),
+  }),
+  'AI-CN-006': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a tamper-evident, hash-chained action log — a SHA-256 ' +
+      'chain any of your tools can log into, verifiable offline with no server required, ' +
+      'zero dependencies. Yours to run on unlimited machines, forever. See LICENSE.md at ' +
+      'the end for the terms.',
+    sections: witnessSections(product),
   }),
 }
 

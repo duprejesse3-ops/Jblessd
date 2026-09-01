@@ -357,6 +357,31 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-CN-006': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Plan your MultiWitness setup',
+    tagline:
+      'Describe what you want proof of, and this returns exactly which of your tools to point at MultiWitness and what event names to log.',
+    cta: 'Build my setup plan',
+    runVerb: 'planning',
+    fields: [
+      {
+        id: 'sources',
+        label: 'Which of your tools/agents should log events here?',
+        type: 'textarea',
+        placeholder: 'e.g. my Shopify connector and my email connector',
+        required: true,
+      },
+      {
+        id: 'purpose',
+        label: 'What do you want to be able to prove?',
+        type: 'textarea',
+        placeholder: 'e.g. exactly which emails my agent sent and when, in case a customer disputes one',
+        required: true,
+      },
+    ],
+  }),
   'AI-AG-065': (product) => ({
     sku: product.sku,
     name: product.name,
@@ -464,6 +489,8 @@ const SKU_RUN_BRIEF: Record<string, string> = {
     'The buyer owns the source of a local Email/CRM connector with its own dashboard UI, an approval queue, and a send-limit setting. Return a concrete setup plan: the SMTP host/port for the provider they named (Gmail: smtp.gmail.com, port 465, secure — remind them to use an App Password, not their normal password; Outlook: smtp.office365.com, port 587), a suggested sendLimitPerHour based on the volume they described (default 20 is fine unless they gave a much higher or lower number), and how their described use case maps onto the approval queue (every send the agent proposes lands as a pending draft — a human must open the dashboard, review it, and click Approve & send with safe mode set to read-write; nothing sends automatically no matter what they configure). If they mentioned reacting to inbound email, tell them to point their provider\'s inbound-parse webhook (e.g. SendGrid Inbound Parse, Mailgun Routes) at the URL shown in the dashboard\'s Inbound email section. Do not pretend to have sent a real email or connected to their mailbox — you have not — and do not invent contact names or message content they never mentioned.',
   'AI-CN-005':
     'The buyer owns the source of a local Slack/Discord connector with its own dashboard UI, named routes, and a safe-mode write gate. Return a concrete setup plan: which platform(s) to set up based on what they named (for Slack: create an app, activate Incoming Webhooks, copy the Signing Secret into the dashboard\'s Slack section; for Discord: create an application, copy the Public Key into the dashboard\'s Discord section, create channel webhooks under a server\'s Integrations settings), the exact named routes to create in the dashboard (one per channel/event pairing they described, e.g. a route called "eng-alerts" for deploy events), and — if they mentioned slash commands — remind them the Slack request URL and Discord interactions URL shown in the dashboard are what to paste into each platform\'s developer settings, and that Discord specifically requires the connector to be running when that URL is saved because of its verification handshake. Reference the actual dashboard sections by name (Slack, Discord, Routes, Safe mode). Do not pretend to have posted a real message or received a real command — you have not — and do not invent channel names they never mentioned.',
+  'AI-CN-006':
+    'The buyer owns the source of MultiWitness, a local tamper-evident hash-chained log with two separate tokens (a dashboard token for themselves, an ingest token to hand to other tools). Return a concrete setup plan: for each tool/agent they said should log events here, the exact curl example or code snippet showing a POST to /api/events with the ingest token and a well-chosen source/action/detail for that tool (e.g. source: "multiconnect-shopify", action: "order.confirmation_drafted"), and how what they said they want to prove maps onto reading the log later (they will run "Verify chain now" in the dashboard, or `node bin/witness.mjs verify` from the command line with no server needed, to get a checkable answer). Emphasize that the ingest token can only ever append, never edit or delete, which is what makes the resulting log usable as evidence. Do not pretend to have logged a real event or verified a real chain — you have not — and do not invent event names or timestamps they never described.',
   'AI-AG-065':
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':
