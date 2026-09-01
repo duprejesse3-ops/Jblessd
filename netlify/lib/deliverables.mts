@@ -21,6 +21,7 @@ import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airta
 import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.mjs'
 import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
+import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -582,6 +583,51 @@ function witnessSections(product: Product): DeliverableSection[] {
   return sections
 }
 
+function guardSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiguard.zip\n` +
+        `    cd multiguard\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts MultiGuard ` +
+        `and prints a dashboard URL and a token. From the dashboard's "Register a ` +
+        `connector" section, add each other MultiConnect tool you run by its own base URL ` +
+        `and its own dashboard token — MultiGuard reads that from you once and stores it ` +
+        `locally, so read the security note in README.md before you use this on anything ` +
+        `you don't fully control.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiguard\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, no database. Just Node 18 or ` +
+        `newer (\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/guard.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to anything real:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it covers registering your first connector and exactly ` +
+        `what the kill switch does and doesn't do.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIGUARD_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIGUARD_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
 const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
   'AI-AG-065': (product) => ({
     sku: product.sku,
@@ -666,6 +712,18 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
       'zero dependencies. Yours to run on unlimited machines, forever. See LICENSE.md at ' +
       'the end for the terms.',
     sections: witnessSections(product),
+  }),
+  'AI-CN-007': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a unified control plane over every MultiConnect tool you ' +
+      'run — one dashboard, one status view, and one kill switch that works generically ' +
+      'with any connector, zero dependencies. Yours to run on unlimited machines, forever. ' +
+      'See LICENSE.md at the end for the terms.',
+    sections: guardSections(product),
   }),
 }
 

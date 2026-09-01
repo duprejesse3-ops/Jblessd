@@ -17,6 +17,7 @@ import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airta
 import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.mjs'
 import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
+import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -34,6 +35,7 @@ const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
 const EMAIL_EXECUTABLE = new Set(['bin/email-connect.mjs', 'install.sh'])
 const MESSAGING_EXECUTABLE = new Set(['bin/messaging-connect.mjs', 'install.sh'])
 const WITNESS_EXECUTABLE = new Set(['bin/witness.mjs', 'install.sh'])
+const GUARD_EXECUTABLE = new Set(['bin/guard.mjs', 'install.sh'])
 
 // Unzipping into a single top-level directory rather than spraying thirteen
 // files into whatever the buyer's cwd happens to be. Standard courtesy, and it
@@ -45,6 +47,7 @@ const SHEETS_ROOT = 'multiconnect-sheets-airtable'
 const EMAIL_ROOT = 'multiconnect-email-crm'
 const MESSAGING_ROOT = 'multiconnect-slack-discord'
 const WITNESS_ROOT = 'multiwitness'
+const GUARD_ROOT = 'multiguard'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -102,6 +105,14 @@ function witnessFiles(): ArchiveFile[] {
   }))
 }
 
+function guardFiles(): ArchiveFile[] {
+  return MULTIGUARD_SOURCE.map((file) => ({
+    path: `${GUARD_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: GUARD_EXECUTABLE.has(file.path),
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
@@ -110,6 +121,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-CN-004': { filename: 'multiconnect-email-crm.zip', files: emailFiles },
   'AI-CN-005': { filename: 'multiconnect-slack-discord.zip', files: messagingFiles },
   'AI-CN-006': { filename: 'multiwitness.zip', files: witnessFiles },
+  'AI-CN-007': { filename: 'multiguard.zip', files: guardFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */

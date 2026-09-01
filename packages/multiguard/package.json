@@ -1,0 +1,34 @@
+{
+  "name": "multiguard",
+  "version": "1.0.0",
+  "description": "One dashboard and kill switch for every MultiConnect tool you run — see and control them all in one place.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiguard": "./bin/guard.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./probe": "./lib/probe.mjs",
+    "./killswitch": "./lib/killswitch.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/guard.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MultiGuard</title>
+<style>
+  :root{--ink:#080000;--panel:#150808;--line:#4A1212;--paper:#FFD4D4;--muted:#E86A6A;--brass:#FF2A2A;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  section{border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:18px;background:var(--panel)}
+  h2{font-size:15px;margin:0 0 12px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input{width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-family:inherit;font-size:14px;margin-bottom:10px}
+  button{background:var(--brass);color:var(--ink);font-weight:600;font-size:13px;padding:8px 14px;border:none;border-radius:4px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--brass);border:1px solid var(--line)}
+  button.danger{background:#3d1a1a;color:#ff9c9c;border:1px solid #5a2020;font-weight:700}
+  .connector{border:1px solid var(--line);border-radius:4px;padding:12px;margin-bottom:8px;font-size:13px}
+  .connector .meta{color:var(--muted);font-size:11px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .badge.ro{background:#1a3d1a;color:#7cd67c}
+  .badge.rw{background:#3d1a1a;color:#ff9c9c}
+  .badge.na{background:#333;color:#999}
+  .badge.offline{background:#3d1a1a;color:#ff786e}
+  .log-entry{border-top:1px solid var(--line);padding:8px 0;font-size:12.5px;font-family:monospace}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  #token-gate{text-align:center;padding-top:60px}
+</style>
+</head>
+<body>
+<div id="token-gate">
+  <div class="wrap">
+    <h1>MultiGuard</h1>
+    <p class="sub">Paste the dashboard token shown in your terminal when it started.</p>
+    <input id="token-input" placeholder="dashboard token" style="max-width:340px;margin:0 auto 10px"/>
+    <div><button id="token-submit">Unlock dashboard</button></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <h1>MultiGuard</h1>
+  <p class="sub">One place to see and control every MultiConnect tool you run.</p>
+
+  <section>
+    <h2>Kill switch</h2>
+    <p class="sub">Switches every registered connector that supports safe mode to read-only, in one action.</p>
+    <button class="danger" id="kill-switch">🛑 Engage kill switch — switch all to read-only</button>
+    <div id="kill-result" style="margin-top:10px"></div>
+  </section>
+
+  <section>
+    <h2>Watched connectors</h2>
+    <div id="connectors"></div>
+    <button class="ghost" id="refresh-status">Refresh status</button>
+  </section>
+
+  <section>
+    <h2>Register a connector</h2>
+    <p class="sub">Add any MultiConnect tool by its dashboard URL and its own dashboard token.</p>
+    <label for="c-name">Name</label>
+    <input id="c-name" placeholder="e.g. Shopify"/>
+    <label for="c-url">Base URL</label>
+    <input id="c-url" placeholder="http://localhost:8421"/>
+    <label for="c-token">Its dashboard token</label>
+    <input id="c-token" type="password"/>
+    <button id="add-connector">Register</button>
+  </section>
+
+  <section>
+    <h2>Activity log</h2>
+    <button class="ghost" id="clear-log">Clear</button>
+    <div id="log"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
