@@ -45,7 +45,7 @@ const CATEGORY: Record<
 > = {
   prompts: {
     accent: '#FF6A6A',
-    glow: 'rgba(255,42,42,0.30)',
+    glow: 'rgba(255,176,32,0.30)',
     glyph: "<path d='M16 20 28 32 16 44'/><path d='M34 44h16'/>",
   },
   automations: {
@@ -70,7 +70,7 @@ const CATEGORY: Record<
 // Brand fallback used for the whole-store creative (no single category).
 const STORE_ART = {
   accent: '#FF7A7A',
-  glow: 'rgba(255,42,42,0.34)',
+  glow: 'rgba(255,176,32,0.34)',
   // The header wordmark's "M" mountain mark, redrawn in the 64-box the glyphs use.
   glyph: "<path d='M12 50V18l20 17 20-17v32'/><path d='M25 56h14'/>",
 }
@@ -140,7 +140,7 @@ function pill(x: number, y: number, text: string, fontSize: number, accent: stri
   return (
     `<g>` +
     `<rect x="${x}" y="${y}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" rx="${(h / 2).toFixed(0)}" ` +
-    `fill="rgba(255,42,42,0.12)" stroke="${accent}" stroke-opacity="0.55" stroke-width="1.5"/>` +
+    `fill="rgba(255,176,32,0.12)" stroke="${accent}" stroke-opacity="0.55" stroke-width="1.5"/>` +
     `<text x="${(x + w / 2).toFixed(0)}" y="${(y + h / 2).toFixed(0)}" fill="${accent}" ` +
     `font-family="monospace" font-size="${fontSize}" font-weight="700" text-anchor="middle" ` +
     `dominant-baseline="central" letter-spacing="0.5">${esc(text)}</text>` +
@@ -168,7 +168,7 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
   const defs =
     `<defs>` +
     `<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">` +
-    `<stop offset="0" stop-color="#110807"/><stop offset="0.55" stop-color="#080000"/>` +
+    `<stop offset="0" stop-color="#110807"/><stop offset="0.55" stop-color="#0A0E16"/>` +
     `<stop offset="1" stop-color="#050000"/></linearGradient>` +
     `<radialGradient id="glow" cx="50%" cy="42%" r="60%">` +
     `<stop offset="0" stop-color="${art.glow}"/><stop offset="1" stop-color="rgba(0,0,0,0)"/>` +
@@ -193,7 +193,7 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
     `<g transform="translate(${pad} ${brandY})">` +
     `<g fill="none" stroke="${accent}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="scale(1.1)">` +
     `<path d="M4 18V6l8 7 8-7v12"/><path d="M9 21h6"/></g>` +
-    `<text x="34" y="16" fill="#FFD4D4" font-family="monospace" font-size="20" font-weight="700" letter-spacing="3">${STORE_NAME}</text>` +
+    `<text x="34" y="16" fill="#EEF1F7" font-family="monospace" font-size="20" font-weight="700" letter-spacing="3">${STORE_NAME}</text>` +
     `</g>`
 
   // ---- CTA / domain strip (bottom-left) ----
@@ -201,9 +201,9 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
   const cta =
     `<g transform="translate(${pad} ${h - pad - 34})">` +
     `<rect x="0" y="0" width="${Math.round(ctaText.length * 12 + 44)}" height="46" rx="23" fill="${accent}"/>` +
-    `<text x="${Math.round((ctaText.length * 12 + 44) / 2)}" y="24" fill="#080000" font-family="sans-serif" ` +
+    `<text x="${Math.round((ctaText.length * 12 + 44) / 2)}" y="24" fill="#0A0E16" font-family="sans-serif" ` +
     `font-size="19" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(ctaText)}</text>` +
-    `<text x="${Math.round(ctaText.length * 12 + 44) + 20}" y="24" fill="#E86A6A" font-family="monospace" ` +
+    `<text x="${Math.round(ctaText.length * 12 + 44) + 20}" y="24" fill="#9AA4BC" font-family="monospace" ` +
     `font-size="18" dominant-baseline="central">${DOMAIN}</text>` +
     `</g>`
 
@@ -225,14 +225,14 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
       nameLines
         .map((ln, i) => {
           const y = ty + i * Math.round(nameSize * 1.12) + nameSize
-          return `<text x="${tx}" y="${y}" fill="#FFD4D4" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
+          return `<text x="${tx}" y="${y}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
         })
         .join('') +
       (() => {
         const subY = ty + nameLines.length * Math.round(nameSize * 1.12) + nameSize + 6
         const subLines = wrap(sub, 24, tw, 2)
         return subLines
-          .map((ln, i) => `<text x="${tx}" y="${subY + i * 32}" fill="#E86A6A" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
+          .map((ln, i) => `<text x="${tx}" y="${subY + i * 32}" fill="#9AA4BC" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
           .join('')
       })() +
       (product ? pill(tx, by + b - 4, `$${product.price.toFixed(0)}`, 22, accent) : '')
@@ -252,13 +252,13 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
     content += nameLines
       .map((ln, i) => {
         const ly = y + i * Math.round(nameSize * 1.12) + nameSize
-        return `<text x="${cx}" y="${ly}" fill="#FFD4D4" font-family="sans-serif" font-size="${nameSize}" font-weight="800" text-anchor="middle">${esc(ln)}</text>`
+        return `<text x="${cx}" y="${ly}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800" text-anchor="middle">${esc(ln)}</text>`
       })
       .join('')
     y += nameLines.length * Math.round(nameSize * 1.12) + nameSize + 10
     const subLines = wrap(sub, 27, w - pad * 2, 3)
     content += subLines
-      .map((ln, i) => `<text x="${cx}" y="${y + i * 38}" fill="#E86A6A" font-family="sans-serif" font-size="27" text-anchor="middle">${esc(ln)}</text>`)
+      .map((ln, i) => `<text x="${cx}" y="${y + i * 38}" fill="#9AA4BC" font-family="sans-serif" font-size="27" text-anchor="middle">${esc(ln)}</text>`)
       .join('')
     if (product) {
       const py = y + subLines.length * 38 + 18

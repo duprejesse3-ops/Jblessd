@@ -55,7 +55,7 @@ function notFound(message: string) {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
       `<meta name="viewport" content="width=device-width,initial-scale=1"><title>Not found</title>` +
-      `<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#080000;` +
+      `<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0A0E16;` +
       `color:#f5f0e8;font:16px/1.6 system-ui,sans-serif;text-align:center;padding:2rem}` +
       `a{color:#f5b642}</style></head><body><div><h1>Not found</h1><p>${message}</p>` +
       `<p><a href="/code">Open the workspace</a></p></div></body></html>`,

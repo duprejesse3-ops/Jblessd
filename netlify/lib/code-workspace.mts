@@ -255,7 +255,7 @@ body {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #080000;
+  background: #0A0E16;
   color: #f5f0e8;
   font: 16px/1.6 system-ui, -apple-system, Segoe UI, sans-serif;
 }
@@ -271,7 +271,7 @@ button {
   padding: .8rem 1.4rem;
   font: inherit;
   font-weight: 600;
-  color: #080000;
+  color: #0A0E16;
   background: #f5b642;
   border: 0;
   border-radius: .6rem;

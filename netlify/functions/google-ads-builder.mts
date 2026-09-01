@@ -35,7 +35,7 @@ import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const STORE_SKU = 'STORE'
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -275,7 +275,7 @@ async function aiPlan(target: Product | null, goal: string, catalog: Product[]):
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 2700,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'compose_google_ads_plan' },
     messages: [

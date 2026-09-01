@@ -47,9 +47,9 @@ f.parentNode.insertBefore(j,f);
     --edge-soft: #101823;
     --fg: #cdd9e5;
     --dim: #5c6b7a;
-    --phos: #e34f4f;      /* primary phosphor green */
-    --phos-dim: #8f3f3f;
-    --amber: #ffb454;
+    --phos: #FFB020;      /* primary accent (was mislabeled "phosphor green" while set to red) */
+    --phos-dim: #8f6a2f;
+    --amber: #FFB020;
     --red: #ff5f6b;
     --cyan: #58c7f3;
     --mono: ui-monospace, "SF Mono", "SFMono-Regular", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
@@ -146,7 +146,7 @@ f.parentNode.insertBefore(j,f);
   .amber { color: var(--amber); }
   .cyan { color: var(--cyan); }
   .tools { color: var(--phos-dim); font-size: 12.5px; margin: 2px 0 6px; letter-spacing: .03em; }
-  .banner { color: var(--phos); text-shadow: 0 0 12px rgba(227,79,79,.25); margin-bottom: 4px; }
+  .banner { color: var(--phos); text-shadow: 0 0 12px rgba(255,176,32,.25); margin-bottom: 4px; }
   a { color: var(--cyan); }
 
   /* ---- input prompt ---- */
@@ -171,20 +171,20 @@ f.parentNode.insertBefore(j,f);
 
   /* ---- login gate ---- */
   .gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 40px 18px; text-align: center; }
-  .gate h1 { font-size: 15px; letter-spacing: .3em; color: var(--phos); margin: 0; text-shadow: 0 0 16px rgba(227,79,79,.3); }
+  .gate h1 { font-size: 15px; letter-spacing: .3em; color: var(--phos); margin: 0; text-shadow: 0 0 16px rgba(255,176,32,.3); }
   .gate p { color: var(--dim); margin: 0; max-width: 420px; font-size: 13px; }
-  .lock { font-size: 30px; filter: drop-shadow(0 0 12px rgba(227,79,79,.4)); }
+  .lock { font-size: 30px; filter: drop-shadow(0 0 12px rgba(255,176,32,.4)); }
   .gate form { display: flex; gap: 8px; width: 100%; max-width: 380px; }
   .gate input {
     flex: 1; background: #060a0f; border: 1px solid var(--edge); color: var(--fg);
     font-family: var(--mono); font-size: 14px; padding: 11px 13px; border-radius: 6px; outline: none;
   }
-  .gate input:focus { border-color: var(--phos-dim); box-shadow: 0 0 0 2px rgba(227,79,79,.12); }
+  .gate input:focus { border-color: var(--phos-dim); box-shadow: 0 0 0 2px rgba(255,176,32,.12); }
   .gate button {
     background: var(--phos); color: #110404; border: none; font-family: var(--mono); font-weight: 600;
     padding: 0 18px; border-radius: 6px; cursor: pointer; letter-spacing: .06em; transition: .15s;
   }
-  .gate button:hover { box-shadow: 0 0 18px rgba(227,79,79,.4); }
+  .gate button:hover { box-shadow: 0 0 18px rgba(255,176,32,.4); }
   .gate button:disabled { opacity: .5; cursor: default; box-shadow: none; }
   .gate .msg { min-height: 18px; font-size: 12.5px; }
   .gate .msg.err { color: var(--red); }
@@ -936,7 +936,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var ctx = canvas.getContext("2d");
     // Paint the brand backdrop first: PNG defaults to transparent, and Google
     // Ads composites unknown transparency onto white.
-    ctx.fillStyle = "#080000";
+    ctx.fillStyle = "#0A0E16";
     ctx.fillRect(0, 0, s.w, s.h);
     ctx.drawImage(img, 0, 0, s.w, s.h);
     return await new Promise(function (resolve, reject) {
@@ -1044,7 +1044,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         "<div style='display:inline-block;vertical-align:top;margin:0 18px 18px 0;text-align:center;'>" +
           "<a href='#' " + attrs + " title='Download " + s.w + "×" + s.h + " PNG'>" +
             "<img src='" + svg + "' width='" + s.prev + "' height='" + ph + "' alt='" + escapeHtml(label) + " " + s.key + " ad creative' " +
-              "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
+              "style='display:block;border:1px solid var(--line);border-radius:4px;background:#0A0E16;'/>" +
           "</a>" +
           "<div class='sys' style='margin-top:6px;font-size:12px;'>" + s.label + "</div>" +
           "<div class='sys' style='font-size:11px;'>" + s.w + "×" + s.h + " px</div>" +
@@ -1103,7 +1103,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               "title='Download " + landscape.w + "×" + landscape.h + " PNG'>" +
               "<img src='" + svg + "' width='" + prevW + "' height='" + ph + "' loading='lazy' " +
                 "alt='" + escapeHtml(name) + " Google Ads creative' " +
-                "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
+                "style='display:block;border:1px solid var(--line);border-radius:4px;background:#0A0E16;'/>" +
             "</a>" +
             "<div class='sys' style='margin-top:6px;font-size:12px;'>" + escapeHtml(name) + "</div>" +
             "<div class='sys' style='font-size:11px;'>" + escapeHtml(sku) + "</div>" +

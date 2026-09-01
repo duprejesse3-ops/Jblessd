@@ -22,7 +22,7 @@ import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
 import { getAdPerformance } from '../lib/ad-performance.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const MAX_TURNS = 6 // safety bound on the tool-use loop
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -313,7 +313,7 @@ export default async (req: Request) => {
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       const response = await anthropic.messages.create({
         model: MODEL,
-        max_tokens: 1400,
+        max_tokens: 1800,
         system: SYSTEM_PROMPT,
         tools: TOOLS,
         messages,

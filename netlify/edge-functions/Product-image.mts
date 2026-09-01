@@ -91,14 +91,14 @@ function buildSvg(p: ApiProduct): string {
 
   return `
 <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${W}" height="${H}" fill="#080000"/>
-  <rect x="0" y="0" width="${W}" height="6" fill="#FF2A2A"/>
-  <text x="80" y="90" font-family="Inter" font-weight="700" font-size="28" letter-spacing="3" fill="#FF2A2A">${esc(STORE)}</text>
-  <rect x="80" y="130" width="${Math.max(cat.length * 13 + 40, 120)}" height="42" rx="3" fill="#FF2A2A"/>
-  <text x="${80 + Math.max(cat.length * 13 + 40, 120) / 2}" y="158" font-family="Inter" font-weight="700" font-size="18" letter-spacing="2" fill="#080000" text-anchor="middle">${esc(cat.toUpperCase())}</text>
-  <text font-family="Inter" font-weight="700" font-size="54" fill="#FFD4D4">${titleTspans}</text>
-  <text x="80" y="560" font-family="Inter" font-weight="700" font-size="44" fill="#FFD4D4">$${Number(p.price).toFixed(2)}</text>
-  <text x="1120" y="560" font-family="Inter" font-weight="500" font-size="20" fill="#9A3C3C" text-anchor="end">Watch it run before you buy →</text>
+  <rect width="${W}" height="${H}" fill="#0A0E16"/>
+  <rect x="0" y="0" width="${W}" height="6" fill="#FFB020"/>
+  <text x="80" y="90" font-family="Inter" font-weight="700" font-size="28" letter-spacing="3" fill="#FFB020">${esc(STORE)}</text>
+  <rect x="80" y="130" width="${Math.max(cat.length * 13 + 40, 120)}" height="42" rx="3" fill="#FFB020"/>
+  <text x="${80 + Math.max(cat.length * 13 + 40, 120) / 2}" y="158" font-family="Inter" font-weight="700" font-size="18" letter-spacing="2" fill="#0A0E16" text-anchor="middle">${esc(cat.toUpperCase())}</text>
+  <text font-family="Inter" font-weight="700" font-size="54" fill="#EEF1F7">${titleTspans}</text>
+  <text x="80" y="560" font-family="Inter" font-weight="700" font-size="44" fill="#EEF1F7">$${Number(p.price).toFixed(2)}</text>
+  <text x="1120" y="560" font-family="Inter" font-weight="500" font-size="20" fill="#5C6580" text-anchor="end">Watch it run before you buy →</text>
 </svg>`.trim()
 }
 

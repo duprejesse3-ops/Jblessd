@@ -28,7 +28,7 @@ import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
@@ -157,7 +157,8 @@ async function aiDesign(brief: string, hints: Partial<Design>, catalog: Product[
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1024,tools: [tool],
+    max_tokens: 1330,
+    tools: [tool],
     tool_choice: { type: 'tool', name: 'design_product' },
     messages: [
       {

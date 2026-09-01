@@ -44,7 +44,7 @@ const READ_CACHE: Record<string, string> = {
   'Cache-Tag': CAMPAIGNS_CACHE_TAG,
 }
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const STORE_SKU = 'STORE'
 
@@ -202,7 +202,7 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
 
       const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 5300,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'compose_campaign' },
     messages: [
