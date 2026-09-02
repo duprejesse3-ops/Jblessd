@@ -24,7 +24,7 @@ import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 import { DEMO_LIBRARY } from '../lib/demo-library.mjs'
 
-const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
+const MODEL = 'claude-opus-5' // the flagship — this is the store's showcase
 const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
 // A shopper's own submitted task gets real room to work through it. This
 // matters most for genuinely hard scenarios (see "Stump the Agent" style
