@@ -392,7 +392,7 @@ function page(opts: {
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
-    `:root{--ink:#080000;--panel:#110807;--line:#4A1212;--line-soft:#2A0A0A;--paper:#FFD4D4;--muted:#E86A6A;--muted-2:#9A3C3C;--brass:#FF2A2A;}` +
+    `:root{--ink:#0A0E16;--panel:#121826;--line:#232B3D;--line-soft:#161C29;--paper:#EEF1F7;--muted:#9AA4BC;--muted-2:#5C6580;--brass:#FFB020;}` +
     `*{box-sizing:border-box}` +
     `body{margin:0;background:var(--ink);color:var(--paper);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}` +
     `a{color:var(--brass);text-decoration:none}a:hover{text-decoration:underline}` +
@@ -414,8 +414,8 @@ function page(opts: {
     `h2{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:22px;margin:40px 0 14px}` +
     `.stars{color:var(--brass);letter-spacing:2px;font-size:17px}` +
     `.rev{border-top:1px solid var(--line-soft);padding:14px 0}` +
-    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#0c0404}` +
-    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#110807}` +
+    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#0D111C}` +
+    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#121826}` +
     `.proof-out{font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.7;color:var(--paper);padding:16px 18px;white-space:normal;word-break:break-word}` +
     `.rev .who{font-size:13px;color:var(--muted);font-weight:600}` +
     `.rev .txt{font-size:14.5px;color:var(--paper);margin:6px 0 0}` +
@@ -1277,7 +1277,7 @@ function renderFreeTool(): Response {
     `<p class="lede">${esc(intro)}</p>` +
     `<form id="ft-form" style="margin:18px 0">` +
     `<textarea id="ft-input" rows="3" maxlength="600" placeholder="e.g. Turn my messy meeting notes into decisions, owners, and deadlines" ` +
-    `style="width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical">${esc(EXAMPLE_TASK)}</textarea>` +
+    `style="width:100%;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical">${esc(EXAMPLE_TASK)}</textarea>` +
     `<button class="btn" id="ft-run" type="submit" style="margin-top:10px">▶ Run it on my task</button>` +
     `<button class="btn ghost" id="ft-clear" type="button" style="margin-top:10px;margin-left:8px">Clear and write my own</button></form>` +
     `<div class="proof" id="ft-term" hidden><div class="proof-bar" id="ft-lab">demo · idle</div><div class="proof-out" id="ft-out"></div></div>` +
@@ -1372,7 +1372,7 @@ function renderCustom(): Response {
     `<div id="co-intake">` +
     `<form id="co-form" style="margin:18px 0">` +
     `<label style="display:block;margin-bottom:12px">Category` +
-    `<select id="co-category" style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
+    `<select id="co-category" style="width:100%;margin-top:6px;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
     `<option value="">Choose one…</option>` +
     `<option value="prompts">Prompt Pack</option>` +
     `<option value="automations">Automation Blueprint</option>` +
@@ -1381,7 +1381,7 @@ function renderCustom(): Response {
     `</select></label>` +
     `<label style="display:block;margin-bottom:12px">What do you need?` +
     `<textarea id="co-need" rows="5" maxlength="4000" placeholder="Describe your situation in detail — the more specific, the better the result." ` +
-    `style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea></label>` +
+    `style="width:100%;margin-top:6px;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea></label>` +
     `<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px">` +
     `<input type="checkbox" id="co-policy" style="margin-top:3px">` +
     `<span>I understand this is a custom digital product delivered instantly upon generation, and I acknowledge the <a href="/refund-policy">refund policy</a>.</span></label>` +
