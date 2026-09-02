@@ -5,8 +5,12 @@
 // and marks them posted or failed.
 //
 // velocity-engine.mts stores a Reddit variant as "title\n\nbody" in one
-// content field (see its generateVariants()) — this splits that back into
-// the title/text Reddit's submit endpoint expects.
+// content field — this splits that back into the title/text Reddit's submit
+// endpoint expects.
+//
+// Captures the posted submission's fullname (t3_...) and permalink so
+// engagement-scanner.mts can look it up later and decide whether it's worth
+// a follow-up "boost" post.
 //
 // Runs a few hours after velocity-engine.mts so there's always fresh content
 // queued before this looks for it. Offset from x-poster.mts's slot so the
@@ -22,6 +26,11 @@ const USER_AGENT = process.env.REDDIT_USER_AGENT || 'jblessd-velocity-engine/1.0
 interface QueuedPost {
   id: string
   content: string
+}
+
+interface SubmitResult {
+  fullname: string | null // e.g. t3_abc123 — what /api/info expects
+  url: string | null // human-viewable permalink
 }
 
 // Reddit "script" apps authenticate as the account itself via the password
@@ -59,7 +68,7 @@ function splitTitleBody(content: string): { title: string; body: string } {
   return { title: content.slice(0, idx).slice(0, 300), body: content.slice(idx + 2) }
 }
 
-async function submitPost(token: string, title: string, body: string): Promise<void> {
+async function submitPost(token: string, title: string, body: string): Promise<SubmitResult> {
   const res = await fetch('https://oauth.reddit.com/api/submit', {
     method: 'POST',
     headers: {
@@ -76,9 +85,17 @@ async function submitPost(token: string, title: string, body: string): Promise<v
     }),
   })
   if (!res.ok) throw new Error(`submit failed: ${res.status}`)
-  const data = (await res.json()) as { json?: { errors?: unknown[] } }
+  const data = (await res.json()) as {
+    json?: { errors?: unknown[]; data?: { id?: string; name?: string; url?: string } }
+  }
   const errors = data.json?.errors
   if (errors && errors.length) throw new Error(`reddit rejected post: ${JSON.stringify(errors)}`)
+
+  const submitData = data.json?.data
+  return {
+    fullname: submitData?.name ?? (submitData?.id ? `t3_${submitData.id}` : null),
+    url: submitData?.url ?? null,
+  }
 }
 
 export default async (_req: Request) => {
@@ -112,10 +129,14 @@ export default async (_req: Request) => {
       continue
     }
     try {
-      await submitPost(token, title, body)
-      await db.sql`UPDATE velocity_posts SET status = 'posted', posted_at = now() WHERE id = ${post.id}`
+      const result = await submitPost(token, title, body)
+      await db.sql`
+        UPDATE velocity_posts
+        SET status = 'posted', posted_at = now(), platform_post_id = ${result.fullname}, platform_post_url = ${result.url}
+        WHERE id = ${post.id}
+      `
       posted++
-      console.log(`[reddit-poster] posted ${post.id}`)
+      console.log(`[reddit-poster] posted ${post.id} -> ${result.url ?? '(no url captured)'}`)
     } catch (err) {
       console.error(`[reddit-poster] failed to post ${post.id}:`, (err as Error).message)
       await db.sql`UPDATE velocity_posts SET status = 'failed' WHERE id = ${post.id}`

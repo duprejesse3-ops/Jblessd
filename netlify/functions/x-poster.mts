@@ -4,6 +4,9 @@
 // platform = 'x'), posts them via the X API using OAuth 1.0a user context
 // (posts as @DupreJesse14633), and marks them posted or failed.
 //
+// Captures the posted tweet's id/url so engagement-scanner.mts can look it
+// up later and decide whether it's worth a follow-up "boost" post.
+//
 // Runs a few hours after velocity-engine.mts so there's always fresh content
 // queued before this looks for it.
 
@@ -12,6 +15,9 @@ import { getDatabase } from '@netlify/database'
 import { TwitterApi } from 'twitter-api-v2'
 
 const BATCH_SIZE = Number(process.env.X_POST_BATCH_SIZE || 1)
+// Used only to build the human-viewable URL stored alongside the post —
+// matches the account this function already posts as.
+const X_USERNAME = process.env.X_USERNAME || 'DupreJesse14633'
 
 interface QueuedPost {
   id: string
@@ -52,14 +58,20 @@ export default async (_req: Request) => {
 
   let posted = 0
   for (const post of queued) {
+    // X caps a single post at 280 chars — trim defensively even though
+    // velocity-engine.mts is prompted to stay under that.
+    const text = post.content.length > 280 ? post.content.slice(0, 277) + '...' : post.content
     try {
-      // X caps a single post at 280 chars — trim defensively even though
-      // velocity-engine.mts is prompted to stay under that.
-      const text = post.content.length > 280 ? post.content.slice(0, 277) + '...' : post.content
-      await rw.v2.tweet(text)
-      await db.sql`UPDATE velocity_posts SET status = 'posted', posted_at = now() WHERE id = ${post.id}`
+      const result = await rw.v2.tweet(text)
+      const tweetId = result.data?.id ?? null
+      const url = tweetId ? `https://x.com/${X_USERNAME}/status/${tweetId}` : null
+      await db.sql`
+        UPDATE velocity_posts
+        SET status = 'posted', posted_at = now(), platform_post_id = ${tweetId}, platform_post_url = ${url}
+        WHERE id = ${post.id}
+      `
       posted++
-      console.log(`[x-poster] posted ${post.id}`)
+      console.log(`[x-poster] posted ${post.id} -> ${url ?? '(no url captured)'}`)
     } catch (err) {
       console.error(`[x-poster] failed to post ${post.id}:`, (err as Error).message)
       await db.sql`UPDATE velocity_posts SET status = 'failed' WHERE id = ${post.id}`
