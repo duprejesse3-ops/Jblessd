@@ -10,7 +10,7 @@ import { getDatabase } from '@netlify/database'
 import Anthropic from '@anthropic-ai/sdk'
 import { sendEmail } from './email.mts'
 
-const MODEL = 'claude-opus-4-8'
+const MODEL = 'claude-opus-5'
 
 const CATEGORY_GUIDANCE = {
   prompts: 'a complete, ready-to-use prompt (or short set of prompts) with clear instructions for how and where to use it',
