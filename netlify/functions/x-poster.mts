@@ -4,6 +4,13 @@
 // platform = 'x'), posts them via the X API using OAuth 1.0a user context
 // (posts as @DupreJesse14633), and marks them posted or failed.
 //
+// Attaches a real image to each post — the same on-brand creative
+// /api/ad-image already generates for the product (or the whole store),
+// rasterized to PNG server-side via netlify/lib/image-render.mts and
+// uploaded through X's v1 media endpoint. If the image step fails for any
+// reason, the post still goes out as text-only rather than being dropped —
+// a plain post beats no post.
+//
 // Captures the posted tweet's id/url so engagement-scanner.mts can look it
 // up later and decide whether it's worth a follow-up "boost" post.
 //
@@ -13,15 +20,18 @@
 import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import { TwitterApi } from 'twitter-api-v2'
+import { fetchCreativePng } from '../lib/image-render.mts'
 
 const BATCH_SIZE = Number(process.env.X_POST_BATCH_SIZE || 1)
 // Used only to build the human-viewable URL stored alongside the post —
 // matches the account this function already posts as.
 const X_USERNAME = process.env.X_USERNAME || 'DupreJesse14633'
+const SITE = 'https://jblessd.com'
 
 interface QueuedPost {
   id: string
   content: string
+  product_sku: string | null
 }
 
 export default async (_req: Request) => {
@@ -37,7 +47,7 @@ export default async (_req: Request) => {
 
   const db = getDatabase()
   const queued = (await db.sql`
-    SELECT id, content FROM velocity_posts
+    SELECT id, content, product_sku FROM velocity_posts
     WHERE platform = 'x' AND status = 'queued'
     ORDER BY created_at ASC
     LIMIT ${BATCH_SIZE}
@@ -61,8 +71,22 @@ export default async (_req: Request) => {
     // X caps a single post at 280 chars — trim defensively even though
     // velocity-engine.mts is prompted to stay under that.
     const text = post.content.length > 280 ? post.content.slice(0, 277) + '...' : post.content
+
+    // Best-effort image attach: any failure here (creative fetch, render, or
+    // upload) falls back to a text-only post rather than losing the post
+    // entirely — the image is a nice-to-have, not a hard requirement.
+    let mediaId: string | null = null
     try {
-      const result = await rw.v2.tweet(text)
+      const png = await fetchCreativePng(SITE, post.product_sku, 'square')
+      mediaId = await rw.v1.uploadMedia(png, { mimeType: 'image/png' })
+    } catch (err) {
+      console.error(`[x-poster] image attach failed for ${post.id}, posting text-only:`, (err as Error).message)
+    }
+
+    try {
+      const result = mediaId
+        ? await rw.v2.tweet({ text, media: { media_ids: [mediaId] as [string] } })
+        : await rw.v2.tweet(text)
       const tweetId = result.data?.id ?? null
       const url = tweetId ? `https://x.com/${X_USERNAME}/status/${tweetId}` : null
       await db.sql`
@@ -71,7 +95,7 @@ export default async (_req: Request) => {
         WHERE id = ${post.id}
       `
       posted++
-      console.log(`[x-poster] posted ${post.id} -> ${url ?? '(no url captured)'}`)
+      console.log(`[x-poster] posted ${post.id}${mediaId ? ' (with image)' : ' (text-only)'} -> ${url ?? '(no url captured)'}`)
     } catch (err) {
       console.error(`[x-poster] failed to post ${post.id}:`, (err as Error).message)
       await db.sql`UPDATE velocity_posts SET status = 'failed' WHERE id = ${post.id}`

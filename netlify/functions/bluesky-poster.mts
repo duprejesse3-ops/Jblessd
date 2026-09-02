@@ -5,6 +5,16 @@
 // app password (no dev-portal review needed, unlike X), and marks them
 // posted or failed.
 //
+// Attaches a real image to each post — the same on-brand creative
+// /api/ad-image already generates for the product (or the whole store),
+// rasterized to PNG server-side via netlify/lib/image-render.mts and
+// uploaded through AT Protocol's uploadBlob endpoint. If the image step
+// fails for any reason, the post still goes out as text-only rather than
+// being dropped — a plain post beats no post.
+//
+// Also attaches URL facets so the link in the post text renders as an
+// actual clickable link (AT Protocol does not auto-linkify plain text).
+//
 // Captures the created record's at:// URI and a human-viewable bsky.app URL
 // so engagement-scanner.mts can look it up later and decide whether it's
 // worth a follow-up "boost" post.
@@ -16,18 +26,28 @@
 
 import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
+import { fetchCreativePng } from '../lib/image-render.mts'
 
 const BATCH_SIZE = Number(process.env.BLUESKY_POST_BATCH_SIZE || 1)
 const SERVICE = process.env.BLUESKY_SERVICE || 'https://bsky.social'
+const SITE = 'https://jblessd.com'
 
 interface QueuedPost {
   id: string
   content: string
+  product_sku: string | null
 }
 
 interface Session {
   accessJwt: string
   did: string
+}
+
+interface BlobRef {
+  $type: 'blob'
+  ref: { $link: string }
+  mimeType: string
+  size: number
 }
 
 // Bluesky app passwords (bsky.app/settings/app-passwords) authenticate via a
@@ -51,7 +71,76 @@ async function createSession(): Promise<Session> {
   return { accessJwt: data.accessJwt, did: data.did }
 }
 
-async function submitPost(session: Session, text: string): Promise<{ uri: string }> {
+// Bluesky caps a single image blob at ~1MB (976.56KB) — the ad-image
+// creatives are flat-color/gradient SVGs, not photographic, so they compress
+// to well under that in practice, but this is a hard protocol limit worth
+// naming rather than discovering via a failed upload.
+const MAX_BLOB_BYTES = 1_000_000
+
+async function uploadImageBlob(session: Session, png: Buffer): Promise<BlobRef> {
+  if (png.length > MAX_BLOB_BYTES) {
+    throw new Error(`creative PNG (${png.length} bytes) exceeds Bluesky's ~1MB blob limit`)
+  }
+  const res = await fetch(`${SERVICE}/xrpc/com.atproto.repo.uploadBlob`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.accessJwt}`,
+      'Content-Type': 'image/png',
+    },
+    body: png,
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`uploadBlob failed: ${res.status} ${body}`)
+  }
+  const data = (await res.json()) as { blob?: BlobRef }
+  if (!data.blob) throw new Error('no blob in uploadBlob response')
+  return data.blob
+}
+
+// AT Protocol doesn't auto-linkify URLs the way X/Reddit do — a URL sitting
+// in plain post text renders as dead text, not a clickable link. Making it
+// clickable requires an explicit "facet": a byte-range annotation over the
+// text saying "these bytes are a link, pointing here." Byte offsets (NOT
+// character offsets) are required because the lexicon spec defines facet
+// ranges in UTF-8 bytes, so multi-byte characters earlier in the post (an
+// em dash, a curly quote) would silently misalign a naive character-index
+// facet — TextEncoder is used here specifically to get true byte offsets.
+function detectUrlFacets(text: string): Array<{
+  index: { byteStart: number; byteEnd: number }
+  features: Array<{ $type: string; uri: string }>
+}> {
+  const encoder = new TextEncoder()
+  const urlPattern = /https?:\/\/[^\s]+/g
+  const facets: Array<{ index: { byteStart: number; byteEnd: number }; features: Array<{ $type: string; uri: string }> }> = []
+
+  let match: RegExpExecArray | null
+  while ((match = urlPattern.exec(text)) !== null) {
+    // Trim common trailing punctuation a URL regex tends to over-capture
+    // (a period ending the sentence, a closing paren) so the link doesn't
+    // swallow characters that aren't actually part of it.
+    let url = match[0]
+    const trailing = /[.,!?)\]]+$/
+    const trimMatch = url.match(trailing)
+    if (trimMatch) url = url.slice(0, -trimMatch[0].length)
+    if (!url) continue
+
+    const startChar = match.index
+    const endChar = startChar + url.length
+    const byteStart = encoder.encode(text.slice(0, startChar)).length
+    const byteEnd = encoder.encode(text.slice(0, endChar)).length
+
+    facets.push({
+      index: { byteStart, byteEnd },
+      features: [{ $type: 'app.bsky.richtext.facet#link', uri: url }],
+    })
+  }
+  return facets
+}
+
+async function submitPost(session: Session, text: string, imageBlob: BlobRef | null): Promise<{ uri: string }> {
+  const facets = detectUrlFacets(text)
+
   const res = await fetch(`${SERVICE}/xrpc/com.atproto.repo.createRecord`, {
     method: 'POST',
     headers: {
@@ -66,6 +155,17 @@ async function submitPost(session: Session, text: string): Promise<{ uri: string
         createdAt: new Date().toISOString(),
         // $type is required on the record itself by the AT Protocol lexicon.
         $type: 'app.bsky.feed.post',
+        // Omit the key entirely when there's nothing to link — an empty
+        // facets array is harmless but there's no reason to send it.
+        ...(facets.length ? { facets } : {}),
+        ...(imageBlob
+          ? {
+              embed: {
+                $type: 'app.bsky.embed.images',
+                images: [{ image: imageBlob, alt: 'MULTINICHE AI product creative' }],
+              },
+            }
+          : {}),
       },
     }),
   })
@@ -98,7 +198,7 @@ export default async (_req: Request) => {
 
   const db = getDatabase()
   const queued = (await db.sql`
-    SELECT id, content FROM velocity_posts
+    SELECT id, content, product_sku FROM velocity_posts
     WHERE platform = 'bluesky' AND status = 'queued'
     ORDER BY created_at ASC
     LIMIT ${BATCH_SIZE}
@@ -116,8 +216,20 @@ export default async (_req: Request) => {
     // Bluesky caps a single post at 300 graphemes — trim defensively even
     // though velocity-engine.mts is prompted to stay under that.
     const text = post.content.length > 300 ? post.content.slice(0, 297) + '...' : post.content
+
+    // Best-effort image attach: any failure here (creative fetch, render, or
+    // upload) falls back to a text-only post rather than losing the post
+    // entirely — the image is a nice-to-have, not a hard requirement.
+    let imageBlob: BlobRef | null = null
     try {
-      const { uri } = await submitPost(session, text)
+      const png = await fetchCreativePng(SITE, post.product_sku, 'square')
+      imageBlob = await uploadImageBlob(session, png)
+    } catch (err) {
+      console.error(`[bluesky-poster] image attach failed for ${post.id}, posting text-only:`, (err as Error).message)
+    }
+
+    try {
+      const { uri } = await submitPost(session, text, imageBlob)
       const url = webUrlFromUri(uri, identifier)
       await db.sql`
         UPDATE velocity_posts
@@ -125,7 +237,7 @@ export default async (_req: Request) => {
         WHERE id = ${post.id}
       `
       posted++
-      console.log(`[bluesky-poster] posted ${post.id} -> ${url ?? '(no url captured)'}`)
+      console.log(`[bluesky-poster] posted ${post.id}${imageBlob ? ' (with image)' : ' (text-only)'} -> ${url ?? '(no url captured)'}`)
     } catch (err) {
       console.error(`[bluesky-poster] failed to post ${post.id}:`, (err as Error).message)
       await db.sql`UPDATE velocity_posts SET status = 'failed' WHERE id = ${post.id}`

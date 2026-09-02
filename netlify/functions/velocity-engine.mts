@@ -48,7 +48,7 @@ function shortId(): string {
 // hook), fall back to the most recent shared proof. Scorecard events are
 // joined against products so the content can refer to a readable product
 // name instead of an internal SKU.
-async function pickSource(db: ReturnType<typeof getDatabase>): Promise <
+async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
   | { type: 'scorecard'; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
   | { type: 'proof'; id: string; sku: string; productName: string; scenario: string; output: string; createdAt: string }
   | null
@@ -257,12 +257,17 @@ export default async (_req: Request) => {
 
   const sourceType = source.type
   const sourceId = source.type === 'scorecard' ? source.sku : source.id
+  // Both branches of pickSource() carry a real product sku (scorecard rows
+  // have it directly; proof rows include it alongside the proof id) — stored
+  // separately from source_id so the posters can fetch a matching
+  // /api/ad-image creative without re-deriving or re-querying it.
+  const productSku = source.sku
   let inserted = 0
   for (const v of variants) {
     try {
       await db.sql`
-        INSERT INTO velocity_posts (id, source_type, source_id, platform, content, status)
-        VALUES (${shortId()}, ${sourceType}, ${sourceId}, ${v.platform}, ${v.content}, 'queued')
+        INSERT INTO velocity_posts (id, source_type, source_id, platform, content, status, product_sku)
+        VALUES (${shortId()}, ${sourceType}, ${sourceId}, ${v.platform}, ${v.content}, 'queued', ${productSku})
       `
       inserted++
     } catch (err) {
