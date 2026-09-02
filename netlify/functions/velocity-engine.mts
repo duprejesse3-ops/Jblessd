@@ -17,7 +17,9 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const MODEL = 'claude-opus-5'
 const SITE = 'https://jblessd.com'
-
+const res = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 3000,
 interface ProofRow {
   id: string
   sku: string
