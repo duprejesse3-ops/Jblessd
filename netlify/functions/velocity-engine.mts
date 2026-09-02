@@ -48,7 +48,7 @@ function shortId(): string {
 // hook), fall back to the most recent shared proof. Scorecard events are
 // joined against products so the content can refer to a readable product
 // name instead of an internal SKU.
-async function pickSource(db: ReturnType<typeof getDatabase>): Promise
+async function pickSource(db: ReturnType<typeof getDatabase>): Promise <
   | { type: 'scorecard'; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
   | { type: 'proof'; id: string; sku: string; productName: string; scenario: string; output: string; createdAt: string }
   | null
