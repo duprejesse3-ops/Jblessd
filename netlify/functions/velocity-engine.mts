@@ -15,7 +15,7 @@ import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'claude-opus-4-8'
+const MODEL = 'claude-opus-5'
 const SITE = 'https://jblessd.com'
 
 interface ProofRow {
