@@ -30,7 +30,7 @@ import type { Product } from '../lib/catalog.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
 
-const MODEL = 'claude-opus-4-8' // the flagship — the app is the paid experience
+const MODEL = 'claude-opus-5' // the flagship — the app is the paid experience
 const MAX_TOKENS = 1400
 
 export default async (req: Request, _context: Context) => {
