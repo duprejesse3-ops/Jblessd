@@ -23,7 +23,7 @@ import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'claude-opus-4-8'
+const MODEL = 'claude-opus-5'
 const BATCH_SIZE = 5 // keep each run's Anthropic + DB cost bounded
 
 // The exact bland strings from the seed migration — a product whose active
