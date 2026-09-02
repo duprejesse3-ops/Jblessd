@@ -17,9 +17,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const MODEL = 'claude-opus-5'
 const SITE = 'https://jblessd.com'
-const res = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 3000,
+
 interface ProofRow {
   id: string
   sku: string
@@ -148,7 +146,7 @@ async function generateVariants(factSheet: string): Promise<Variant[]> {
 
   const res = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1200,
+    max_tokens: 3000,
     system,
     messages: [{ role: 'user', content: factSheet }],
   })
