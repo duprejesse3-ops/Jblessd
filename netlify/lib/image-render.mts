@@ -12,8 +12,8 @@
 // as a plain npm dependency inside a Netlify function.
 
 import { Resvg } from '@resvg/resvg-js'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 // resvg-js needs real font files to draw any text — Netlify's function
 // runtime is a minimal container with NO system fonts installed, unlike a
@@ -23,19 +23,46 @@ import { dirname, join } from 'node:path'
 // vector paths (icons, backgrounds, buttons) still draw fine — that
 // mismatch is exactly what showed up as "blank" areas on posted images.
 //
-// Fonts are bundled directly in this directory (netlify/lib/fonts/) rather
-// than depended on from the host, and loadSystemFonts is turned off so
-// behavior doesn't vary based on what happens to be installed wherever this
-// runs. netlify.toml's [functions] included_files entry is what makes sure
-// these .ttf files actually ship with the deployed function — esbuild's
-// default bundling only picks up JS/TS, not binary assets like fonts.
-const FONTS_DIR = dirname(fileURLToPath(import.meta.url)) + '/fonts'
+// Fonts are bundled directly in netlify/lib/fonts/ rather than depended on
+// from the host, and loadSystemFonts is turned off so behavior doesn't vary
+// based on what happens to be installed wherever this runs. netlify.toml's
+// [functions] included_files entry is what makes sure these .ttf files
+// actually ship with the deployed function — esbuild's default bundling
+// only picks up JS/TS, not binary assets like fonts.
+//
+// Path resolution deliberately does NOT use import.meta.url / dirname(this
+// file) — once esbuild bundles this module into each function's output,
+// import.meta.url reflects the BUNDLED file's location, not this source
+// file's original location, so a path built from it silently points
+// somewhere wrong. included_files are unpacked preserving their repo-root-
+// relative path under the Lambda runtime's task root, which Netlify exposes
+// as LAMBDA_TASK_ROOT — that's the one path base guaranteed to line up with
+// how included_files was declared in netlify.toml.
+const TASK_ROOT = process.env.LAMBDA_TASK_ROOT || process.cwd()
+const FONTS_DIR = join(TASK_ROOT, 'netlify', 'lib', 'fonts')
 const FONT_FILES = [
   join(FONTS_DIR, 'DejaVuSans.ttf'),
   join(FONTS_DIR, 'DejaVuSans-Bold.ttf'),
   join(FONTS_DIR, 'DejaVuSansMono.ttf'),
   join(FONTS_DIR, 'DejaVuSansMono-Bold.ttf'),
 ]
+
+// A wrong font path does NOT throw — resvg-js just silently renders no text
+// for that family, which is indistinguishable from "working" until someone
+// notices blank text on a live post. Checking existence up front and logging
+// loudly turns that into a visible, diagnosable error instead.
+let fontsChecked = false
+function verifyFontsOnce(): void {
+  if (fontsChecked) return
+  fontsChecked = true
+  const missing = FONT_FILES.filter((f) => !existsSync(f))
+  if (missing.length) {
+    console.error(
+      `[image-render] font file(s) not found at expected path — text will render blank: ${missing.join(', ')}. ` +
+        `TASK_ROOT resolved to: ${TASK_ROOT}. Check netlify.toml's [functions] included_files entry.`
+    )
+  }
+}
 
 /**
  * Fetch the existing ad-image creative for a product (or the whole store,
@@ -48,6 +75,8 @@ export async function fetchCreativePng(
   sku: string | null,
   size: 'landscape' | 'square' | 'portrait' = 'square'
 ): Promise<Buffer> {
+  verifyFontsOnce()
+
   const params = new URLSearchParams({ size })
   if (sku) params.set('sku', sku)
 
