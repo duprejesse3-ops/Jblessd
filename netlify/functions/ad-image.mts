@@ -38,39 +38,47 @@ const SIZES: Record<string, { w: number; h: number }> = {
 
 // Per-category accent + the storefront's own line-art glyph (64×64 viewBox).
 // Kept in sync with the [data-cat] rules in index.html so the ad creative reads
-// as the same brand as the product cards a shopper lands on.
+// as the same brand as the product cards a shopper lands on. Colors match
+// index.html's current --art-glow / glyph stroke values exactly (brass /
+// teal / purple / indigo) — these previously still had this file's pre-
+// rebrand all-pink/coral palette, which is what made generated creatives
+// look off-brand next to the actual site.
 const CATEGORY: Record<
   Product['category'],
   { accent: string; glow: string; glyph: string }
 > = {
   prompts: {
-    accent: '#FF6A6A',
-    glow: 'rgba(255,176,32,0.30)',
+    accent: '#FFB020',
+    glow: 'rgba(255,176,32,0.22)',
     glyph: "<path d='M16 20 28 32 16 44'/><path d='M34 44h16'/>",
   },
   automations: {
-    accent: '#FF8A5A',
-    glow: 'rgba(255,106,58,0.28)',
+    accent: '#22D3B0',
+    glow: 'rgba(34,211,176,0.18)',
     glyph:
       "<circle cx='15' cy='32' r='6'/><circle cx='49' cy='32' r='6'/><path d='M21 32h16'/><path d='M33 26l6 6-6 6'/>",
   },
   templates: {
-    accent: '#FF7DA6',
-    glow: 'rgba(255,92,138,0.26)',
+    accent: '#8B7CFF',
+    glow: 'rgba(139,124,255,0.16)',
     glyph:
       "<rect x='19' y='12' width='26' height='40' rx='3'/><path d='M25 24h14M25 32h14M25 40h9'/>",
   },
   agents: {
-    accent: '#FF5A6E',
-    glow: 'rgba(199,31,58,0.32)',
+    accent: '#6366F1',
+    glow: 'rgba(99,102,241,0.24)',
     glyph: "<path d='M32 9 52 20.5v23L32 55 12 43.5v-23z'/><circle cx='32' cy='32' r='5.5'/>",
   },
 }
 
 // Brand fallback used for the whole-store creative (no single category).
+// Matches .brand-mark's actual current color in index.html (#FF2A2A with a
+// rgba(255,42,42,.35) glow) — unlike the per-category colors above, the
+// logo mark itself kept its original red identity through the rebrand, so
+// this intentionally stays red rather than moving to teal/brass.
 const STORE_ART = {
-  accent: '#FF7A7A',
-  glow: 'rgba(255,176,32,0.34)',
+  accent: '#FF2A2A',
+  glow: 'rgba(255,42,42,0.28)',
   // The header wordmark's "M" mountain mark, redrawn in the 64-box the glyphs use.
   glyph: "<path d='M12 50V18l20 17 20-17v32'/><path d='M25 56h14'/>",
 }
@@ -125,7 +133,12 @@ function badge(x: number, y: number, b: number, accent: string, glyph: string): 
   const sw = Math.max(2.5, 3.4 / scale) // keep the line weight visually constant
   return (
     `<rect x="${x}" y="${y}" width="${b}" height="${b}" rx="${b * 0.22}" ` +
-    `fill="rgba(255,122,122,0.06)" stroke="${accent}" stroke-opacity="0.5" stroke-width="2"/>` +
+    // Neutral fill — was a fixed pink tint (rgba(255,122,122,...)) that only
+    // worked when every category was some shade of pink. With per-category
+    // accents now spanning brass/teal/purple/indigo/red, the badge interior
+    // needs to be accent-agnostic; the accent still carries entirely through
+    // the stroke and glyph color.
+    `fill="rgba(255,255,255,0.05)" stroke="${accent}" stroke-opacity="0.5" stroke-width="2"/>` +
     `<g transform="translate(${gx} ${gy}) scale(${scale.toFixed(4)})" fill="none" ` +
     `stroke="${accent}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round">` +
     `${glyph}</g>`
@@ -140,7 +153,9 @@ function pill(x: number, y: number, text: string, fontSize: number, accent: stri
   return (
     `<g>` +
     `<rect x="${x}" y="${y}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" rx="${(h / 2).toFixed(0)}" ` +
-    `fill="rgba(255,176,32,0.12)" stroke="${accent}" stroke-opacity="0.55" stroke-width="1.5"/>` +
+    // Same reasoning as badge()'s fill above — neutral instead of a fixed
+    // gold tint so it reads correctly under every category's accent color.
+    `fill="rgba(255,255,255,0.06)" stroke="${accent}" stroke-opacity="0.55" stroke-width="1.5"/>` +
     `<text x="${(x + w / 2).toFixed(0)}" y="${(y + h / 2).toFixed(0)}" fill="${accent}" ` +
     `font-family="monospace" font-size="${fontSize}" font-weight="700" text-anchor="middle" ` +
     `dominant-baseline="central" letter-spacing="0.5">${esc(text)}</text>` +
@@ -165,16 +180,20 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
     : 'Prompt packs, automations, templates & agent configs.'
 
   // ---- shared defs: background gradient, category glow, faint grid ----
+  // Gradient stops and grid line now match index.html's actual --ink/--panel/
+  // --panel-2/--line-soft scale (navy-black) instead of this file's old
+  // red-tinted background (#110807 → #050000, #2A0A0A grid), which was left
+  // over from before the site's navy/teal/brass rebrand.
   const defs =
     `<defs>` +
     `<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">` +
-    `<stop offset="0" stop-color="#110807"/><stop offset="0.55" stop-color="#0A0E16"/>` +
-    `<stop offset="1" stop-color="#050000"/></linearGradient>` +
+    `<stop offset="0" stop-color="#121826"/><stop offset="0.55" stop-color="#0A0E16"/>` +
+    `<stop offset="1" stop-color="#0D111C"/></linearGradient>` +
     `<radialGradient id="glow" cx="50%" cy="42%" r="60%">` +
     `<stop offset="0" stop-color="${art.glow}"/><stop offset="1" stop-color="rgba(0,0,0,0)"/>` +
     `</radialGradient>` +
     `<pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">` +
-    `<path d="M46 0H0V46" fill="none" stroke="#2A0A0A" stroke-width="1"/></pattern>` +
+    `<path d="M46 0H0V46" fill="none" stroke="#161C29" stroke-width="1"/></pattern>` +
     `</defs>`
 
   const bg =
