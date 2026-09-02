@@ -35,7 +35,7 @@ import {
 
 // The flagship model: this is the paid artifact the buyer keeps forever, and it
 // is written once per SKU and cached, so it's worth the best output available.
-const MODEL = 'claude-opus-4-8'
+const MODEL = 'claude-opus-5'
 const MAX_TOKENS = 4000
 
 // Bump when the generation prompt or stored shape changes so old cached copies
