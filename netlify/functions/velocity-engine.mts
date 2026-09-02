@@ -48,7 +48,7 @@ function shortId(): string {
 // hook), fall back to the most recent shared proof. Scorecard events are
 // joined against products so the content can refer to a readable product
 // name instead of an internal SKU.
-async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
+async function pickSource(db: ReturnType<typeof getDatabase>): Promise
   | { type: 'scorecard'; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
   | { type: 'proof'; id: string; sku: string; productName: string; scenario: string; output: string; createdAt: string }
   | null
@@ -165,10 +165,15 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
 }
 
 // youtube_shorts needs more room for a full timestamped beat-sheet; the
-// other three are short single posts.
+// other three are short single posts. 1200 was too tight in practice — a
+// full beat-sheet (6-7 beats with spoken lines) plus JSON wrapping and
+// escaping regularly ran past it, cutting the response off mid-string and
+// producing invalid JSON. Bumped with headroom rather than trimmed exactly
+// to the observed failure, since this only runs once/day — the extra token
+// budget costs nothing meaningful.
 const MAX_TOKENS: Record<Platform, number> = {
   x: 600,
-  youtube_shorts: 1200,
+  youtube_shorts: 2500,
   reddit: 700,
   bluesky: 600,
 }
@@ -184,7 +189,24 @@ async function generatePlatformContent(anthropic: Anthropic, platform: Platform,
   })
 
   const text = res.content.find((b) => b.type === 'text')?.text ?? '{}'
-  const parsed = JSON.parse(text.replace(/```json|```/g, '').trim())
+  const cleaned = text.replace(/```json|```/g, '').trim()
+
+  let parsed: any
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch (err) {
+    // Distinguish "the model ran out of tokens mid-response" from "the model
+    // returned something that just isn't valid JSON" — the fix for each is
+    // different (raise max_tokens vs. tighten the prompt), and stop_reason
+    // tells them apart without having to guess from the parse error alone.
+    const truncated = res.stop_reason === 'max_tokens'
+    console.error(
+      `[velocity-engine] ${platform} JSON parse failed (stop_reason=${res.stop_reason}` +
+        `${truncated ? `, likely truncated — raise MAX_TOKENS.${platform}` : ''}): ` +
+        `${(err as Error).message}. Response length: ${cleaned.length} chars.`
+    )
+    throw err
+  }
 
   if (platform === 'reddit') {
     const content = `${parsed.title ?? ''}\n\n${parsed.body ?? ''}`.trim()
