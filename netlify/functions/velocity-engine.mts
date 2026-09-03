@@ -47,6 +47,7 @@ interface ProofRow {
   created_at: string
 }
 interface ScorecardChangeRow {
+  id: string
   sku: string
   outcome: string
   duration_ms: number | null
@@ -107,20 +108,32 @@ async function pickImageVariant(db: ReturnType<typeof getDatabase>): Promise<0 |
 }
 
 // Find the freshest real thing to write about: prefer a scorecard run from
-// the last 24h (especially a failure — that's the strongest, least-fakeable
+// the last 2 days (especially a failure — that's the strongest, least-fakeable
 // hook), fall back to the most recent shared proof. Scorecard events are
 // joined against products so the content can refer to a readable product
 // name instead of an internal SKU.
+//
+// Both branches exclude anything already posted about (checked against
+// velocity_posts.source_id, keyed by the run/proof's own unique id — NOT the
+// product sku, which multiple runs share). Without this, a scenario that
+// doesn't get a fresh run every day just kept surfacing as "most recent" for
+// its whole 2-day window, and proofs (which had no time window at all)
+// could resurface indefinitely — the engine would write a new post about the
+// literal same benchmark run or demo run over and over.
 async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
-  | { type: 'scorecard'; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
+  | { type: 'scorecard'; runId: string; sku: string; productName: string; outcome: string; durationMs: number | null; createdAt: string }
   | { type: 'proof'; id: string; sku: string; productName: string; scenario: string; output: string; createdAt: string }
   | null
 > {
   const recentRuns = (await db.sql`
-    SELECT r.sku, r.outcome, r.duration_ms, r.created_at, p.name AS product_name
+    SELECT r.id, r.sku, r.outcome, r.duration_ms, r.created_at, p.name AS product_name
     FROM benchmark_runs r
     LEFT JOIN products p ON p.sku = r.sku
     WHERE r.created_at > now() - interval '2 days'
+      AND NOT EXISTS (
+        SELECT 1 FROM velocity_posts vp
+        WHERE vp.source_type = 'scorecard' AND vp.source_id = r.id
+      )
     ORDER BY (r.outcome = 'failed') DESC, r.created_at DESC
     LIMIT 1
   `) as (ScorecardChangeRow & { product_name: string | null })[]
@@ -128,6 +141,7 @@ async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
     const r = recentRuns[0]
     return {
       type: 'scorecard',
+      runId: r.id,
       sku: r.sku,
       productName: r.product_name || r.sku,
       outcome: r.outcome,
@@ -138,6 +152,10 @@ async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
 
   const recentProofs = (await db.sql`
     SELECT id, sku, product_name, scenario, output, created_at FROM proofs
+    WHERE NOT EXISTS (
+      SELECT 1 FROM velocity_posts vp
+      WHERE vp.source_type = 'proof' AND vp.source_id = proofs.id
+    )
     ORDER BY created_at DESC LIMIT 1
   `) as ProofRow[]
   if (recentProofs.length) {
@@ -329,8 +347,8 @@ export default async (_req: Request) => {
 
   const source = await pickSource(db)
   if (!source) {
-    console.log('[velocity-engine] no proof or scorecard data yet — nothing to write about')
-    return Response.json({ generated: 0, reason: 'no source data' })
+    console.log('[velocity-engine] nothing fresh to write about — either no proof/scorecard data exists yet, or everything recent has already been posted')
+    return Response.json({ generated: 0, reason: 'no fresh source data' })
   }
 
   const productSkuForTrend = source.sku
@@ -351,7 +369,7 @@ export default async (_req: Request) => {
   }
 
   const sourceType = source.type
-  const sourceId = source.type === 'scorecard' ? source.sku : source.id
+  const sourceId = source.type === 'scorecard' ? source.runId : source.id
   // Both branches of pickSource() carry a real product sku (scorecard rows
   // have it directly; proof rows include it alongside the proof id) — stored
   // separately from source_id so the posters can fetch a matching

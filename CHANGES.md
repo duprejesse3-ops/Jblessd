@@ -1,48 +1,41 @@
-# Rebuilt: site-health-agent scheduled function
+# Velocity engine — stop reposting the same run
 
-Drop into your repo root — one new file, one new path, nothing overwritten.
+One file, drop into your repo root, overwrites `netlify/functions/velocity-engine.mts`.
 
-## What was missing
+## The bug
 
-`netlify/lib/site-health.mts` (the check logic), `netlify/functions/site-status.mts`
-(the read endpoint), the admin console's `site_health` tool, and
-`netlify/lib/agent-diagnosis.mts` (which already has `'site_health_runs'` wired
-into its cached-recommendation logic) all existed and expected a scheduled
-function to run the checks and write rows to `site_health_runs`. That function
-itself was missing from the repo. Nothing errored — `/api/site-status` just kept
-serving the last real row forever, which is why the 401 data you found was
-frozen at Aug 26 with no error anywhere pointing at why.
+`pickSource()` always grabbed the single most recent scorecard run (within a
+2-day window) or, failing that, the single most recent proof — with no check
+for whether that exact run had already been posted about. If your benchmark
+scenario doesn't get a fresh run every day, the same run stays "most recent"
+for its entire 2-day window, so the engine just kept generating new posts
+about the identical old event — which is what you were seeing: the same
+"433ms, Sep 1, 22:36 UTC" run showing up in post after post.
 
-## What this adds
+Proofs had it worse — no time window at all, so a single old proof could
+resurface indefinitely with nothing ever aging it out.
 
-`netlify/functions/site-health-agent.mts` — mirrors `discovery-crawler.mts`'s
-structure exactly, since that one already does this correctly for a different
-table:
+There was also a second, related bug: scorecard posts stored the product's
+**SKU** as `source_id`, not the run's own unique id. A naive "don't repeat
+this source_id" fix on top of that would have blocked ALL future posts about
+that product forever after the first one, not just that specific run.
 
-1. Runs `inspectSite()` (homepage, catalog API, review API, sitemap)
-2. Reuses the previous recommendation when the set of failing checks hasn't
-   changed (`cachedRecommendation`), so a steady-state problem costs one LLM
-   call instead of one every run — same cost-control pattern already used
-   elsewhere in your codebase
-3. Otherwise asks Claude for a fresh recommendation. I added one instruction
-   here that the discovery-crawler prompt doesn't need: if every check fails
-   with the same status — especially if the homepage itself fails alongside
-   everything else — the model is told to say that plainly points at a
-   platform-level block (e.g. Netlify's site-wide password protection) rather
-   than guessing at per-service credential rot, which is what produced the
-   misleading recommendation text you saw on Aug 26
-4. Writes the run to `site_health_runs`
-5. Prunes runs older than 30 days, once a day (same gating pattern as
-   `discovery-crawler.mts`)
+## The fix
 
-**Schedule:** hourly (`0 * * * *`), matching the roughly-hourly spacing
-already visible in your existing `site_health_runs` history — this restores
-the cadence other parts of the system were already built around, not a new
-one. No collision with any other function's schedule.
+- Both queries now exclude anything already present in `velocity_posts` for
+  that source type, checked against the run/proof's own unique id.
+- Scorecard posts now store the run's real unique id (`benchmark_runs.id`)
+  as `source_id`, not the sku — so future runs of the same product post
+  fine, only the literal same run is excluded.
+- When nothing fresh exists (everything recent already covered, or no data
+  yet), the function logs that clearly and skips the run rather than
+  repeating old content — same graceful no-op behavior as before, just an
+  honest reason now.
+
+Nothing else changed — trend context, image variety, and everything from the
+last patch are untouched.
 
 ## Verification
-Transpile-checked with esbuild — clean, no syntax errors. I can't trigger a
-live Netlify scheduled run from here, so the first real confirmation is
-either watching for a new row in `/api/site-status` after your next deploy,
-or triggering it manually if your Netlify setup allows invoking scheduled
-functions on demand.
+Transpile-checked with esbuild — clean, no syntax errors. Worth watching the
+next couple of scheduled runs to confirm it either posts about a genuinely
+new run or skips cleanly instead of repeating.
