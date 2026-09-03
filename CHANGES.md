@@ -1,41 +1,28 @@
-# Velocity engine — stop reposting the same run
+# Clear the backlog of already-queued duplicate posts
 
-One file, drop into your repo root, overwrites `netlify/functions/velocity-engine.mts`.
+One file: `netlify/database/migrations/20260903170000_dedupe_queued_velocity_posts.sql`
 
-## The bug
+## Why you're still seeing duplicates after the last fix
 
-`pickSource()` always grabbed the single most recent scorecard run (within a
-2-day window) or, failing that, the single most recent proof — with no check
-for whether that exact run had already been posted about. If your benchmark
-scenario doesn't get a fresh run every day, the same run stays "most recent"
-for its entire 2-day window, so the engine just kept generating new posts
-about the identical old event — which is what you were seeing: the same
-"433ms, Sep 1, 22:36 UTC" run showing up in post after post.
+That fix (in `pickSource()`) stops **new** duplicate posts from being
+generated — it doesn't retroactively clean out posts that were already sitting
+in `velocity_posts` with `status='queued'` before the fix deployed. Your
+poster functions (`x-poster.mts`, `bluesky-poster.mts`, `reddit-poster.mts`)
+each only post one queued row per scheduled run, so if several duplicate
+copies of the same run got queued before the fix landed, they trickle out one
+at a time, run after run — which is exactly what the post you just showed me
+looks like: a leftover from the backlog, not a new bug.
 
-Proofs had it worse — no time window at all, so a single old proof could
-resurface indefinitely with nothing ever aging it out.
+## What this does
 
-There was also a second, related bug: scorecard posts stored the product's
-**SKU** as `source_id`, not the run's own unique id. A naive "don't repeat
-this source_id" fix on top of that would have blocked ALL future posts about
-that product forever after the first one, not just that specific run.
+Deletes any `queued` row whose exact platform+content text already exists in
+a `posted` row. Only removes pure duplicates of something already sent —
+doesn't touch posting history, doesn't touch anything that isn't an exact
+repeat. Same idempotent one-time-cleanup pattern your repo already uses
+(`20260829200000_dedupe_active_scenarios.sql`) — safe to run more than once.
 
-## The fix
-
-- Both queries now exclude anything already present in `velocity_posts` for
-  that source type, checked against the run/proof's own unique id.
-- Scorecard posts now store the run's real unique id (`benchmark_runs.id`)
-  as `source_id`, not the sku — so future runs of the same product post
-  fine, only the literal same run is excluded.
-- When nothing fresh exists (everything recent already covered, or no data
-  yet), the function logs that clearly and skips the run rather than
-  repeating old content — same graceful no-op behavior as before, just an
-  honest reason now.
-
-Nothing else changed — trend context, image variety, and everything from the
-last patch are untouched.
-
-## Verification
-Transpile-checked with esbuild — clean, no syntax errors. Worth watching the
-next couple of scheduled runs to confirm it either posts about a genuinely
-new run or skips cleanly instead of repeating.
+## After this runs
+The queue should be clear of the old duplicates. Combined with the earlier
+`pickSource()` fix, no new ones should generate either. If you see another
+repeat after both of these are live, it'd be worth a fresh look rather than
+assuming it's more backlog.
