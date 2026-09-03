@@ -36,6 +36,7 @@ interface QueuedPost {
   id: string
   content: string
   product_sku: string | null
+  image_variant: number
 }
 
 interface Session {
@@ -198,7 +199,7 @@ export default async (_req: Request) => {
 
   const db = getDatabase()
   const queued = (await db.sql`
-    SELECT id, content, product_sku FROM velocity_posts
+    SELECT id, content, product_sku, image_variant FROM velocity_posts
     WHERE platform = 'bluesky' AND status = 'queued'
     ORDER BY created_at ASC
     LIMIT ${BATCH_SIZE}
@@ -222,7 +223,8 @@ export default async (_req: Request) => {
     // entirely — the image is a nice-to-have, not a hard requirement.
     let imageBlob: BlobRef | null = null
     try {
-      const png = await fetchCreativePng(SITE, post.product_sku, 'square')
+      const variant = ([0, 1, 2].includes(post.image_variant) ? post.image_variant : 0) as 0 | 1 | 2
+      const png = await fetchCreativePng(SITE, post.product_sku, 'square', variant)
       imageBlob = await uploadImageBlob(session, png)
     } catch (err) {
       console.error(`[bluesky-poster] image attach failed for ${post.id}, posting text-only:`, (err as Error).message)

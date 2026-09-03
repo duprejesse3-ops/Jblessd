@@ -163,7 +163,20 @@ function pill(x: number, y: number, text: string, fontSize: number, accent: stri
   )
 }
 
-function renderSvg(product: Product | null, size: { w: number; h: number }): string {
+// Three distinct visual treatments so consecutive posts don't look like the
+// same template reused — the flat "same layout every time" look was the
+// actual source of a bland-feeling feed, not the copy itself.
+//   0 = original: badge-dominant, centered/left-aligned as before (unchanged
+//       default so any existing cached/pinned creative URLs keep looking the
+//       same if size/sku match with no variant param)
+//   1 = reversed: badge moves to the opposite side/corner, kicker+name shift
+//       to lead from the opposite edge — same information, mirrored rhythm
+//   2 = name-forward: product name becomes the dominant visual element with
+//       an accent underline rule; badge shrinks to a small corner mark;
+//       kicker becomes a pill instead of plain monospace text
+type Variant = 0 | 1 | 2
+
+function renderSvg(product: Product | null, size: { w: number; h: number }, variant: Variant = 0): string {
   const { w, h } = size
   // Fall back to the brand mark for a category with no glyph yet: a creative that
   // still renders beats a 500 that shows up as a broken image in the console.
@@ -228,35 +241,161 @@ function renderSvg(product: Product | null, size: { w: number; h: number }): str
 
   let content = ''
   if (row) {
-    // Landscape: glyph badge on the left, text column on the right.
+    // Landscape layouts.
     const b = Math.round(h * 0.42)
-    const bx = pad
     const by = Math.round(h / 2 - b / 2)
-    const tx = bx + b + Math.round(w * 0.05)
-    const tw = w - tx - pad
     const nameSize = 52
-    const nameLines = wrap(name, nameSize, tw, 3)
-    const ty = Math.round(h / 2 - (nameLines.length * nameSize * 1.12) / 2) - 30
-    const kickerY = ty - 34
+
+    if (variant === 1) {
+      // Reversed: badge on the RIGHT, text column leads from the left edge.
+      const bx = w - pad - b
+      const tx = pad
+      const tw = bx - Math.round(w * 0.05) - tx
+      const nameLines = wrap(name, nameSize, tw, 3)
+      const ty = Math.round(h / 2 - (nameLines.length * nameSize * 1.12) / 2) - 30
+      const kickerY = ty - 34
+      content =
+        badge(bx, by, b, accent, art.glyph) +
+        `<text x="${tx}" y="${kickerY}" fill="${accent}" font-family="monospace" font-size="19" font-weight="700" letter-spacing="1.5">${esc(kicker.toUpperCase())}</text>` +
+        nameLines
+          .map((ln, i) => {
+            const y = ty + i * Math.round(nameSize * 1.12) + nameSize
+            return `<text x="${tx}" y="${y}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
+          })
+          .join('') +
+        (() => {
+          const subY = ty + nameLines.length * Math.round(nameSize * 1.12) + nameSize + 6
+          const subLines = wrap(sub, 24, tw, 2)
+          return subLines
+            .map((ln, i) => `<text x="${tx}" y="${subY + i * 32}" fill="#9AA4BC" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
+            .join('')
+        })() +
+        (product ? pill(tx, by + b - 4, `$${product.price.toFixed(0)}`, 22, accent) : '')
+    } else if (variant === 2) {
+      // Name-forward: no badge in the main flow — name spans nearly the full
+      // width with an accent underline rule; badge shrinks to a bottom-right
+      // corner mark; kicker becomes a small pill instead of plain text.
+      const tx = pad
+      const tw = w - pad * 2
+      const bigName = 64
+      const nameLines = wrap(name, bigName, tw, 2)
+      const kickerPillY = pad + 40
+      let y = kickerPillY + 66
+      content =
+        pill(tx, kickerPillY, kicker.toUpperCase(), 18, accent) +
+        nameLines
+          .map((ln, i) => {
+            const ly = y + i * Math.round(bigName * 1.1) + bigName
+            return `<text x="${tx}" y="${ly}" fill="#EEF1F7" font-family="sans-serif" font-size="${bigName}" font-weight="800">${esc(ln)}</text>`
+          })
+          .join('')
+      y += nameLines.length * Math.round(bigName * 1.1) + bigName + 4
+      content += `<rect x="${tx}" y="${y}" width="${Math.round(tw * 0.32)}" height="5" rx="2.5" fill="${accent}"/>`
+      y += 26
+      const subLines = wrap(sub, 24, tw, 2)
+      content += subLines
+        .map((ln, i) => `<text x="${tx}" y="${y + 30 + i * 32}" fill="#9AA4BC" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
+        .join('')
+      if (product) {
+        const py = y + subLines.length * 32 + 44
+        content += pill(tx, py, `$${product.price.toFixed(0)}`, 22, accent)
+      }
+      // Small corner-mark badge, deliberately understated relative to variant 0/1.
+      const cb = Math.round(b * 0.55)
+      content += badge(w - pad - cb, h - pad - cb - 46, cb, accent, art.glyph)
+    } else {
+      // Variant 0 (original): glyph badge on the left, text column on the right.
+      const bx = pad
+      const tx = bx + b + Math.round(w * 0.05)
+      const tw = w - tx - pad
+      const nameLines = wrap(name, nameSize, tw, 3)
+      const ty = Math.round(h / 2 - (nameLines.length * nameSize * 1.12) / 2) - 30
+      const kickerY = ty - 34
+      content =
+        badge(bx, by, b, accent, art.glyph) +
+        `<text x="${tx}" y="${kickerY}" fill="${accent}" font-family="monospace" font-size="19" font-weight="700" letter-spacing="1.5">${esc(kicker.toUpperCase())}</text>` +
+        nameLines
+          .map((ln, i) => {
+            const y = ty + i * Math.round(nameSize * 1.12) + nameSize
+            return `<text x="${tx}" y="${y}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
+          })
+          .join('') +
+        (() => {
+          const subY = ty + nameLines.length * Math.round(nameSize * 1.12) + nameSize + 6
+          const subLines = wrap(sub, 24, tw, 2)
+          return subLines
+            .map((ln, i) => `<text x="${tx}" y="${subY + i * 32}" fill="#9AA4BC" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
+            .join('')
+        })() +
+        (product ? pill(tx, by + b - 4, `$${product.price.toFixed(0)}`, 22, accent) : '')
+    }
+  } else if (variant === 1) {
+    // Square/portrait reversed: badge moves to top-right corner, text block
+    // is left-aligned from the top instead of centered mid-page.
+    const tx = pad
+    const tw = w - pad * 2
+    const b = Math.round(w * 0.24)
+    const bx = w - pad - b
+    const by = pad
+    const nameSize = w === h ? 56 : 52
+    let y = by + b + 50
+    const kicker0 = kicker.toUpperCase()
     content =
       badge(bx, by, b, accent, art.glyph) +
-      `<text x="${tx}" y="${kickerY}" fill="${accent}" font-family="monospace" font-size="19" font-weight="700" letter-spacing="1.5">${esc(kicker.toUpperCase())}</text>` +
-      nameLines
-        .map((ln, i) => {
-          const y = ty + i * Math.round(nameSize * 1.12) + nameSize
-          return `<text x="${tx}" y="${y}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
-        })
-        .join('') +
-      (() => {
-        const subY = ty + nameLines.length * Math.round(nameSize * 1.12) + nameSize + 6
-        const subLines = wrap(sub, 24, tw, 2)
-        return subLines
-          .map((ln, i) => `<text x="${tx}" y="${subY + i * 32}" fill="#9AA4BC" font-family="sans-serif" font-size="24">${esc(ln)}</text>`)
-          .join('')
-      })() +
-      (product ? pill(tx, by + b - 4, `$${product.price.toFixed(0)}`, 22, accent) : '')
+      `<text x="${tx}" y="${y}" fill="${accent}" font-family="monospace" font-size="20" font-weight="700" letter-spacing="1.5">${esc(kicker0)}</text>`
+    y += 28
+    const nameLines = wrap(name, nameSize, tw, 3)
+    content += nameLines
+      .map((ln, i) => {
+        const ly = y + i * Math.round(nameSize * 1.12) + nameSize
+        return `<text x="${tx}" y="${ly}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800">${esc(ln)}</text>`
+      })
+      .join('')
+    y += nameLines.length * Math.round(nameSize * 1.12) + nameSize + 10
+    const subLines = wrap(sub, 25, tw, 3)
+    content += subLines
+      .map((ln, i) => `<text x="${tx}" y="${y + i * 34}" fill="#9AA4BC" font-family="sans-serif" font-size="25">${esc(ln)}</text>`)
+      .join('')
+    if (product) {
+      const py = y + subLines.length * 34 + 24
+      const fs = 22
+      const pText = `$${product.price.toFixed(0)} · ${product.format}`
+      content += pill(tx, py, pText, fs, accent)
+    }
+  } else if (variant === 2) {
+    // Square/portrait name-forward: name dominates top-to-bottom, badge
+    // shrinks to a bottom-corner watermark, kicker is a pill not plain text.
+    const tx = pad
+    const tw = w - pad * 2
+    const cx = w / 2
+    let y = pad + 60
+    const nameSize = w === h ? 58 : 54
+    content = pill(tx, pad, kicker.toUpperCase(), 18, accent)
+    const nameLines = wrap(name, nameSize, tw, 3)
+    content += nameLines
+      .map((ln, i) => {
+        const ly = y + i * Math.round(nameSize * 1.12) + nameSize
+        return `<text x="${cx}" y="${ly}" fill="#EEF1F7" font-family="sans-serif" font-size="${nameSize}" font-weight="800" text-anchor="middle">${esc(ln)}</text>`
+      })
+      .join('')
+    y += nameLines.length * Math.round(nameSize * 1.12) + nameSize + 6
+    content += `<rect x="${cx - tw * 0.16}" y="${y}" width="${Math.round(tw * 0.32)}" height="5" rx="2.5" fill="${accent}"/>`
+    y += 32
+    const subLines = wrap(sub, 26, tw, 3)
+    content += subLines
+      .map((ln, i) => `<text x="${cx}" y="${y + i * 36}" fill="#9AA4BC" font-family="sans-serif" font-size="26" text-anchor="middle">${esc(ln)}</text>`)
+      .join('')
+    if (product) {
+      const py = y + subLines.length * 36 + 20
+      const fs = 22
+      const pText = `$${product.price.toFixed(0)} · ${product.format}`
+      const pw = pText.length * fs * 0.62 + fs * 1.8
+      content += pill(cx - pw / 2, py, pText, fs, accent)
+    }
+    const cb = Math.round(w * 0.16)
+    content += badge(w - pad - cb, h - pad - cb - 56, cb, accent, art.glyph)
   } else {
-    // Square / portrait: centered stack — badge, kicker, name, sub, price.
+    // Variant 0 (original): centered stack — badge, kicker, name, sub, price.
     const cx = w / 2
     const b = Math.round(w * 0.30)
     const by = Math.round(h * (w === h ? 0.22 : 0.20))
@@ -304,6 +443,8 @@ export default async (req: Request) => {
   const sizeKey = (url.searchParams.get('size') || 'square').toLowerCase()
   const size = SIZES[sizeKey] || SIZES.square
   const sku = (url.searchParams.get('sku') || '').trim()
+  const variantRaw = Number(url.searchParams.get('variant') || 0)
+  const variant = ([0, 1, 2].includes(variantRaw) ? variantRaw : 0) as 0 | 1 | 2
 
   let product: Product | null = null
   if (sku && sku.toUpperCase() !== 'STORE') {
@@ -318,12 +459,14 @@ export default async (req: Request) => {
     }
   }
 
-  const svg = renderSvg(product, size)
+  const svg = renderSvg(product, size, variant)
   return new Response(svg, {
     headers: {
       'Content-Type': 'image/svg+xml; charset=utf-8',
-      // Deterministic collateral — cache hard at the edge; Image CDN keys its
-      // rasterized PNG off this response.
+      // Deterministic collateral for a given (sku, size, variant) triple —
+      // cache hard at the edge; Image CDN keys its rasterized PNG off this
+      // response including the query string, so different variants cache
+      // as distinct images rather than colliding.
       'Cache-Control': 'public, max-age=3600, s-maxage=86400',
     },
   })

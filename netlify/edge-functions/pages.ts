@@ -392,7 +392,7 @@ function page(opts: {
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
-    `:root{--ink:#0A0E16;--panel:#121826;--line:#232B3D;--line-soft:#161C29;--paper:#EEF1F7;--muted:#9AA4BC;--muted-2:#5C6580;--brass:#FFB020;}` +
+    `:root{--ink:#0A0E16;--panel:#121826;--line:#232B3D;--line-soft:#161C29;--paper:#EEF1F7;--muted:#9AA4BC;--muted-2:#5C6580;--brass:#FFB020;--danger:#FF2A2A;}` +
     `*{box-sizing:border-box}` +
     `body{margin:0;background:var(--ink);color:var(--paper);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}` +
     `a{color:var(--brass);text-decoration:none}a:hover{text-decoration:underline}` +
@@ -951,7 +951,7 @@ interface Scorecard {
 }
 
 function outcomeTag(o: string): string {
-  const color = o === 'success' ? 'var(--brass)' : o === 'partial' ? 'var(--muted)' : '#ff786e'
+  const color = o === 'success' ? 'var(--brass)' : o === 'partial' ? 'var(--muted)' : 'var(--danger)'
   return `<span style="color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${esc(o)}</span>`
 }
 
@@ -1385,7 +1385,7 @@ function renderCustom(): Response {
     `<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px">` +
     `<input type="checkbox" id="co-policy" style="margin-top:3px">` +
     `<span>I understand this is a custom digital product delivered instantly upon generation, and I acknowledge the <a href="/refund-policy">refund policy</a>.</span></label>` +
-    `<p id="co-err" hidden style="color:#ff786e;font-size:13.5px;margin-bottom:12px"></p>` +
+    `<p id="co-err" hidden style="color:var(--danger);font-size:13.5px;margin-bottom:12px"></p>` +
     `<button class="btn" id="co-submit" type="submit">Get my custom deliverable — $49</button></form>` +
     `</div>` +
     `<div class="proof" id="co-generating" hidden><div class="proof-bar">generating · building your deliverable, this takes about 20 seconds</div><div class="proof-out"><span class="co-cursor"></span></div></div>` +

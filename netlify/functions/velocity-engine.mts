@@ -16,6 +16,20 @@
 // as one JSON blob. That way a malformed/truncated response for one platform
 // (e.g. the youtube_shorts beat-sheet running long) doesn't silently drop
 // the other three variants — each platform succeeds or fails independently.
+//
+// Trend awareness: trend-scanner.mts already runs every 6h and records
+// matches between external/internal trend signals and specific products in
+// trend_signals. This function checks whether the chosen source's product
+// has a recent, meaningful signal and — only when one exists — adds it to
+// the fact sheet as optional context the copy MAY reference naturally. It
+// never invents or forces a trend tie-in: most runs will have no signal for
+// the chosen product, and the copy proceeds exactly as before in that case.
+// The proof/scorecard fact stays the mandatory hook either way — trend
+// context is additive, not a replacement for the store's real differentiator.
+//
+// Image variety: ad-image.mts now supports 3 layout variants (0/1/2). Each
+// run looks at the last 2 posts' image_variant and picks a different one, so
+// consecutive posts don't render with the same visual template.
 
 import type { Config } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
@@ -41,6 +55,55 @@ interface ScorecardChangeRow {
 
 function shortId(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+}
+
+interface TrendSignalRow {
+  term: string
+  source: string
+  strength: number
+  detected_at: string
+}
+
+// Looks up the strongest recent (24h) trend_signals row for this specific
+// product, if any. trend-scanner.mts already does the relevance matching
+// (regex against name/blurb/spec) when it wrote the row — this just checks
+// whether a match still exists and is fresh enough to be worth mentioning.
+async function findTrendContext(
+  db: ReturnType<typeof getDatabase>,
+  sku: string
+): Promise<TrendSignalRow | null> {
+  try {
+    const rows = (await db.sql`
+      SELECT term, source, strength, detected_at FROM trend_signals
+      WHERE matched_sku = ${sku} AND detected_at > now() - interval '24 hours'
+      ORDER BY strength DESC, detected_at DESC
+      LIMIT 1
+    `) as TrendSignalRow[]
+    return rows[0] ?? null
+  } catch (err) {
+    console.log('[velocity-engine] trend_signals lookup failed, proceeding without trend context:', (err as Error).message)
+    return null
+  }
+}
+
+// Picks an ad-image layout variant (0/1/2), avoiding whichever variant(s)
+// were used in the last 2 queued posts so consecutive content doesn't look
+// like the same template reused.
+async function pickImageVariant(db: ReturnType<typeof getDatabase>): Promise<0 | 1 | 2> {
+  const ALL: (0 | 1 | 2)[] = [0, 1, 2]
+  try {
+    const rows = (await db.sql`
+      SELECT image_variant FROM velocity_posts
+      ORDER BY created_at DESC LIMIT 2
+    `) as { image_variant: number }[]
+    const recent = new Set(rows.map((r) => r.image_variant))
+    const candidates = ALL.filter((v) => !recent.has(v))
+    const pool = candidates.length ? candidates : ALL
+    return pool[Math.floor(Math.random() * pool.length)]
+  } catch (err) {
+    console.log('[velocity-engine] recent-variant lookup failed, picking randomly:', (err as Error).message)
+    return ALL[Math.floor(Math.random() * ALL.length)]
+  }
 }
 
 // Find the freshest real thing to write about: prefer a scorecard run from
@@ -84,30 +147,51 @@ async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
   return null
 }
 
-function buildFactSheet(source: NonNullable<Awaited<ReturnType<typeof pickSource>>>): string {
-  if (source.type === 'scorecard') {
-    const url = `${SITE}/scorecard/${encodeURIComponent(source.sku)}`
-    return (
-      `Real, verifiable event: a benchmark run just completed.\n` +
-      `Product name (use this in the post, not the SKU): ${source.productName}\n` +
-      `Product SKU (for reference only, don't lead with it): ${source.sku}\n` +
-      `Outcome: ${source.outcome}\n` +
-      `Duration: ${source.durationMs ? source.durationMs + 'ms' : 'unknown'}\n` +
-      `Timestamp: ${source.createdAt}\n` +
-      `Public, checkable URL: ${url}\n` +
-      (source.outcome === 'failed'
-        ? `This was a FAILURE. The methodology publishes failures on purpose — use that as the hook. Do not spin it as a success.`
-        : `This was a success on the store's public, dated benchmark.`)
-    )
-  }
-  const url = `${SITE}/proof/${source.id}`
+function buildFactSheet(
+  source: NonNullable<Awaited<ReturnType<typeof pickSource>>>,
+  trend: TrendSignalRow | null
+): string {
+  const base =
+    source.type === 'scorecard'
+      ? (() => {
+          const url = `${SITE}/scorecard/${encodeURIComponent(source.sku)}`
+          return (
+            `Real, verifiable event: a benchmark run just completed.\n` +
+            `Product name (use this in the post, not the SKU): ${source.productName}\n` +
+            `Product SKU (for reference only, don't lead with it): ${source.sku}\n` +
+            `Outcome: ${source.outcome}\n` +
+            `Duration: ${source.durationMs ? source.durationMs + 'ms' : 'unknown'}\n` +
+            `Timestamp: ${source.createdAt}\n` +
+            `Public, checkable URL: ${url}\n` +
+            (source.outcome === 'failed'
+              ? `This was a FAILURE. The methodology publishes failures on purpose — use that as the hook. Do not spin it as a success.`
+              : `This was a success on the store's public, dated benchmark.`)
+          )
+        })()
+      : (() => {
+          const url = `${SITE}/proof/${source.id}`
+          return (
+            `Real, verifiable event: a shopper ran a live product demo and it was saved publicly.\n` +
+            `Product: ${source.productName} (${source.sku})\n` +
+            `Scenario it ran on: ${source.scenario || '(default demo)'}\n` +
+            `Output excerpt: ${source.output.slice(0, 400)}\n` +
+            `Timestamp: ${source.createdAt}\n` +
+            `Public, checkable URL: ${url}`
+          )
+        })()
+
+  if (!trend) return base
+
+  // Optional, secondary context — the model decides per its instructions
+  // whether working this in actually reads naturally for the platform, or
+  // whether skipping it is the better call.
   return (
-    `Real, verifiable event: a shopper ran a live product demo and it was saved publicly.\n` +
-    `Product: ${source.productName} (${source.sku})\n` +
-    `Scenario it ran on: ${source.scenario || '(default demo)'}\n` +
-    `Output excerpt: ${source.output.slice(0, 400)}\n` +
-    `Timestamp: ${source.createdAt}\n` +
-    `Public, checkable URL: ${url}`
+    base +
+    `\n\nOptional trend context (use ONLY if it lets you open with a more timely, ` +
+    `attention-grabbing hook without weakening the real fact above or reading as forced): ` +
+    `"${trend.term}" is currently trending (source: ${trend.source}) and was independently ` +
+    `matched to this product. If referencing it doesn't add a genuine, natural angle, ignore it ` +
+    `entirely and just use the real fact above — a forced trend mention is worse than no mention.`
   )
 }
 
@@ -220,6 +304,8 @@ async function generatePlatformContent(anthropic: Anthropic, platform: Platform,
 }
 
 async function generateVariants(factSheet: string): Promise<Variant[]> {
+  // (factSheet already carries trend context inline when present — see
+  // buildFactSheet — so no separate trend param is needed here.)
   const anthropic = new Anthropic()
   const platforms: Platform[] = ['x', 'youtube_shorts', 'reddit', 'bluesky']
 
@@ -247,7 +333,16 @@ export default async (_req: Request) => {
     return Response.json({ generated: 0, reason: 'no source data' })
   }
 
-  const factSheet = buildFactSheet(source)
+  const productSkuForTrend = source.sku
+  const [trend, imageVariant] = await Promise.all([
+    findTrendContext(db, productSkuForTrend),
+    pickImageVariant(db),
+  ])
+  if (trend) {
+    console.log(`[velocity-engine] trend context found for ${productSkuForTrend}: "${trend.term}" (${trend.source}, strength ${trend.strength})`)
+  }
+
+  const factSheet = buildFactSheet(source, trend)
   const variants = await generateVariants(factSheet)
 
   if (!variants.length) {
@@ -266,8 +361,8 @@ export default async (_req: Request) => {
   for (const v of variants) {
     try {
       await db.sql`
-        INSERT INTO velocity_posts (id, source_type, source_id, platform, content, status, product_sku)
-        VALUES (${shortId()}, ${sourceType}, ${sourceId}, ${v.platform}, ${v.content}, 'queued', ${productSku})
+        INSERT INTO velocity_posts (id, source_type, source_id, platform, content, status, product_sku, used_trend_term, image_variant)
+        VALUES (${shortId()}, ${sourceType}, ${sourceId}, ${v.platform}, ${v.content}, 'queued', ${productSku}, ${trend?.term ?? null}, ${imageVariant})
       `
       inserted++
     } catch (err) {
@@ -275,8 +370,11 @@ export default async (_req: Request) => {
     }
   }
 
-  console.log(`[velocity-engine] queued ${inserted}/${variants.length} post(s) from ${sourceType}:${sourceId}`)
-  return Response.json({ generated: inserted, attempted: 4, sourceType, sourceId })
+  console.log(
+    `[velocity-engine] queued ${inserted}/${variants.length} post(s) from ${sourceType}:${sourceId}` +
+      `${trend ? ` (trend: "${trend.term}")` : ''} (image variant ${imageVariant})`
+  )
+  return Response.json({ generated: inserted, attempted: 4, sourceType, sourceId, trend: trend?.term ?? null, imageVariant })
 }
 
 export const config: Config = {

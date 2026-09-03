@@ -73,11 +73,12 @@ function verifyFontsOnce(): void {
 export async function fetchCreativePng(
   siteOrigin: string,
   sku: string | null,
-  size: 'landscape' | 'square' | 'portrait' = 'square'
+  size: 'landscape' | 'square' | 'portrait' = 'square',
+  variant: 0 | 1 | 2 = 0
 ): Promise<Buffer> {
   verifyFontsOnce()
 
-  const params = new URLSearchParams({ size })
+  const params = new URLSearchParams({ size, variant: String(variant) })
   if (sku) params.set('sku', sku)
 
   const res = await fetch(`${siteOrigin}/api/ad-image?${params.toString()}`)
