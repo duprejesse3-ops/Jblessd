@@ -1,0 +1,36 @@
+{
+  "name": "multivault",
+  "version": "1.0.0",
+  "description": "A local, encrypted context snapshot of one folder and one calendar file. No account, no OAuth, no cloud storage — the vault lives on your machine and only your passphrase opens it.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "vault": "./bin/vault.mjs"
+  },
+  "main": "./lib/vault.mjs",
+  "exports": {
+    ".": "./lib/vault.mjs",
+    "./crypto": "./lib/crypto.mjs",
+    "./scan": "./lib/scan.mjs",
+    "./calendar": "./lib/calendar.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "vault": "node bin/vault.mjs",
+    "test": "node test/run.mjs",
+    "build:binary": "node scripts/build-sea.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
+  }
+}

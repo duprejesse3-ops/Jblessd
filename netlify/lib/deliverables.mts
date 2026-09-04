@@ -22,6 +22,7 @@ import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.m
 import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
+import { MULTIVAULT_SOURCE } from './multivault-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -583,6 +584,58 @@ function witnessSections(product: Product): DeliverableSection[] {
   return sections
 }
 
+function multivaultSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to use it',
+      body:
+        `${product.blurb}\n\n` +
+        `Unzip the archive on your order page, then:\n\n` +
+        `    unzip multivault.zip\n` +
+        `    cd multivault\n` +
+        `    npm test\n\n` +
+        `That last step is optional but recommended — it runs the real test suite against ` +
+        `a real temp directory (encryption round-trip, .ics parsing, folder scanning) so ` +
+        `you know the software works on your machine before you rely on it.\n\n` +
+        `Create your first vault:\n\n` +
+        `    node bin/vault.mjs init --folder ~/Documents/ClientNotes --ics ~/Calendar.ics\n\n` +
+        `This prints a passphrase — save it now (a password manager is recommended). ` +
+        `There is no recovery if you lose it; it is never stored anywhere by this software. ` +
+        `Then:\n\n` +
+        `    node bin/vault.mjs sync\n` +
+        `    node bin/vault.mjs context\n\n` +
+        `\`context\` prints a pasteable brief of your folder and calendar — drop it into any ` +
+        `AI chat, or pipe it into your own script (see README's "Piping into the Claude ` +
+        `API"). Three scheduling adapters (cron, launchd, Windows Task Scheduler) are ` +
+        `included in adapters/ to keep it synced automatically — see each file's header ` +
+        `comment for setup.\n\n` +
+        `Want a double-clickable executable instead of running through Node? Run ` +
+        `\`npm run build:binary\` on each OS you want one for (README's "Standalone ` +
+        `binaries" section covers the unsigned-binary warnings you'll see on first run).\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multivault\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Start with README.md — it covers exactly what this does and does not watch, in ` +
+        `plain terms.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIVAULT_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIVAULT_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
 function guardSections(product: Product): DeliverableSection[] {
   const sections: DeliverableSection[] = [
     {
@@ -724,6 +777,18 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
       'with any connector, zero dependencies. Yours to run on unlimited machines, forever. ' +
       'See LICENSE.md at the end for the terms.',
     sections: guardSections(product),
+  }),
+  'AI-CN-008': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local, AES-256-GCM encrypted context snapshot of one ' +
+      'folder and one calendar file — turned into a pasteable brief for any AI chat, zero ' +
+      'dependencies, nothing phones home. Yours to run on unlimited machines, forever. See ' +
+      'LICENSE.md at the end for the terms.',
+    sections: multivaultSections(product),
   }),
 }
 

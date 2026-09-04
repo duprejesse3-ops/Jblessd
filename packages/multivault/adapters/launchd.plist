@@ -1,0 +1,59 @@
+<!-- Copyright (c) 2026 [SELLER]. All rights reserved. -->
+<!-- Licensed to a single purchaser under the terms in LICENSE.md. -->
+<!-- Redistribution or resale of this source, in whole or in part, is not permitted. -->
+
+<!--
+  Adapter: launchd, the native scheduler on macOS. Preferred over cron there —
+  launchd runs your jobs even after the machine sleeps and wakes.
+
+  Install:
+    1. Copy this file to ~/Library/LaunchAgents/com.multivault.sync.plist
+    2. Edit the placeholders below: YOUR_USERNAME (three times), the package
+       path (twice), and YOUR_PASSPHRASE_HERE (once) to match your setup.
+       Prefer a wrapper script that reads the passphrase from a
+       0600-permissioned file over pasting it into this plist directly, if
+       other users can read your LaunchAgents folder.
+    3. Load it:
+         launchctl load ~/Library/LaunchAgents/com.multivault.sync.plist
+    4. Check it's running:
+         launchctl list | grep multivault
+
+  Runs once an hour by default (StartInterval, in seconds — 3600 = 1 hour).
+
+  To stop it:
+    launchctl unload ~/Library/LaunchAgents/com.multivault.sync.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.multivault.sync</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/YOUR_USERNAME/multivault/bin/vault.mjs</string>
+    <string>sync</string>
+    <string>--dest</string>
+    <string>/Users/YOUR_USERNAME/.multivault</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>MULTIVAULT_PASSPHRASE</key>
+    <string>YOUR_PASSPHRASE_HERE</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/multivault/multivault.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/multivault/multivault.log</string>
+</dict>
+</plist>
