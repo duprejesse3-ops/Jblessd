@@ -609,6 +609,22 @@ function multivaultSections(product: Product): DeliverableSection[] {
         `API"). Three scheduling adapters (cron, launchd, Windows Task Scheduler) are ` +
         `included in adapters/ to keep it synced automatically — see each file's header ` +
         `comment for setup.\n\n` +
+        `**Want it automatic instead?** That's MCP mode — no sync, no paste. Point your MCP ` +
+        `client (Claude Desktop, Claude Code) at \`bin/vault-mcp.mjs\` and it calls your vault ` +
+        `directly, live, whenever relevant. For Claude Desktop, add to ` +
+        `\`claude_desktop_config.json\`:\n\n` +
+        `    {\n` +
+        `      "mcpServers": {\n` +
+        `        "multivault": {\n` +
+        `          "command": "node",\n` +
+        `          "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"]\n` +
+        `        }\n` +
+        `      }\n` +
+        `    }\n\n` +
+        `Restart your client — it can now call \`get_context\` and \`vault_status\` on its own. ` +
+        `See README's "MCP mode" section for the full walkthrough, and "Provable logging ` +
+        `with MultiWitness" if you also own MultiWitness and want every context call logged ` +
+        `to its hash chain.\n\n` +
         `Want a double-clickable executable instead of running through Node? Run ` +
         `\`npm run build:binary\` on each OS you want one for (README's "Standalone ` +
         `binaries" section covers the unsigned-binary warnings you'll see on first run).\n\n` +
@@ -784,9 +800,16 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
     format: product.format,
     spec: product.spec,
     intro:
-      'The complete source for a local, AES-256-GCM encrypted context snapshot of one ' +
-      'folder and one calendar file — turned into a pasteable brief for any AI chat, zero ' +
-      'dependencies, nothing phones home. Yours to run on unlimited machines, forever. See ' +
+      'The complete source for a local, AES-256-GCM encrypted context snapshot of one folder ' +
+      'and one calendar file — with two ways to use it. CLI mode (sync + context) is zero-' +
+      'dependency and works exactly like v1. MCP mode runs a built-in server so Claude ' +
+      'Desktop, Claude Code, and other MCP-aware tools pull in your current context ' +
+      'automatically, live, with no copy-paste — that mode is the one part of this package ' +
+      'with real dependencies (the official @modelcontextprotocol/sdk and zod), documented ' +
+      'plainly in README.md rather than hidden. Nothing phones home either way: MCP mode ' +
+      'talks only over stdio to your local AI client, and the only network call anywhere in ' +
+      'this package is an optional, content-free log line to MultiWitness (sold separately) ' +
+      'if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
       'LICENSE.md at the end for the terms.',
     sections: multivaultSections(product),
   }),
