@@ -18,9 +18,12 @@
 // (no ratings) rather than failing the page.
 
 import type { Context, Config } from '@netlify/functions'
+import { purgeCache } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import { loadCatalog } from '../lib/db.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
+
+const REVIEWS_CACHE_TAG = 'reviews'
 
 interface ReviewRow {
   author: string
@@ -91,7 +94,15 @@ export default async (req: Request, context: Context) => {
           { status: 409, headers: { 'Cache-Control': 'no-store' } },
         )
       }
-      return Response.json({ review: toReview(rows[0]) }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
+      const review = toReview(rows[0])
+      try {
+        await purgeCache({ tags: [REVIEWS_CACHE_TAG] })
+      } catch (err) {
+        // Non-fatal: the review is saved either way; worst case it's a few
+        // minutes before the cached aggregate/homepage picks it up.
+        console.error('reviews cache purge failed:', (err as Error).message)
+      }
+      return Response.json({ review }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
     } catch (err) {
       console.error('reviews POST error:', (err as Error).message)
       return Response.json({ error: 'Could not save your review right now.' }, { status: 500 })
@@ -102,7 +113,19 @@ export default async (req: Request, context: Context) => {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST' } })
   }
 
-  const cacheHeaders = { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' }
+  // Like products.mts's /api/products, this endpoint is read on essentially
+  // every storefront and product-page render (via seo.ts and pages.ts), but
+  // previously carried no Netlify-CDN-Cache-Control — every one of those reads
+  // ran this function fresh, including its two Postgres queries in the no-sku
+  // branch below. Serving it from Netlify's CDN for a few minutes at a time
+  // collapses that to roughly one function invocation per window, per region,
+  // while browsers are still told to revalidate every time. purgeCache() on a
+  // successful POST above keeps a new review from being hidden behind it.
+  const cacheHeaders = {
+    'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+    'Netlify-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600, durable',
+    'Cache-Tag': REVIEWS_CACHE_TAG,
+  }
   const sku = new URL(req.url).searchParams.get('sku')?.trim()
 
   try {
@@ -161,8 +184,14 @@ export default async (req: Request, context: Context) => {
     return Response.json({ aggregates }, { headers: cacheHeaders })
   } catch (err) {
     console.error('reviews function:', (err as Error).message)
-    // Degrade gracefully: empty results keep the SEO layer working without stars.
-    return Response.json(sku ? { aggregate: null, reviews: [] } : { aggregates: {} }, { headers: cacheHeaders })
+    // Degrade gracefully: empty results keep the SEO layer working without
+    // stars. Deliberately NOT edge-cached (browser-only Cache-Control) — the
+    // DB error is transient, and caching an empty result at the shared CDN
+    // layer would hide real reviews for the rest of the cache window.
+    return Response.json(
+      sku ? { aggregate: null, reviews: [] } : { aggregates: {} },
+      { headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' } },
+    )
   }
 }
 
