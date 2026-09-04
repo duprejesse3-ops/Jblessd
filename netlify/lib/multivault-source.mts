@@ -24,22 +24,33 @@ export const MULTIVAULT_SOURCE: SourceFile[] = [
     contents: `# multivault
 
 A local, encrypted context snapshot of one folder and one calendar file —
-turned into a short brief you can paste into any AI chat, or pipe into your
-own API calls, instead of re-explaining your situation every time.
+available two ways: as a manual brief you paste into any AI chat, or
+**automatically**, via a local MCP server that lets Claude Desktop, Claude
+Code, and other MCP-aware tools pull in your current context on their own,
+live, with zero copy-pasting.
 
-No account. No OAuth. No cloud storage. The vault file lives on your machine,
-and only your passphrase can open it.
+No account. No OAuth. No cloud storage. The encrypted vault file lives on
+your machine, and only your passphrase can open it. The MCP server never
+makes a network call to serve context — the only network activity anywhere
+in this package is an *optional*, localhost-only log line to MultiWitness
+(sold separately), and even that never carries your actual file/calendar
+content, only a note that context was served and how much.
 
-## What this actually is (v1 scope)
+## What this actually is
 
-This is a **local snapshot tool**, not a live tunnel into your files or
-calendar. \`vault sync\` reads your folder and calendar file once, encrypts
-what it found, and writes it to disk. \`vault context\` decrypts that snapshot
-and formats it. Nothing runs continuously in the background unless you set up
-one of the [adapters](#keeping-it-fresh) to sync on a schedule — and even
-then, each sync is a single read-and-encrypt pass, not an open connection.
+**Two modes, one underlying vault:**
 
-**What it watches:**
+- **CLI mode** — \`vault sync\` reads your folder and calendar file, encrypts
+  what it found, and writes it to disk. \`vault context\` decrypts that
+  snapshot and formats it for you to paste somewhere. This is the portable,
+  works-anywhere path: any AI chat UI, any script, offline-safe.
+- **MCP mode** — \`vault-mcp\` runs as a long-lived local server that an
+  MCP-aware AI client calls directly. No encrypted snapshot, no passphrase
+  at query time: it re-scans your folder and re-reads your calendar file
+  live, on every call, so it's always current — no manual \`sync\` step, ever.
+  See [MCP mode](#mcp-mode-automatic-context) below.
+
+**What it watches, in both modes:**
 - **One local folder.** File names, sizes, and modified times are always
   included. For a small allowlist of plain-text formats (\`.md\`, \`.txt\`,
   \`.csv\`, \`.json\`) under 100KB, a short excerpt of the content is also
@@ -49,20 +60,18 @@ then, each sync is a single read-and-encrypt pass, not an open connection.
   contents are never read.
 - **One \`.ics\` calendar file**, if you point one at it. This is a *file*, not
   a live Google/Outlook/etc. connection — most calendar apps have an
-  export-to-\`.ics\` or auto-sync-to-file option; point \`--ics\` at that file
-  and each \`vault sync\` will pick up whatever's in it.
+  export-to-\`.ics\` or auto-sync-to-file option; point \`--ics\` at that file.
 
-**What it explicitly does NOT do in v1:**
+**What it explicitly does NOT do:**
 - No OAuth or live API connection to Google Calendar, Outlook, email, or
-  anything else.
-- No automatic injection into a third-party AI tool. \`vault context\` prints a
-  snippet — you paste it in, or pipe it into your own script (see below).
+  anything else — MCP mode closes the manual-paste gap, not the
+  local-files-only boundary.
 - No recursive scan past 3 folder levels deep, and no more than 500 files per
-  sync, so a huge folder can't turn a sync into a multi-minute disk read.
+  call, so a huge folder can't turn a scan into a multi-minute disk read.
 
-If you need more than this (live calendar API, deeper folder trees, more file
-types), that's a real v2 conversation — this README describes what v1 ships,
-not a roadmap promise.
+If you need more than this (a live calendar API, deeper folder trees, more
+file types), that's a real v3 conversation — this README describes what
+ships today, not a roadmap promise.
 
 ## Quick start
 
@@ -109,10 +118,108 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 })
 \`\`\`
 
-## Keeping it fresh
+## MCP mode: automatic context
 
-A vault is only as useful as its last sync. Three scheduling adapters are
-included in \`adapters/\` — pick whichever fits your machine:
+This is what closes the manual-paste gap. Instead of running \`vault sync\`
+then \`vault context\` then copying the result somewhere, an MCP-aware client
+calls MultiVault directly and gets your current folder/calendar state — no
+copy-paste, and never stale, because it re-scans live on every call.
+
+**Setup — one-time:**
+
+\`\`\`
+node bin/vault.mjs init --folder ~/Documents/ClientNotes --ics ~/Calendar.ics
+\`\`\`
+
+(Save the passphrase this prints if you also plan to use CLI mode — MCP mode
+itself never asks for it.)
+
+**Point your MCP client at it.** For Claude Desktop, add to your config file
+(\`claude_desktop_config.json\` — Claude menu → Settings → Developer → Edit
+Config):
+
+\`\`\`json
+{
+  "mcpServers": {
+    "multivault": {
+      "command": "node",
+      "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"]
+    }
+  }
+}
+\`\`\`
+
+Restart Claude Desktop. It will now be able to call two tools on its own,
+whenever relevant to what you're asking:
+
+- **\`get_context\`** — the live folder/calendar brief (same content as CLI
+  mode's \`vault context\`, fetched fresh, no staleness).
+- **\`vault_status\`** — what folder/calendar this vault is configured to
+  watch, and whether MultiWitness logging is active (see below) — without
+  reading any file contents.
+
+Claude Code and other MCP-compatible clients follow the same shape — see
+your client's own docs for exactly where its MCP server config lives.
+
+**Why MCP mode needs no passphrase:** nothing is written to or read from an
+encrypted file in this path — see \`buildLiveContext()\` in \`lib/vault.mjs\` if
+you want to verify this yourself. An MCP server answers a live, in-process
+query over stdio to a client already running as you, on your machine; there
+is no "resting file" for encryption-at-rest to protect, unlike the portable
+snapshot CLI mode produces.
+
+## Provable logging with MultiWitness (optional)
+
+Every cloud AI-memory product asks you to trust that it's using your data
+correctly — you can't see their logs. MultiVault can do the opposite: log
+every time context was served to a **tamper-evident, hash-chained** local
+log via [MultiWitness](https://jblessd.com) (sold separately, same store),
+independently verifiable offline, by you, at any time.
+
+**What gets logged:** only *that* context was served, when, and how much —
+file count, event count, which folder. **Never the actual file contents,
+excerpts, or calendar details.** The log answers "was my AI's context
+genuinely local and genuinely current," not "what was in it."
+
+**Setup:**
+
+\`\`\`
+MULTIWITNESS_INGEST_TOKEN=<your MultiWitness ingest token> node bin/vault-mcp.mjs
+\`\`\`
+
+Or add it to your MCP client's config alongside the command:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "multivault": {
+      "command": "node",
+      "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"],
+      "env": { "MULTIWITNESS_INGEST_TOKEN": "your-ingest-token-here" }
+    }
+  }
+}
+\`\`\`
+
+Verify the chain any time, independent of whether MultiVault or MultiWitness
+are even running — from MultiWitness's own CLI:
+
+\`\`\`
+node bin/witness.mjs verify
+\`\`\`
+
+**Entirely optional.** No token set → MultiVault works exactly the same,
+just without the audit trail. A missing token, an unreachable MultiWitness,
+or a slow response all fail silently and instantly — logging what the AI saw
+must never be able to block or delay serving it that context.
+
+## Keeping it fresh (CLI mode)
+
+If you're using MCP mode, skip this section — it re-scans live on every
+call, so there's nothing to schedule.
+
+For CLI mode, a vault is only as useful as its last sync. Three scheduling
+adapters are included in \`adapters/\` — pick whichever fits your machine:
 
 - \`adapters/cron.sh\` — any Linux/macOS machine with cron
 - \`adapters/launchd.plist\` — macOS, preferred over cron there (survives sleep/wake)
@@ -129,11 +236,13 @@ vault init    [--folder <path>] [--ics <path>] [--dest <path>]
 vault sync    [--dest <path>]
 vault context [--dest <path>] [--format text|markdown|json]
 vault status  [--dest <path>]
+vault-mcp     [--dest <path>]    # MCP server — see "MCP mode" above; not for interactive use
 \`\`\`
 
 \`vault status\` reads only the unencrypted metadata file (last sync time, file
 count) — it never needs your passphrase, so you can check freshness from a
-script without exposing the secret.
+script without exposing the secret. Its MCP-mode equivalent, \`vault_status\`,
+also reports whether MultiWitness logging is active.
 
 ## Security model, plainly stated
 
@@ -148,9 +257,24 @@ script without exposing the secret.
   the folder path, calendar path, and sync timestamps, so \`vault status\` can
   work without the passphrase. If those paths themselves are sensitive on
   your machine, keep \`--dest\` somewhere access-controlled.
-- Nothing in this package makes a network request. Read the source — it's
-  plain, dependency-free JavaScript specifically so that claim is easy to
-  verify yourself rather than something you have to take on faith.
+- **CLI mode** makes no network request, ever. **MCP mode** talks only over
+  stdio to whatever local client launched it — also no network request to
+  serve context. The one exception, and it's opt-in: if
+  \`MULTIWITNESS_INGEST_TOKEN\` is set, MCP mode makes a \`localhost\`-only POST
+  per context call, and that call never carries file/calendar content — only
+  a count. Leave the token unset and there is zero network activity anywhere
+  in this package, full stop.
+- **Dependencies, honestly stated:** the CLI (\`vault init/sync/context/status\`)
+  and core library (\`lib/crypto.mjs\`, \`lib/scan.mjs\`, \`lib/calendar.mjs\`) are
+  zero-dependency, same as v1 — plain Node.js, nothing to audit beyond what
+  ships with Node itself. **MCP mode is the one exception**: it depends on
+  \`@modelcontextprotocol/sdk\` (Anthropic's real, published MCP SDK) and
+  \`zod\`, because implementing the MCP protocol correctly from scratch would
+  be reinventing a well-tested wheel, badly. If you don't use MCP mode, you
+  never load either dependency — \`vault.mjs\`, \`crypto.mjs\`, \`scan.mjs\`, and
+  \`calendar.mjs\` don't import them.
+- Read the source. It's plain JavaScript specifically so every claim above is
+  easy to verify yourself rather than something you have to take on faith.
 
 ## Standalone binaries (optional)
 
@@ -188,8 +312,20 @@ Apple are a separate purchase if you want that warning gone.
 npm test
 \`\`\`
 
-Runs the adapter-free unit tests in \`test/run.mjs\` — encryption round-trip,
-\`.ics\` parsing, and folder scanning against a throwaway temp directory.
+Runs all three suites (31 tests total):
+- \`test/run.mjs\` — encryption round-trip, \`.ics\` parsing, folder scanning,
+  and the full CLI-mode vault lifecycle, against real throwaway temp
+  directories.
+- \`test/mcp.test.mjs\` — MCP mode, driven by a **real
+  \`@modelcontextprotocol/sdk\` \`Client\`** talking to the real \`McpServer\`
+  over the SDK's in-memory transport — the same client/server code path a
+  real MCP host exercises, including a test that adds a file mid-session
+  with no restart and confirms \`get_context\` picks it up immediately.
+- \`test/witness-log.test.mjs\` — the MultiWitness integration's request
+  contract (auth header, event shape, silent-fail behavior when
+  unconfigured or unreachable), against a bare local HTTP server standing
+  in for MultiWitness's real API — kept dependency-free from MultiWitness's
+  own source since that's a separate product.
 `,
   },
   {
@@ -282,22 +418,25 @@ with a file that gets separated from this license.
     path: "package.json",
     contents: `{
   "name": "multivault",
-  "version": "1.0.0",
-  "description": "A local, encrypted context snapshot of one folder and one calendar file. No account, no OAuth, no cloud storage — the vault lives on your machine and only your passphrase opens it.",
+  "version": "2.0.0",
+  "description": "A local, encrypted context snapshot of one folder and one calendar file — plus an MCP server for automatic, zero-paste context, and optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
     "node": ">=18"
   },
   "bin": {
-    "vault": "./bin/vault.mjs"
+    "vault": "./bin/vault.mjs",
+    "vault-mcp": "./bin/vault-mcp.mjs"
   },
   "main": "./lib/vault.mjs",
   "exports": {
     ".": "./lib/vault.mjs",
     "./crypto": "./lib/crypto.mjs",
     "./scan": "./lib/scan.mjs",
-    "./calendar": "./lib/calendar.mjs"
+    "./calendar": "./lib/calendar.mjs",
+    "./mcp-server": "./lib/mcp-server.mjs",
+    "./witness-log": "./lib/witness-log.mjs"
   },
   "files": [
     "bin",
@@ -308,8 +447,13 @@ with a file that gets separated from this license.
   ],
   "scripts": {
     "vault": "node bin/vault.mjs",
-    "test": "node test/run.mjs",
+    "vault-mcp": "node bin/vault-mcp.mjs",
+    "test": "node test/run.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs",
     "build:binary": "node scripts/build-sea.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
@@ -483,6 +627,111 @@ export function decrypt(blob, passphrase) {
 // contents, by design (see README's "if you lose the passphrase" section).
 export function generatePassphrase() {
   return randomBytes(24).toString('base64url') // 32 chars, URL-safe, no padding
+}
+`,
+  },
+  {
+    path: "lib/mcp-server.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// MultiVault's MCP (Model Context Protocol) server — the piece that closes
+// the "manual paste" gap from v1. Instead of running \`vault context\` and
+// pasting the output into a chat, an MCP-aware client (Claude Desktop,
+// Claude Code, and other MCP clients) calls this tool directly and gets the
+// current folder/calendar context on demand, live, automatically.
+//
+// Two things this deliberately does NOT do:
+//   - It never touches vault.enc or asks for a passphrase. See
+//     buildLiveContext() in lib/vault.mjs for why — this mode re-scans live
+//     on every call instead of trusting a snapshot that might be stale.
+//   - It never makes an outbound network call to serve context. The ONLY
+//     network activity anywhere in this file is the optional, best-effort,
+//     localhost-only POST to MultiWitness (see lib/witness-log.mjs) — and
+//     that's for logging that context was served, never the content itself.
+//
+// Requires @modelcontextprotocol/sdk — the one real dependency in this
+// product. Everything else (encryption, folder scanning, .ics parsing, the
+// CLI) stays zero-dependency exactly as in v1; this is additive, not a
+// change to that.
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { z } from 'zod'
+import { resolve } from 'node:path'
+import { buildLiveContext, statusVault } from './vault.mjs'
+import { logContextServed, witnessConfigured } from './witness-log.mjs'
+
+export function createMultiVaultServer(dest) {
+  const server = new McpServer({ name: 'multivault', version: '2.0.0' })
+
+  server.registerTool(
+    'get_context',
+    {
+      title: 'Get local context',
+      description:
+        'Returns a live, current brief of the watched local folder and calendar file — file names, ' +
+        'sizes, and (for a small set of plain-text formats) short excerpts, plus any calendar events. ' +
+        'Nothing is cached: this re-scans the folder and re-reads the calendar file fresh on every ' +
+        'call, so it always reflects the current state, not a snapshot from an earlier \`vault sync\`.',
+      inputSchema: {
+        format: z.enum(['markdown', 'json']).optional().describe('Output format. Defaults to markdown.'),
+      },
+    },
+    async ({ format }) => {
+      try {
+        const { snapshot, text } = buildLiveContext(dest, { format: format ?? 'markdown' })
+        // Best-effort, non-blocking, content-free logging — see
+        // lib/witness-log.mjs. Never awaited-and-branched-on beyond this:
+        // a logging failure must never affect the response below.
+        logContextServed(
+          \`\${snapshot.files.length} file(s), \${snapshot.events.length} event(s) from \${snapshot.folder ?? '(no folder)'}\`,
+        )
+        return { content: [{ type: 'text', text }] }
+      } catch (err) {
+        return {
+          content: [{ type: 'text', text: \`MultiVault error: \${err.message}\` }],
+          isError: true,
+        }
+      }
+    },
+  )
+
+  server.registerTool(
+    'vault_status',
+    {
+      title: 'Vault status',
+      description:
+        'Reports what folder/calendar this vault is configured to watch and whether MultiWitness ' +
+        'logging is active — without reading any file contents. Useful for confirming setup.',
+      inputSchema: {},
+    },
+    async () => {
+      const meta = statusVault(dest)
+      if (!meta) {
+        return {
+          content: [{ type: 'text', text: \`No vault found at \${dest}. Run "vault init" first.\` }],
+          isError: true,
+        }
+      }
+      const lines = [
+        \`Folder: \${meta.folder ?? '(none configured)'}\`,
+        \`Calendar: \${meta.icsPath ?? '(none configured)'}\`,
+        \`MultiWitness logging: \${witnessConfigured() ? 'active' : 'not configured (set MULTIWITNESS_INGEST_TOKEN to enable)'}\`,
+      ]
+      return { content: [{ type: 'text', text: lines.join('\\n') }] }
+    },
+  )
+
+  return server
+}
+
+export async function startMultiVaultServer(dest) {
+  const server = createMultiVaultServer(resolve(dest))
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+  return server
 }
 `,
   },
@@ -715,14 +964,12 @@ export function readSnapshot(dest, passphrase) {
 }
 
 /**
- * Build the pasteable context snippet described in the product blurb: a
- * compact brief of what's in the watched folder and what's on the calendar,
- * meant to be dropped at the top of a chat with an AI agent (or piped into a
- * Claude API call — see README "Piping into the Claude API").
+ * Format a snapshot object (from readSnapshot() or a live scan) into the
+ * pasteable context brief. Shared by buildContext() (reads the encrypted
+ * at-rest snapshot) and buildLiveContext() (scans fresh, no passphrase) —
+ * both produce identically-shaped output from this one function.
  */
-export function buildContext(dest, passphrase, { format = 'markdown' } = {}) {
-  const snapshot = readSnapshot(dest, passphrase)
-
+export function formatContext(snapshot, { format = 'markdown' } = {}) {
   if (format === 'json') return JSON.stringify(snapshot, null, 2)
 
   const lines = []
@@ -763,6 +1010,45 @@ export function buildContext(dest, passphrase, { format = 'markdown' } = {}) {
 }
 
 /**
+ * Build the pasteable context snippet described in the product blurb: a
+ * compact brief of what's in the watched folder and what's on the calendar,
+ * meant to be dropped at the top of a chat with an AI agent (or piped into a
+ * Claude API call — see README "Piping into the Claude API").
+ */
+export function buildContext(dest, passphrase, opts = {}) {
+  return formatContext(readSnapshot(dest, passphrase), opts)
+}
+
+/**
+ * The MCP-mode path: build context LIVE, with no passphrase and no
+ * encrypted-snapshot round-trip. Reads only vault.meta.json (unencrypted —
+ * just the folder/ics paths, not their contents) to know what to scan, then
+ * scans the folder and parses the calendar file fresh, right now.
+ *
+ * This is deliberate, not a shortcut: an MCP server answers a live query
+ * from a local AI client over stdio — nothing is written to disk or sent
+ * over a network in this path, so there is no "resting file" for
+ * encryption-at-rest to protect. Re-scanning live also means an MCP client
+ * always sees the CURRENT folder/calendar state, never a snapshot that's
+ * gone stale because someone forgot to run \`vault sync\` — that staleness
+ * gap is exactly what made v1's workflow feel manual.
+ *
+ * Requires a vault to have been \`init\`ed at \`dest\` (so the folder/ics paths
+ * are known) but does not require or use its passphrase at all.
+ */
+export function buildLiveContext(dest, opts = {}) {
+  const meta = readMeta(dest)
+  if (!meta) throw new Error(\`No vault found at \${dest}. Run "vault init" first.\`)
+  if (!meta.folder && !meta.icsPath) {
+    throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
+  }
+  const files = meta.folder ? scanFolder(meta.folder, opts.scan) : []
+  const events = readIcsFile(meta.icsPath)
+  const snapshot = { folder: meta.folder, icsPath: meta.icsPath, files, events, syncedAt: new Date().toISOString() }
+  return { snapshot, text: formatContext(snapshot, opts) }
+}
+
+/**
  * Cheap status check that never needs the passphrase — reads only the
  * unencrypted metadata file, so \`vault status\` works as a quick freshness
  * check without unlocking anything.
@@ -772,6 +1058,102 @@ export function statusVault(dest) {
   if (!meta) return null
   return meta
 }
+`,
+  },
+  {
+    path: "lib/witness-log.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Optional, best-effort integration with MultiWitness (sold separately) —
+// its tamper-evident, hash-chained local log. If MULTIWITNESS_INGEST_TOKEN
+// is set, every context-serving event is logged there: what was served and
+// when, NEVER the actual file/calendar content. This is what makes "provably
+// logged" a real claim rather than a slogan — the log is independently
+// verifiable offline (see MultiWitness's own \`witness verify\`), and its
+// hash chain means a served-context event can't be quietly edited or
+// deleted after the fact without breaking the chain.
+//
+// Entirely optional: MultiVault works exactly the same with or without
+// MultiWitness installed. A missing token, an unreachable server, or a
+// slow response all fail silently here — logging what the AI saw must
+// never be able to block or break serving it that context in the first
+// place.
+
+const LOG_TIMEOUT_MS = 800 // local loopback call — generous but bounded so a stalled MultiWitness never noticeably delays a context response
+
+/**
+ * Best-effort: log a context-serving event to MultiWitness, if configured.
+ * Never throws — a logging failure must never prevent context from being
+ * served. Returns true if the event was actually logged, false otherwise
+ * (not configured, MultiWitness unreachable, etc.) — callers that want to
+ * report logging status (e.g. an MCP tool's response) can use this, but
+ * nothing should ever branch on it to decide whether to proceed.
+ */
+export async function logContextServed(detail) {
+  const token = process.env.MULTIWITNESS_INGEST_TOKEN
+  if (!token) return false
+  const url = process.env.MULTIWITNESS_URL || 'http://localhost:8429'
+
+  try {
+    const res = await fetch(\`\${url}/api/events\`, {
+      method: 'POST',
+      headers: { Authorization: \`Bearer \${token}\`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'multivault', action: 'context.served', detail }),
+      signal: AbortSignal.timeout(LOG_TIMEOUT_MS),
+    })
+    return res.ok
+  } catch {
+    // MultiWitness not running, wrong port, network hiccup — all the same
+    // outcome here: proceed without logging. See module comment.
+    return false
+  }
+}
+
+/** Whether MultiWitness logging is configured at all (for status/UX only). */
+export function witnessConfigured() {
+  return Boolean(process.env.MULTIWITNESS_INGEST_TOKEN)
+}
+`,
+  },
+  {
+    path: "bin/vault-mcp.mjs",
+    contents: `#!/usr/bin/env node
+// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Entry point for MCP mode. This is what an MCP client (Claude Desktop,
+// Claude Code, etc.) actually launches — see README's "MCP mode" section for
+// the exact client config. Not meant to be run by hand in a normal terminal:
+// it speaks JSON-RPC over stdio and expects a client on the other end.
+//
+// Usage (in an MCP client's config, not typed directly):
+//   node bin/vault-mcp.mjs [--dest <path>]
+//
+// --dest defaults to ./.multivault, same default as the main CLI.
+
+import process from 'node:process'
+import { join } from 'node:path'
+import { startMultiVaultServer } from '../lib/mcp-server.mjs'
+
+function parseDest(argv) {
+  const i = argv.indexOf('--dest')
+  if (i !== -1 && argv[i + 1]) return argv[i + 1]
+  return join(process.cwd(), '.multivault')
+}
+
+const dest = parseDest(process.argv.slice(2))
+
+startMultiVaultServer(dest).catch((err) => {
+  // MCP clients read stderr for diagnostics, not a JSON-RPC-shaped error —
+  // this only fires on a startup failure (e.g. bad --dest), since ordinary
+  // per-call errors are already handled inside the tool and returned as a
+  // normal (isError: true) tool result instead of a process crash.
+  process.stderr.write(\`multivault-mcp failed to start: \${err.message}\\n\`)
+  process.exit(1)
+})
 `,
   },
   {
@@ -1120,6 +1502,193 @@ Write-Host "Note: MULTIVAULT_PASSPHRASE was saved as a per-user environment vari
 `,
   },
   {
+    path: "test/mcp.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Tests for MultiVault v2's MCP mode. Run with: node test/mcp.test.mjs
+//
+// The MCP server test drives a REAL @modelcontextprotocol/sdk Client against
+// the REAL createMultiVaultServer(), connected over the SDK's own in-memory
+// linked-pair transport — not a hand-rolled mock of the protocol. This is
+// the same client/server code path an actual MCP host (Claude Desktop,
+// Claude Code) exercises; only the transport (in-memory vs. real stdio) and
+// the client (the SDK's Client vs. a host application) differ.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { initVault, buildLiveContext } from '../lib/vault.mjs'
+import { createMultiVaultServer } from '../lib/mcp-server.mjs'
+
+function tempDir(prefix) {
+  return mkdtempSync(join(tmpdir(), \`\${prefix}-\`))
+}
+
+// ---------------------------------------------------------------------------
+// buildLiveContext — the no-passphrase, always-fresh path MCP mode relies on
+// ---------------------------------------------------------------------------
+
+test('buildLiveContext reflects the CURRENT folder state, not a stale snapshot', () => {
+  const watchedDir = tempDir('live-watch')
+  const vaultDest = tempDir('live-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'first version')
+    initVault(vaultDest, { folder: watchedDir }) // no sync — deliberately never synced
+
+    const { text: before } = buildLiveContext(vaultDest)
+    assert.ok(before.includes('a.md'))
+    assert.ok(before.includes('first version'))
+
+    // Change the folder AFTER init, with no \`vault sync\` in between.
+    writeFileSync(join(watchedDir, 'b.md'), 'a second file appeared')
+    const { text: after } = buildLiveContext(vaultDest)
+    assert.ok(after.includes('b.md'), 'a file added after init should appear without a sync step')
+    assert.ok(after.includes('a second file appeared'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('buildLiveContext requires no passphrase at all', () => {
+  const watchedDir = tempDir('live-watch')
+  const vaultDest = tempDir('live-dest')
+  try {
+    initVault(vaultDest, { folder: watchedDir }) // passphrase is generated and discarded here
+    // No passphrase captured, none passed below — this must still work.
+    const { snapshot } = buildLiveContext(vaultDest, { format: 'json' })
+    assert.equal(snapshot.files.length, 0) // empty folder, but no error
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('buildLiveContext fails clearly when no vault has been initialized', () => {
+  const emptyDest = tempDir('never-init')
+  try {
+    assert.throws(() => buildLiveContext(emptyDest), /Run "vault init" first/)
+  } finally {
+    rmSync(emptyDest, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// MCP server — real Client, real Server, real (in-memory) transport
+// ---------------------------------------------------------------------------
+
+async function connectedClient(dest) {
+  const server = createMultiVaultServer(dest)
+  const client = new Client({ name: 'test-client', version: '1.0.0' })
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)])
+  return { client, server }
+}
+
+test('MCP: tools/list exposes get_context and vault_status', async () => {
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    initVault(vaultDest, { folder: null })
+    const { client } = await connectedClient(vaultDest)
+    const { tools } = await client.listTools()
+    const names = tools.map((t) => t.name).sort()
+    assert.deepEqual(names, ['get_context', 'vault_status'])
+  } finally {
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: get_context returns live folder contents through the real protocol round-trip', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'notes.md'), 'Client prefers async updates.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const result = await client.callTool({ name: 'get_context', arguments: {} })
+    assert.equal(result.isError, undefined)
+    const text = result.content[0].text
+    assert.ok(text.includes('notes.md'))
+    assert.ok(text.includes('Client prefers async updates.'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: get_context picks up a file added AFTER the client connected (no restart needed)', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const firstResult = await client.callTool({ name: 'get_context', arguments: {} })
+    assert.ok(!firstResult.content[0].text.includes('late.txt'))
+
+    writeFileSync(join(watchedDir, 'late.txt'), 'added after the MCP session started')
+    const secondResult = await client.callTool({ name: 'get_context', arguments: {} })
+    assert.ok(secondResult.content[0].text.includes('late.txt'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: get_context respects the format argument (json)', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'x.md'), 'hello')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const result = await client.callTool({ name: 'get_context', arguments: { format: 'json' } })
+    const parsed = JSON.parse(result.content[0].text)
+    assert.equal(parsed.files[0].relPath, 'x.md')
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: vault_status reports configured folder without needing a passphrase', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+    const result = await client.callTool({ name: 'vault_status', arguments: {} })
+    assert.ok(result.content[0].text.includes(watchedDir))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: get_context on a never-initialized vault returns isError, not a crash', async () => {
+  const emptyDest = tempDir('mcp-never-init')
+  try {
+    // Deliberately skip initVault — createMultiVaultServer + callTool must
+    // still respond cleanly rather than throwing out of the MCP transport.
+    const { client } = await connectedClient(emptyDest)
+    const result = await client.callTool({ name: 'get_context', arguments: {} })
+    assert.equal(result.isError, true)
+    assert.ok(result.content[0].text.includes('vault init'))
+  } finally {
+    rmSync(emptyDest, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
     path: "test/run.mjs",
     contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
@@ -1345,6 +1914,130 @@ test('readSnapshot reflects calendar events after sync', () => {
     assert.equal(snapshot.events[0].summary, 'Quarterly review')
   } finally {
     rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
+    path: "test/witness-log.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Tests for the MultiWitness integration in isolation. Stands up a plain
+// http.Server matching MultiWitness's real /api/events contract (POST,
+// Bearer auth, 201 on success) rather than depending on MultiWitness's own
+// source being present — that's a separate product, and this test suite
+// must pass on its own for a buyer who only purchased MultiVault.
+//
+// The real cross-product integration (this code talking to an ACTUAL running
+// MultiWitness server, with its real hash chain) was verified separately
+// against MultiWitness's real source before shipping; this suite locks in
+// the same request/response contract so a future change can't silently
+// break that compatibility.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import http from 'node:http'
+import { logContextServed, witnessConfigured } from '../lib/witness-log.mjs'
+
+function startFakeWitness({ expectedToken, status = 201 } = {}) {
+  const received = []
+  const server = http.createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    const auth = req.headers.authorization
+    if (expectedToken && auth !== \`Bearer \${expectedToken}\`) {
+      res.writeHead(401)
+      return res.end()
+    }
+    received.push(JSON.parse(body || '{}'))
+    res.writeHead(status, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ ok: true }))
+  })
+  return new Promise((resolve) => {
+    server.listen(0, () => resolve({ server, received, port: server.address().port }))
+  })
+}
+
+test('witnessConfigured reflects whether the ingest token env var is set', () => {
+  const original = process.env.MULTIWITNESS_INGEST_TOKEN
+  try {
+    delete process.env.MULTIWITNESS_INGEST_TOKEN
+    assert.equal(witnessConfigured(), false)
+    process.env.MULTIWITNESS_INGEST_TOKEN = 'x'
+    assert.equal(witnessConfigured(), true)
+  } finally {
+    if (original === undefined) delete process.env.MULTIWITNESS_INGEST_TOKEN
+    else process.env.MULTIWITNESS_INGEST_TOKEN = original
+  }
+})
+
+test('logContextServed returns false silently when no token is configured (never throws)', async () => {
+  const originalToken = process.env.MULTIWITNESS_INGEST_TOKEN
+  delete process.env.MULTIWITNESS_INGEST_TOKEN
+  try {
+    const result = await logContextServed('some detail')
+    assert.equal(result, false)
+  } finally {
+    if (originalToken !== undefined) process.env.MULTIWITNESS_INGEST_TOKEN = originalToken
+  }
+})
+
+test('logContextServed posts source/action/detail matching MultiWitness\\'s real event contract', async () => {
+  const { server, received, port } = await startFakeWitness({ expectedToken: 'tok123' })
+  const originalUrl = process.env.MULTIWITNESS_URL
+  const originalToken = process.env.MULTIWITNESS_INGEST_TOKEN
+  process.env.MULTIWITNESS_URL = \`http://localhost:\${port}\`
+  process.env.MULTIWITNESS_INGEST_TOKEN = 'tok123'
+  try {
+    const result = await logContextServed('2 file(s), 0 event(s) from /tmp/notes')
+    assert.equal(result, true)
+    assert.equal(received.length, 1)
+    assert.equal(received[0].source, 'multivault')
+    assert.equal(received[0].action, 'context.served')
+    assert.equal(received[0].detail, '2 file(s), 0 event(s) from /tmp/notes')
+  } finally {
+    server.close()
+    if (originalUrl === undefined) delete process.env.MULTIWITNESS_URL
+    else process.env.MULTIWITNESS_URL = originalUrl
+    if (originalToken === undefined) delete process.env.MULTIWITNESS_INGEST_TOKEN
+    else process.env.MULTIWITNESS_INGEST_TOKEN = originalToken
+  }
+})
+
+test('logContextServed sends the token as a Bearer header and fails closed on a wrong one', async () => {
+  const { server, received, port } = await startFakeWitness({ expectedToken: 'correct-token' })
+  const originalUrl = process.env.MULTIWITNESS_URL
+  const originalToken = process.env.MULTIWITNESS_INGEST_TOKEN
+  process.env.MULTIWITNESS_URL = \`http://localhost:\${port}\`
+  process.env.MULTIWITNESS_INGEST_TOKEN = 'wrong-token'
+  try {
+    const result = await logContextServed('detail')
+    assert.equal(result, false) // 401 from the server -> res.ok is false -> we report false
+    assert.equal(received.length, 0)
+  } finally {
+    server.close()
+    if (originalUrl === undefined) delete process.env.MULTIWITNESS_URL
+    else process.env.MULTIWITNESS_URL = originalUrl
+    if (originalToken === undefined) delete process.env.MULTIWITNESS_INGEST_TOKEN
+    else process.env.MULTIWITNESS_INGEST_TOKEN = originalToken
+  }
+})
+
+test('logContextServed never throws when the target is unreachable', async () => {
+  const originalUrl = process.env.MULTIWITNESS_URL
+  const originalToken = process.env.MULTIWITNESS_INGEST_TOKEN
+  process.env.MULTIWITNESS_URL = 'http://localhost:1' // nothing listens on port 1
+  process.env.MULTIWITNESS_INGEST_TOKEN = 'tok'
+  try {
+    const result = await logContextServed('detail')
+    assert.equal(result, false)
+  } finally {
+    if (originalUrl === undefined) delete process.env.MULTIWITNESS_URL
+    else process.env.MULTIWITNESS_URL = originalUrl
+    if (originalToken === undefined) delete process.env.MULTIWITNESS_INGEST_TOKEN
+    else process.env.MULTIWITNESS_INGEST_TOKEN = originalToken
   }
 })
 `,

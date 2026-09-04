@@ -1,22 +1,33 @@
 # multivault
 
 A local, encrypted context snapshot of one folder and one calendar file —
-turned into a short brief you can paste into any AI chat, or pipe into your
-own API calls, instead of re-explaining your situation every time.
+available two ways: as a manual brief you paste into any AI chat, or
+**automatically**, via a local MCP server that lets Claude Desktop, Claude
+Code, and other MCP-aware tools pull in your current context on their own,
+live, with zero copy-pasting.
 
-No account. No OAuth. No cloud storage. The vault file lives on your machine,
-and only your passphrase can open it.
+No account. No OAuth. No cloud storage. The encrypted vault file lives on
+your machine, and only your passphrase can open it. The MCP server never
+makes a network call to serve context — the only network activity anywhere
+in this package is an *optional*, localhost-only log line to MultiWitness
+(sold separately), and even that never carries your actual file/calendar
+content, only a note that context was served and how much.
 
-## What this actually is (v1 scope)
+## What this actually is
 
-This is a **local snapshot tool**, not a live tunnel into your files or
-calendar. `vault sync` reads your folder and calendar file once, encrypts
-what it found, and writes it to disk. `vault context` decrypts that snapshot
-and formats it. Nothing runs continuously in the background unless you set up
-one of the [adapters](#keeping-it-fresh) to sync on a schedule — and even
-then, each sync is a single read-and-encrypt pass, not an open connection.
+**Two modes, one underlying vault:**
 
-**What it watches:**
+- **CLI mode** — `vault sync` reads your folder and calendar file, encrypts
+  what it found, and writes it to disk. `vault context` decrypts that
+  snapshot and formats it for you to paste somewhere. This is the portable,
+  works-anywhere path: any AI chat UI, any script, offline-safe.
+- **MCP mode** — `vault-mcp` runs as a long-lived local server that an
+  MCP-aware AI client calls directly. No encrypted snapshot, no passphrase
+  at query time: it re-scans your folder and re-reads your calendar file
+  live, on every call, so it's always current — no manual `sync` step, ever.
+  See [MCP mode](#mcp-mode-automatic-context) below.
+
+**What it watches, in both modes:**
 - **One local folder.** File names, sizes, and modified times are always
   included. For a small allowlist of plain-text formats (`.md`, `.txt`,
   `.csv`, `.json`) under 100KB, a short excerpt of the content is also
@@ -26,20 +37,18 @@ then, each sync is a single read-and-encrypt pass, not an open connection.
   contents are never read.
 - **One `.ics` calendar file**, if you point one at it. This is a *file*, not
   a live Google/Outlook/etc. connection — most calendar apps have an
-  export-to-`.ics` or auto-sync-to-file option; point `--ics` at that file
-  and each `vault sync` will pick up whatever's in it.
+  export-to-`.ics` or auto-sync-to-file option; point `--ics` at that file.
 
-**What it explicitly does NOT do in v1:**
+**What it explicitly does NOT do:**
 - No OAuth or live API connection to Google Calendar, Outlook, email, or
-  anything else.
-- No automatic injection into a third-party AI tool. `vault context` prints a
-  snippet — you paste it in, or pipe it into your own script (see below).
+  anything else — MCP mode closes the manual-paste gap, not the
+  local-files-only boundary.
 - No recursive scan past 3 folder levels deep, and no more than 500 files per
-  sync, so a huge folder can't turn a sync into a multi-minute disk read.
+  call, so a huge folder can't turn a scan into a multi-minute disk read.
 
-If you need more than this (live calendar API, deeper folder trees, more file
-types), that's a real v2 conversation — this README describes what v1 ships,
-not a roadmap promise.
+If you need more than this (a live calendar API, deeper folder trees, more
+file types), that's a real v3 conversation — this README describes what
+ships today, not a roadmap promise.
 
 ## Quick start
 
@@ -86,10 +95,108 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 })
 ```
 
-## Keeping it fresh
+## MCP mode: automatic context
 
-A vault is only as useful as its last sync. Three scheduling adapters are
-included in `adapters/` — pick whichever fits your machine:
+This is what closes the manual-paste gap. Instead of running `vault sync`
+then `vault context` then copying the result somewhere, an MCP-aware client
+calls MultiVault directly and gets your current folder/calendar state — no
+copy-paste, and never stale, because it re-scans live on every call.
+
+**Setup — one-time:**
+
+```
+node bin/vault.mjs init --folder ~/Documents/ClientNotes --ics ~/Calendar.ics
+```
+
+(Save the passphrase this prints if you also plan to use CLI mode — MCP mode
+itself never asks for it.)
+
+**Point your MCP client at it.** For Claude Desktop, add to your config file
+(`claude_desktop_config.json` — Claude menu → Settings → Developer → Edit
+Config):
+
+```json
+{
+  "mcpServers": {
+    "multivault": {
+      "command": "node",
+      "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. It will now be able to call two tools on its own,
+whenever relevant to what you're asking:
+
+- **`get_context`** — the live folder/calendar brief (same content as CLI
+  mode's `vault context`, fetched fresh, no staleness).
+- **`vault_status`** — what folder/calendar this vault is configured to
+  watch, and whether MultiWitness logging is active (see below) — without
+  reading any file contents.
+
+Claude Code and other MCP-compatible clients follow the same shape — see
+your client's own docs for exactly where its MCP server config lives.
+
+**Why MCP mode needs no passphrase:** nothing is written to or read from an
+encrypted file in this path — see `buildLiveContext()` in `lib/vault.mjs` if
+you want to verify this yourself. An MCP server answers a live, in-process
+query over stdio to a client already running as you, on your machine; there
+is no "resting file" for encryption-at-rest to protect, unlike the portable
+snapshot CLI mode produces.
+
+## Provable logging with MultiWitness (optional)
+
+Every cloud AI-memory product asks you to trust that it's using your data
+correctly — you can't see their logs. MultiVault can do the opposite: log
+every time context was served to a **tamper-evident, hash-chained** local
+log via [MultiWitness](https://jblessd.com) (sold separately, same store),
+independently verifiable offline, by you, at any time.
+
+**What gets logged:** only *that* context was served, when, and how much —
+file count, event count, which folder. **Never the actual file contents,
+excerpts, or calendar details.** The log answers "was my AI's context
+genuinely local and genuinely current," not "what was in it."
+
+**Setup:**
+
+```
+MULTIWITNESS_INGEST_TOKEN=<your MultiWitness ingest token> node bin/vault-mcp.mjs
+```
+
+Or add it to your MCP client's config alongside the command:
+
+```json
+{
+  "mcpServers": {
+    "multivault": {
+      "command": "node",
+      "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"],
+      "env": { "MULTIWITNESS_INGEST_TOKEN": "your-ingest-token-here" }
+    }
+  }
+}
+```
+
+Verify the chain any time, independent of whether MultiVault or MultiWitness
+are even running — from MultiWitness's own CLI:
+
+```
+node bin/witness.mjs verify
+```
+
+**Entirely optional.** No token set → MultiVault works exactly the same,
+just without the audit trail. A missing token, an unreachable MultiWitness,
+or a slow response all fail silently and instantly — logging what the AI saw
+must never be able to block or delay serving it that context.
+
+## Keeping it fresh (CLI mode)
+
+If you're using MCP mode, skip this section — it re-scans live on every
+call, so there's nothing to schedule.
+
+For CLI mode, a vault is only as useful as its last sync. Three scheduling
+adapters are included in `adapters/` — pick whichever fits your machine:
 
 - `adapters/cron.sh` — any Linux/macOS machine with cron
 - `adapters/launchd.plist` — macOS, preferred over cron there (survives sleep/wake)
@@ -106,11 +213,13 @@ vault init    [--folder <path>] [--ics <path>] [--dest <path>]
 vault sync    [--dest <path>]
 vault context [--dest <path>] [--format text|markdown|json]
 vault status  [--dest <path>]
+vault-mcp     [--dest <path>]    # MCP server — see "MCP mode" above; not for interactive use
 ```
 
 `vault status` reads only the unencrypted metadata file (last sync time, file
 count) — it never needs your passphrase, so you can check freshness from a
-script without exposing the secret.
+script without exposing the secret. Its MCP-mode equivalent, `vault_status`,
+also reports whether MultiWitness logging is active.
 
 ## Security model, plainly stated
 
@@ -125,9 +234,24 @@ script without exposing the secret.
   the folder path, calendar path, and sync timestamps, so `vault status` can
   work without the passphrase. If those paths themselves are sensitive on
   your machine, keep `--dest` somewhere access-controlled.
-- Nothing in this package makes a network request. Read the source — it's
-  plain, dependency-free JavaScript specifically so that claim is easy to
-  verify yourself rather than something you have to take on faith.
+- **CLI mode** makes no network request, ever. **MCP mode** talks only over
+  stdio to whatever local client launched it — also no network request to
+  serve context. The one exception, and it's opt-in: if
+  `MULTIWITNESS_INGEST_TOKEN` is set, MCP mode makes a `localhost`-only POST
+  per context call, and that call never carries file/calendar content — only
+  a count. Leave the token unset and there is zero network activity anywhere
+  in this package, full stop.
+- **Dependencies, honestly stated:** the CLI (`vault init/sync/context/status`)
+  and core library (`lib/crypto.mjs`, `lib/scan.mjs`, `lib/calendar.mjs`) are
+  zero-dependency, same as v1 — plain Node.js, nothing to audit beyond what
+  ships with Node itself. **MCP mode is the one exception**: it depends on
+  `@modelcontextprotocol/sdk` (Anthropic's real, published MCP SDK) and
+  `zod`, because implementing the MCP protocol correctly from scratch would
+  be reinventing a well-tested wheel, badly. If you don't use MCP mode, you
+  never load either dependency — `vault.mjs`, `crypto.mjs`, `scan.mjs`, and
+  `calendar.mjs` don't import them.
+- Read the source. It's plain JavaScript specifically so every claim above is
+  easy to verify yourself rather than something you have to take on faith.
 
 ## Standalone binaries (optional)
 
@@ -165,5 +289,17 @@ Apple are a separate purchase if you want that warning gone.
 npm test
 ```
 
-Runs the adapter-free unit tests in `test/run.mjs` — encryption round-trip,
-`.ics` parsing, and folder scanning against a throwaway temp directory.
+Runs all three suites (31 tests total):
+- `test/run.mjs` — encryption round-trip, `.ics` parsing, folder scanning,
+  and the full CLI-mode vault lifecycle, against real throwaway temp
+  directories.
+- `test/mcp.test.mjs` — MCP mode, driven by a **real
+  `@modelcontextprotocol/sdk` `Client`** talking to the real `McpServer`
+  over the SDK's in-memory transport — the same client/server code path a
+  real MCP host exercises, including a test that adds a file mid-session
+  with no restart and confirms `get_context` picks it up immediately.
+- `test/witness-log.test.mjs` — the MultiWitness integration's request
+  contract (auth header, event shape, silent-fail behavior when
+  unconfigured or unreachable), against a bare local HTTP server standing
+  in for MultiWitness's real API — kept dependency-free from MultiWitness's
+  own source since that's a separate product.

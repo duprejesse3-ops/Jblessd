@@ -113,14 +113,12 @@ export function readSnapshot(dest, passphrase) {
 }
 
 /**
- * Build the pasteable context snippet described in the product blurb: a
- * compact brief of what's in the watched folder and what's on the calendar,
- * meant to be dropped at the top of a chat with an AI agent (or piped into a
- * Claude API call — see README "Piping into the Claude API").
+ * Format a snapshot object (from readSnapshot() or a live scan) into the
+ * pasteable context brief. Shared by buildContext() (reads the encrypted
+ * at-rest snapshot) and buildLiveContext() (scans fresh, no passphrase) —
+ * both produce identically-shaped output from this one function.
  */
-export function buildContext(dest, passphrase, { format = 'markdown' } = {}) {
-  const snapshot = readSnapshot(dest, passphrase)
-
+export function formatContext(snapshot, { format = 'markdown' } = {}) {
   if (format === 'json') return JSON.stringify(snapshot, null, 2)
 
   const lines = []
@@ -158,6 +156,45 @@ export function buildContext(dest, passphrase, { format = 'markdown' } = {}) {
     }
   }
   return lines.join('\n') + '\n'
+}
+
+/**
+ * Build the pasteable context snippet described in the product blurb: a
+ * compact brief of what's in the watched folder and what's on the calendar,
+ * meant to be dropped at the top of a chat with an AI agent (or piped into a
+ * Claude API call — see README "Piping into the Claude API").
+ */
+export function buildContext(dest, passphrase, opts = {}) {
+  return formatContext(readSnapshot(dest, passphrase), opts)
+}
+
+/**
+ * The MCP-mode path: build context LIVE, with no passphrase and no
+ * encrypted-snapshot round-trip. Reads only vault.meta.json (unencrypted —
+ * just the folder/ics paths, not their contents) to know what to scan, then
+ * scans the folder and parses the calendar file fresh, right now.
+ *
+ * This is deliberate, not a shortcut: an MCP server answers a live query
+ * from a local AI client over stdio — nothing is written to disk or sent
+ * over a network in this path, so there is no "resting file" for
+ * encryption-at-rest to protect. Re-scanning live also means an MCP client
+ * always sees the CURRENT folder/calendar state, never a snapshot that's
+ * gone stale because someone forgot to run `vault sync` — that staleness
+ * gap is exactly what made v1's workflow feel manual.
+ *
+ * Requires a vault to have been `init`ed at `dest` (so the folder/ics paths
+ * are known) but does not require or use its passphrase at all.
+ */
+export function buildLiveContext(dest, opts = {}) {
+  const meta = readMeta(dest)
+  if (!meta) throw new Error(`No vault found at ${dest}. Run "vault init" first.`)
+  if (!meta.folder && !meta.icsPath) {
+    throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
+  }
+  const files = meta.folder ? scanFolder(meta.folder, opts.scan) : []
+  const events = readIcsFile(meta.icsPath)
+  const snapshot = { folder: meta.folder, icsPath: meta.icsPath, files, events, syncedAt: new Date().toISOString() }
+  return { snapshot, text: formatContext(snapshot, opts) }
 }
 
 /**

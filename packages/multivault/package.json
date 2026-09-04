@@ -1,21 +1,24 @@
 {
   "name": "multivault",
-  "version": "1.0.0",
-  "description": "A local, encrypted context snapshot of one folder and one calendar file. No account, no OAuth, no cloud storage — the vault lives on your machine and only your passphrase opens it.",
+  "version": "2.0.0",
+  "description": "A local, encrypted context snapshot of one folder and one calendar file — plus an MCP server for automatic, zero-paste context, and optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
     "node": ">=18"
   },
   "bin": {
-    "vault": "./bin/vault.mjs"
+    "vault": "./bin/vault.mjs",
+    "vault-mcp": "./bin/vault-mcp.mjs"
   },
   "main": "./lib/vault.mjs",
   "exports": {
     ".": "./lib/vault.mjs",
     "./crypto": "./lib/crypto.mjs",
     "./scan": "./lib/scan.mjs",
-    "./calendar": "./lib/calendar.mjs"
+    "./calendar": "./lib/calendar.mjs",
+    "./mcp-server": "./lib/mcp-server.mjs",
+    "./witness-log": "./lib/witness-log.mjs"
   },
   "files": [
     "bin",
@@ -26,8 +29,13 @@
   ],
   "scripts": {
     "vault": "node bin/vault.mjs",
-    "test": "node test/run.mjs",
+    "vault-mcp": "node bin/vault-mcp.mjs",
+    "test": "node test/run.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs",
     "build:binary": "node scripts/build-sea.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
