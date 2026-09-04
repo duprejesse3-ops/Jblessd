@@ -274,7 +274,7 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
 // to the observed failure, since this only runs once/day — the extra token
 // budget costs nothing meaningful.
 const MAX_TOKENS: Record<Platform, number> = {
-  x: 600,
+  x: 1000,
   youtube_shorts: 2500,
   reddit: 700,
   bluesky: 600,
