@@ -72,7 +72,13 @@ function shortId(): string {
 async function runScenario(origin: string, sku: string, prompt: string): Promise<{ text: string; outcome: 'success' | 'failed' }> {
   const res = await fetch(`${origin}/api/demo`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // Identifies this as a trusted internal call so /api/demo skips the
+      // shopper-facing rate limit — see demo.mts. Without INTERNAL_API_SECRET
+      // set, this header is empty and the limiter applies as before.
+      'X-Internal-Secret': process.env.INTERNAL_API_SECRET ?? '',
+    },
     body: JSON.stringify({ sku, scenario: prompt }),
   })
   if (!res.ok || !res.body) return { text: '', outcome: 'failed' }
