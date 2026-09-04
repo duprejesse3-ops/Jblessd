@@ -200,6 +200,7 @@ export default async (req: Request, context: Context) => {
   if (!contentType.includes('text/html')) return res
 
   let html = await res.text()
+  let liveCatalogApplied = false
 
   try {
     const apiUrl = internalUrl('/api/products', req)
@@ -222,6 +223,7 @@ export default async (req: Request, context: Context) => {
           html.slice(0, startIdx) +
           buildItemList(products, aggregates) +
           html.slice(endIdx + END.length)
+        liveCatalogApplied = true
       }
     }
   } catch (err) {
@@ -231,9 +233,29 @@ export default async (req: Request, context: Context) => {
 
   const headers = new Headers(res.headers)
   headers.delete('content-length')
+  // Same fix as pages.ts's page(): without Netlify-CDN-Cache-Control this
+  // function's response is never shared-cached, so every visitor and every
+  // crawler hit re-ran this render plus its /api/products and /api/reviews
+  // subrequests (and the Postgres connections behind them) from scratch. Only
+  // cache when the live catalog was actually applied — the static-fallback
+  // path means the DB was unreachable, and caching that in front of the real
+  // homepage would pin a stale/degraded page for the whole window.
+  headers.set(
+    'Netlify-CDN-Cache-Control',
+    liveCatalogApplied ? 'public, s-maxage=300, stale-while-revalidate=86400, durable' : 'no-store',
+  )
   return new Response(html, { status: res.status, statusText: res.statusText, headers })
 }
 
 export const config: Config = {
   path: ['/', '/index.html'],
+  // Opt this function's responses into the CDN cache — see the comment above
+  // and pages.ts's identical config, which this mirrors. Without `cache:
+  // 'manual'` the Netlify-CDN-Cache-Control header above is inert and this
+  // function re-runs, live subrequests and all, on every single request.
+  //
+  // Ordering is unaffected: non-cached edge functions run ahead of cached
+  // ones, so csp.ts (declared in netlify.toml on /*) still wraps this one and
+  // still nonces every response on its way to the visitor.
+  cache: 'manual',
 }
