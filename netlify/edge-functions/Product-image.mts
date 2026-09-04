@@ -55,6 +55,23 @@ async function getFont(): Promise<Uint8Array> {
   return fontCache
 }
 
+let monoFontCache: Uint8Array | null = null
+async function getMonoFont(): Promise<Uint8Array> {
+  if (monoFontCache) return monoFontCache
+  // JetBrains Mono, matching the site's own monospace font (pages.ts <style>
+  // uses it for .sku/nav.crumbs). Loaded separately from Inter above —
+  // resvg-wasm has no system fonts, so a font-family referenced in an SVG
+  // but never passed in fontBuffers renders as missing glyphs, not a
+  // fallback. Needed here because the software template's command-line-style
+  // text (the "$ vault --help" line, the window titlebar) is meant to
+  // actually look like a terminal, not just claim to.
+  const res = await fetch(
+    'https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Bold.ttf',
+  )
+  monoFontCache = new Uint8Array(await res.arrayBuffer())
+  return monoFontCache
+}
+
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 }
@@ -62,13 +79,13 @@ function esc(s: unknown): string {
 // Wraps a title into at most 3 lines by word count, roughly matching the SVG's
 // available width at this font size — good enough for product names in this
 // catalog, which run short (2-6 words).
-function wrapTitle(name: string): string[] {
+function wrapTitle(name: string, maxLineChars = 22): string[] {
   const words = name.split(' ')
   const lines: string[] = []
   let line = ''
   for (const w of words) {
     const candidate = line ? `${line} ${w}` : w
-    if (candidate.length > 22 && line) {
+    if (candidate.length > maxLineChars && line) {
       lines.push(line)
       line = w
     } else {
@@ -77,6 +94,135 @@ function wrapTitle(name: string): string[] {
   }
   if (line) lines.push(line)
   return lines.slice(0, 3)
+}
+
+// ---- "software" template: Multi-branded connectors/agents get an app-icon
+// look (window chrome, a mark, a command-line hint) instead of the generic
+// prompt-pack card, since these are real installable software, not documents.
+
+// One accent color and one simple vector mark per Multi product, keyed by
+// SKU so a rename doesn't silently fall back to the generic glyph. Marks are
+// plain shapes/paths (no external icon assets) since resvg only rasterizes
+// what's in the SVG itself.
+const SOFTWARE_STYLE: Record<string, { accent: string; mark: string }> = {
+  // MultiWitness — a hash-chain: linked rounded rects.
+  'AI-CN-006': {
+    accent: '#FFB020',
+    mark: `<g>
+      <rect x="-58" y="-16" width="60" height="32" rx="8" fill="none" stroke="#0A0E16" stroke-width="7"/>
+      <rect x="-2" y="-16" width="60" height="32" rx="8" fill="none" stroke="#0A0E16" stroke-width="7"/>
+    </g>`,
+  },
+  // MultiGuard — a shield.
+  'AI-CN-007': {
+    accent: '#FF4D4D',
+    mark: `<path d="M0 -60 L52 -40 L52 8 C52 44 26 62 0 72 C-26 62 -52 44 -52 8 L-52 -40 Z" fill="none" stroke="#0A0E16" stroke-width="8"/>`,
+  },
+  // MultiVault — a padlock.
+  'AI-CN-008': {
+    accent: '#8B5CF6',
+    mark: `<g>
+      <path d="M-30 -6 L-30 -28 C-30 -46 -16 -60 0 -60 C16 -60 30 -46 30 -28 L30 -6" fill="none" stroke="#0A0E16" stroke-width="8"/>
+      <rect x="-44" y="-6" width="88" height="66" rx="8" fill="#0A0E16"/>
+      <circle cx="0" cy="20" r="8" fill="${'#8B5CF6'}"/>
+      <rect x="-4" y="24" width="8" height="18" fill="${'#8B5CF6'}"/>
+    </g>`,
+  },
+  // MultiConnect: Zapier/Webhook Bridge — a lightning bolt.
+  'AI-CN-001': {
+    accent: '#FF7A45',
+    mark: `<path d="M10 -62 L-38 6 L-4 6 L-10 62 L38 -10 L4 -10 Z" fill="#0A0E16"/>`,
+  },
+  // MultiConnect: Shopify — a shopping bag with two separated strap handles
+  // (a single wide arc across the top reads as a bucket/trash-can, not a bag).
+  'AI-CN-002': {
+    accent: '#22C55E',
+    mark: `<g fill="none" stroke="#0A0E16" stroke-width="7">
+      <path d="M-38 -20 L38 -20 L32 56 L-32 56 Z" stroke-linejoin="round"/>
+      <path d="M-20 -20 L-20 -36 C-20 -44 -12 -48 -6 -48" stroke-linecap="round"/>
+      <path d="M20 -20 L20 -36 C20 -44 12 -48 6 -48" stroke-linecap="round"/>
+    </g>`,
+  },
+  // MultiConnect: Sheets/Airtable — a grid.
+  'AI-CN-003': {
+    accent: '#14B8A6',
+    mark: `<g fill="none" stroke="#0A0E16" stroke-width="7">
+      <rect x="-52" y="-52" width="104" height="104" rx="6"/>
+      <line x1="-52" y1="-17" x2="52" y2="-17"/>
+      <line x1="-52" y1="18" x2="52" y2="18"/>
+      <line x1="-17" y1="-52" x2="-17" y2="52"/>
+      <line x1="18" y1="-52" x2="18" y2="52"/>
+    </g>`,
+  },
+  // MultiConnect: Email/CRM — an envelope.
+  'AI-CN-004': {
+    accent: '#3B82F6',
+    mark: `<g fill="none" stroke="#0A0E16" stroke-width="8">
+      <rect x="-54" y="-38" width="108" height="76" rx="6"/>
+      <path d="M-54 -34 L0 6 L54 -34"/>
+    </g>`,
+  },
+  // MultiConnect: Slack/Discord — a chat bubble.
+  'AI-CN-005': {
+    accent: '#6366F1',
+    mark: `<path d="M-52 -40 L52 -40 C58 -40 62 -36 62 -30 L62 14 C62 20 58 24 52 24 L4 24 L-22 46 L-18 24 L-52 24 C-58 24 -62 20 -62 14 L-62 -30 C-62 -36 -58 -40 -52 -40 Z" fill="none" stroke="#0A0E16" stroke-width="8"/>`,
+  },
+}
+
+// A generic fallback mark for any future "Multi"-prefixed product not yet
+// mapped above — a simple terminal prompt, so a new connector still gets the
+// software treatment on day one instead of erroring or reverting silently to
+// the plain card.
+const DEFAULT_SOFTWARE_MARK = `<text x="0" y="20" font-family="JetBrains Mono" font-weight="700" font-size="56" fill="#0A0E16" text-anchor="middle">&gt;_</text>`
+
+function isSoftwareProduct(p: ApiProduct): boolean {
+  return p.category === 'connectors' || p.name.startsWith('Multi')
+}
+
+function buildSoftwareSvg(p: ApiProduct): string {
+  const style = SOFTWARE_STYLE[p.sku] ?? { accent: '#FFB020', mark: DEFAULT_SOFTWARE_MARK }
+  const cat = p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category
+  const cmdName = p.name.split(':').pop()!.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+
+  // Title column starts at x=340 with ~30px right margin, so ~830px available.
+  // Long names ("MultiConnect: Zapier/Webhook Bridge") overflow that at the
+  // single-line 52px size used for short ones ("MultiVault") — shrink and
+  // wrap onto a second line rather than letting it run off the canvas edge.
+  const longName = p.name.length > 24
+  const titleSize = longName ? 40 : 52
+  const titleLines = longName ? wrapTitle(p.name, 24) : [p.name]
+  const titleLineHeight = titleSize + 12
+  const titleStartY = 250
+  const titleTspans = titleLines
+    .map((line, i) => `<tspan x="340" y="${titleStartY + i * titleLineHeight}">${esc(line)}</tspan>`)
+    .join('')
+  const cmdY = titleStartY + titleLines.length * titleLineHeight + 16
+
+  return `
+<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${W}" height="${H}" fill="#0A0E16"/>
+
+  <!-- window chrome -->
+  <rect x="0" y="0" width="${W}" height="56" fill="#121826"/>
+  <rect x="0" y="56" width="${W}" height="1" fill="#232B3D"/>
+  <circle cx="34" cy="28" r="9" fill="#FF5F57"/>
+  <circle cx="62" cy="28" r="9" fill="#FEBC2E"/>
+  <circle cx="90" cy="28" r="9" fill="#28C840"/>
+  <text x="${W / 2}" y="35" font-family="JetBrains Mono" font-size="17" fill="#5C6580" text-anchor="middle">${esc(cmdName)} — ${esc(cat)}</text>
+  <text x="${W - 32}" y="35" font-family="Inter" font-weight="700" font-size="15" letter-spacing="2" fill="#5C6580" text-anchor="end">${esc(STORE)}</text>
+
+  <!-- app icon -->
+  <g transform="translate(180, 300)">
+    <rect x="-100" y="-100" width="200" height="200" rx="44" fill="${style.accent}"/>
+    ${style.mark}
+  </g>
+
+  <!-- title + price -->
+  <text font-family="Inter" font-weight="700" font-size="${titleSize}" fill="#EEF1F7">${titleTspans}</text>
+  <text x="340" y="${cmdY}" font-family="JetBrains Mono" font-size="20" fill="${style.accent}">$ ${esc(cmdName)} --help</text>
+  <text x="340" y="560" font-family="Inter" font-weight="700" font-size="44" fill="#EEF1F7">$${Number(p.price).toFixed(2)}</text>
+  <text x="1120" y="560" font-family="Inter" font-weight="500" font-size="20" fill="#5C6580" text-anchor="end">Real source. Zero dependencies.</text>
+</svg>`.trim()
 }
 
 function buildSvg(p: ApiProduct): string {
@@ -120,9 +266,11 @@ export default async (req: Request, _context: Context) => {
 
     await ensureWasm()
     const font = await getFont()
-    const svg = buildSvg(product)
+    const isSoftware = isSoftwareProduct(product)
+    const svg = isSoftware ? buildSoftwareSvg(product) : buildSvg(product)
+    const fontBuffers = isSoftware ? [font, await getMonoFont()] : [font]
     const resvg = new Resvg(svg, {
-      font: { fontBuffers: [font], defaultFontFamily: 'Inter' },
+      font: { fontBuffers, defaultFontFamily: 'Inter' },
       fitTo: { mode: 'width', value: W },
     })
     const png = resvg.render().asPng()

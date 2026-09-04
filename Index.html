@@ -471,6 +471,17 @@ f.parentNode.insertBefore(j,f);
     transition:filter .2s ease;
   }
   .card:hover::before{filter:brightness(1.12) saturate(1.08);}
+  /* Real generated thumbnail (connector/Multi products) — same bleed and
+     height as the procedural .card::before art above, so a mixed grid of
+     real-thumbnail and procedural-art cards still lines up edge to edge.
+     The procedural pattern is suppressed via .has-thumb so the two never
+     stack under each other. */
+  .card.has-thumb::before{display:none;}
+  .card-thumb{
+    width:calc(100% + 44px); height:104px; margin:-22px -22px 18px; display:block;
+    border-bottom:1px solid var(--line); border-radius:var(--radius) var(--radius) 0 0;
+    object-fit:cover; object-position:center; background:var(--panel-2);
+  }
   /* Nudge the glow across the grid so identical categories don't line up. */
   .card:nth-of-type(4n+2)::before{--art-x:26%;}
   .card:nth-of-type(4n+3)::before{--art-x:52%;}
@@ -2313,8 +2324,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
     card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
     card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
+    // Real generated thumbnail for connector/"Multi"-branded products — these
+    // get a distinct app-style image per SKU (window chrome, an icon mark)
+    // from /product-image/:sku.png, the same image already used in this
+    // product's structured data and social previews. Every other category
+    // keeps the existing procedural CSS cover art (.card::before) as-is —
+    // this is additive, not a redesign of the whole catalog.
+    var isSoftware = p.category === 'connectors' || /^Multi/.test(p.name || '');
+    var thumbHtml = isSoftware
+      ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
+      : '';
+    if (isSoftware) card.classList.add('has-thumb');
     card.innerHTML =
       '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
+      thumbHtml+
       '<div class="card-top"><span class="sku">'+esc(id)+'</span></div>'+
       '<span class="trend-badge" hidden>Trending</span>'+
       '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
