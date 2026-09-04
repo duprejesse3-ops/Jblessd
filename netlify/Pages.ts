@@ -403,6 +403,7 @@ function page(opts: {
     `h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.12;letter-spacing:-.02em;margin:.2em 0}` +
     `.sku{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase}` +
     `.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:var(--brass);padding:3px 9px;border-radius:2px}` +
+    `.badge-new{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);background:transparent;border:1px solid var(--brass);padding:2px 8px;border-radius:2px}` +
     `.lede{font-size:17px;color:var(--paper);margin:18px 0}` +
     `.specs{border:1px solid var(--line);border-radius:4px;padding:6px 18px;margin:22px 0}` +
     `.specs .row{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px dashed var(--line-soft);font-size:14px}` +
@@ -619,9 +620,10 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       `</div>`
     : ''
 
+  const newBadge = agg && agg.count > 0 ? '' : ` <span class="badge-new">New</span>`
   const body =
     `<nav class="crumbs"><a href="/">Home</a> / <a href="/tools/${esc(p.niche)}">Tools for ${esc(nl)}</a> / ${esc(p.name)}</nav>` +
-    `<span class="tag">${esc(cat)}</span> <span class="sku">${esc(p.sku)}</span>` +
+    `<span class="tag">${esc(cat)}</span> <span class="sku">${esc(p.sku)}</span>${newBadge}` +
     `<h1>${esc(p.name)}</h1>` +
     `<p class="lede">${esc(p.blurb)}</p>` +
     `<div class="specs">` +
@@ -702,7 +704,10 @@ function renderNiche(niche: string, all: ApiProduct[], aggs: Record<string, Aggr
   const cards = items
     .map((p) => {
       const agg = aggs[p.sku]
-      const rating = agg && agg.count > 0 ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>` : ''
+      const rating =
+        agg && agg.count > 0
+          ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>`
+          : `<div style="margin-top:6px"><span class="badge-new">New</span></div>`
       return (
         `<a class="pcard" href="/product/${encodeURIComponent(p.sku)}">` +
         `<div class="n">${esc(p.name)}</div>` +
@@ -1056,7 +1061,7 @@ function useCaseCards(items: ApiProduct[], aggs: Record<string, Aggregate>): str
       const rating =
         agg && agg.count > 0
           ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>`
-          : ''
+          : `<div style="margin-top:6px"><span class="badge-new">New</span></div>`
       return (
         `<a class="pcard" href="/product/${encodeURIComponent(p.sku)}">` +
         `<div class="n">${esc(p.name)}</div><div class="b">${esc(p.blurb)}</div>` +
