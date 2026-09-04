@@ -16,7 +16,13 @@ export interface HealthReport {
 }
 
 const REQUEST_TIMEOUT_MS = 5000
-const SLOW_RESPONSE_MS = 2500
+// Observed homepage latency straddles the old 2500ms line (seen anywhere from
+// ~400ms to ~2700ms run to run), which made this check flip passed/warning on
+// ordinary variance rather than a real slowdown — and each flip changed the
+// diagnosis fingerprint, forcing a fresh LLM call in agent-diagnosis.mts for
+// what wasn't actually a new problem. 3200ms gives headroom above normal
+// variance while still catching genuine slowness.
+const SLOW_RESPONSE_MS = 3200
 
 function elapsed(startedAt: number): number {
   return Math.max(0, Math.round(performance.now() - startedAt))

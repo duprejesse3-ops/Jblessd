@@ -49,8 +49,28 @@ export function diagnosisFingerprint(status: string, checks: FingerprintableChec
 type RunTable = 'site_health_runs' | 'crawl_runs'
 
 /**
- * Return the previous run's recommendation when it was produced for an
- * identical set of problems, or null when a fresh diagnosis is warranted.
+ * How many recent rows to scan for a matching fingerprint.
+ *
+ * Originally this only ever looked at the single most recent row, which meant
+ * one transient flap — e.g. homepage latency drifting a few ms across the
+ * SLOW_RESPONSE_MS boundary and back — broke the cache chain and forced a
+ * fresh paid diagnosis for a problem (like a persistent review-coverage gap)
+ * that had already been diagnosed and hadn't actually changed. Scanning a
+ * short window lets the cache survive a single-run blip while still paying
+ * for a fresh answer once the problem has genuinely been different for a
+ * while.
+ */
+const LOOKBACK_ROWS = 20
+
+/**
+ * Return a recent run's recommendation when it was produced for an identical
+ * set of problems, or null when a fresh diagnosis is warranted.
+ *
+ * Scans back through the last LOOKBACK_ROWS runs (newest first) and reuses
+ * the recommendation from the first one whose fingerprint matches. This
+ * means a single differing run in between — a one-off blip — no longer
+ * forces a fresh LLM call on every subsequent run of an unchanged, steady-
+ * state problem the way comparing only to the immediately previous row did.
  *
  * A DB error here is not fatal: we fall through to null and the caller pays for
  * a real diagnosis, which is the old behaviour. Never let a cost optimisation
@@ -68,22 +88,23 @@ export async function cachedRecommendation(
             SELECT status, checks, recommendation
             FROM site_health_runs
             ORDER BY created_at DESC
-            LIMIT 1
+            LIMIT ${LOOKBACK_ROWS}
           `) as any[])
         : ((await db.sql`
             SELECT status, checks, recommendation
             FROM crawl_runs
             ORDER BY created_at DESC
-            LIMIT 1
+            LIMIT ${LOOKBACK_ROWS}
           `) as any[])
 
-    const previous = rows?.[0]
-    if (!previous?.recommendation) return null
-
-    const checks = typeof previous.checks === 'string' ? JSON.parse(previous.checks) : previous.checks
-    return diagnosisFingerprint(String(previous.status ?? ''), checks ?? []) === fingerprint
-      ? String(previous.recommendation)
-      : null
+    for (const row of rows ?? []) {
+      if (!row?.recommendation) continue
+      const checks = typeof row.checks === 'string' ? JSON.parse(row.checks) : row.checks
+      if (diagnosisFingerprint(String(row.status ?? ''), checks ?? []) === fingerprint) {
+        return String(row.recommendation)
+      }
+    }
+    return null
   } catch (error) {
     console.error(
       `cachedRecommendation(${table}) lookup failed:`,
