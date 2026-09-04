@@ -18,14 +18,6 @@ const STORE = 'MULTINICHE AI'
 const W = 1200
 const H = 630
 
-const CATEGORY_LABEL: Record<string, string> = {
-  prompts: 'Prompt Packs',
-  automations: 'Automation Blueprints',
-  templates: 'Doc Templates',
-  agents: 'Agent Configs',
-  connectors: 'Connectors',
-}
-
 interface ApiProduct {
   sku: string
   name: string
@@ -184,22 +176,63 @@ const DEFAULT_SOFTWARE_STYLE = {
   mark: (c: string) => `<text x="0" y="20" font-family="JetBrains Mono" font-weight="700" font-size="72" fill="${c}" text-anchor="middle">&gt;_</text>`,
 }
 
-function isSoftwareProduct(p: ApiProduct): boolean {
-  return p.category === 'connectors' || p.name.startsWith('Multi')
+// Per-category marks and gradients for the rest of the catalog — drawn fresh
+// at logo scale but matching the same silhouettes already used in the
+// storefront's own CSS card art ([data-cat] glyphs in index.html): a
+// chevron+tick for prompts, two linked nodes for automations, a lined
+// document for templates, a hexagon for agents. Keeps the generated images
+// recognizably "the same icon system" as the rest of the site, just bigger.
+const CATEGORY_STYLE: Record<string, { gradient: [string, string]; mark: (c: string) => string }> = {
+  prompts: {
+    gradient: ['#FFC94D', '#D98E00'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-64 -46 L-16 0 L-64 46"/>
+      <path d="M-4 46 H50"/>
+    </g>`,
+  },
+  automations: {
+    gradient: ['#7BEEDD', '#0E9E86'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="-58" cy="0" r="17" fill="${c}" stroke="none"/>
+      <circle cx="58" cy="0" r="17" fill="${c}" stroke="none"/>
+      <path d="M-32 0 H14"/>
+      <path d="M6 -20 L28 0 L6 20"/>
+    </g>`,
+  },
+  templates: {
+    gradient: ['#C3B8FF', '#5B4FD1'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="-46" y="-72" width="92" height="144" rx="10"/>
+      <path d="M-24 -32 H24 M-24 0 H24 M-24 32 H6"/>
+    </g>`,
+  },
+  agents: {
+    gradient: ['#9FA3FF', '#3A3DC2'],
+    mark: (c) => `<g stroke="${c}" stroke-width="10" fill="none" stroke-linejoin="round">
+      <path d="M0 -80 L64 -44 V44 L0 80 L-64 44 V-44 Z"/>
+      <circle cx="0" cy="0" r="16" fill="${c}" stroke="none"/>
+    </g>`,
+  },
 }
 
-function buildSoftwareSvg(p: ApiProduct): string {
-  const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
+/** Per-SKU style wins (the 8 Multi products); otherwise fall back to the product's category, then a generic default. */
+function styleFor(p: ApiProduct): { gradient: [string, string]; mark: (c: string) => string } {
+  return SOFTWARE_STYLE[p.sku] ?? CATEGORY_STYLE[p.category] ?? DEFAULT_SOFTWARE_STYLE
+}
+
+function buildLogoSvg(p: ApiProduct): string {
+  const style = styleFor(p)
   const [g1, g2] = style.gradient
   const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}`
   const cx = W / 2
 
   // Auto-size + wrap: short names ("MultiVault") stay big and single-line;
-  // longer ones ("MultiConnect: Zapier/Webhook Bridge") shrink and wrap onto
-  // 2 lines rather than overflowing the canvas edge, which a fixed single-line
-  // size did for anything past ~24 characters.
+  // longer ones ("Personal Budget & Net-Worth Template", the longest name
+  // in the catalog) shrink and wrap onto 2 lines rather than overflowing
+  // the canvas edge, which a fixed single-line size did for anything past
+  // ~24 characters.
   const longName = p.name.length > 20
-  const nameSize = longName ? 46 : 64
+  const nameSize = longName ? 46 : 60
   const nameLines = longName ? wrapTitle(p.name, 26) : [p.name]
   const lineHeight = nameSize * 1.15
   const iconCy = nameLines.length > 1 ? H / 2 - 108 : H / 2 - 78
@@ -235,29 +268,6 @@ function buildSoftwareSvg(p: ApiProduct): string {
 </svg>`.trim()
 }
 
-function buildSvg(p: ApiProduct): string {
-  const cat = p.catLabel ?? CATEGORY_LABEL[p.category] ?? p.category
-  const lines = wrapTitle(p.name)
-  const titleY = 260
-  const lineHeight = 64
-
-  const titleTspans = lines
-    .map((line, i) => `<tspan x="80" y="${titleY + i * lineHeight}">${esc(line)}</tspan>`)
-    .join('')
-
-  return `
-<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${W}" height="${H}" fill="#0A0E16"/>
-  <rect x="0" y="0" width="${W}" height="6" fill="#FFB020"/>
-  <text x="80" y="90" font-family="Inter" font-weight="700" font-size="28" letter-spacing="3" fill="#FFB020">${esc(STORE)}</text>
-  <rect x="80" y="130" width="${Math.max(cat.length * 13 + 40, 120)}" height="42" rx="3" fill="#FFB020"/>
-  <text x="${80 + Math.max(cat.length * 13 + 40, 120) / 2}" y="158" font-family="Inter" font-weight="700" font-size="18" letter-spacing="2" fill="#0A0E16" text-anchor="middle">${esc(cat.toUpperCase())}</text>
-  <text font-family="Inter" font-weight="700" font-size="54" fill="#EEF1F7">${titleTspans}</text>
-  <text x="80" y="560" font-family="Inter" font-weight="700" font-size="44" fill="#EEF1F7">$${Number(p.price).toFixed(2)}</text>
-  <text x="1120" y="560" font-family="Inter" font-weight="500" font-size="20" fill="#5C6580" text-anchor="end">Watch it run before you buy →</text>
-</svg>`.trim()
-}
-
 export default async (req: Request, _context: Context) => {
   const { pathname } = new URL(req.url)
   const match = pathname.match(/^\/product-image\/(.+)\.png$/)
@@ -276,11 +286,10 @@ export default async (req: Request, _context: Context) => {
 
     await ensureWasm()
     const font = await getFont()
-    const isSoftware = isSoftwareProduct(product)
-    const svg = isSoftware ? buildSoftwareSvg(product) : buildSvg(product)
-    const fontBuffers = isSoftware ? [font, await getMonoFont()] : [font]
+    const mono = await getMonoFont()
+    const svg = buildLogoSvg(product)
     const resvg = new Resvg(svg, {
-      font: { fontBuffers, defaultFontFamily: 'Inter' },
+      font: { fontBuffers: [font, mono], defaultFontFamily: 'Inter' },
       fitTo: { mode: 'width', value: W },
     })
     const png = resvg.render().asPng()
