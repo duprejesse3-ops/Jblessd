@@ -147,7 +147,15 @@ export default async (req: Request, context: Context) => {
   if (!sku) return Response.json({ error: 'A product SKU is required.' }, { status: 400 })
 
   // Only the uncacheable, always-fresh path is metered — see CUSTOM_DEMO_LIMIT.
-  if (scenario) {
+  const internalSecret = process.env.INTERNAL_API_SECRET
+  const isInternalCaller = Boolean(internalSecret) && req.headers.get('x-internal-secret') === internalSecret
+
+  // The shopper-abuse limiter below exists to stop a script from scripting
+  // unlimited custom demos through a real browser/IP. It was never meant to
+  // apply to our own scorecard-runner, which legitimately needs to run many
+  // more than 10 fixed, versioned scenarios per hour — trusted internal
+  // callers (verified via a shared secret only they know) skip it entirely.
+  if (scenario && !isInternalCaller) {
     const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
     const limit = await checkRateLimit('demo-custom', ip, {
       limit: CUSTOM_DEMO_LIMIT,
