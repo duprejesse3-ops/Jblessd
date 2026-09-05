@@ -1,0 +1,48 @@
+<!-- Copyright (c) 2026 [SELLER]. All rights reserved. -->
+<!-- Licensed to a single purchaser under the terms in LICENSE.md. -->
+<!-- Redistribution or resale of this source, in whole or in part, is not permitted. -->
+
+<!--
+  Adapter: launchd, the native scheduler on macOS. Preferred over cron there —
+  launchd runs your jobs even after the machine sleeps and wakes.
+
+  Requires you've already run "docs-bridge auth" once interactively before
+  installing this — the saved refresh token is what lets it run unattended.
+
+  Install:
+    1. Copy this file to ~/Library/LaunchAgents/com.multivault.docs-bridge.plist
+    2. Edit YOUR_USERNAME (three times) below to match your setup.
+    3. Load it:
+         launchctl load ~/Library/LaunchAgents/com.multivault.docs-bridge.plist
+
+  Runs once an hour by default (StartInterval, in seconds — 3600 = 1 hour).
+
+  To stop it:
+    launchctl unload ~/Library/LaunchAgents/com.multivault.docs-bridge.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.multivault.docs-bridge</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/YOUR_USERNAME/multivault-docs-bridge/bin/docs-bridge.mjs</string>
+    <string>sync</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/multivault-docs-bridge/docs-bridge.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/multivault-docs-bridge/docs-bridge.log</string>
+</dict>
+</plist>

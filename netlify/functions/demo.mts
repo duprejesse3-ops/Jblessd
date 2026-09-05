@@ -108,6 +108,12 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `over the gap with generic filler. Give your best real attempt first, then the honest ` +
     `assessment. "Here's how far this gets, and here's what would close the rest" builds more ` +
     `trust than pretending a poor fit is a perfect one.\n` +
+    `- When you name a limitation, do not also invent a specific technical workaround for it ` +
+    `unless you are certain it actually works as described. A plausible-sounding but wrong claim ` +
+    `about how a third-party service behaves (what a sync tool actually writes to disk, what an ` +
+    `export produces, etc.) is worse than naming the limitation and stopping there — confidently ` +
+    `wrong is a bigger trust problem than incomplete. If you don't know a workaround holds up, ` +
+    `just state the limitation.\n` +
     `- ${lengthRule}\n` +
     `- Plain text only. No markdown headers or code fences. You may use simple line ` +
     `breaks, short labels ending in a colon, and "▸" or "—" as light structure.\n` +

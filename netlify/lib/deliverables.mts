@@ -23,6 +23,7 @@ import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
 import { MULTIVAULT_SOURCE } from './multivault-source.mjs'
+import { MULTICONNECT_GOOGLE_DOCS_SOURCE } from './multiconnect-google-docs-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -584,6 +585,62 @@ function witnessSections(product: Product): DeliverableSection[] {
   return sections
 }
 
+function multiconnectGoogleDocsSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to use it',
+      body:
+        `${product.blurb}\n\n` +
+        `Unzip the archive on your order page, then:\n\n` +
+        `    unzip multiconnect-google-docs.zip\n` +
+        `    cd multiconnect-google-docs\n` +
+        `    npm test\n\n` +
+        `That last step is optional but recommended — it runs the real test suite (20 tests) ` +
+        `against a real temp directory and a real local HTTP server, so you know the software ` +
+        `works on your machine before you rely on it. Only Google's own servers are mocked, ` +
+        `since those obviously aren't reachable in a test run.\n\n` +
+        `**One-time setup (about ten minutes):** this needs a Google Cloud OAuth client — ` +
+        `unavoidable for any real Drive integration, not a design choice made here. Full ` +
+        `walkthrough is in README.md's "One-time setup" section: create a Google Cloud ` +
+        `project, enable the Drive API, create an OAuth Client ID (type: Desktop app). Then:\n\n` +
+        `    node bin/docs-bridge.mjs auth --client-id <id> --client-secret <secret>\n\n` +
+        `This prints a URL — open it, sign in, approve. The refresh token it saves is what ` +
+        `lets scheduled runs proceed unattended afterward; see README's "Security model" for ` +
+        `exactly how that's stored and protected.\n\n` +
+        `Then export:\n\n` +
+        `    node bin/docs-bridge.mjs sync --dest ~/Documents/ClientVault\n\n` +
+        `That's it — your Google Docs are now real, readable .md files at that path. If you ` +
+        `also own MultiVault, point its watched folder at the same destination (or a ` +
+        `subfolder) and its own watcher picks up what this tool exports, automatically. ` +
+        `Re-running \`sync\` only re-exports what actually changed, so it's cheap to run on a ` +
+        `schedule — three adapters (cron, launchd, Windows Task Scheduler) are included in ` +
+        `adapters/ for exactly that; see each file's header comment for setup.\n\n` +
+        `Want to limit this to one folder in Drive instead of your whole account? README's ` +
+        `"Scoping to one Drive folder" section covers the \`--folder-id\` flag.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-google-docs\` and save each block to the path in its ` +
+        `heading, keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Start with README.md — it covers exactly what this does and does not do, in plain ` +
+        `terms, including why Drive Desktop sync alone doesn't solve this.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_GOOGLE_DOCS_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_GOOGLE_DOCS_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
 function multivaultSections(product: Product): DeliverableSection[] {
   const sections: DeliverableSection[] = [
     {
@@ -609,9 +666,18 @@ function multivaultSections(product: Product): DeliverableSection[] {
         `API"). Three scheduling adapters (cron, launchd, Windows Task Scheduler) are ` +
         `included in adapters/ to keep it synced automatically — see each file's header ` +
         `comment for setup.\n\n` +
+        `**Got a large folder?** Whole-folder mode hands over everything, which stops being ` +
+        `useful past a few dozen files. Search mode instead:\n\n` +
+        `    node bin/vault.mjs context --query "invoice overdue"\n\n` +
+        `No passphrase needed — this builds a local BM25-ranked search index automatically ` +
+        `on first use and returns only relevant chunks, not the whole folder. Run ` +
+        `\`node bin/vault.mjs watch\` to keep that index continuously updated in the ` +
+        `background instead of paying the update cost on each query. See README's "Search ` +
+        `mode: large folders" for how the ranking actually works.\n\n` +
         `**Want it automatic instead?** That's MCP mode — no sync, no paste. Point your MCP ` +
         `client (Claude Desktop, Claude Code) at \`bin/vault-mcp.mjs\` and it calls your vault ` +
-        `directly, live, whenever relevant. For Claude Desktop, add to ` +
+        `directly, live, whenever relevant — including search: its \`get_context\` tool takes ` +
+        `the same optional \`query\` argument. For Claude Desktop, add to ` +
         `\`claude_desktop_config.json\`:\n\n` +
         `    {\n` +
         `      "mcpServers": {\n` +
@@ -800,18 +866,37 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
     format: product.format,
     spec: product.spec,
     intro:
-      'The complete source for a local, AES-256-GCM encrypted context snapshot of one folder ' +
-      'and one calendar file — with two ways to use it. CLI mode (sync + context) is zero-' +
-      'dependency and works exactly like v1. MCP mode runs a built-in server so Claude ' +
-      'Desktop, Claude Code, and other MCP-aware tools pull in your current context ' +
-      'automatically, live, with no copy-paste — that mode is the one part of this package ' +
-      'with real dependencies (the official @modelcontextprotocol/sdk and zod), documented ' +
-      'plainly in README.md rather than hidden. Nothing phones home either way: MCP mode ' +
-      'talks only over stdio to your local AI client, and the only network call anywhere in ' +
-      'this package is an optional, content-free log line to MultiWitness (sold separately) ' +
-      'if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
+      'The complete source for a local, AES-256-GCM encrypted context snapshot of a folder and ' +
+      'calendar file — with three ways to use it. CLI mode (sync + context) is zero-dependency ' +
+      'and works exactly like v1. Search mode indexes your folder with BM25 ranking (the same ' +
+      'approach real search engines use) so large folders return only relevant content instead ' +
+      'of everything — also zero-dependency, no embeddings, no AI model involved. MCP mode runs ' +
+      'a built-in server so Claude Desktop, Claude Code, and other MCP-aware tools pull in your ' +
+      'current context automatically, live, with no copy-paste — that mode is the one part of ' +
+      'this package with real dependencies (the official @modelcontextprotocol/sdk and zod), ' +
+      'documented plainly in README.md rather than hidden. Nothing phones home in any mode: ' +
+      'search and MCP mode both talk only to your local disk/client, and the only network call ' +
+      'anywhere in this package is an optional, content-free log line to MultiWitness (sold ' +
+      'separately) if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
       'LICENSE.md at the end for the terms.',
     sections: multivaultSections(product),
+  }),
+  'AI-CN-009': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a one-way, read-only Google Docs export tool: it converts each ' +
+      'Doc to plain markdown server-side (via Google\'s own Drive API) and writes the result as ' +
+      'a real local file, on a schedule. Zero npm dependencies — the OAuth flow and Drive API ' +
+      'calls are plain fetch against documented REST endpoints, not the large googleapis SDK. ' +
+      'Requires a one-time Google Cloud OAuth setup (about ten minutes, walked through in ' +
+      'README.md) — unavoidable for any real Drive integration, not a design choice made here. ' +
+      'Read-only by construction (the requested scope cannot create, modify, or delete anything ' +
+      'in Drive) and revocable anytime from your Google account settings. Yours to run on ' +
+      'unlimited machines, forever. See LICENSE.md at the end for the terms.',
+    sections: multiconnectGoogleDocsSections(product),
   }),
 }
 
@@ -852,7 +937,7 @@ export function deliverableToMarkdown(d: Deliverable): string {
   d.sections.forEach((s, i) => {
     lines.push(`## ${i + 1}. ${s.title}`, '', s.body, '')
   })
-  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — multinicheai.com`)
+  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — jblessd.com`)
   return lines.join('\n')
 }
 

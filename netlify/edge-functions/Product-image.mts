@@ -173,6 +173,20 @@ const SOFTWARE_STYLE: Record<string, { gradient: [string, string]; mark: (color:
     gradient: ['#9C9CFF', '#4636C9'],
     mark: (c) => `<path d="M-67 -52 L67 -52 C75 -52 80 -47 80 -39 L80 17 C80 25 75 30 67 30 L4 30 L-28 58 L-23 30 L-67 30 C-75 30 -80 25 -80 17 L-80 -39 C-80 -47 -75 -52 -67 -52 Z" fill="none" stroke="${c}" stroke-width="10"/>`,
   },
+  // MultiConnect: Google Docs — a document with a folded corner and an
+  // export-arrow badge (signals "content leaving the document"), in cyan —
+  // deliberately distinct from Email/CRM's blue and Sheets/Airtable's teal,
+  // the two nearest existing hues in this palette.
+  'AI-CN-009': {
+    gradient: ['#8DD8FF', '#0C7ABF'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-46 -70 L14 -70 L34 -50 L34 66 L-46 66 Z"/>
+      <path d="M14 -70 L14 -50 L34 -50"/>
+      <path d="M-26 -20 H14 M-26 4 H14 M-26 28 H-2"/>
+      <circle cx="38" cy="52" r="28" fill="${c}" stroke="none"/>
+    </g>
+    <path d="M28 52 H48 M40 42 L50 52 L40 62" stroke="#0C7ABF" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
 }
 
 // A generic fallback for any future "Multi"-prefixed product not yet mapped

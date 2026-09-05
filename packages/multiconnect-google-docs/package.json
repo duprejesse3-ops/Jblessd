@@ -1,0 +1,33 @@
+{
+  "name": "multiconnect-google-docs",
+  "version": "1.0.0",
+  "description": "Exports Google Docs to local markdown files, one-way, on a schedule — so local-file tools (like MultiVault, sold separately) can see content that otherwise only exists in Google Docs. Zero npm dependencies.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "docs-bridge": "./bin/docs-bridge.mjs"
+  },
+  "main": "./lib/sync.mjs",
+  "exports": {
+    ".": "./lib/sync.mjs",
+    "./auth": "./lib/auth.mjs",
+    "./drive": "./lib/drive.mjs",
+    "./config": "./lib/config.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "docs-bridge": "node bin/docs-bridge.mjs",
+    "test": "node test/sync.test.mjs && node test/auth.test.mjs && node test/config.test.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
