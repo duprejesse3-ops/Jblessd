@@ -73,11 +73,31 @@ that's offline, or that doesn't have a safe-mode concept at all (like the
 Webhook Bridge or MultiWitness), is reported honestly as such — this never
 pretends something worked when it didn't.
 
+## The activity log
+
+Every registration, removal, and kill-switch engagement is recorded to
+\`guard.log.json\`, next to \`guard.config.json\` — so restarting MultiGuard
+(a crash, an update, a reboot) doesn't wipe the record of what just
+happened, which matters most right after an incident that involved
+restarting it. Capped at the 200 most recent entries.
+
+This is a plain activity feed, not a security log: the file is ordinary,
+editable JSON with no tamper-evidence property. If you need a provable,
+tamper-evident record of MultiGuard's own actions specifically, that's
+what [MultiWitness](../multiwitness) (sold separately) is for — the two
+stay separate products on purpose, same one-tool-one-job reasoning as
+[\`multivault-docs-bridge\`](../multivault-docs-bridge)'s split from MultiVault.
+
 ## Development
 
 \`\`\`
 npm test
 \`\`\`
+
+Runs all five suites (31 tests total) — registry, probing, kill switch,
+the persisted activity log (including a real restart: a second server
+instance against the same config directory picking up the first
+instance's log entries), and the HTTP server end-to-end.
 
 Zero dependencies — plain Node.js (18+), no build step.
 
@@ -170,8 +190,8 @@ with a file that gets separated from this license.
     path: "package.json",
     contents: `{
   "name": "multiguard",
-  "version": "1.0.0",
-  "description": "One dashboard and kill switch for every MultiConnect tool you run — see and control them all in one place.",
+  "version": "1.1.0",
+  "description": "One dashboard and kill switch for every MultiConnect tool you run — see and control them all in one place, with a persisted activity log that survives a restart.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
@@ -404,6 +424,31 @@ export async function engageKillSwitch(connectors) {
 // Licensed to a single purchaser under the terms in LICENSE.md.
 // Redistribution or resale of this source, in whole or in part, is not permitted.
 
+// The activity log — "connector X registered", "kill switch engaged,
+// 3/4 switched" — shown on the dashboard's log tab. Persisted to a plain
+// JSON file (guard.log.json, next to guard.config.json) so a restart of
+// MultiGuard itself doesn't wipe the record of what just happened, which
+// matters most exactly when you'd want it least: right after an incident
+// that involved restarting MultiGuard.
+//
+// This is NOT MultiWitness. MultiWitness (sold separately) is a tamper-
+// evident, hash-chained log meant to prove after the fact that an entry
+// wasn't altered. This is a plain activity feed for MultiGuard's own
+// dashboard — readable, editable JSON on disk, no chaining, no proof
+// property. If you need the tamper-evidence guarantee for MultiGuard's own
+// actions specifically, that's what MultiWitness is for; the two are
+// separate products on purpose, same reasoning as MultiVault's
+// \`multivault-docs-bridge\` split — one small tool, one job.
+//
+// createLog(logPath) returns an instance bound to one file, rather than
+// module-level global state — each MultiGuard process (and, in tests, each
+// server instance) gets its own log file and its own in-memory cache, so
+// two instances pointed at different --config paths never see each other's
+// activity, and tests never leak entries across each other by accident.
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import path from 'node:path'
+
 const MAX_ENTRIES = 200
 
 /**
@@ -416,30 +461,58 @@ const MAX_ENTRIES = 200
  * }} LogEntry
  */
 
-/** @type {LogEntry[]} */
-const entries = []
-let seq = 0
+function loadEntries(logPath) {
+  if (!existsSync(logPath)) return []
+  try {
+    const parsed = JSON.parse(readFileSync(logPath, 'utf8'))
+    return Array.isArray(parsed) ? parsed : [] // corrupt/unexpected shape — start fresh rather than crash
+  } catch {
+    return [] // corrupt/partial file (e.g. killed mid-write) — same "don't crash, start clean" stance as index-store's loadIndex()
+  }
+}
+
+function persist(logPath, entries) {
+  mkdirSync(path.dirname(logPath), { recursive: true })
+  writeFileSync(logPath, JSON.stringify(entries, null, 2) + '\\n', 'utf8')
+}
 
 /**
- * @param {Omit<LogEntry, 'id' | 'at'>} entry
- * @returns {LogEntry}
+ * @param {string} logPath
  */
-export function record(entry) {
-  seq += 1
-  /** @type {LogEntry} */
-  const full = { id: String(seq), at: new Date().toISOString(), ...entry }
-  entries.unshift(full)
-  if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES
-  return full
+export function createLog(logPath) {
+  let entries = loadEntries(logPath)
+  let seq = entries.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0)
+
+  return {
+    /**
+     * @param {Omit<LogEntry, 'id' | 'at'>} entry
+     * @returns {LogEntry}
+     */
+    record(entry) {
+      seq += 1
+      /** @type {LogEntry} */
+      const full = { id: String(seq), at: new Date().toISOString(), ...entry }
+      entries.unshift(full)
+      if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES
+      persist(logPath, entries)
+      return full
+    },
+
+    /** @returns {LogEntry[]} */
+    recent(limit = 50) {
+      return entries.slice(0, limit)
+    },
+
+    clear() {
+      entries = []
+      persist(logPath, entries)
+    },
+  }
 }
 
-/** @returns {LogEntry[]} */
-export function recent(limit = 50) {
-  return entries.slice(0, limit)
-}
-
-export function clear() {
-  entries.length = 0
+/** Default location: guard.log.json next to the given guard.config.json path. */
+export function defaultLogPath(configPath) {
+  return path.join(path.dirname(configPath), 'guard.log.json')
 }
 `,
   },
@@ -589,11 +662,11 @@ import http from 'node:http'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { loadConfig } from './config.mjs'
+import { loadConfig, defaultConfigPath } from './config.mjs'
 import { addConnector, listConnectors, removeConnector, RegistryError } from './registry.mjs'
 import { probeAll } from './probe.mjs'
 import { engageKillSwitch } from './killswitch.mjs'
-import { record, recent, clear as clearLog } from './log.mjs'
+import { createLog, defaultLogPath } from './log.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const UI_DIR = path.join(__dirname, 'ui')
@@ -649,6 +722,9 @@ export function createServer(opts = {}) {
   let config = loadConfig(opts.configPath)
   if (opts.port) config.port = opts.port
 
+  const configPath = opts.configPath ?? defaultConfigPath()
+  const log = createLog(opts.logPath ?? defaultLogPath(configPath))
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
 
@@ -677,7 +753,7 @@ export function createServer(opts = {}) {
       try {
         const body = await readJsonBody(req)
         const connector = addConnector(config, body, opts.configPath)
-        record({ kind: 'registered', summary: \`Registered "\${connector.name}"\`, detail: connector.baseUrl })
+        log.record({ kind: 'registered', summary: \`Registered "\${connector.name}"\`, detail: connector.baseUrl })
         const { token, ...safe } = connector
         return json(res, 201, { connector: safe })
       } catch (err) {
@@ -690,7 +766,7 @@ export function createServer(opts = {}) {
       try {
         const connector = config.connectors.find((c) => c.id === removeMatch[1])
         removeConnector(config, removeMatch[1], opts.configPath)
-        record({ kind: 'removed', summary: \`Removed "\${connector?.name ?? removeMatch[1]}"\`, detail: null })
+        log.record({ kind: 'removed', summary: \`Removed "\${connector?.name ?? removeMatch[1]}"\`, detail: null })
         return json(res, 200, { ok: true })
       } catch (err) {
         return json(res, err instanceof RegistryError ? 404 : 500, { error: err.message })
@@ -705,7 +781,7 @@ export function createServer(opts = {}) {
     if (req.method === 'POST' && url.pathname === '/api/kill-switch') {
       const results = await engageKillSwitch(listConnectors(config))
       const okCount = results.filter((r) => r.ok).length
-      record({
+      log.record({
         kind: 'kill-switch',
         summary: \`Kill switch engaged — \${okCount}/\${results.length} connectors switched to read-only\`,
         detail: JSON.stringify(results),
@@ -714,10 +790,10 @@ export function createServer(opts = {}) {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/log') {
-      return json(res, 200, { entries: recent(Number(url.searchParams.get('limit') ?? 50)) })
+      return json(res, 200, { entries: log.recent(Number(url.searchParams.get('limit') ?? 50)) })
     }
     if (req.method === 'POST' && url.pathname === '/api/log/clear') {
-      clearLog()
+      log.clear()
       return json(res, 200, { ok: true })
     }
 
@@ -725,7 +801,7 @@ export function createServer(opts = {}) {
     res.end()
   })
 
-  return { server, config }
+  return { server, config, logPath: opts.logPath ?? defaultLogPath(configPath) }
 }
 `,
   },
@@ -962,7 +1038,7 @@ async function main() {
   const args = parseArgs(rest)
 
   if (args.help) { console.log(USAGE); process.exit(0) }
-  if (args.version) { console.log('1.0.0'); process.exit(0) }
+  if (args.version) { console.log('1.1.0'); process.exit(0) }
   if (cmd !== 'start') { console.log(USAGE); process.exit(2) }
 
   const { server, config } = createServer({ port: args.port, configPath: args.config ?? defaultConfigPath() })
@@ -1139,6 +1215,181 @@ test('engageKillSwitch on an empty connector list returns an empty array', async
 `,
   },
   {
+    path: "test/log.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { createLog, defaultLogPath } from '../lib/log.mjs'
+import { createServer } from '../lib/server.mjs'
+
+function tempLogPath() {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mcg-log-'))
+  return { logPath: path.join(dir, 'guard.log.json'), cleanup: () => rmSync(dir, { recursive: true, force: true }) }
+}
+
+// ---------------------------------------------------------------------------
+// createLog — unit level
+// ---------------------------------------------------------------------------
+
+test('record() writes an entry to disk immediately, in the same shape recent() returns', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const log = createLog(logPath)
+    const entry = log.record({ kind: 'registered', summary: 'Registered "Shopify"', detail: 'http://localhost:8421' })
+    assert.equal(entry.kind, 'registered')
+    assert.ok(entry.id)
+    assert.ok(entry.at)
+
+    const onDisk = JSON.parse(readFileSync(logPath, 'utf8'))
+    assert.equal(onDisk.length, 1)
+    assert.deepEqual(onDisk[0], entry)
+  } finally {
+    cleanup()
+  }
+})
+
+test('a fresh createLog() against an existing file loads its entries (this is the actual persistence guarantee)', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const first = createLog(logPath)
+    first.record({ kind: 'registered', summary: 'a', detail: null })
+    first.record({ kind: 'removed', summary: 'b', detail: null })
+
+    const second = createLog(logPath) // simulates a fresh process reading the same file after a restart
+    const entries = second.recent()
+    assert.equal(entries.length, 2)
+    assert.equal(entries[0].summary, 'b') // most recent first
+    assert.equal(entries[1].summary, 'a')
+  } finally {
+    cleanup()
+  }
+})
+
+test('ids keep incrementing across a reload instead of restarting from 1 and colliding', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const first = createLog(logPath)
+    first.record({ kind: 'registered', summary: 'a', detail: null })
+    first.record({ kind: 'registered', summary: 'b', detail: null })
+
+    const second = createLog(logPath)
+    const entry = second.record({ kind: 'registered', summary: 'c', detail: null })
+    assert.equal(entry.id, '3')
+  } finally {
+    cleanup()
+  }
+})
+
+test('recent() respects the caller-supplied limit and returns newest first', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const log = createLog(logPath)
+    for (let i = 0; i < 5; i++) log.record({ kind: 'registered', summary: \`entry \${i}\`, detail: null })
+    const top2 = log.recent(2)
+    assert.equal(top2.length, 2)
+    assert.equal(top2[0].summary, 'entry 4')
+    assert.equal(top2[1].summary, 'entry 3')
+  } finally {
+    cleanup()
+  }
+})
+
+test('entries beyond the 200-entry cap are dropped, oldest first, both in memory and on disk', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const log = createLog(logPath)
+    for (let i = 0; i < 205; i++) log.record({ kind: 'registered', summary: \`entry \${i}\`, detail: null })
+    assert.equal(log.recent(1000).length, 200)
+    assert.equal(log.recent(1)[0].summary, 'entry 204') // newest survives
+    const onDisk = JSON.parse(readFileSync(logPath, 'utf8'))
+    assert.equal(onDisk.length, 200)
+  } finally {
+    cleanup()
+  }
+})
+
+test('clear() empties both memory and the on-disk file', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const log = createLog(logPath)
+    log.record({ kind: 'registered', summary: 'a', detail: null })
+    log.clear()
+    assert.equal(log.recent().length, 0)
+    assert.deepEqual(JSON.parse(readFileSync(logPath, 'utf8')), [])
+  } finally {
+    cleanup()
+  }
+})
+
+test('a missing log file starts empty rather than throwing', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    const log = createLog(logPath) // tempLogPath() only creates the directory, never the file itself
+    assert.deepEqual(log.recent(), [])
+  } finally {
+    cleanup()
+  }
+})
+
+test('a corrupt log file is treated as empty rather than crashing the process', () => {
+  const { logPath, cleanup } = tempLogPath()
+  try {
+    writeFileSync(logPath, '{not valid json')
+    const log = createLog(logPath)
+    assert.deepEqual(log.recent(), [])
+  } finally {
+    cleanup()
+  }
+})
+
+test('defaultLogPath() places guard.log.json next to the given config path', () => {
+  const configPath = path.join('some', 'dir', 'guard.config.json')
+  assert.equal(defaultLogPath(configPath), path.join('some', 'dir', 'guard.log.json'))
+})
+
+// ---------------------------------------------------------------------------
+// End-to-end: the actual point of this feature — survives a real restart
+// ---------------------------------------------------------------------------
+
+test('activity log survives a MultiGuard restart (new createServer() call against the same config dir)', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mcg-log-restart-'))
+  const configPath = path.join(dir, 'guard.config.json')
+  try {
+    const first = createServer({ port: 0, configPath })
+    await new Promise((resolve) => first.server.listen(0, resolve))
+    const port1 = first.server.address().port
+
+    await fetch(\`http://localhost:\${port1}/api/connectors\`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: \`Bearer \${first.config.dashboardToken}\` },
+      body: JSON.stringify({ name: 'Shopify', baseUrl: 'http://localhost:8421', token: 't' }),
+    })
+    await new Promise((resolve) => first.server.close(resolve)) // simulates Ctrl+C / a restart
+
+    // A brand-new server instance, same --config, standing in for the process restarting.
+    const second = createServer({ port: 0, configPath })
+    await new Promise((resolve) => second.server.listen(0, resolve))
+    const port2 = second.server.address().port
+    try {
+      const logRes = await fetch(\`http://localhost:\${port2}/api/log\`, { headers: { authorization: \`Bearer \${second.config.dashboardToken}\` } })
+      const { entries } = await logRes.json()
+      assert.ok(entries.some((e) => e.kind === 'registered' && e.summary.includes('Shopify')), 'the entry recorded before restart should still be there after it')
+    } finally {
+      second.server.close()
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
     path: "test/probe.test.mjs",
     contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
@@ -1311,6 +1562,7 @@ test('removeConnector deletes an existing connector and throws on an unknown one
 import './registry.test.mjs'
 import './probe.test.mjs'
 import './killswitch.test.mjs'
+import './log.test.mjs'
 import './server.test.mjs'
 `,
   },

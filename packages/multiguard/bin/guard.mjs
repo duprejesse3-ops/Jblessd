@@ -38,7 +38,7 @@ async function main() {
   const args = parseArgs(rest)
 
   if (args.help) { console.log(USAGE); process.exit(0) }
-  if (args.version) { console.log('1.0.0'); process.exit(0) }
+  if (args.version) { console.log('1.1.0'); process.exit(0) }
   if (cmd !== 'start') { console.log(USAGE); process.exit(2) }
 
   const { server, config } = createServer({ port: args.port, configPath: args.config ?? defaultConfigPath() })

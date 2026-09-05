@@ -12,11 +12,11 @@ import http from 'node:http'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { loadConfig } from './config.mjs'
+import { loadConfig, defaultConfigPath } from './config.mjs'
 import { addConnector, listConnectors, removeConnector, RegistryError } from './registry.mjs'
 import { probeAll } from './probe.mjs'
 import { engageKillSwitch } from './killswitch.mjs'
-import { record, recent, clear as clearLog } from './log.mjs'
+import { createLog, defaultLogPath } from './log.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const UI_DIR = path.join(__dirname, 'ui')
@@ -72,6 +72,9 @@ export function createServer(opts = {}) {
   let config = loadConfig(opts.configPath)
   if (opts.port) config.port = opts.port
 
+  const configPath = opts.configPath ?? defaultConfigPath()
+  const log = createLog(opts.logPath ?? defaultLogPath(configPath))
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
 
@@ -100,7 +103,7 @@ export function createServer(opts = {}) {
       try {
         const body = await readJsonBody(req)
         const connector = addConnector(config, body, opts.configPath)
-        record({ kind: 'registered', summary: `Registered "${connector.name}"`, detail: connector.baseUrl })
+        log.record({ kind: 'registered', summary: `Registered "${connector.name}"`, detail: connector.baseUrl })
         const { token, ...safe } = connector
         return json(res, 201, { connector: safe })
       } catch (err) {
@@ -113,7 +116,7 @@ export function createServer(opts = {}) {
       try {
         const connector = config.connectors.find((c) => c.id === removeMatch[1])
         removeConnector(config, removeMatch[1], opts.configPath)
-        record({ kind: 'removed', summary: `Removed "${connector?.name ?? removeMatch[1]}"`, detail: null })
+        log.record({ kind: 'removed', summary: `Removed "${connector?.name ?? removeMatch[1]}"`, detail: null })
         return json(res, 200, { ok: true })
       } catch (err) {
         return json(res, err instanceof RegistryError ? 404 : 500, { error: err.message })
@@ -128,7 +131,7 @@ export function createServer(opts = {}) {
     if (req.method === 'POST' && url.pathname === '/api/kill-switch') {
       const results = await engageKillSwitch(listConnectors(config))
       const okCount = results.filter((r) => r.ok).length
-      record({
+      log.record({
         kind: 'kill-switch',
         summary: `Kill switch engaged — ${okCount}/${results.length} connectors switched to read-only`,
         detail: JSON.stringify(results),
@@ -137,10 +140,10 @@ export function createServer(opts = {}) {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/log') {
-      return json(res, 200, { entries: recent(Number(url.searchParams.get('limit') ?? 50)) })
+      return json(res, 200, { entries: log.recent(Number(url.searchParams.get('limit') ?? 50)) })
     }
     if (req.method === 'POST' && url.pathname === '/api/log/clear') {
-      clearLog()
+      log.clear()
       return json(res, 200, { ok: true })
     }
 
@@ -148,5 +151,5 @@ export function createServer(opts = {}) {
     res.end()
   })
 
-  return { server, config }
+  return { server, config, logPath: opts.logPath ?? defaultLogPath(configPath) }
 }

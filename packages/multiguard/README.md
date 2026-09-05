@@ -50,11 +50,31 @@ that's offline, or that doesn't have a safe-mode concept at all (like the
 Webhook Bridge or MultiWitness), is reported honestly as such — this never
 pretends something worked when it didn't.
 
+## The activity log
+
+Every registration, removal, and kill-switch engagement is recorded to
+`guard.log.json`, next to `guard.config.json` — so restarting MultiGuard
+(a crash, an update, a reboot) doesn't wipe the record of what just
+happened, which matters most right after an incident that involved
+restarting it. Capped at the 200 most recent entries.
+
+This is a plain activity feed, not a security log: the file is ordinary,
+editable JSON with no tamper-evidence property. If you need a provable,
+tamper-evident record of MultiGuard's own actions specifically, that's
+what [MultiWitness](../multiwitness) (sold separately) is for — the two
+stay separate products on purpose, same one-tool-one-job reasoning as
+[`multivault-docs-bridge`](../multivault-docs-bridge)'s split from MultiVault.
+
 ## Development
 
 ```
 npm test
 ```
+
+Runs all five suites (31 tests total) — registry, probing, kill switch,
+the persisted activity log (including a real restart: a second server
+instance against the same config directory picking up the first
+instance's log entries), and the HTTP server end-to-end.
 
 Zero dependencies — plain Node.js (18+), no build step.
 

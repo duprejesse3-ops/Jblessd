@@ -5,4 +5,5 @@
 import './registry.test.mjs'
 import './probe.test.mjs'
 import './killswitch.test.mjs'
+import './log.test.mjs'
 import './server.test.mjs'

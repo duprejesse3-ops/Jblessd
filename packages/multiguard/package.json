@@ -1,7 +1,7 @@
 {
   "name": "multiguard",
-  "version": "1.0.0",
-  "description": "One dashboard and kill switch for every MultiConnect tool you run — see and control them all in one place.",
+  "version": "1.1.0",
+  "description": "One dashboard and kill switch for every MultiConnect tool you run — see and control them all in one place, with a persisted activity log that survives a restart.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {

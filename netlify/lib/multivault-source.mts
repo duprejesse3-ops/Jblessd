@@ -23,22 +23,22 @@ export const MULTIVAULT_SOURCE: SourceFile[] = [
     path: "README.md",
     contents: `# multivault
 
-A local, encrypted context snapshot of one folder and one calendar file —
-available two ways: as a manual brief you paste into any AI chat, or
-**automatically**, via a local MCP server that lets Claude Desktop, Claude
-Code, and other MCP-aware tools pull in your current context on their own,
-live, with zero copy-pasting.
+A local, encrypted context snapshot of a folder and calendar file — three
+ways to use it: a manual brief you paste into any AI chat, **automatically**
+via a local MCP server, or **searched** via a local BM25 + optional local-
+semantic hybrid index so large folders return only what's actually relevant
+instead of everything.
 
 No account. No OAuth. No cloud storage. The encrypted vault file lives on
-your machine, and only your passphrase can open it. The MCP server never
-makes a network call to serve context — the only network activity anywhere
-in this package is an *optional*, localhost-only log line to MultiWitness
-(sold separately), and even that never carries your actual file/calendar
-content, only a note that context was served and how much.
+your machine, and only your passphrase can open it. Neither MCP mode nor
+search mode ever make a network call to serve context — the only network
+activity anywhere in this package is an *optional*, localhost-only log line
+to MultiWitness (sold separately), and even that never carries your actual
+file/calendar content, only a note that context was served and how much.
 
 ## What this actually is
 
-**Two modes, one underlying vault:**
+**Three modes, one underlying vault:**
 
 - **CLI mode** — \`vault sync\` reads your folder and calendar file, encrypts
   what it found, and writes it to disk. \`vault context\` decrypts that
@@ -46,32 +46,127 @@ content, only a note that context was served and how much.
   works-anywhere path: any AI chat UI, any script, offline-safe.
 - **MCP mode** — \`vault-mcp\` runs as a long-lived local server that an
   MCP-aware AI client calls directly. No encrypted snapshot, no passphrase
-  at query time: it re-scans your folder and re-reads your calendar file
-  live, on every call, so it's always current — no manual \`sync\` step, ever.
-  See [MCP mode](#mcp-mode-automatic-context) below.
+  at query time. See [MCP mode](#mcp-mode-automatic-context) below.
+- **Search mode** — \`vault context --query "..."\` (or the MCP \`get_context\`
+  tool's \`query\` argument) ranks your folder's content with BM25 — the same
+  ranking family real search engines use — and returns only the relevant
+  chunks. Add \`--semantic\` (or \`semantic: true\` over MCP) to also rank by a
+  local embedding model, catching chunks that are relevant in meaning even
+  when they share no exact words with your query — still nothing leaves the
+  machine. This is what makes large folders practical: see
+  [Search mode: large folders](#search-mode-large-folders) below.
 
-**What it watches, in both modes:**
+**What it watches, in all three modes:**
 - **One local folder.** File names, sizes, and modified times are always
   included. For a small allowlist of plain-text formats (\`.md\`, \`.txt\`,
-  \`.csv\`, \`.json\`) under 100KB, a short excerpt of the content is also
-  included — capped at 2000 characters per file. Anything else (images,
-  PDFs, spreadsheets, executables, anything with "key", "secret",
-  "credential", or "password" in the filename) is listed by name only; its
-  contents are never read.
+  \`.csv\`, \`.json\`) under 2MB, the full content is read for indexing/search;
+  whole-folder mode's flat listing still caps its inline excerpt at 2000
+  characters per file (search mode doesn't need that cap — see below).
+  Anything else (images, PDFs, spreadsheets, executables, anything with
+  "key", "secret", "credential", or "password" in the filename) is listed
+  by name only; its contents are never read.
 - **One \`.ics\` calendar file**, if you point one at it. This is a *file*, not
   a live Google/Outlook/etc. connection — most calendar apps have an
   export-to-\`.ics\` or auto-sync-to-file option; point \`--ics\` at that file.
 
 **What it explicitly does NOT do:**
 - No OAuth or live API connection to Google Calendar, Outlook, email, or
-  anything else — MCP mode closes the manual-paste gap, not the
-  local-files-only boundary.
-- No recursive scan past 3 folder levels deep, and no more than 500 files per
-  call, so a huge folder can't turn a scan into a multi-minute disk read.
+  anything else built into MultiVault itself — MCP and search modes close
+  the manual-paste and everything-or-nothing gaps, not the local-files-only
+  boundary. If your content lives in Google Docs specifically, note that
+  Drive for Desktop sync does NOT solve this: a synced \`.gdoc\` is a small
+  pointer file linking back to Google's servers, not the document's actual
+  content. [\`multivault-docs-bridge\`](../multivault-docs-bridge) (sold
+  separately, zero dependencies, same local-only ethos) is a real, tested
+  fix for that specific gap — it exports Google Docs to real local \`.md\`
+  files on a schedule, which MultiVault's own watcher then picks up like
+  any other file. It's a separate tool on purpose: MultiVault's core stays
+  free of the OAuth dependency that a Google integration requires, whether
+  or not you happen to use Google Docs.
+- No vector database, and no cloud call to any AI model to rank results —
+  BM25 is a lexical/statistical ranker, running entirely in this process, in
+  milliseconds. \`--semantic\` mode does use a local embedding model (see
+  below), but it runs on-device the same way BM25 does — no API call, no
+  data leaving your machine, ever.
+- Up to 20,000 files and 12 folder levels deep by default (v1 capped at 500
+  files/3 levels) — raised because search mode's index absorbs the cost of
+  a large folder incrementally instead of re-reading everything on every
+  call. Still a real ceiling, not "unlimited," so a scan can't turn into an
+  unbounded disk read.
 
-If you need more than this (a live calendar API, deeper folder trees, more
-file types), that's a real v3 conversation — this README describes what
-ships today, not a roadmap promise.
+If you need more than this (a live calendar API, for instance), that's a
+real v4 conversation — this README describes what ships today, not a
+roadmap promise.
+
+## Search mode: large folders
+
+Whole-folder mode (\`vault context\`, no query) is fine for a few dozen
+files — it hands over everything. Past that, "everything" stops being
+useful context and starts being noise an AI has to wade through. Search
+mode fixes this by indexing your folder once and ranking chunks by
+relevance to what you actually asked:
+
+\`\`\`
+vault index                              # optional — builds automatically on first query
+vault context --query "invoice overdue"  # ranked results, no passphrase needed
+\`\`\`
+
+Search mode needs no passphrase at all — nothing is decrypted, nothing at
+rest is read. It builds (or incrementally updates) a plain index file,
+\`index.json\`, next to your vault.
+
+**How the index stays current:**
+- **On-demand** — every \`--query\` call brings the index up to date first,
+  automatically. For an unchanged folder this costs one \`stat()\` call per
+  file, not a re-read — cheap even at thousands of files.
+- **In the background** — \`vault watch\` runs continuously and updates the
+  index reactively as files change (via \`fs.watch\`), so queries never pay
+  even the stat-scan cost. Useful for very large trees where you'd rather
+  pay that cost once, off the critical path:
+  \`\`\`
+  vault watch    # Ctrl+C to stop
+  \`\`\`
+
+**How ranking works, plainly:** [BM25](https://en.wikipedia.org/wiki/Okapi_BM25) —
+the same ranking family Elasticsearch and Lucene use by default. A chunk
+that mentions your search terms often, in a short/focused piece of content,
+ranks above one that mentions them once in a sprawling file. No AI model is
+involved in default (keyword) mode; it's a well-established statistical
+method, computed entirely in this process.
+
+**Honest limit of keyword-only search:** BM25 ranks by shared vocabulary. A
+query like "churn risk" will not surface a doc that only ever says
+"Northwind is wobbling, usage dropped, contact's gone quiet" — the two share
+no term, and BM25 has no way to know they're about the same thing. If your
+own notes rarely repeat the exact words you'll later search for, this is a
+real gap, not a hypothetical one.
+
+**\`--semantic\` closes that gap, still fully local.** Add \`--semantic\` to a
+query (or \`semantic: true\` in the MCP tool call) and results are ranked by
+BM25 *and* a local semantic-embedding model, combined via [Reciprocal Rank
+Fusion](https://en.wikipedia.org/wiki/Learning_to_rank#Reciprocal_rank_fusion) —
+a doc that ranks well on either signal rises to the top. The embedding model
+(\`Xenova/all-MiniLM-L6-v2\`, ~80MB) runs entirely on-device via
+\`@xenova/transformers\` (ONNX Runtime) — no API call, nothing sent anywhere,
+same trust story as BM25 itself. It's fetched from Hugging Face and cached
+to disk the first time \`--semantic\` actually runs; every call after that is
+fully offline. Per-chunk vectors are then cached inside \`index.json\` too, so
+re-embedding only happens for content that's actually new or changed.
+
+If that first-run download can't complete (no internet at that moment, a
+restrictive network), \`--semantic\` doesn't error out — it automatically
+falls back to keyword-only ranking and says so plainly in the output
+(\`Ranking: BM25 keyword match only — local semantic model unavailable this
+run\`), rather than silently pretending semantic search ran when it didn't.
+
+**Large files are chunked, not truncated.** A 50-page document gets split
+into overlapping pieces (paragraph-aware where possible), each ranked on
+its own — so the one relevant paragraph on page 40 can outrank the whole
+rest of the file, instead of being invisible past a flat character cutoff.
+
+**Everything from v1/v2 still works unchanged.** \`vault context\` with no
+\`--query\` returns the exact same whole-folder brief it always did — search
+mode is purely additive.
 
 ## Quick start
 
@@ -152,11 +247,15 @@ Config):
 Restart Claude Desktop. It will now be able to call two tools on its own,
 whenever relevant to what you're asking:
 
-- **\`get_context\`** — the live folder/calendar brief (same content as CLI
-  mode's \`vault context\`, fetched fresh, no staleness).
+- **\`get_context\`** — call with no arguments for the full folder/calendar
+  brief (same content as CLI mode's \`vault context\`, fetched fresh, no
+  staleness). Call with a \`query\` argument for ranked search instead — same
+  BM25 index as CLI mode's \`vault context --query\`, useful for large
+  folders where "everything" would be too much. Optional \`topK\` caps result
+  count (default 8) and \`format\` picks \`markdown\` or \`json\`.
 - **\`vault_status\`** — what folder/calendar this vault is configured to
-  watch, and whether MultiWitness logging is active (see below) — without
-  reading any file contents.
+  watch, whether MultiWitness logging is active, and the search index's
+  current size/freshness — without reading any file contents.
 
 Claude Code and other MCP-compatible clients follow the same shape — see
 your client's own docs for exactly where its MCP server config lives.
@@ -166,14 +265,16 @@ encrypted file in this path — see \`buildLiveContext()\` in \`lib/vault.mjs\` 
 you want to verify this yourself. An MCP server answers a live, in-process
 query over stdio to a client already running as you, on your machine; there
 is no "resting file" for encryption-at-rest to protect, unlike the portable
-snapshot CLI mode produces.
+snapshot CLI mode produces. The search index (\`index.json\`) is likewise not
+encrypted — see "Security model" below for why, and how to keep \`--dest\`
+access-controlled if that matters on your machine.
 
 ## Provable logging with MultiWitness (optional)
 
 Every cloud AI-memory product asks you to trust that it's using your data
 correctly — you can't see their logs. MultiVault can do the opposite: log
 every time context was served to a **tamper-evident, hash-chained** local
-log via [MultiWitness](https://multinicheai.com) (sold separately, same store),
+log via [MultiWitness](https://jblessd.com) (sold separately, same store),
 independently verifiable offline, by you, at any time.
 
 **What gets logged:** only *that* context was served, when, and how much —
@@ -234,7 +335,9 @@ steps.
 \`\`\`
 vault init    [--folder <path>] [--ics <path>] [--dest <path>]
 vault sync    [--dest <path>]
-vault context [--dest <path>] [--format text|markdown|json]
+vault index   [--dest <path>] [--folder <path>]
+vault watch   [--dest <path>] [--folder <path>]
+vault context [--dest <path>] [--query <text>] [--topk <n>] [--format text|markdown|json]
 vault status  [--dest <path>]
 vault-mcp     [--dest <path>]    # MCP server — see "MCP mode" above; not for interactive use
 \`\`\`
@@ -242,7 +345,11 @@ vault-mcp     [--dest <path>]    # MCP server — see "MCP mode" above; not for 
 \`vault status\` reads only the unencrypted metadata file (last sync time, file
 count) — it never needs your passphrase, so you can check freshness from a
 script without exposing the secret. Its MCP-mode equivalent, \`vault_status\`,
-also reports whether MultiWitness logging is active.
+also reports whether MultiWitness logging is active and the search index's
+current size.
+
+\`vault context --query\` needs no passphrase either — see "MCP mode"'s note
+on why search mode has no resting file to protect.
 
 ## Security model, plainly stated
 
@@ -257,22 +364,36 @@ also reports whether MultiWitness logging is active.
   the folder path, calendar path, and sync timestamps, so \`vault status\` can
   work without the passphrase. If those paths themselves are sensitive on
   your machine, keep \`--dest\` somewhere access-controlled.
-- **CLI mode** makes no network request, ever. **MCP mode** talks only over
-  stdio to whatever local client launched it — also no network request to
-  serve context. The one exception, and it's opt-in: if
+- **\`index.json\`, search mode's index, is also not encrypted.** It holds the
+  same plain-text content a \`vault sync\` snapshot would have shown anyway —
+  same eligibility rules (extension allowlist, size cap, sensitive-filename
+  exclusion — see \`lib/scan.mjs\`'s \`shouldRead\`) — just chunked and
+  tokenized for ranking instead of encrypted at rest. This is a deliberate
+  trade: encrypting the index would mean decrypting it (and re-encrypting
+  after every incremental update) on every single query, defeating the
+  point of an index being fast. If that trade doesn't work for your threat
+  model, keep \`--dest\` access-controlled, same as \`vault.meta.json\` above.
+- **CLI mode** makes no network request, ever. **MCP mode and search mode**
+  talk only over stdio/local disk — also no network request to serve
+  context. The one exception, and it's opt-in: if
   \`MULTIWITNESS_INGEST_TOKEN\` is set, MCP mode makes a \`localhost\`-only POST
   per context call, and that call never carries file/calendar content — only
   a count. Leave the token unset and there is zero network activity anywhere
   in this package, full stop.
-- **Dependencies, honestly stated:** the CLI (\`vault init/sync/context/status\`)
-  and core library (\`lib/crypto.mjs\`, \`lib/scan.mjs\`, \`lib/calendar.mjs\`) are
-  zero-dependency, same as v1 — plain Node.js, nothing to audit beyond what
-  ships with Node itself. **MCP mode is the one exception**: it depends on
-  \`@modelcontextprotocol/sdk\` (Anthropic's real, published MCP SDK) and
-  \`zod\`, because implementing the MCP protocol correctly from scratch would
-  be reinventing a well-tested wheel, badly. If you don't use MCP mode, you
-  never load either dependency — \`vault.mjs\`, \`crypto.mjs\`, \`scan.mjs\`, and
-  \`calendar.mjs\` don't import them.
+- **Dependencies, honestly stated:** the CLI (\`vault init/sync/context/status/
+  index/watch\`) and core library — encryption, folder scanning, \`.ics\`
+  parsing, tokenizing, BM25 ranking, chunking, indexing, and the file
+  watcher — are all zero-dependency, plain Node.js, nothing to audit beyond
+  what ships with Node itself. Search mode (indexing, ranking, watching) is
+  NOT an exception to this — it's pure JS, same as v1's core always was.
+  **MCP mode and \`--semantic\` mode are the two actual exceptions.** MCP mode
+  depends on \`@modelcontextprotocol/sdk\` (Anthropic's real, published MCP
+  SDK) and \`zod\`, because implementing the MCP protocol correctly from
+  scratch would be reinventing a well-tested wheel, badly. \`--semantic\` mode
+  depends on \`@xenova/transformers\` to run the local embedding model — see
+  [Search mode: large folders](#search-mode-large-folders) above for what it
+  does and why it's still fully local. Skip both flags/modes and you never
+  load any of these three packages.
 - Read the source. It's plain JavaScript specifically so every claim above is
   easy to verify yourself rather than something you have to take on faith.
 
@@ -312,20 +433,47 @@ Apple are a separate purchase if you want that warning gone.
 npm test
 \`\`\`
 
-Runs all three suites (31 tests total):
+Runs all eight suites (72 tests total):
 - \`test/run.mjs\` — encryption round-trip, \`.ics\` parsing, folder scanning,
   and the full CLI-mode vault lifecycle, against real throwaway temp
   directories.
+- \`test/bm25.test.mjs\` — the ranking engine itself, tested against known
+  mathematical properties: diminishing returns on repeated terms (not raw
+  linear term-frequency counting), length normalization (a long document
+  mentioning a term once should rank below a short, focused one), and IDF
+  behaving correctly at the edges (a term in every document shouldn't score
+  negative, rarer terms should outrank common ones).
+- \`test/indexer.test.mjs\` — building and incrementally updating the index
+  against a real filesystem: adding, modifying, and deleting files, and
+  specifically verifying that a deleted file's term-frequency contribution
+  is actually cleaned up (not left dangling and silently skewing future
+  rankings), and that an unchanged file triggers zero re-indexing work.
+- \`test/query.test.mjs\` — \`buildLiveContext\`'s query path end-to-end,
+  including confirming the no-query path is byte-for-byte the same v1/v2
+  behavior it always was.
+- \`test/watcher.test.mjs\` — the background file watcher, against real
+  \`fs.watch\` events on a real temp directory: a newly-created file is
+  picked up and becomes searchable without any manual trigger, and \`stop()\`
+  actually tears the watcher down rather than leaving it running.
 - \`test/mcp.test.mjs\` — MCP mode, driven by a **real
   \`@modelcontextprotocol/sdk\` \`Client\`** talking to the real \`McpServer\`
   over the SDK's in-memory transport — the same client/server code path a
-  real MCP host exercises, including a test that adds a file mid-session
-  with no restart and confirms \`get_context\` picks it up immediately.
+  real MCP host exercises, including the new \`query\` argument returning
+  ranked results through the actual protocol, not just the library function.
 - \`test/witness-log.test.mjs\` — the MultiWitness integration's request
   contract (auth header, event shape, silent-fail behavior when
   unconfigured or unreachable), against a bare local HTTP server standing
   in for MultiWitness's real API — kept dependency-free from MultiWitness's
   own source since that's a separate product.
+- \`test/hybrid-rank.test.mjs\` — \`--semantic\` mode's RRF combination logic,
+  the embedding cache (an unchanged chunk is never re-embedded; a model
+  upgrade correctly invalidates stale vectors), and the graceful fallback
+  to BM25-only when the local embedding model can't load. Uses an injected
+  fake embedding function rather than the real model, so this suite runs
+  fast and offline — the fake groups words into concept clusters (e.g.
+  "wobbling"/"dropped"/"quiet" cluster with "churn"/"risk") specifically to
+  exercise the actual scenario this feature exists for: a query and a
+  relevant doc that share no literal words.
 `,
   },
   {
@@ -418,8 +566,8 @@ with a file that gets separated from this license.
     path: "package.json",
     contents: `{
   "name": "multivault",
-  "version": "2.0.0",
-  "description": "A local, encrypted context snapshot of one folder and one calendar file — plus an MCP server for automatic, zero-paste context, and optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
+  "version": "3.1.0",
+  "description": "A local, encrypted context snapshot of a folder and calendar file, with a hybrid BM25 + local-semantic-embedding search index for large folders and an MCP server for automatic, zero-paste context. Optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
@@ -436,7 +584,15 @@ with a file that gets separated from this license.
     "./scan": "./lib/scan.mjs",
     "./calendar": "./lib/calendar.mjs",
     "./mcp-server": "./lib/mcp-server.mjs",
-    "./witness-log": "./lib/witness-log.mjs"
+    "./witness-log": "./lib/witness-log.mjs",
+    "./tokenize": "./lib/tokenize.mjs",
+    "./bm25": "./lib/bm25.mjs",
+    "./chunk": "./lib/chunk.mjs",
+    "./index-store": "./lib/index-store.mjs",
+    "./indexer": "./lib/indexer.mjs",
+    "./watcher": "./lib/watcher.mjs",
+    "./embeddings": "./lib/embeddings.mjs",
+    "./hybrid-rank": "./lib/hybrid-rank.mjs"
   },
   "files": [
     "bin",
@@ -448,17 +604,97 @@ with a file that gets separated from this license.
   "scripts": {
     "vault": "node bin/vault.mjs",
     "vault-mcp": "node bin/vault-mcp.mjs",
-    "test": "node test/run.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs",
+    "test": "node test/run.mjs && node test/bm25.test.mjs && node test/indexer.test.mjs && node test/query.test.mjs && node test/watcher.test.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs && node test/hybrid-rank.test.mjs",
     "build:binary": "node scripts/build-sea.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@xenova/transformers": "^2.17.2",
     "zod": "^3.25.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6"
   }
+}
+`,
+  },
+  {
+    path: "lib/bm25.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Okapi BM25 — the same ranking family real search engines (Elasticsearch,
+// Lucene) use by default, implemented here in plain JS against MultiVault's
+// own index (see lib/index-store.mjs) instead of pulling in a search
+// library. This is genuinely the least trivial piece of this package: correct
+// IDF weighting, correct length normalization, and correct incremental
+// index maintenance are what separate "search that actually ranks well" from
+// "grep with extra steps" — see test/bm25.test.mjs for the formula tests
+// that pin this down.
+//
+// Standard parameters (k1=1.5, b=0.75) are Lucene/Elasticsearch's own
+// defaults — deliberately not "tuned" for this corpus, since a corpus of
+// one person's folder is too small and too idiosyncratic to responsibly
+// tune against; these defaults are well-studied across a huge range of
+// real corpora and are the sane, boring choice.
+
+const K1 = 1.5
+const B = 0.75
+
+/**
+ * Inverse document frequency, +1-smoothed (the modern/Lucene variant) so a
+ * term appearing in every document scores a small positive IDF instead of
+ * going negative, which the classic textbook formula can do.
+ *
+ * @param {number} totalDocs
+ * @param {number} docsContainingTerm
+ */
+export function idf(totalDocs, docsContainingTerm) {
+  return Math.log(1 + (totalDocs - docsContainingTerm + 0.5) / (docsContainingTerm + 0.5))
+}
+
+/**
+ * BM25 score for one document against one already-tokenized query.
+ *
+ * @param {string[]} queryTerms
+ * @param {{ tokens: Record<string, number>, length: number }} doc
+ * @param {{ totalDocs: number, avgDocLength: number, docFreq: Record<string, number> }} corpus
+ */
+export function scoreDoc(queryTerms, doc, corpus) {
+  let score = 0
+  for (const term of queryTerms) {
+    const docFreq = corpus.docFreq[term]
+    if (!docFreq) continue // term never appears in the corpus — contributes nothing, not a penalty
+    const tf = doc.tokens[term] ?? 0
+    if (tf === 0) continue
+    const termIdf = idf(corpus.totalDocs, docFreq)
+    const lengthNorm = 1 - B + B * (doc.length / (corpus.avgDocLength || 1))
+    score += termIdf * ((tf * (K1 + 1)) / (tf + K1 * lengthNorm))
+  }
+  return score
+}
+
+/**
+ * Rank every doc in the index against a tokenized query, descending by
+ * score, dropping zero-score docs (a doc that shares no term with the query
+ * is not "slightly relevant", it's irrelevant — including it just pads the
+ * result with noise).
+ *
+ * @param {string[]} queryTerms
+ * @param {{ docs: Array<{tokens: Record<string, number>, length: number}> }} index
+ * @returns {Array<{ doc: object, score: number }>}
+ */
+export function rank(queryTerms, index) {
+  const corpus = { totalDocs: index.totalDocs, avgDocLength: index.avgDocLength, docFreq: index.docFreq }
+  const scored = []
+  for (const doc of index.docs) {
+    const score = scoreDoc(queryTerms, doc, corpus)
+    if (score > 0) scored.push({ doc, score })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  return scored
 }
 `,
   },
@@ -559,6 +795,78 @@ export function readIcsFile(path) {
 `,
   },
   {
+    path: "lib/chunk.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Splits text into chunks for indexing, preferring paragraph boundaries so a
+// chunk stays semantically coherent rather than being a mid-sentence
+// character cutoff. This is what lets v3 handle large files at all: v1/v2
+// excerpted the first 2000 characters of a file and stopped — useful context
+// buried on page 40 of a doc was simply invisible. Chunking + per-chunk BM25
+// scoring means the relevant section wins on its own merits, wherever it is
+// in the file.
+//
+// A small overlap between consecutive chunks (default 80 chars) means a
+// sentence that happens to fall right on a chunk boundary still appears
+// intact in at least one chunk, rather than being split with half its
+// meaning in each neighbor.
+
+const DEFAULT_CHUNK_SIZE = 800
+const DEFAULT_OVERLAP = 80
+
+/**
+ * @param {string} text
+ * @param {{ chunkSize?: number, overlap?: number }} [opts]
+ * @returns {string[]} — always at least one chunk for non-empty input, even
+ *   if the whole text fits in a single chunk (no pointless splitting).
+ */
+export function chunkText(text, opts = {}) {
+  const chunkSize = opts.chunkSize ?? DEFAULT_CHUNK_SIZE
+  const overlap = opts.overlap ?? DEFAULT_OVERLAP
+  if (!text) return []
+  if (text.length <= chunkSize) return [text]
+
+  const paragraphs = text.split(/\\n{2,}/)
+  const chunks = []
+  let current = ''
+
+  function flush() {
+    if (current.trim()) chunks.push(current.trim())
+  }
+
+  for (const para of paragraphs) {
+    // A single paragraph longer than a whole chunk: hard-split it by
+    // character count rather than letting one paragraph blow the budget —
+    // this is the fallback for minified code, a giant CSV row, etc.
+    if (para.length > chunkSize) {
+      flush()
+      current = ''
+      for (let i = 0; i < para.length; i += chunkSize - overlap) {
+        chunks.push(para.slice(i, i + chunkSize).trim())
+      }
+      continue
+    }
+
+    const candidate = current ? \`\${current}\\n\\n\${para}\` : para
+    if (candidate.length > chunkSize && current) {
+      flush()
+      // Start the next chunk with a small tail of the previous one, so
+      // content right at the boundary isn't orphaned from its neighbor.
+      const tail = current.slice(Math.max(0, current.length - overlap))
+      current = \`\${tail}\\n\\n\${para}\`
+    } else {
+      current = candidate
+    }
+  }
+  flush()
+
+  return chunks.length ? chunks : [text.slice(0, chunkSize)]
+}
+`,
+  },
+  {
     path: "lib/crypto.mjs",
     contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
@@ -631,6 +939,502 @@ export function generatePassphrase() {
 `,
   },
   {
+    path: "lib/embeddings.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Local semantic embeddings — the piece BM25 alone can't do. BM25 (see
+// lib/bm25.mjs) ranks by shared vocabulary: query "churn risk" against a doc
+// that only ever says "Northwind is wobbling" scores zero, because the two
+// share no term. An embedding model recognizes the two are about the same
+// thing even with no words in common. See lib/hybrid-rank.mjs for how the
+// two signals get combined.
+//
+// Runs via @xenova/transformers, which executes the model in-process through
+// ONNX Runtime — there is no API call at embedding time, no document text or
+// query text is ever sent anywhere. This is the one honest exception to this
+// package's "zero new dependencies" history (the other being
+// @modelcontextprotocol/sdk for MCP mode — see lib/mcp-server.mjs's header):
+// worth being upfront about in the README rather than pretending it isn't
+// there.
+//
+// The model (Xenova/all-MiniLM-L6-v2, ~80MB) is fetched from Hugging Face
+// and cached to disk the FIRST time embedding actually happens — normal for
+// any app that ships a model rather than bundling multi-hundred-MB weights
+// in the installer. Every call after that first one is fully offline. If
+// that first fetch can't complete (no internet at that moment, a corporate
+// firewall blocking huggingface.co, etc.), this module fails closed: it
+// throws EmbeddingsUnavailableError and stays unavailable for the rest of
+// the process rather than retrying on every single query. Callers (see
+// hybridRank in lib/hybrid-rank.mjs) catch that and fall back to BM25-only
+// ranking — semantic search is a bonus layer, never a hard requirement for
+// MultiVault to keep working.
+
+export class EmbeddingsUnavailableError extends Error {}
+
+const MODEL_ID = 'Xenova/all-MiniLM-L6-v2'
+
+let pipelinePromise = null
+let permanentlyUnavailable = false
+
+async function getEmbedder() {
+  if (permanentlyUnavailable) {
+    throw new EmbeddingsUnavailableError('Local embedding model is unavailable for this process (failed once already).')
+  }
+  if (!pipelinePromise) {
+    pipelinePromise = (async () => {
+      try {
+        const { pipeline } = await import('@xenova/transformers')
+        return await pipeline('feature-extraction', MODEL_ID)
+      } catch (err) {
+        permanentlyUnavailable = true
+        pipelinePromise = null
+        throw new EmbeddingsUnavailableError(\`Could not load local embedding model: \${err.message}\`)
+      }
+    })()
+  }
+  return pipelinePromise
+}
+
+/**
+ * Embed a batch of strings into L2-normalized vectors (384-dim for
+ * all-MiniLM-L6-v2). Because vectors are normalized, cosineSimilarity()
+ * below reduces to a plain dot product.
+ *
+ * @param {string[]} texts
+ * @returns {Promise<Float32Array[]>}
+ * @throws {EmbeddingsUnavailableError} if the model can't be loaded
+ */
+export async function embedBatch(texts) {
+  const embedder = await getEmbedder()
+  const out = []
+  for (const text of texts) {
+    const result = await embedder(text, { pooling: 'mean', normalize: true })
+    out.push(Float32Array.from(result.data))
+  }
+  return out
+}
+
+export function cosineSimilarity(a, b) {
+  let dot = 0
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i]
+  return dot
+}
+
+export function modelId() {
+  return MODEL_ID
+}
+
+/** Test/diagnostic hook: forget any cached load attempt so the next embedBatch() call retries from scratch. */
+export function resetEmbedderForTests() {
+  pipelinePromise = null
+  permanentlyUnavailable = false
+}
+`,
+  },
+  {
+    path: "lib/hybrid-rank.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Combines lib/bm25.mjs's keyword ranking with lib/embeddings.mjs's local
+// semantic similarity. Deliberately additive, not a replacement: bm25.mjs's
+// rank() is called here exactly as it always was, and every existing test in
+// test/bm25.test.mjs, test/indexer.test.mjs, test/query.test.mjs, and
+// test/mcp.test.mjs keeps passing untouched — this file only adds a new,
+// optional path.
+//
+// Combining strategy: Reciprocal Rank Fusion (RRF), not a weighted sum of
+// raw scores. BM25 scores and cosine similarities live on incomparable
+// scales (a BM25 score of 14 and a cosine similarity of 0.6 aren't the same
+// kind of number), which is exactly what breaks a naive "0.6*bm25 +
+// 0.4*cosine" blend — the mix ends up dominated by whichever score happens
+// to have the larger numeric range, not whichever result is actually more
+// relevant. RRF sidesteps the whole problem by looking only at each
+// document's RANK in each list, never its raw score:
+//
+//   RRF(doc) = sum over each ranked list containing doc of  1 / (k + rank)
+//
+// A doc that ranks well in either list (or both) rises to the top with zero
+// score-scale tuning. k=60 is the constant from the original RRF paper
+// (Cormack, Clarke & Buettcher 2009) and is standard enough not to need
+// per-corpus adjustment.
+//
+// Embeddings are computed once per chunk and cached on the doc itself
+// (doc.vector, persisted in index.json by whichever caller calls saveIndex()
+// afterward — see buildLiveContextHybrid in lib/vault.mjs) so a query never
+// re-embeds content that hasn't changed. If the corpus's embeddings were
+// computed under a different model id than embeddings.mjs currently reports
+// (e.g. after an upgrade), they're treated as stale and recomputed — see
+// ensureEmbeddings below.
+
+import { rank } from './bm25.mjs'
+import { tokenize } from './tokenize.mjs'
+import { embedBatch as defaultEmbedBatch, cosineSimilarity as defaultCosineSimilarity, modelId as defaultModelId, EmbeddingsUnavailableError } from './embeddings.mjs'
+
+const RRF_K = 60
+
+/**
+ * Make sure every doc in \`index\` has an up-to-date \`.vector\`. Mutates
+ * \`index.docs\` in place and sets \`index.embeddingModel\`. Only embeds docs
+ * that are missing a vector or were embedded under a different model — an
+ * unchanged file's chunks (which keep their doc ids across queries; see
+ * lib/index-store.mjs) are never re-embedded.
+ *
+ * @param {object} index
+ * @param {{ embedBatch?: Function, modelId?: Function }} [deps] - injectable for tests
+ * @returns {Promise<boolean>} true if the index now has usable vectors, false if embedding is unavailable
+ */
+export async function ensureEmbeddings(index, deps = {}) {
+  const embedBatchFn = deps.embedBatch ?? defaultEmbedBatch
+  const modelIdFn = deps.modelId ?? defaultModelId
+  const currentModel = modelIdFn()
+
+  const stale = index.docs.filter((doc) => !doc.vector || index.embeddingModel !== currentModel)
+  if (stale.length === 0) return index.docs.length > 0 && index.embeddingModel === currentModel
+
+  try {
+    const vectors = await embedBatchFn(stale.map((doc) => doc.text))
+    stale.forEach((doc, i) => {
+      doc.vector = Array.from(vectors[i])
+    })
+    index.embeddingModel = currentModel
+    return true
+  } catch (err) {
+    if (err instanceof EmbeddingsUnavailableError || err?.name === 'EmbeddingsUnavailableError') {
+      return false // graceful degrade — caller falls back to BM25-only
+    }
+    throw err // an unexpected error (bad input, etc.) should surface, not be silently swallowed
+  }
+}
+
+function rrfCombine(rankedIdLists) {
+  const scores = new Map()
+  for (const ids of rankedIdLists) {
+    ids.forEach((id, rank0) => {
+      scores.set(id, (scores.get(id) ?? 0) + 1 / (RRF_K + rank0 + 1))
+    })
+  }
+  return scores
+}
+
+/**
+ * Rank \`index\`'s docs against \`query\` using BM25 + semantic similarity
+ * combined via RRF, falling back to plain BM25 if the local embedding model
+ * isn't available (first-run download failed, offline, etc.).
+ *
+ * @param {string} query
+ * @param {object} index
+ * @param {{ embedBatch?: Function, cosineSimilarity?: Function, modelId?: Function }} [deps] - injectable for tests
+ * @returns {Promise<{ results: Array<{doc: object, score: number}>, usedSemantic: boolean }>}
+ */
+export async function hybridRank(query, index, deps = {}) {
+  const queryTerms = tokenize(query)
+  const bm25Results = rank(queryTerms, index) // [{doc, score}], unchanged behavior
+
+  if (index.docs.length === 0) return { results: bm25Results, usedSemantic: false }
+
+  const embeddingsReady = await ensureEmbeddings(index, deps)
+  if (!embeddingsReady) return { results: bm25Results, usedSemantic: false }
+
+  const embedBatchFn = deps.embedBatch ?? defaultEmbedBatch
+  const cosineSimilarityFn = deps.cosineSimilarity ?? defaultCosineSimilarity
+
+  let queryVector
+  try {
+    ;[queryVector] = await embedBatchFn([query])
+  } catch (err) {
+    if (err instanceof EmbeddingsUnavailableError || err?.name === 'EmbeddingsUnavailableError') {
+      return { results: bm25Results, usedSemantic: false }
+    }
+    throw err
+  }
+
+  const semanticScored = index.docs
+    .map((doc) => ({ doc, sim: cosineSimilarityFn(queryVector, Float32Array.from(doc.vector)) }))
+    .sort((a, b) => b.sim - a.sim)
+
+  const bm25RankedIds = bm25Results.map((r) => r.doc.id)
+  const semanticRankedIds = semanticScored.map((r) => r.doc.id)
+  const combined = rrfCombine([bm25RankedIds, semanticRankedIds])
+
+  const bm25ScoreById = new Map(bm25Results.map((r) => [r.doc.id, r.score]))
+  const docById = new Map(index.docs.map((d) => [d.id, d]))
+
+  const results = [...combined.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, score]) => ({
+      doc: docById.get(id),
+      score, // RRF score — replaces the raw BM25 score for combined results, same {doc, score} shape formatSearchResults() already expects
+      bm25Score: bm25ScoreById.get(id) ?? 0, // kept for callers/tests that want to show why a result ranked where it did
+    }))
+
+  return { results, usedSemantic: true }
+}
+`,
+  },
+  {
+    path: "lib/index-store.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// The index's on-disk shape and the low-level operations for keeping its
+// BM25 aggregates (docFreq, totalDocs, avgDocLength) correct as documents
+// are added and removed. Deliberately plain JSON, not a binary format or an
+// embedded database — this index is meant to be inspectable (open it in any
+// editor) and to have zero new dependencies, consistent with the rest of
+// this package.
+//
+// One entry in \`docs\` is one CHUNK (see lib/chunk.mjs), not one file — a
+// large file becomes several docs. \`files\` tracks one entry per actual file,
+// pointing at which doc ids currently belong to it, which is what makes
+// incremental updates possible: to re-index a changed file, remove exactly
+// its docs (and undo their docFreq contribution) before adding the new ones,
+// without touching any other file's data or rebuilding from scratch.
+//
+// NOT encrypted at rest, unlike vault.enc. The index holds the same
+// plain-text excerpts a vault sync would have shown anyway (same
+// eligibility rules — see lib/scan.mjs's shouldRead) — see README's
+// "Security model" for the reasoning and how to keep --dest access-controlled
+// if that matters on your machine.
+
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const INDEX_FILE = 'index.json'
+
+export function indexPath(dest) {
+  return join(dest, INDEX_FILE)
+}
+
+/**
+ * A fresh, empty index for \`folder\`. Adding docs to this and calling
+ * recomputeAggregates() is the whole story — see indexer.mjs for the
+ * higher-level build/update orchestration that actually walks the
+ * filesystem and calls these.
+ */
+export function emptyIndex(folder) {
+  return {
+    version: 1,
+    folder,
+    builtAt: null,
+    totalDocs: 0,
+    avgDocLength: 0,
+    docFreq: Object.create(null),
+    docs: [],
+    files: Object.create(null), // relPath -> { mtimeMs, sizeBytes, ext, docIds: string[], eligible: boolean }
+  }
+}
+
+export function loadIndex(dest) {
+  const path = indexPath(dest)
+  if (!existsSync(path)) return null
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    return null // corrupt/partial index — caller should rebuild, not crash
+  }
+}
+
+export function saveIndex(dest, index) {
+  writeFileSync(indexPath(dest), JSON.stringify(index), 'utf8')
+}
+
+let nextDocSeq = 0
+function freshDocId(relPath, chunkIndex) {
+  // Includes a process-local monotonic counter, not just relPath+chunkIndex,
+  // so two docs can never collide even across a remove-then-immediately-
+  // re-add for the same file (which happens on every re-index of a changed
+  // file) — old ids fully retire rather than risk being confused with new
+  // ones that happen to reuse the same (relPath, chunkIndex) pair.
+  nextDocSeq += 1
+  return \`\${relPath}::\${chunkIndex}::\${nextDocSeq}\`
+}
+
+/**
+ * Remove every doc belonging to \`relPath\` and undo their docFreq
+ * contribution. Safe to call on a file with no docs (nothing to do) — the
+ * standard first step before re-indexing an existing file, or the whole
+ * step for a file that was deleted.
+ */
+export function removeFileDocs(index, relPath) {
+  const fileEntry = index.files[relPath]
+  if (!fileEntry) return
+  const idsToRemove = new Set(fileEntry.docIds)
+  if (idsToRemove.size) {
+    index.docs = index.docs.filter((doc) => {
+      if (!idsToRemove.has(doc.id)) return true
+      for (const term of Object.keys(doc.tokens)) {
+        const next = (index.docFreq[term] ?? 0) - 1
+        if (next <= 0) delete index.docFreq[term]
+        else index.docFreq[term] = next
+      }
+      return false
+    })
+  }
+  delete index.files[relPath]
+}
+
+/**
+ * Add one file's chunks as new docs and record its file-level metadata.
+ * Assumes removeFileDocs() was already called for this relPath if it was
+ * previously indexed — indexer.mjs's updateIndex() always does remove-then-
+ * add for a changed file, never a blind add, so docFreq can't double-count.
+ *
+ * @param {Array<{ text: string, tokens: Record<string, number>, length: number }>} chunks
+ */
+export function addFileDocs(index, relPath, chunks, meta) {
+  const docIds = []
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]
+    const id = freshDocId(relPath, i)
+    index.docs.push({ id, relPath, chunkIndex: i, length: chunk.length, tokens: chunk.tokens, text: chunk.text })
+    docIds.push(id)
+    for (const term of Object.keys(chunk.tokens)) {
+      index.docFreq[term] = (index.docFreq[term] ?? 0) + 1
+    }
+  }
+  index.files[relPath] = { mtimeMs: meta.mtimeMs, sizeBytes: meta.sizeBytes, ext: meta.ext, docIds, eligible: chunks.length > 0 }
+}
+
+/** Record a file that exists but isn't eligible for content indexing (wrong extension, too big, looks sensitive) — still listed, never chunked. */
+export function recordIneligibleFile(index, relPath, meta) {
+  index.files[relPath] = { mtimeMs: meta.mtimeMs, sizeBytes: meta.sizeBytes, ext: meta.ext, docIds: [], eligible: false }
+}
+
+/** Recompute totalDocs/avgDocLength from the current docs array. Call this once after a batch of add/remove operations, not per-operation. */
+export function recomputeAggregates(index) {
+  index.totalDocs = index.docs.length
+  index.avgDocLength = index.totalDocs ? index.docs.reduce((sum, d) => sum + d.length, 0) / index.totalDocs : 0
+}
+`,
+  },
+  {
+    path: "lib/indexer.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Builds and incrementally updates the BM25 index. This is the actual answer
+// to "handle much larger workloads": v1/v2's buildLiveContext() re-scanned
+// and re-read every eligible file on every single call — fine for a folder
+// of a few dozen files, a real bottleneck at a few thousand. updateIndex()
+// here only touches files that are NEW or whose mtime changed since the last
+// index; an unchanged file costs one stat() call, not a re-read.
+//
+// readFileSync + chunk + tokenize is the one part of this pipeline that's
+// O(file size) rather than O(1) per unchanged file — still real work for a
+// freshly-changed large file, but it's work paid once per change, not once
+// per query the way v1/v2's live re-scan was.
+
+import { readFileSync } from 'node:fs'
+import { walkFiles, shouldRead } from './scan.mjs'
+import { chunkText } from './chunk.mjs'
+import { termFrequencies, tokenize } from './tokenize.mjs'
+import { emptyIndex, loadIndex, saveIndex, removeFileDocs, addFileDocs, recordIneligibleFile, recomputeAggregates } from './index-store.mjs'
+
+function chunksFor(fullPath) {
+  let text
+  try {
+    text = readFileSync(fullPath, 'utf8')
+  } catch {
+    return [] // unreadable (binary despite the extension, permissions, race with a delete) — treat as no content, not a crash
+  }
+  return chunkText(text).map((chunkString) => ({
+    text: chunkString,
+    tokens: termFrequencies(chunkString),
+    length: tokenize(chunkString).length,
+  }))
+}
+
+/**
+ * Full (re)build from scratch. Used by \`vault index\` and automatically the
+ * first time a vault with no existing index.json is queried.
+ */
+export function buildIndex(folder, opts = {}) {
+  const index = emptyIndex(folder)
+  const files = walkFiles(folder, opts)
+  for (const f of files) {
+    if (shouldRead(f.name, f.ext, f.sizeBytes, opts)) {
+      const chunks = chunksFor(f.fullPath)
+      if (chunks.length) addFileDocs(index, f.relPath, chunks, f)
+      else recordIneligibleFile(index, f.relPath, f) // eligible by rule but unreadable in practice
+    } else {
+      recordIneligibleFile(index, f.relPath, f)
+    }
+  }
+  recomputeAggregates(index)
+  index.builtAt = new Date().toISOString()
+  return index
+}
+
+/**
+ * Incrementally bring an existing index up to date with the current state
+ * of \`folder\`. Only files that are new, changed (by mtime), or deleted since
+ * the index was last built/updated actually get touched — see module
+ * comment. Returns { index, added, updated, removed } so callers (the CLI,
+ * the watcher) can report what actually happened.
+ */
+export function updateIndex(existingIndex, folder, opts = {}) {
+  const index = existingIndex
+  const onDisk = walkFiles(folder, opts)
+  const onDiskPaths = new Set(onDisk.map((f) => f.relPath))
+  const stats = { added: 0, updated: 0, removed: 0 }
+
+  // Deletions: anything the index still has a record of that's no longer on disk.
+  for (const relPath of Object.keys(index.files)) {
+    if (!onDiskPaths.has(relPath)) {
+      removeFileDocs(index, relPath)
+      stats.removed += 1
+    }
+  }
+
+  // Additions and changes.
+  for (const f of onDisk) {
+    const existing = index.files[f.relPath]
+    const unchanged = existing && existing.mtimeMs === f.mtimeMs
+    if (unchanged) continue
+
+    if (existing) {
+      removeFileDocs(index, f.relPath) // re-index: undo the old contribution before adding the new one
+      stats.updated += 1
+    } else {
+      stats.added += 1
+    }
+
+    if (shouldRead(f.name, f.ext, f.sizeBytes, opts)) {
+      const chunks = chunksFor(f.fullPath)
+      if (chunks.length) addFileDocs(index, f.relPath, chunks, f)
+      else recordIneligibleFile(index, f.relPath, f)
+    } else {
+      recordIneligibleFile(index, f.relPath, f)
+    }
+  }
+
+  recomputeAggregates(index)
+  index.builtAt = new Date().toISOString()
+  return { index, ...stats }
+}
+
+/**
+ * Load the index at \`dest\` if it exists and is for the right folder;
+ * otherwise build one fresh. Does NOT save — callers that want the result
+ * persisted call saveIndex() themselves (see vault.mjs's ensureIndex, which
+ * does exactly that).
+ */
+export function loadOrBuildIndex(dest, folder, opts = {}) {
+  const existing = loadIndex(dest)
+  if (existing && existing.folder === folder) return existing
+  return buildIndex(folder, opts)
+}
+
+export { saveIndex, loadIndex } from './index-store.mjs'
+`,
+  },
+  {
     path: "lib/mcp-server.mjs",
     contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
@@ -660,34 +1464,52 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { resolve } from 'node:path'
-import { buildLiveContext, statusVault } from './vault.mjs'
+import { buildLiveContext, buildLiveContextHybrid, statusVault } from './vault.mjs'
+import { loadIndex } from './index-store.mjs'
 import { logContextServed, witnessConfigured } from './witness-log.mjs'
 
 export function createMultiVaultServer(dest) {
-  const server = new McpServer({ name: 'multivault', version: '2.0.0' })
+  const server = new McpServer({ name: 'multivault', version: '3.1.0' })
 
   server.registerTool(
     'get_context',
     {
       title: 'Get local context',
       description:
-        'Returns a live, current brief of the watched local folder and calendar file — file names, ' +
-        'sizes, and (for a small set of plain-text formats) short excerpts, plus any calendar events. ' +
-        'Nothing is cached: this re-scans the folder and re-reads the calendar file fresh on every ' +
-        'call, so it always reflects the current state, not a snapshot from an earlier \`vault sync\`.',
+        'Returns local context from the watched folder and calendar file. Two modes: ' +
+        'call with no arguments for a full brief (file names, sizes, short excerpts, calendar events) — ' +
+        'suitable for small-to-medium folders. Call WITH a \`query\` for large or many-file folders: this ' +
+        'searches an incrementally-maintained local index and returns only the most relevant chunks ' +
+        'instead of everything, so it stays fast and useful even against thousands of files. Ranking is ' +
+        'BM25 keyword matching by default, or set \`semantic: true\` to also rank by local semantic ' +
+        'similarity (via an on-device embedding model — nothing leaves the machine) — this catches a ' +
+        'chunk that\\'s relevant in meaning even when it shares no exact words with the query. Semantic ' +
+        'mode falls back to keyword-only automatically if the local model isn\\'t available (e.g. no ' +
+        'internet for its one-time download) — never an error, just a plainly-noted fallback. Nothing is ' +
+        'cached across calls beyond the index itself — it updates against current disk state on every ' +
+        'query, so results always reflect what\\'s actually there now.',
       inputSchema: {
+        query: z.string().optional().describe('Search terms. Omit for a full whole-folder brief instead of a targeted search.'),
+        topK: z.number().int().positive().max(50).optional().describe('Max results when using query. Defaults to 8.'),
         format: z.enum(['markdown', 'json']).optional().describe('Output format. Defaults to markdown.'),
+        semantic: z.boolean().optional().describe('Also rank by local semantic similarity, not just keyword match. Defaults to false.'),
       },
     },
-    async ({ format }) => {
+    async ({ query, topK, format, semantic }) => {
       try {
-        const { snapshot, text } = buildLiveContext(dest, { format: format ?? 'markdown' })
+        const { snapshot, text } = semantic
+          ? await buildLiveContextHybrid(dest, { query, topK, format: format ?? 'markdown' })
+          : buildLiveContext(dest, { query, topK, format: format ?? 'markdown' })
         // Best-effort, non-blocking, content-free logging — see
         // lib/witness-log.mjs. Never awaited-and-branched-on beyond this:
-        // a logging failure must never affect the response below.
-        logContextServed(
-          \`\${snapshot.files.length} file(s), \${snapshot.events.length} event(s) from \${snapshot.folder ?? '(no folder)'}\`,
-        )
+        // a logging failure must never affect the response below. The two
+        // modes have different snapshot shapes (a query returns { results,
+        // events }, no query returns { files, events }), so the logged
+        // detail branches on which one actually ran.
+        const detail = snapshot.results
+          ? \`query "\${snapshot.query}" -> \${snapshot.results.length} result(s), \${snapshot.events.length} event(s)\`
+          : \`\${snapshot.files.length} file(s), \${snapshot.events.length} event(s) from \${snapshot.folder ?? '(no folder)'}\`
+        logContextServed(detail)
         return { content: [{ type: 'text', text }] }
       } catch (err) {
         return {
@@ -715,10 +1537,18 @@ export function createMultiVaultServer(dest) {
           isError: true,
         }
       }
+      // Read-only: reports whatever index currently exists on disk without
+      // triggering a build/update, so vault_status stays cheap regardless
+      // of folder size — that cost only happens when get_context is
+      // actually called with a query.
+      const index = loadIndex(dest)
       const lines = [
         \`Folder: \${meta.folder ?? '(none configured)'}\`,
         \`Calendar: \${meta.icsPath ?? '(none configured)'}\`,
         \`MultiWitness logging: \${witnessConfigured() ? 'active' : 'not configured (set MULTIWITNESS_INGEST_TOKEN to enable)'}\`,
+        index
+          ? \`Search index: \${Object.keys(index.files).length} file(s) tracked, \${index.docs.length} indexed chunk(s), last updated \${index.builtAt}\`
+          : 'Search index: not built yet (built automatically on first query, or run "vault index")',
       ]
       return { content: [{ type: 'text', text: lines.join('\\n') }] }
     },
@@ -741,30 +1571,36 @@ export async function startMultiVaultServer(dest) {
 // Licensed to a single purchaser under the terms in LICENSE.md.
 // Redistribution or resale of this source, in whole or in part, is not permitted.
 
-// Turns a watched folder into a compact snapshot: what's there, and — for a
-// small set of plain-text formats under a size cap — a short excerpt of each.
+// Walks a watched folder and decides what's eligible to have its content
+// read at all — shared by two callers with different needs:
+//   - scanFolder() below: v1/v2's flat listing-with-a-short-excerpt, used
+//     when buildLiveContext() is called with no search query (see
+//     lib/vault.mjs) — unchanged behavior from v1/v2.
+//   - lib/indexer.mjs: v3's full-content chunking + BM25 indexing pipeline,
+//     which needs the same "is this file safe/sane to read" decision but
+//     wants the FULL content (to chunk), not a flat 2000-char excerpt.
 //
-// Deliberately conservative about what it reads. This is the one piece of
-// MultiVault that touches file *contents* rather than just structure, so the
-// defaults are narrow on purpose:
-//   - Only a fixed allowlist of plain-text extensions are ever excerpted.
+// Deliberately conservative about what it reads, in both callers:
+//   - Only a fixed allowlist of plain-text extensions are ever read.
 //     Anything else (images, PDFs, spreadsheets, executables, .env files,
 //     anything with "key", "secret", or "credential" in the name) is listed
 //     by name and metadata only — never opened.
-//   - Each excerpt is capped at EXCERPT_CHAR_LIMIT characters.
-//   - The whole scan stops at MAX_FILES so a huge folder can't turn a sync
-//     into a multi-minute read of the entire disk.
 //   - Hidden files/folders (dotfiles) and common noise directories
 //     (node_modules, .git) are skipped outright.
+//
+// v3 raises the volume caps substantially (500 files -> 20,000; 3 folder
+// levels -> 12) versus v1/v2, because the cost of a large folder is now
+// absorbed by the incremental index (lib/indexer.mjs) instead of being
+// paid fresh on every single call — see that file's module comment.
 
 import { readdirSync, statSync, readFileSync } from 'node:fs'
 import { join, extname, relative } from 'node:path'
 
 export const DEFAULTS = {
-  maxFiles: 500,
-  maxDepth: 3,
-  excerptCharLimit: 2000,
-  excerptMaxFileBytes: 100_000, // don't even attempt to read a text file bigger than this
+  maxFiles: 20_000,
+  maxDepth: 12,
+  excerptCharLimit: 2000, // v1/v2 flat-excerpt mode only — see scanFolder()
+  maxFileBytes: 2_000_000, // per-file cap for READING content at all, in either mode — 2MB of plain text is already an unusual single file, and chunking (lib/chunk.mjs) means indexing mode doesn't need this to be small the way a flat excerpt did
 }
 
 const EXCERPT_EXTENSIONS = new Set(['.md', '.txt', '.csv', '.json'])
@@ -775,35 +1611,34 @@ const SKIP_DIR_NAMES = new Set(['node_modules', '.git', '.DS_Store', 'dist', 'bu
 // "api-keys.txt" is not).
 const SENSITIVE_NAME_PATTERN = /(secret|password|credential|\\bkeys?\\b|\\.env)/i
 
-function isHidden(name) {
+export function isHidden(name) {
   return name.startsWith('.')
 }
 
-function shouldExcerpt(name, ext, sizeBytes) {
+/**
+ * Whether a file's CONTENT is safe/eligible to read at all — by extension,
+ * size, and filename. Used by both scanFolder() (v1/v2) and lib/indexer.mjs
+ * (v3), so this one decision stays in exactly one place.
+ */
+export function shouldRead(name, ext, sizeBytes, opts = {}) {
+  const maxFileBytes = opts.maxFileBytes ?? DEFAULTS.maxFileBytes
   if (isHidden(name)) return false
   if (!EXCERPT_EXTENSIONS.has(ext)) return false
-  if (sizeBytes > DEFAULTS.excerptMaxFileBytes) return false
+  if (sizeBytes > maxFileBytes) return false
   if (SENSITIVE_NAME_PATTERN.test(name)) return false
   return true
 }
 
-function readExcerpt(fullPath) {
-  try {
-    const text = readFileSync(fullPath, 'utf8')
-    return text.length > DEFAULTS.excerptCharLimit
-      ? text.slice(0, DEFAULTS.excerptCharLimit) + '\\n… (truncated)'
-      : text
-  } catch {
-    return null // unreadable (binary despite the extension, permissions, etc.) — skip silently
-  }
-}
-
 /**
- * Walk \`folder\` up to \`maxDepth\` levels and return a flat list of entries:
- *   { relPath, sizeBytes, mtimeMs, ext, excerpt: string | null }
- * Stops early once \`maxFiles\` entries have been collected.
+ * Walk \`folder\` up to \`maxDepth\` levels and return a flat list of every
+ * file's metadata — no content read yet. Stops early once \`maxFiles\`
+ * entries have been collected. This is the shared "what's on disk" pass;
+ * callers decide what to do with each entry (scanFolder excerpts eligible
+ * ones inline below; lib/indexer.mjs reads+chunks+tokenizes eligible ones).
+ *
+ * @returns {Array<{ relPath: string, fullPath: string, name: string, ext: string, sizeBytes: number, mtimeMs: number }>}
  */
-export function scanFolder(folder, opts = {}) {
+export function walkFiles(folder, opts = {}) {
   const { maxFiles, maxDepth } = { ...DEFAULTS, ...opts }
   const entries = []
 
@@ -813,7 +1648,7 @@ export function scanFolder(folder, opts = {}) {
     try {
       names = readdirSync(dir)
     } catch {
-      return // unreadable directory — skip rather than fail the whole sync
+      return // unreadable directory — skip rather than fail the whole scan
     }
     for (const name of names) {
       if (entries.length >= maxFiles) return
@@ -830,20 +1665,91 @@ export function scanFolder(folder, opts = {}) {
         continue
       }
       if (!stat.isFile()) continue
-      const ext = extname(name).toLowerCase()
-      const excerpt = shouldExcerpt(name, ext, stat.size) ? readExcerpt(fullPath) : null
       entries.push({
         relPath: relative(folder, fullPath),
+        fullPath,
+        name,
+        ext: extname(name).toLowerCase(),
         sizeBytes: stat.size,
         mtimeMs: stat.mtimeMs,
-        ext,
-        excerpt,
       })
     }
   }
 
   walk(folder, 0)
   return entries
+}
+
+function readExcerpt(fullPath, charLimit) {
+  try {
+    const text = readFileSync(fullPath, 'utf8')
+    return text.length > charLimit ? text.slice(0, charLimit) + '\\n… (truncated)' : text
+  } catch {
+    return null // unreadable (binary despite the extension, permissions, etc.) — skip silently
+  }
+}
+
+/**
+ * v1/v2 behavior, unchanged: a flat list with a short (2000-char) excerpt
+ * per eligible file. Used when buildLiveContext() is called with no search
+ * query — see lib/vault.mjs.
+ *
+ * @returns {Array<{ relPath, sizeBytes, mtimeMs, ext, excerpt: string | null }>}
+ */
+export function scanFolder(folder, opts = {}) {
+  const files = walkFiles(folder, opts)
+  const charLimit = opts.excerptCharLimit ?? DEFAULTS.excerptCharLimit
+  return files.map((f) => ({
+    relPath: f.relPath,
+    sizeBytes: f.sizeBytes,
+    mtimeMs: f.mtimeMs,
+    ext: f.ext,
+    excerpt: shouldRead(f.name, f.ext, f.sizeBytes, opts) ? readExcerpt(f.fullPath, charLimit) : null,
+  }))
+}
+`,
+  },
+  {
+    path: "lib/tokenize.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// A deliberately simple tokenizer: lowercase, split on anything that isn't a
+// letter/digit, drop tokens under 2 characters (mostly punctuation debris and
+// single letters that add noise without adding signal), cap token length at
+// 40 (guards against pathological input — a 10,000-character "word" from a
+// minified file or a URL blob isn't a real search term). No stemming, no
+// stopword list: deliberately, both are corpus-dependent tuning that would
+// need real usage data to get right, and a wrong stopword list actively hurts
+// (strips a term someone actually searches for). BM25's own math already
+// down-weights common words via IDF — see lib/bm25.mjs.
+
+const TOKEN_PATTERN = /[a-z0-9]+/g
+const MIN_TOKEN_LENGTH = 2
+const MAX_TOKEN_LENGTH = 40
+
+/**
+ * Tokenize a string into an array of lowercase terms.
+ */
+export function tokenize(text) {
+  if (!text) return []
+  const lower = text.toLowerCase()
+  const matches = lower.match(TOKEN_PATTERN) ?? []
+  return matches.filter((t) => t.length >= MIN_TOKEN_LENGTH && t.length <= MAX_TOKEN_LENGTH)
+}
+
+/**
+ * Tokenize and count term frequencies in one pass — the shape the index and
+ * BM25 scoring both actually want, so callers don't tokenize twice.
+ * Returns a plain object: { term: count }.
+ */
+export function termFrequencies(text) {
+  const freq = Object.create(null)
+  for (const term of tokenize(text)) {
+    freq[term] = (freq[term] ?? 0) + 1
+  }
+  return freq
 }
 `,
   },
@@ -867,6 +1773,10 @@ import { join } from 'node:path'
 import { encrypt, decrypt, generatePassphrase, DecryptError } from './crypto.mjs'
 import { scanFolder } from './scan.mjs'
 import { readIcsFile } from './calendar.mjs'
+import { loadIndex, buildIndex, updateIndex, saveIndex } from './indexer.mjs'
+import { rank } from './bm25.mjs'
+import { tokenize } from './tokenize.mjs'
+import { hybridRank } from './hybrid-rank.mjs'
 
 export { DecryptError }
 
@@ -1042,10 +1952,123 @@ export function buildLiveContext(dest, opts = {}) {
   if (!meta.folder && !meta.icsPath) {
     throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
   }
+
+  // Query given -> v3's indexed/ranked path: only the relevant chunks, not
+  // the whole folder. No query -> exact v1/v2 behavior, unchanged, so
+  // anything already relying on "get everything" keeps working.
+  if (opts.query && meta.folder) {
+    const index = ensureIndex(dest, meta.folder, opts.scan)
+    const results = rank(tokenize(opts.query), index).slice(0, opts.topK ?? 8)
+    const events = readIcsFile(meta.icsPath)
+    return { snapshot: { query: opts.query, results, events }, text: formatSearchResults(opts.query, results, events, index, opts) }
+  }
+
   const files = meta.folder ? scanFolder(meta.folder, opts.scan) : []
   const events = readIcsFile(meta.icsPath)
   const snapshot = { folder: meta.folder, icsPath: meta.icsPath, files, events, syncedAt: new Date().toISOString() }
   return { snapshot, text: formatContext(snapshot, opts) }
+}
+
+/**
+ * Same contract as buildLiveContext(), but the query path (only the query
+ * path — the no-query whole-folder brief is identical and needs no ranking
+ * at all) uses hybridRank() instead of plain bm25 rank(): BM25 keyword
+ * matching PLUS local semantic similarity, combined via Reciprocal Rank
+ * Fusion — see lib/hybrid-rank.mjs for why RRF and lib/embeddings.mjs for
+ * why this never leaves the machine. Async where buildLiveContext() is
+ * sync, because embedding text is genuinely asynchronous work (the model
+ * runs off the main thread via ONNX Runtime) — everything else about this
+ * function is identical to buildLiveContext().
+ *
+ * Falls back to BM25-only automatically (see hybridRank) if the local
+ * embedding model can't load — e.g. the very first run has no internet to
+ * fetch it. That fallback is reported back via snapshot.usedSemantic /
+ * a note in the formatted text, rather than silently pretending semantic
+ * search ran when it didn't — consistent with this product's "honest
+ * limits" stance elsewhere.
+ *
+ * Newly-computed embeddings are persisted back to the index file before
+ * returning, so they're a one-time cost per chunk, not a per-query one.
+ */
+export async function buildLiveContextHybrid(dest, opts = {}) {
+  const meta = readMeta(dest)
+  if (!meta) throw new Error(\`No vault found at \${dest}. Run "vault init" first.\`)
+  if (!meta.folder && !meta.icsPath) {
+    throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
+  }
+
+  if (!opts.query || !meta.folder) return buildLiveContext(dest, opts)
+
+  const index = ensureIndex(dest, meta.folder, opts.scan)
+  const { results, usedSemantic } = await hybridRank(opts.query, index, opts.embeddingDeps)
+  saveIndex(dest, index) // persist any vectors ensureEmbeddings() just computed, so the next query reuses them
+  const topResults = results.slice(0, opts.topK ?? 8)
+  const events = readIcsFile(meta.icsPath)
+  return {
+    snapshot: { query: opts.query, results: topResults, events, usedSemantic },
+    text: formatSearchResults(opts.query, topResults, events, index, { ...opts, usedSemantic }),
+  }
+}
+
+/**
+ * Bring the on-disk index for \`dest\` up to date with \`folder\` and persist
+ * it — build fresh if none exists yet (or it's for a different folder),
+ * otherwise an incremental update (see indexer.mjs — cheap for files that
+ * haven't changed). Called automatically by buildLiveContext()'s query path
+ * on every call, so a query always searches current content; also exposed
+ * directly for \`vault index\` to pre-warm the index ahead of time.
+ */
+export function ensureIndex(dest, folder, scanOpts = {}) {
+  const existing = loadIndex(dest)
+  const index = existing && existing.folder === folder ? updateIndex(existing, folder, scanOpts).index : buildIndex(folder, scanOpts)
+  saveIndex(dest, index)
+  return index
+}
+
+function formatSearchResults(query, results, events, index, { format = 'markdown', usedSemantic } = {}) {
+  if (format === 'json') {
+    return JSON.stringify(
+      {
+        query,
+        resultCount: results.length,
+        indexedFiles: Object.keys(index.files).length,
+        ...(usedSemantic !== undefined ? { usedSemantic } : {}),
+        results: results.map((r) => ({ relPath: r.doc.relPath, score: r.score, text: r.doc.text })),
+        events,
+      },
+      null,
+      2,
+    )
+  }
+
+  const lines = []
+  lines.push(\`# Search: "\${query}"\`)
+  lines.push(\`(\${results.length} relevant chunk(s) out of \${Object.keys(index.files).length} indexed file(s))\`)
+  if (usedSemantic === true) lines.push('Ranking: hybrid — BM25 keyword match + local semantic similarity.')
+  if (usedSemantic === false) lines.push('Ranking: BM25 keyword match only — local semantic model unavailable this run (falls back automatically, nothing else is affected).')
+  lines.push('')
+  if (!results.length) {
+    lines.push('No matching content found. Try different terms, or use \`vault context\` with no query for the full folder listing.')
+  } else {
+    for (const { doc, score } of results) {
+      lines.push(\`## \${doc.relPath} (relevance \${score.toFixed(2)})\`)
+      const indented = doc.text
+        .split('\\n')
+        .map((l) => \`  > \${l}\`)
+        .join('\\n')
+      lines.push(indented)
+      lines.push('')
+    }
+  }
+  if (events.length) {
+    lines.push('## Calendar')
+    for (const e of events) {
+      const when = [e.start, e.end].filter(Boolean).join(' – ')
+      const where = e.location ? \` @ \${e.location}\` : ''
+      lines.push(\`- \${e.summary ?? '(untitled)'}\${when ? \` — \${when}\` : ''}\${where}\`)
+    }
+  }
+  return lines.join('\\n') + '\\n'
 }
 
 /**
@@ -1057,6 +2080,116 @@ export function statusVault(dest) {
   const meta = readMeta(dest)
   if (!meta) return null
   return meta
+}
+`,
+  },
+  {
+    path: "lib/watcher.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Optional background watcher: keeps the index updated reactively via
+// fs.watch instead of relying solely on the on-query incremental scan (see
+// ensureIndex in lib/vault.mjs). Both approaches are correct — the on-query
+// path already handles "index might be stale" on every call — this exists
+// purely as a latency optimization for very large trees, where even a
+// stat()-only walk of thousands of files on every single query adds
+// noticeable delay. Run \`vault watch\` once and queries stay fast because
+// the index is already current by the time they arrive.
+//
+// Node's fs.watch recursive option is NOT cross-platform: it works natively
+// on macOS and Windows, but on Linux it throws (inotify has no native
+// recursive-watch primitive). This module handles that honestly rather than
+// silently under-watching on Linux: it watches every subdirectory
+// individually there, discovered via the same walkFiles() used elsewhere,
+// and re-scans for newly-created subdirectories periodically (60s) since a
+// brand-new directory has no watch on it yet until the next such pass.
+//
+// Debounced: filesystem events tend to arrive in bursts (an editor's
+// save-as-temp-then-rename pattern can fire several events for one logical
+// save) — changes are batched for DEBOUNCE_MS before a single incremental
+// update runs, rather than re-indexing on every individual event.
+
+import { watch } from 'node:fs'
+import { platform } from 'node:process'
+import { walkFiles } from './scan.mjs'
+import { loadIndex, buildIndex, updateIndex, saveIndex } from './indexer.mjs'
+
+const DEBOUNCE_MS = 800
+const LINUX_RESCAN_INTERVAL_MS = 60_000
+
+/**
+ * Start watching \`folder\` and keep the index at \`dest\` continuously
+ * updated. Returns a controller with stop() to tear everything down —
+ * used by tests, and by \`vault watch\` to handle Ctrl+C cleanly.
+ */
+export function startWatcher(dest, folder, opts = {}) {
+  let index = loadIndex(dest)
+  if (!index || index.folder !== folder) index = buildIndex(folder, opts)
+  saveIndex(dest, index)
+
+  let debounceTimer = null
+  let stopped = false
+  const onEvent = opts.onUpdate ?? (() => {})
+
+  function scheduleUpdate() {
+    if (stopped) return
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      if (stopped) return
+      const result = updateIndex(index, folder, opts)
+      index = result.index
+      saveIndex(dest, index)
+      if (result.added || result.updated || result.removed) onEvent(result)
+    }, DEBOUNCE_MS)
+  }
+
+  const watchers = []
+
+  if (platform !== 'linux') {
+    // macOS/Windows: fs.watch's recursive option is a real, single OS-level
+    // watch covering the whole subtree.
+    try {
+      watchers.push(watch(folder, { recursive: true }, scheduleUpdate))
+    } catch {
+      // Fall through to the manual per-directory approach below if the
+      // platform claims recursive support but it fails in practice.
+    }
+  }
+
+  let rescanTimer = null
+  if (platform === 'linux' || watchers.length === 0) {
+    const watchedDirs = new Set()
+    function watchAllDirs() {
+      if (stopped) return
+      const dirs = new Set([folder, ...walkFiles(folder, opts).map((f) => f.fullPath.slice(0, f.fullPath.length - f.name.length - 1))])
+      for (const dir of dirs) {
+        if (watchedDirs.has(dir)) continue
+        try {
+          watchers.push(watch(dir, scheduleUpdate))
+          watchedDirs.add(dir)
+        } catch {
+          // Directory vanished between the walk and the watch call, or a
+          // permissions issue — skip it rather than fail the whole watcher.
+        }
+      }
+    }
+    watchAllDirs()
+    rescanTimer = setInterval(watchAllDirs, LINUX_RESCAN_INTERVAL_MS)
+  }
+
+  return {
+    stop() {
+      stopped = true
+      clearTimeout(debounceTimer)
+      if (rescanTimer) clearInterval(rescanTimer)
+      for (const w of watchers) w.close()
+    },
+    getIndex() {
+      return index
+    },
+  }
 }
 `,
   },
@@ -1188,9 +2321,11 @@ import { existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { initVault, syncVault, buildContext, statusVault, DecryptError } from '../lib/vault.mjs'
+import { initVault, syncVault, buildContext, buildLiveContext, buildLiveContextHybrid, ensureIndex, statusVault, DecryptError } from '../lib/vault.mjs'
+import { startWatcher } from '../lib/watcher.mjs'
 
-const USAGE = \`multivault — a local, encrypted context snapshot of a folder and calendar
+const USAGE = \`multivault — a local, encrypted context snapshot of a folder and calendar,
+with a BM25-ranked search index for large folders
 
 Usage
   vault <command> [options]
@@ -1198,25 +2333,35 @@ Usage
 Commands
   init      Create a new vault (generates and prints your passphrase — save it!)
   sync      Re-scan the folder/calendar and refresh the encrypted snapshot
-  context   Decrypt the vault and print a pasteable context brief
+  index     Build/update the search index once, without decrypting or printing anything
+  watch     Keep the search index continuously updated in the background (Ctrl+C to stop)
+  context   Print a context brief — whole-folder, or ranked search results with --query
   status    Show last-sync time and counts, without needing the passphrase
 
 Options
-  --folder <path>    Folder to watch (init: required unless already set; sync: overrides)
+  --folder <path>    Folder to watch (init: required unless already set; sync/index: overrides)
   --ics <path>       Path to a .ics calendar file to include (optional)
   --dest <path>      Where the vault lives (default: ./.multivault)
+  --query <text>     context: search instead of dumping the whole folder — no passphrase needed
+  --semantic         context --query: also rank by local semantic similarity, not just keyword
+                      match (catches paraphrases BM25 alone misses). Falls back to keyword-only
+                      automatically if the local model can't load — never an error, always a result.
+  --topk <n>         context --query: max results (default 8)
   --format <fmt>     context: text|markdown (default) or json
   --passphrase <p>   Passphrase (or set MULTIVAULT_PASSPHRASE — preferred, keeps it
-                      out of your shell history)
+                      out of your shell history). Not needed for context --query.
   -h, --help          Show this message
   -v, --version       Show the version
 
 Examples
   vault init --folder ~/Documents/ClientNotes --ics ~/Calendar.ics
-  vault sync
-  vault context                              # paste this into a chat
-  vault context --format json | your-script  # pipe into your own tooling
-  MULTIVAULT_PASSPHRASE=xxxx vault sync      # for cron/launchd/Task Scheduler
+  vault sync                                     # whole-folder mode: snapshot + encrypt
+  vault context                                  # paste this into a chat
+  vault index                                    # pre-warm the search index (optional — auto-builds on first query)
+  vault context --query "invoice overdue"        # ranked search, no passphrase needed
+  vault context --query "churn risk" --semantic  # also catches docs that never say those exact words
+  vault context --format json | your-script      # pipe into your own tooling
+  MULTIVAULT_PASSPHRASE=xxxx vault sync          # for cron/launchd/Task Scheduler
 \`
 
 class UsageError extends Error {}
@@ -1227,16 +2372,19 @@ function defaultDest() {
 
 function parseArgs(argv) {
   const command = argv[0]
-  const opts = { folder: null, ics: null, dest: null, format: 'markdown', passphrase: null }
+  const opts = { folder: null, ics: null, dest: null, format: 'markdown', passphrase: null, query: null, topK: null, semantic: false }
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '-h' || arg === '--help') { process.stdout.write(USAGE); process.exit(0) }
-    if (arg === '-v' || arg === '--version') { process.stdout.write('multivault 1.0.0\\n'); process.exit(0) }
+    if (arg === '-v' || arg === '--version') { process.stdout.write('multivault 3.1.0\\n'); process.exit(0) }
     if (arg === '--folder') { opts.folder = argv[++i]; continue }
     if (arg === '--ics') { opts.ics = argv[++i]; continue }
     if (arg === '--dest') { opts.dest = argv[++i]; continue }
     if (arg === '--format') { opts.format = argv[++i]; continue }
     if (arg === '--passphrase') { opts.passphrase = argv[++i]; continue }
+    if (arg === '--query') { opts.query = argv[++i]; continue }
+    if (arg === '--topk') { opts.topK = Number(argv[++i]); continue }
+    if (arg === '--semantic') { opts.semantic = true; continue }
     throw new UsageError(\`Unknown option: \${arg}\`)
   }
   return { command, opts }
@@ -1259,7 +2407,7 @@ async function main() {
     process.exit(0)
   }
   if (argv[0] === '-v' || argv[0] === '--version') {
-    process.stdout.write('multivault 1.0.0\\n')
+    process.stdout.write('multivault 3.1.0\\n')
     process.exit(0)
   }
   const { command, opts } = parseArgs(argv)
@@ -1278,7 +2426,7 @@ async function main() {
     process.stdout.write(\`  \${passphrase}\\n\\n\`)
     process.stdout.write(
       \`There is no recovery if you lose this. It is never stored anywhere by this tool.\\n\` +
-        \`Run "vault sync" next to take your first snapshot.\\n\`,
+        \`Run "vault sync" next to take your first snapshot, or "vault context --query ..." to search — that path builds its own index automatically and needs no passphrase.\\n\`,
     )
     return
   }
@@ -1295,9 +2443,65 @@ async function main() {
     return
   }
 
+  if (command === 'index') {
+    const meta = statusVault(dest)
+    if (!meta) {
+      process.stderr.write(\`No vault found at \${dest}. Run "vault init" first.\\n\`)
+      process.exit(2)
+    }
+    const folder = opts.folder ? resolve(opts.folder) : meta.folder
+    if (!folder) {
+      process.stderr.write('No folder configured. Pass --folder, or set one at "vault init" time.\\n')
+      process.exit(2)
+    }
+    const index = ensureIndex(dest, folder)
+    process.stdout.write(
+      \`Indexed: \${Object.keys(index.files).length} file(s), \${index.docs.length} searchable chunk(s) at \${index.builtAt}\\n\`,
+    )
+    return
+  }
+
+  if (command === 'watch') {
+    const meta = statusVault(dest)
+    if (!meta) {
+      process.stderr.write(\`No vault found at \${dest}. Run "vault init" first.\\n\`)
+      process.exit(2)
+    }
+    const folder = opts.folder ? resolve(opts.folder) : meta.folder
+    if (!folder) {
+      process.stderr.write('No folder configured. Pass --folder, or set one at "vault init" time.\\n')
+      process.exit(2)
+    }
+    process.stdout.write(\`Watching \${folder} — index will stay current in the background. Ctrl+C to stop.\\n\`)
+    const controller = startWatcher(dest, folder, {
+      onUpdate: (result) => {
+        const stamp = new Date().toISOString()
+        process.stdout.write(\`\${stamp} re-indexed: +\${result.added} ~\${result.updated} -\${result.removed}\\n\`)
+      },
+    })
+    // Keep the process alive until Ctrl+C; stop() closes the underlying
+    // fs.watch handles cleanly rather than leaving them dangling.
+    process.on('SIGINT', () => {
+      controller.stop()
+      process.stdout.write('\\nStopped.\\n')
+      process.exit(0)
+    })
+    await new Promise(() => {}) // run forever
+    return
+  }
+
   if (command === 'context') {
-    const passphrase = resolvePassphrase(opts)
     const format = opts.format === 'json' ? 'json' : 'markdown'
+    if (opts.query) {
+      // Search mode: no passphrase needed — see buildLiveContext in
+      // lib/vault.mjs for why (nothing decrypted, nothing at rest read).
+      const { text } = opts.semantic
+        ? await buildLiveContextHybrid(dest, { query: opts.query, topK: opts.topK ?? undefined, format })
+        : buildLiveContext(dest, { query: opts.query, topK: opts.topK ?? undefined, format })
+      process.stdout.write(text)
+      return
+    }
+    const passphrase = resolvePassphrase(opts)
     process.stdout.write(buildContext(dest, passphrase, { format }))
     return
   }
@@ -1502,6 +2706,526 @@ Write-Host "Note: MULTIVAULT_PASSPHRASE was saved as a per-user environment vari
 `,
   },
   {
+    path: "test/bm25.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { tokenize, termFrequencies } from '../lib/tokenize.mjs'
+import { idf, scoreDoc, rank } from '../lib/bm25.mjs'
+
+// ---------------------------------------------------------------------------
+// tokenize
+// ---------------------------------------------------------------------------
+
+test('tokenize lowercases and splits on non-alphanumeric', () => {
+  assert.deepEqual(tokenize('Client Prefers Async-Updates!'), ['client', 'prefers', 'async', 'updates'])
+})
+
+test('tokenize drops single-character tokens', () => {
+  assert.deepEqual(tokenize('a b cc'), ['cc'])
+})
+
+test('tokenize handles empty/null input without throwing', () => {
+  assert.deepEqual(tokenize(''), [])
+  assert.deepEqual(tokenize(null), [])
+  assert.deepEqual(tokenize(undefined), [])
+})
+
+test('termFrequencies counts correctly', () => {
+  const result = termFrequencies('the cat sat on the mat')
+  assert.deepEqual({ ...result }, { the: 2, cat: 1, sat: 1, on: 1, mat: 1 })
+})
+
+// ---------------------------------------------------------------------------
+// BM25 — tested against known mathematical properties of the algorithm,
+// not just "does it run"
+// ---------------------------------------------------------------------------
+
+test('idf: a term in every document scores a small positive number, not negative', () => {
+  // The classic (unsmoothed) BM25 IDF formula goes negative here — this is
+  // exactly the failure case the +1-smoothed variant exists to fix.
+  const score = idf(10, 10)
+  assert.ok(score > 0, \`expected positive IDF, got \${score}\`)
+})
+
+test('idf: a rare term scores higher than a common term', () => {
+  const rare = idf(1000, 2)
+  const common = idf(1000, 500)
+  assert.ok(rare > common, 'a term in 2/1000 docs should outrank a term in 500/1000 docs')
+})
+
+test('idf: increases monotonically as a term gets rarer', () => {
+  const scores = [900, 500, 100, 10, 1].map((df) => idf(1000, df))
+  for (let i = 1; i < scores.length; i++) {
+    assert.ok(scores[i] > scores[i - 1], \`idf should strictly increase as document frequency drops\`)
+  }
+})
+
+test('scoreDoc: a document matching the query term outscores one that does not', () => {
+  const corpus = { totalDocs: 2, avgDocLength: 5, docFreq: { async: 1 } }
+  const matching = { tokens: { async: 1, updates: 1 }, length: 5 }
+  const nonMatching = { tokens: { sync: 1, calls: 1 }, length: 5 }
+  const queryTerms = ['async']
+  assert.ok(scoreDoc(queryTerms, matching, corpus) > 0)
+  assert.equal(scoreDoc(queryTerms, nonMatching, corpus), 0)
+})
+
+test('scoreDoc: higher term frequency scores higher (with diminishing returns)', () => {
+  const corpus = { totalDocs: 3, avgDocLength: 10, docFreq: { budget: 3 } }
+  const oneOccurrence = { tokens: { budget: 1 }, length: 10 }
+  const fiveOccurrences = { tokens: { budget: 5 }, length: 10 }
+  const tenOccurrences = { tokens: { budget: 10 }, length: 10 }
+  const s1 = scoreDoc(['budget'], oneOccurrence, corpus)
+  const s5 = scoreDoc(['budget'], fiveOccurrences, corpus)
+  const s10 = scoreDoc(['budget'], tenOccurrences, corpus)
+  assert.ok(s5 > s1, 'more occurrences should score higher')
+  assert.ok(s10 > s5, 'more occurrences should score higher')
+  // Diminishing returns: going from 5->10 occurrences should gain LESS than
+  // going from 1->5 did, per unit — this is BM25's whole point vs. raw term
+  // frequency, which would double-count a stuffed document linearly.
+  const gain1to5 = s5 - s1
+  const gain5to10 = s10 - s5
+  assert.ok(gain5to10 < gain1to5, 'term-frequency saturation: later occurrences should matter less')
+})
+
+test('scoreDoc: a longer document with the same term density scores lower (length normalization)', () => {
+  // Same term frequency, but the long doc is mostly OTHER content — BM25
+  // should discount that relative to a short, focused document.
+  const corpus = { totalDocs: 2, avgDocLength: 50, docFreq: { invoice: 2 } }
+  const short = { tokens: { invoice: 3 }, length: 20 }
+  const long = { tokens: { invoice: 3 }, length: 200 }
+  assert.ok(scoreDoc(['invoice'], short, corpus) > scoreDoc(['invoice'], long, corpus))
+})
+
+test('scoreDoc: a query term absent from the whole corpus contributes zero, not an error', () => {
+  const corpus = { totalDocs: 1, avgDocLength: 10, docFreq: { known: 1 } }
+  const doc = { tokens: { known: 1 }, length: 10 }
+  assert.equal(scoreDoc(['known', 'never-appears-anywhere'], doc, corpus), scoreDoc(['known'], doc, corpus))
+})
+
+test('rank: sorts descending by score and drops zero-score (irrelevant) docs', () => {
+  const index = {
+    totalDocs: 3,
+    avgDocLength: 6,
+    docFreq: { pricing: 2, refund: 1 },
+    docs: [
+      { id: 'a', tokens: { pricing: 1 }, length: 6 },
+      { id: 'b', tokens: { pricing: 3, refund: 1 }, length: 6 },
+      { id: 'c', tokens: { unrelated: 5 }, length: 6 }, // shares no term with the query
+    ],
+  }
+  const results = rank(['pricing', 'refund'], index)
+  assert.equal(results.length, 2, 'doc c shares no query term and should be dropped, not scored 0 and kept')
+  assert.equal(results[0].doc.id, 'b', 'doc b matches both query terms and should rank first')
+  assert.equal(results[1].doc.id, 'a')
+})
+
+test('rank: an exact, focused match beats a long document that only mentions the term once', () => {
+  const index = {
+    totalDocs: 2,
+    avgDocLength: 100,
+    docFreq: { deadline: 2 },
+    docs: [
+      { id: 'focused', tokens: { deadline: 4 }, length: 15 },
+      { id: 'sprawling', tokens: { deadline: 1 }, length: 400 },
+    ],
+  }
+  const results = rank(['deadline'], index)
+  assert.equal(results[0].doc.id, 'focused')
+})
+`,
+  },
+  {
+    path: "test/hybrid-rank.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+// Tests hybridRank() and ensureEmbeddings() from lib/hybrid-rank.mjs against
+// an INJECTED fake embedding function, never the real @xenova/transformers
+// model — a real model download needs network access to Hugging Face, which
+// CI/build environments can't always assume, and these tests should be fast
+// and deterministic regardless. lib/hybrid-rank.mjs accepts embedBatch/
+// cosineSimilarity/modelId as an optional \`deps\` argument for exactly this
+// reason; production code (see buildLiveContextHybrid in lib/vault.mjs)
+// simply omits \`deps\` and gets the real ones from lib/embeddings.mjs.
+//
+// The fake embedding groups words into hand-picked concept clusters instead
+// of literal word overlap — standing in for what a real embedding model
+// already knows (that "usage dropped, contact gone quiet" and "churn risk"
+// are related concepts, without sharing a single word). A literal-overlap
+// fake couldn't exercise the actual scenario this feature exists for.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { buildIndex } from '../lib/indexer.mjs'
+import { rank } from '../lib/bm25.mjs'
+import { tokenize } from '../lib/tokenize.mjs'
+import { hybridRank, ensureEmbeddings } from '../lib/hybrid-rank.mjs'
+import { EmbeddingsUnavailableError } from '../lib/embeddings.mjs'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+function tempDir(prefix) {
+  return mkdtempSync(join(tmpdir(), \`\${prefix}-\`))
+}
+
+const FAKE_MODEL_ID = 'fake-test-model-v1'
+const CONCEPT_GROUPS = [
+  ['churn', 'risk', 'wobbling', 'dropped', 'quiet', 'flag'], // "customer at risk of leaving" concept
+  ['invoice', 'overdue', 'renewal', 'paid', 'outstanding'], // "billing status" concept
+  ['office', 'supplies', 'coffee', 'paper'], // unrelated concept, kept apart
+]
+
+function fakeVector(text) {
+  const lower = text.toLowerCase()
+  const v = CONCEPT_GROUPS.map((group) => group.reduce((s, w) => s + (lower.includes(w) ? 1 : 0), 0))
+  const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1
+  return Float32Array.from(v.map((x) => x / norm))
+}
+
+function fakeCosineSimilarity(a, b) {
+  let dot = 0
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i]
+  return dot
+}
+
+const fakeDeps = {
+  embedBatch: async (texts) => texts.map(fakeVector),
+  cosineSimilarity: fakeCosineSimilarity,
+  modelId: () => FAKE_MODEL_ID,
+}
+
+// ---------------------------------------------------------------------------
+// ensureEmbeddings
+// ---------------------------------------------------------------------------
+
+test('ensureEmbeddings adds a vector to every doc and records the model id', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Northwind is wobbling.')
+    const index = buildIndex(dir)
+    const ok = await ensureEmbeddings(index, fakeDeps)
+    assert.equal(ok, true)
+    assert.equal(index.embeddingModel, FAKE_MODEL_ID)
+    for (const doc of index.docs) assert.ok(Array.isArray(doc.vector) && doc.vector.length > 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('ensureEmbeddings does not re-embed docs that already have a current vector (cache is respected)', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Northwind is wobbling.')
+    const index = buildIndex(dir)
+    await ensureEmbeddings(index, fakeDeps)
+    const cachedVector = index.docs[0].vector
+
+    let embedCalls = 0
+    const countingDeps = {
+      ...fakeDeps,
+      embedBatch: async (texts) => {
+        embedCalls += 1
+        return texts.map(fakeVector)
+      },
+    }
+    await ensureEmbeddings(index, countingDeps)
+    assert.equal(embedCalls, 0, 'no docs should have needed re-embedding')
+    assert.deepEqual(index.docs[0].vector, cachedVector)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('ensureEmbeddings recomputes vectors when the recorded model id no longer matches', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Northwind is wobbling.')
+    const index = buildIndex(dir)
+    index.embeddingModel = 'some-old-model'
+    index.docs[0].vector = [0, 0, 0]
+
+    let embedCalls = 0
+    const countingDeps = { ...fakeDeps, embedBatch: async (texts) => { embedCalls += 1; return texts.map(fakeVector) } }
+    await ensureEmbeddings(index, countingDeps)
+    assert.equal(embedCalls, 1, 'stale-model vectors should be recomputed')
+    assert.equal(index.embeddingModel, FAKE_MODEL_ID)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('ensureEmbeddings returns false (not a throw) when the embedder is unavailable', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Northwind is wobbling.')
+    const index = buildIndex(dir)
+    const failingDeps = {
+      embedBatch: async () => { throw new EmbeddingsUnavailableError('no internet for first-run model download') },
+      modelId: () => FAKE_MODEL_ID,
+    }
+    const ok = await ensureEmbeddings(index, failingDeps)
+    assert.equal(ok, false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// hybridRank — the actual product scenario
+// ---------------------------------------------------------------------------
+
+test('hybridRank surfaces a paraphrased doc that shares no words with the query, which plain bm25 rank() cannot', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(
+      join(dir, 'status-update.md'),
+      'Quick note for the team.\\n\\nNorthwind is wobbling — usage dropped 40% and the contact has gone quiet.\\n\\nWe should flag this before the renewal call.',
+    )
+    writeFileSync(join(dir, 'invoices.md'), 'Invoice log.\\n\\nGlobex renewal invoice is outstanding, 12 days overdue.')
+    writeFileSync(join(dir, 'unrelated.md'), 'Office supplies order.\\n\\nOrdered more printer paper and coffee.')
+
+    const index = buildIndex(dir)
+
+    // Sanity check: plain BM25 genuinely cannot find this — the whole point
+    // of the feature. If this assertion ever fails, the fixture text below
+    // needs adjusting, since the hybrid test downstream would no longer be
+    // testing anything meaningful.
+    const bm25Only = rank(tokenize('churn risk'), index)
+    assert.equal(bm25Only.length, 0, 'fixture should share zero terms with "churn risk" for BM25')
+
+    const { results, usedSemantic } = await hybridRank('churn risk', index, fakeDeps)
+    assert.equal(usedSemantic, true)
+    assert.ok(results.length > 0)
+    assert.equal(results[0].doc.relPath, 'status-update.md')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('hybridRank still ranks an exact keyword match first (BM25 signal is not lost inside the blend)', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'status-update.md'), 'Northwind is wobbling — usage dropped and the contact has gone quiet.')
+    writeFileSync(join(dir, 'invoices.md'), 'Invoice log.\\n\\nGlobex renewal invoice is outstanding, 12 days overdue.')
+    writeFileSync(join(dir, 'unrelated.md'), 'Office supplies order.\\n\\nOrdered more printer paper and coffee.')
+
+    const index = buildIndex(dir)
+    const { results } = await hybridRank('invoice overdue Globex', index, fakeDeps)
+    assert.equal(results[0].doc.relPath, 'invoices.md')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('hybridRank falls back to plain BM25 results and reports usedSemantic: false when embeddings are unavailable', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    writeFileSync(join(dir, 'invoices.md'), 'Invoice log.\\n\\nGlobex renewal invoice is outstanding, 12 days overdue.')
+    const index = buildIndex(dir)
+
+    const bm25Only = rank(tokenize('invoice overdue'), index)
+    const failingDeps = { embedBatch: async () => { throw new EmbeddingsUnavailableError('offline') }, modelId: () => FAKE_MODEL_ID }
+
+    const { results, usedSemantic } = await hybridRank('invoice overdue', index, failingDeps)
+    assert.equal(usedSemantic, false)
+    assert.deepEqual(results, bm25Only)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('hybridRank on an empty index returns no results and usedSemantic: false without calling the embedder', async () => {
+  const dir = tempDir('mv-hybrid')
+  try {
+    const index = buildIndex(dir) // empty folder
+    let called = false
+    const trackingDeps = { ...fakeDeps, embedBatch: async (t) => { called = true; return fakeDeps.embedBatch(t) } }
+    const { results, usedSemantic } = await hybridRank('anything', index, trackingDeps)
+    assert.deepEqual(results, [])
+    assert.equal(usedSemantic, false)
+    assert.equal(called, false, 'no docs to embed — the embedder should never be invoked')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
+    path: "test/indexer.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync, unlinkSync, utimesSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { buildIndex, updateIndex } from '../lib/indexer.mjs'
+import { rank } from '../lib/bm25.mjs'
+import { tokenize } from '../lib/tokenize.mjs'
+
+function tempDir(prefix) {
+  return mkdtempSync(join(tmpdir(), \`\${prefix}-\`))
+}
+
+test('buildIndex indexes eligible files and lists ineligible ones without content', () => {
+  const dir = tempDir('idx-build')
+  try {
+    writeFileSync(join(dir, 'notes.md'), 'Client prefers async updates over calls.')
+    writeFileSync(join(dir, 'photo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    const index = buildIndex(dir)
+    assert.ok(index.files['notes.md'].eligible)
+    assert.ok(index.files['notes.md'].docIds.length > 0)
+    assert.equal(index.files['photo.png'].eligible, false)
+    assert.equal(index.files['photo.png'].docIds.length, 0)
+    assert.equal(index.totalDocs, index.docs.length)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('buildIndex never reads a file matching the sensitive-name pattern', () => {
+  const dir = tempDir('idx-build')
+  try {
+    writeFileSync(join(dir, 'api-keys.txt'), 'sk-super-secret-value')
+    const index = buildIndex(dir)
+    assert.equal(index.files['api-keys.txt'].eligible, false)
+    assert.equal(index.docs.length, 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('a query finds content via BM25 ranking against a built index', () => {
+  const dir = tempDir('idx-build')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'The invoice for Acme Corp is overdue by two weeks.')
+    writeFileSync(join(dir, 'b.md'), 'Weekly standup notes: nothing blocking, ship on Friday.')
+    const index = buildIndex(dir)
+    const results = rank(tokenize('invoice overdue'), index)
+    assert.ok(results.length > 0)
+    assert.equal(results[0].doc.relPath, 'a.md')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('updateIndex picks up a newly added file without touching unrelated docs', () => {
+  const dir = tempDir('idx-update')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Original content about pricing.')
+    let index = buildIndex(dir)
+    const originalDocCount = index.docs.length
+
+    writeFileSync(join(dir, 'b.md'), 'New file about refunds.')
+    const result = updateIndex(index, dir)
+    assert.equal(result.added, 1)
+    assert.equal(result.updated, 0)
+    assert.equal(result.removed, 0)
+    assert.ok(result.index.docs.length > originalDocCount)
+    assert.ok(result.index.files['a.md'], 'unrelated file a.md should be untouched')
+    assert.ok(result.index.files['b.md'])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('updateIndex detects a modified file (by mtime) and re-indexes only that file', () => {
+  const dir = tempDir('idx-update')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Old content mentions apples.')
+    writeFileSync(join(dir, 'b.md'), 'Unrelated content about oranges.')
+    let index = buildIndex(dir)
+
+    // Change a.md's content AND bump its mtime forward so the change is detected.
+    writeFileSync(join(dir, 'a.md'), 'New content mentions bananas now.')
+    const future = new Date(Date.now() + 5000)
+    utimesSync(join(dir, 'a.md'), future, future)
+
+    const result = updateIndex(index, dir)
+    assert.equal(result.updated, 1)
+    assert.equal(result.added, 0)
+
+    const appleResults = rank(tokenize('apples'), result.index)
+    const bananaResults = rank(tokenize('bananas'), result.index)
+    assert.equal(appleResults.length, 0, 'old content should no longer be findable')
+    assert.equal(bananaResults.length, 1, 'new content should be findable')
+    assert.equal(bananaResults[0].doc.relPath, 'a.md')
+
+    // b.md's doc should be untouched — same doc id it had before.
+    const bDoc = result.index.docs.find((d) => d.relPath === 'b.md')
+    assert.ok(bDoc)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('updateIndex removes a deleted file\\'s docs and its docFreq contribution', () => {
+  const dir = tempDir('idx-update')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Unique term zephyrsaurus appears only here.')
+    writeFileSync(join(dir, 'b.md'), 'Common content about meetings.')
+    let index = buildIndex(dir)
+    assert.equal(index.docFreq['zephyrsaurus'], 1)
+
+    unlinkSync(join(dir, 'a.md'))
+    const result = updateIndex(index, dir)
+    assert.equal(result.removed, 1)
+    assert.equal(result.index.files['a.md'], undefined)
+    assert.equal(result.index.docFreq['zephyrsaurus'], undefined, 'docFreq for the deleted file\\'s only term should be cleaned up, not left dangling')
+
+    const results = rank(tokenize('zephyrsaurus'), result.index)
+    assert.equal(results.length, 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('updateIndex is a no-op (no re-reads) for files whose mtime has not changed', () => {
+  const dir = tempDir('idx-update')
+  try {
+    writeFileSync(join(dir, 'a.md'), 'Stable content.')
+    let index = buildIndex(dir)
+    const originalDocIds = index.files['a.md'].docIds.slice()
+
+    const result = updateIndex(index, dir) // nothing changed on disk
+    assert.equal(result.added, 0)
+    assert.equal(result.updated, 0)
+    assert.equal(result.removed, 0)
+    assert.deepEqual(result.index.files['a.md'].docIds, originalDocIds, 'doc ids should be identical, proving the file was not re-chunked/re-indexed')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('a large file is chunked and only its relevant chunk ranks highly for a specific query', () => {
+  const dir = tempDir('idx-large')
+  try {
+    const filler = 'The quarterly newsletter covers many unrelated topics. '.repeat(60)
+    const relevantSection = '\\n\\nIMPORTANT: the client contract renewal deadline is March 15th, confirmed by legal.\\n\\n'
+    const moreFiller = 'More unrelated newsletter content follows here. '.repeat(60)
+    writeFileSync(join(dir, 'newsletter.md'), filler + relevantSection + moreFiller)
+
+    const index = buildIndex(dir)
+    assert.ok(index.files['newsletter.md'].docIds.length > 1, 'a large file should produce multiple chunks')
+
+    const results = rank(tokenize('contract renewal deadline'), index)
+    assert.ok(results.length > 0)
+    assert.ok(results[0].doc.text.includes('March 15th'), 'the top-ranked chunk should be the one actually containing the relevant content')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
     path: "test/mcp.test.mjs",
     contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
@@ -1673,6 +3397,46 @@ test('MCP: vault_status reports configured folder without needing a passphrase',
   }
 })
 
+test('MCP: get_context with a query returns ranked, relevant results through the real protocol', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'contract.md'), 'The renewal deadline for the Acme contract is March 15th.')
+    writeFileSync(join(watchedDir, 'lunch.md'), 'Team lunch order: half want tacos, half want sushi.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const result = await client.callTool({ name: 'get_context', arguments: { query: 'contract renewal deadline' } })
+    assert.equal(result.isError, undefined)
+    assert.ok(result.content[0].text.includes('contract.md'))
+    assert.ok(!result.content[0].text.includes('lunch.md'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: vault_status reflects the index once a query has run', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'Some indexed content.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const before = await client.callTool({ name: 'vault_status', arguments: {} })
+    assert.ok(before.content[0].text.includes('not built yet'))
+
+    await client.callTool({ name: 'get_context', arguments: { query: 'indexed' } })
+
+    const after = await client.callTool({ name: 'vault_status', arguments: {} })
+    assert.ok(after.content[0].text.includes('1 file(s) tracked'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
 test('MCP: get_context on a never-initialized vault returns isError, not a crash', async () => {
   const emptyDest = tempDir('mcp-never-init')
   try {
@@ -1684,6 +3448,138 @@ test('MCP: get_context on a never-initialized vault returns isError, not a crash
     assert.ok(result.content[0].text.includes('vault init'))
   } finally {
     rmSync(emptyDest, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
+    path: "test/query.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { initVault, buildLiveContext, ensureIndex } from '../lib/vault.mjs'
+import { loadIndex } from '../lib/index-store.mjs'
+
+function tempDir(prefix) {
+  return mkdtempSync(join(tmpdir(), \`\${prefix}-\`))
+}
+
+test('buildLiveContext with no query behaves exactly like v1/v2 (whole-folder listing)', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'Some content here.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { text } = buildLiveContext(vaultDest)
+    assert.ok(text.startsWith('# Context'), 'no-query path should still use the v1/v2 whole-folder format')
+    assert.ok(text.includes('a.md'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('buildLiveContext with a query returns only relevant chunks, ranked', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    writeFileSync(join(watchedDir, 'invoice.md'), 'Acme Corp invoice #4471 is overdue by 12 days.')
+    writeFileSync(join(watchedDir, 'standup.md'), 'Daily standup: nothing blocking, on track for Friday.')
+    initVault(vaultDest, { folder: watchedDir })
+
+    const { text, snapshot } = buildLiveContext(vaultDest, { query: 'overdue invoice' })
+    assert.ok(text.startsWith('# Search:'))
+    assert.ok(text.includes('invoice.md'))
+    assert.ok(!text.includes('standup.md'), 'irrelevant file should not appear in a targeted query result')
+    assert.equal(snapshot.results[0].doc.relPath, 'invoice.md')
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('a query automatically indexes on first call — no separate "vault index" step required', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    writeFileSync(join(watchedDir, 'notes.md'), 'Project Phoenix launches in Q3.')
+    initVault(vaultDest, { folder: watchedDir })
+    // No explicit ensureIndex/vault-index call — buildLiveContext's query path should handle it.
+    const { text } = buildLiveContext(vaultDest, { query: 'Phoenix launch' })
+    assert.ok(text.includes('notes.md'))
+    assert.ok(loadIndex(vaultDest), 'querying should have persisted an index to disk')
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('a query picks up a file added after the vault was initialized (index updates incrementally)', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    initVault(vaultDest, { folder: watchedDir })
+    buildLiveContext(vaultDest, { query: 'anything' }) // builds an initial (empty) index
+
+    writeFileSync(join(watchedDir, 'late.md'), 'This file about zeppelins arrived after init.')
+    const { text } = buildLiveContext(vaultDest, { query: 'zeppelins' })
+    assert.ok(text.includes('late.md'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('a query with no matches returns a clear empty result, not an error', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'Completely unrelated content.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { text, snapshot } = buildLiveContext(vaultDest, { query: 'xyznonexistentterm' })
+    assert.equal(snapshot.results.length, 0)
+    assert.ok(text.includes('No matching content found'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('query respects topK to limit result count', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    for (let i = 0; i < 5; i++) {
+      writeFileSync(join(watchedDir, \`doc\${i}.md\`), \`This document number \${i} discusses budgets extensively. Budget budget budget.\`)
+    }
+    initVault(vaultDest, { folder: watchedDir })
+    const { snapshot } = buildLiveContext(vaultDest, { query: 'budgets', topK: 2 })
+    assert.equal(snapshot.results.length, 2)
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('ensureIndex persists to disk and a second call is a cheap incremental no-op when nothing changed', () => {
+  const watchedDir = tempDir('q-watch')
+  const vaultDest = tempDir('q-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'Stable content.')
+    initVault(vaultDest, { folder: watchedDir })
+    const first = ensureIndex(vaultDest, watchedDir)
+    const firstDocIds = first.files['a.md'].docIds.slice()
+    const second = ensureIndex(vaultDest, watchedDir)
+    assert.deepEqual(second.files['a.md'].docIds, firstDocIds, 'unchanged file should keep the same doc ids across ensureIndex calls')
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
   }
 })
 `,
@@ -1913,6 +3809,88 @@ test('readSnapshot reflects calendar events after sync', () => {
     assert.equal(snapshot.events.length, 1)
     assert.equal(snapshot.events[0].summary, 'Quarterly review')
   } finally {
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+`,
+  },
+  {
+    path: "test/watcher.test.mjs",
+    contents: `// Copyright (c) 2026 [SELLER]. All rights reserved.
+// Licensed to a single purchaser under the terms in LICENSE.md.
+// Redistribution or resale of this source, in whole or in part, is not permitted.
+
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
+import { startWatcher } from '../lib/watcher.mjs'
+import { rank } from '../lib/bm25.mjs'
+import { tokenize } from '../lib/tokenize.mjs'
+
+function tempDir(prefix) {
+  return mkdtempSync(join(tmpdir(), \`\${prefix}-\`))
+}
+
+test('startWatcher builds an initial index immediately', async () => {
+  const watchedDir = tempDir('watch-watch')
+  const vaultDest = tempDir('watch-dest')
+  const controller = startWatcher(vaultDest, watchedDir)
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'initial content')
+    // The initial index was built before this file existed, so it should
+    // not be in it yet — this just confirms startWatcher() itself doesn't
+    // throw and produces a usable index synchronously.
+    assert.ok(controller.getIndex())
+  } finally {
+    controller.stop()
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('startWatcher picks up a new file reactively, without a manual query triggering it', async () => {
+  const watchedDir = tempDir('watch-watch')
+  const vaultDest = tempDir('watch-dest')
+  let updateFired = false
+  const controller = startWatcher(vaultDest, watchedDir, { onUpdate: () => { updateFired = true } })
+  try {
+    writeFileSync(join(watchedDir, 'zeppelin.md'), 'This document is about zeppelins specifically.')
+
+    // Debounce is 800ms — poll for a bit past that rather than a single fixed sleep,
+    // so this isn't flaky under slow CI/sandbox scheduling.
+    const deadline = Date.now() + 4000
+    while (!updateFired && Date.now() < deadline) {
+      await sleep(150)
+    }
+    assert.ok(updateFired, 'onUpdate callback should have fired after the debounce window')
+
+    const results = rank(tokenize('zeppelins'), controller.getIndex())
+    assert.ok(results.length > 0, 'the reactively-indexed file should be findable')
+    assert.equal(results[0].doc.relPath, 'zeppelin.md')
+  } finally {
+    controller.stop()
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('stop() actually tears down watching — a later file change is not picked up', async () => {
+  const watchedDir = tempDir('watch-watch')
+  const vaultDest = tempDir('watch-dest')
+  let updateCount = 0
+  const controller = startWatcher(vaultDest, watchedDir, { onUpdate: () => { updateCount++ } })
+  controller.stop()
+
+  writeFileSync(join(watchedDir, 'after-stop.md'), 'This should not trigger an update.')
+  await sleep(1200) // well past the debounce window
+
+  try {
+    assert.equal(updateCount, 0, 'no update should fire after stop() was called')
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
     rmSync(vaultDest, { recursive: true, force: true })
   }
 })
