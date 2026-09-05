@@ -2,8 +2,9 @@
 
 A local, encrypted context snapshot of a folder and calendar file — three
 ways to use it: a manual brief you paste into any AI chat, **automatically**
-via a local MCP server, or **searched** via a local BM25-ranked index so
-large folders return only what's actually relevant instead of everything.
+via a local MCP server, or **searched** via a local BM25 + optional local-
+semantic hybrid index so large folders return only what's actually relevant
+instead of everything.
 
 No account. No OAuth. No cloud storage. The encrypted vault file lives on
 your machine, and only your passphrase can open it. Neither MCP mode nor
@@ -26,7 +27,10 @@ file/calendar content, only a note that context was served and how much.
 - **Search mode** — `vault context --query "..."` (or the MCP `get_context`
   tool's `query` argument) ranks your folder's content with BM25 — the same
   ranking family real search engines use — and returns only the relevant
-  chunks. This is what makes large folders practical: see
+  chunks. Add `--semantic` (or `semantic: true` over MCP) to also rank by a
+  local embedding model, catching chunks that are relevant in meaning even
+  when they share no exact words with your query — still nothing leaves the
+  machine. This is what makes large folders practical: see
   [Search mode: large folders](#search-mode-large-folders) below.
 
 **What it watches, in all three modes:**
@@ -56,18 +60,20 @@ file/calendar content, only a note that context was served and how much.
   any other file. It's a separate tool on purpose: MultiVault's core stays
   free of the OAuth dependency that a Google integration requires, whether
   or not you happen to use Google Docs.
-- No embeddings, no vector database, no call to any AI model to rank
-  results — BM25 is a lexical/statistical ranker, running entirely in this
-  process, in milliseconds, on data that never leaves your machine.
+- No vector database, and no cloud call to any AI model to rank results —
+  BM25 is a lexical/statistical ranker, running entirely in this process, in
+  milliseconds. `--semantic` mode does use a local embedding model (see
+  below), but it runs on-device the same way BM25 does — no API call, no
+  data leaving your machine, ever.
 - Up to 20,000 files and 12 folder levels deep by default (v1 capped at 500
   files/3 levels) — raised because search mode's index absorbs the cost of
   a large folder incrementally instead of re-reading everything on every
   call. Still a real ceiling, not "unlimited," so a scan can't turn into an
   unbounded disk read.
 
-If you need more than this (a live calendar API, semantic/embeddings-based
-ranking), that's a real v4 conversation — this README describes what ships
-today, not a roadmap promise.
+If you need more than this (a live calendar API, for instance), that's a
+real v4 conversation — this README describes what ships today, not a
+roadmap promise.
 
 ## Search mode: large folders
 
@@ -102,8 +108,33 @@ rest is read. It builds (or incrementally updates) a plain index file,
 the same ranking family Elasticsearch and Lucene use by default. A chunk
 that mentions your search terms often, in a short/focused piece of content,
 ranks above one that mentions them once in a sprawling file. No AI model is
-involved in ranking; it's a well-established statistical method, computed
-entirely in this process.
+involved in default (keyword) mode; it's a well-established statistical
+method, computed entirely in this process.
+
+**Honest limit of keyword-only search:** BM25 ranks by shared vocabulary. A
+query like "churn risk" will not surface a doc that only ever says
+"Northwind is wobbling, usage dropped, contact's gone quiet" — the two share
+no term, and BM25 has no way to know they're about the same thing. If your
+own notes rarely repeat the exact words you'll later search for, this is a
+real gap, not a hypothetical one.
+
+**`--semantic` closes that gap, still fully local.** Add `--semantic` to a
+query (or `semantic: true` in the MCP tool call) and results are ranked by
+BM25 *and* a local semantic-embedding model, combined via [Reciprocal Rank
+Fusion](https://en.wikipedia.org/wiki/Learning_to_rank#Reciprocal_rank_fusion) —
+a doc that ranks well on either signal rises to the top. The embedding model
+(`Xenova/all-MiniLM-L6-v2`, ~80MB) runs entirely on-device via
+`@xenova/transformers` (ONNX Runtime) — no API call, nothing sent anywhere,
+same trust story as BM25 itself. It's fetched from Hugging Face and cached
+to disk the first time `--semantic` actually runs; every call after that is
+fully offline. Per-chunk vectors are then cached inside `index.json` too, so
+re-embedding only happens for content that's actually new or changed.
+
+If that first-run download can't complete (no internet at that moment, a
+restrictive network), `--semantic` doesn't error out — it automatically
+falls back to keyword-only ranking and says so plainly in the output
+(`Ranking: BM25 keyword match only — local semantic model unavailable this
+run`), rather than silently pretending semantic search ran when it didn't.
 
 **Large files are chunked, not truncated.** A 50-page document gets split
 into overlapping pieces (paragraph-aware where possible), each ranked on
@@ -332,11 +363,14 @@ on why search mode has no resting file to protect.
   watcher — are all zero-dependency, plain Node.js, nothing to audit beyond
   what ships with Node itself. Search mode (indexing, ranking, watching) is
   NOT an exception to this — it's pure JS, same as v1's core always was.
-  **MCP mode is the one actual exception**: it depends on
-  `@modelcontextprotocol/sdk` (Anthropic's real, published MCP SDK) and
-  `zod`, because implementing the MCP protocol correctly from scratch would
-  be reinventing a well-tested wheel, badly. If you don't use MCP mode, you
-  never load either dependency.
+  **MCP mode and `--semantic` mode are the two actual exceptions.** MCP mode
+  depends on `@modelcontextprotocol/sdk` (Anthropic's real, published MCP
+  SDK) and `zod`, because implementing the MCP protocol correctly from
+  scratch would be reinventing a well-tested wheel, badly. `--semantic` mode
+  depends on `@xenova/transformers` to run the local embedding model — see
+  [Search mode: large folders](#search-mode-large-folders) above for what it
+  does and why it's still fully local. Skip both flags/modes and you never
+  load any of these three packages.
 - Read the source. It's plain JavaScript specifically so every claim above is
   easy to verify yourself rather than something you have to take on faith.
 
@@ -376,7 +410,7 @@ Apple are a separate purchase if you want that warning gone.
 npm test
 ```
 
-Runs all seven suites (64 tests total):
+Runs all eight suites (72 tests total):
 - `test/run.mjs` — encryption round-trip, `.ics` parsing, folder scanning,
   and the full CLI-mode vault lifecycle, against real throwaway temp
   directories.
@@ -408,3 +442,12 @@ Runs all seven suites (64 tests total):
   unconfigured or unreachable), against a bare local HTTP server standing
   in for MultiWitness's real API — kept dependency-free from MultiWitness's
   own source since that's a separate product.
+- `test/hybrid-rank.test.mjs` — `--semantic` mode's RRF combination logic,
+  the embedding cache (an unchanged chunk is never re-embedded; a model
+  upgrade correctly invalidates stale vectors), and the graceful fallback
+  to BM25-only when the local embedding model can't load. Uses an injected
+  fake embedding function rather than the real model, so this suite runs
+  fast and offline — the fake groups words into concept clusters (e.g.
+  "wobbling"/"dropped"/"quiet" cluster with "churn"/"risk") specifically to
+  exercise the actual scenario this feature exists for: a query and a
+  relevant doc that share no literal words.

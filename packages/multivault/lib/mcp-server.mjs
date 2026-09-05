@@ -26,12 +26,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { resolve } from 'node:path'
-import { buildLiveContext, statusVault } from './vault.mjs'
+import { buildLiveContext, buildLiveContextHybrid, statusVault } from './vault.mjs'
 import { loadIndex } from './index-store.mjs'
 import { logContextServed, witnessConfigured } from './witness-log.mjs'
 
 export function createMultiVaultServer(dest) {
-  const server = new McpServer({ name: 'multivault', version: '3.0.0' })
+  const server = new McpServer({ name: 'multivault', version: '3.1.0' })
 
   server.registerTool(
     'get_context',
@@ -41,20 +41,27 @@ export function createMultiVaultServer(dest) {
         'Returns local context from the watched folder and calendar file. Two modes: ' +
         'call with no arguments for a full brief (file names, sizes, short excerpts, calendar events) — ' +
         'suitable for small-to-medium folders. Call WITH a `query` for large or many-file folders: this ' +
-        'searches an incrementally-maintained local index (BM25 ranking, same approach real search ' +
-        'engines use) and returns only the most relevant chunks instead of everything, so it stays fast ' +
-        'and useful even against thousands of files. Nothing is cached across calls in either mode — the ' +
-        'index updates itself against current disk state on every query, so results always reflect what\'s ' +
-        'actually there now.',
+        'searches an incrementally-maintained local index and returns only the most relevant chunks ' +
+        'instead of everything, so it stays fast and useful even against thousands of files. Ranking is ' +
+        'BM25 keyword matching by default, or set `semantic: true` to also rank by local semantic ' +
+        'similarity (via an on-device embedding model — nothing leaves the machine) — this catches a ' +
+        'chunk that\'s relevant in meaning even when it shares no exact words with the query. Semantic ' +
+        'mode falls back to keyword-only automatically if the local model isn\'t available (e.g. no ' +
+        'internet for its one-time download) — never an error, just a plainly-noted fallback. Nothing is ' +
+        'cached across calls beyond the index itself — it updates against current disk state on every ' +
+        'query, so results always reflect what\'s actually there now.',
       inputSchema: {
         query: z.string().optional().describe('Search terms. Omit for a full whole-folder brief instead of a targeted search.'),
         topK: z.number().int().positive().max(50).optional().describe('Max results when using query. Defaults to 8.'),
         format: z.enum(['markdown', 'json']).optional().describe('Output format. Defaults to markdown.'),
+        semantic: z.boolean().optional().describe('Also rank by local semantic similarity, not just keyword match. Defaults to false.'),
       },
     },
-    async ({ query, topK, format }) => {
+    async ({ query, topK, format, semantic }) => {
       try {
-        const { snapshot, text } = buildLiveContext(dest, { query, topK, format: format ?? 'markdown' })
+        const { snapshot, text } = semantic
+          ? await buildLiveContextHybrid(dest, { query, topK, format: format ?? 'markdown' })
+          : buildLiveContext(dest, { query, topK, format: format ?? 'markdown' })
         // Best-effort, non-blocking, content-free logging — see
         // lib/witness-log.mjs. Never awaited-and-branched-on beyond this:
         // a logging failure must never affect the response below. The two

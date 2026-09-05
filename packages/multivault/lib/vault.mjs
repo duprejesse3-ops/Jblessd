@@ -19,6 +19,7 @@ import { readIcsFile } from './calendar.mjs'
 import { loadIndex, buildIndex, updateIndex, saveIndex } from './indexer.mjs'
 import { rank } from './bm25.mjs'
 import { tokenize } from './tokenize.mjs'
+import { hybridRank } from './hybrid-rank.mjs'
 
 export { DecryptError }
 
@@ -212,6 +213,47 @@ export function buildLiveContext(dest, opts = {}) {
 }
 
 /**
+ * Same contract as buildLiveContext(), but the query path (only the query
+ * path — the no-query whole-folder brief is identical and needs no ranking
+ * at all) uses hybridRank() instead of plain bm25 rank(): BM25 keyword
+ * matching PLUS local semantic similarity, combined via Reciprocal Rank
+ * Fusion — see lib/hybrid-rank.mjs for why RRF and lib/embeddings.mjs for
+ * why this never leaves the machine. Async where buildLiveContext() is
+ * sync, because embedding text is genuinely asynchronous work (the model
+ * runs off the main thread via ONNX Runtime) — everything else about this
+ * function is identical to buildLiveContext().
+ *
+ * Falls back to BM25-only automatically (see hybridRank) if the local
+ * embedding model can't load — e.g. the very first run has no internet to
+ * fetch it. That fallback is reported back via snapshot.usedSemantic /
+ * a note in the formatted text, rather than silently pretending semantic
+ * search ran when it didn't — consistent with this product's "honest
+ * limits" stance elsewhere.
+ *
+ * Newly-computed embeddings are persisted back to the index file before
+ * returning, so they're a one-time cost per chunk, not a per-query one.
+ */
+export async function buildLiveContextHybrid(dest, opts = {}) {
+  const meta = readMeta(dest)
+  if (!meta) throw new Error(`No vault found at ${dest}. Run "vault init" first.`)
+  if (!meta.folder && !meta.icsPath) {
+    throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
+  }
+
+  if (!opts.query || !meta.folder) return buildLiveContext(dest, opts)
+
+  const index = ensureIndex(dest, meta.folder, opts.scan)
+  const { results, usedSemantic } = await hybridRank(opts.query, index, opts.embeddingDeps)
+  saveIndex(dest, index) // persist any vectors ensureEmbeddings() just computed, so the next query reuses them
+  const topResults = results.slice(0, opts.topK ?? 8)
+  const events = readIcsFile(meta.icsPath)
+  return {
+    snapshot: { query: opts.query, results: topResults, events, usedSemantic },
+    text: formatSearchResults(opts.query, topResults, events, index, { ...opts, usedSemantic }),
+  }
+}
+
+/**
  * Bring the on-disk index for `dest` up to date with `folder` and persist
  * it — build fresh if none exists yet (or it's for a different folder),
  * otherwise an incremental update (see indexer.mjs — cheap for files that
@@ -226,10 +268,17 @@ export function ensureIndex(dest, folder, scanOpts = {}) {
   return index
 }
 
-function formatSearchResults(query, results, events, index, { format = 'markdown' } = {}) {
+function formatSearchResults(query, results, events, index, { format = 'markdown', usedSemantic } = {}) {
   if (format === 'json') {
     return JSON.stringify(
-      { query, resultCount: results.length, indexedFiles: Object.keys(index.files).length, results: results.map((r) => ({ relPath: r.doc.relPath, score: r.score, text: r.doc.text })), events },
+      {
+        query,
+        resultCount: results.length,
+        indexedFiles: Object.keys(index.files).length,
+        ...(usedSemantic !== undefined ? { usedSemantic } : {}),
+        results: results.map((r) => ({ relPath: r.doc.relPath, score: r.score, text: r.doc.text })),
+        events,
+      },
       null,
       2,
     )
@@ -238,6 +287,8 @@ function formatSearchResults(query, results, events, index, { format = 'markdown
   const lines = []
   lines.push(`# Search: "${query}"`)
   lines.push(`(${results.length} relevant chunk(s) out of ${Object.keys(index.files).length} indexed file(s))`)
+  if (usedSemantic === true) lines.push('Ranking: hybrid — BM25 keyword match + local semantic similarity.')
+  if (usedSemantic === false) lines.push('Ranking: BM25 keyword match only — local semantic model unavailable this run (falls back automatically, nothing else is affected).')
   lines.push('')
   if (!results.length) {
     lines.push('No matching content found. Try different terms, or use `vault context` with no query for the full folder listing.')

@@ -28,7 +28,7 @@ import { existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { initVault, syncVault, buildContext, buildLiveContext, ensureIndex, statusVault, DecryptError } from '../lib/vault.mjs'
+import { initVault, syncVault, buildContext, buildLiveContext, buildLiveContextHybrid, ensureIndex, statusVault, DecryptError } from '../lib/vault.mjs'
 import { startWatcher } from '../lib/watcher.mjs'
 
 const USAGE = `multivault — a local, encrypted context snapshot of a folder and calendar,
@@ -50,6 +50,9 @@ Options
   --ics <path>       Path to a .ics calendar file to include (optional)
   --dest <path>      Where the vault lives (default: ./.multivault)
   --query <text>     context: search instead of dumping the whole folder — no passphrase needed
+  --semantic         context --query: also rank by local semantic similarity, not just keyword
+                      match (catches paraphrases BM25 alone misses). Falls back to keyword-only
+                      automatically if the local model can't load — never an error, always a result.
   --topk <n>         context --query: max results (default 8)
   --format <fmt>     context: text|markdown (default) or json
   --passphrase <p>   Passphrase (or set MULTIVAULT_PASSPHRASE — preferred, keeps it
@@ -63,6 +66,7 @@ Examples
   vault context                                  # paste this into a chat
   vault index                                    # pre-warm the search index (optional — auto-builds on first query)
   vault context --query "invoice overdue"        # ranked search, no passphrase needed
+  vault context --query "churn risk" --semantic  # also catches docs that never say those exact words
   vault context --format json | your-script      # pipe into your own tooling
   MULTIVAULT_PASSPHRASE=xxxx vault sync          # for cron/launchd/Task Scheduler
 `
@@ -75,11 +79,11 @@ function defaultDest() {
 
 function parseArgs(argv) {
   const command = argv[0]
-  const opts = { folder: null, ics: null, dest: null, format: 'markdown', passphrase: null, query: null, topK: null }
+  const opts = { folder: null, ics: null, dest: null, format: 'markdown', passphrase: null, query: null, topK: null, semantic: false }
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '-h' || arg === '--help') { process.stdout.write(USAGE); process.exit(0) }
-    if (arg === '-v' || arg === '--version') { process.stdout.write('multivault 3.0.0\n'); process.exit(0) }
+    if (arg === '-v' || arg === '--version') { process.stdout.write('multivault 3.1.0\n'); process.exit(0) }
     if (arg === '--folder') { opts.folder = argv[++i]; continue }
     if (arg === '--ics') { opts.ics = argv[++i]; continue }
     if (arg === '--dest') { opts.dest = argv[++i]; continue }
@@ -87,6 +91,7 @@ function parseArgs(argv) {
     if (arg === '--passphrase') { opts.passphrase = argv[++i]; continue }
     if (arg === '--query') { opts.query = argv[++i]; continue }
     if (arg === '--topk') { opts.topK = Number(argv[++i]); continue }
+    if (arg === '--semantic') { opts.semantic = true; continue }
     throw new UsageError(`Unknown option: ${arg}`)
   }
   return { command, opts }
@@ -109,7 +114,7 @@ async function main() {
     process.exit(0)
   }
   if (argv[0] === '-v' || argv[0] === '--version') {
-    process.stdout.write('multivault 3.0.0\n')
+    process.stdout.write('multivault 3.1.0\n')
     process.exit(0)
   }
   const { command, opts } = parseArgs(argv)
@@ -197,7 +202,9 @@ async function main() {
     if (opts.query) {
       // Search mode: no passphrase needed — see buildLiveContext in
       // lib/vault.mjs for why (nothing decrypted, nothing at rest read).
-      const { text } = buildLiveContext(dest, { query: opts.query, topK: opts.topK ?? undefined, format })
+      const { text } = opts.semantic
+        ? await buildLiveContextHybrid(dest, { query: opts.query, topK: opts.topK ?? undefined, format })
+        : buildLiveContext(dest, { query: opts.query, topK: opts.topK ?? undefined, format })
       process.stdout.write(text)
       return
     }
