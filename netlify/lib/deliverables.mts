@@ -609,18 +609,9 @@ function multivaultSections(product: Product): DeliverableSection[] {
         `API"). Three scheduling adapters (cron, launchd, Windows Task Scheduler) are ` +
         `included in adapters/ to keep it synced automatically — see each file's header ` +
         `comment for setup.\n\n` +
-        `**Got a large folder?** Whole-folder mode hands over everything, which stops being ` +
-        `useful past a few dozen files. Search mode instead:\n\n` +
-        `    node bin/vault.mjs context --query "invoice overdue"\n\n` +
-        `No passphrase needed — this builds a local BM25-ranked search index automatically ` +
-        `on first use and returns only relevant chunks, not the whole folder. Run ` +
-        `\`node bin/vault.mjs watch\` to keep that index continuously updated in the ` +
-        `background instead of paying the update cost on each query. See README's "Search ` +
-        `mode: large folders" for how the ranking actually works.\n\n` +
         `**Want it automatic instead?** That's MCP mode — no sync, no paste. Point your MCP ` +
         `client (Claude Desktop, Claude Code) at \`bin/vault-mcp.mjs\` and it calls your vault ` +
-        `directly, live, whenever relevant — including search: its \`get_context\` tool takes ` +
-        `the same optional \`query\` argument. For Claude Desktop, add to ` +
+        `directly, live, whenever relevant. For Claude Desktop, add to ` +
         `\`claude_desktop_config.json\`:\n\n` +
         `    {\n` +
         `      "mcpServers": {\n` +
@@ -809,18 +800,16 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
     format: product.format,
     spec: product.spec,
     intro:
-      'The complete source for a local, AES-256-GCM encrypted context snapshot of a folder and ' +
-      'calendar file — with three ways to use it. CLI mode (sync + context) is zero-dependency ' +
-      'and works exactly like v1. Search mode indexes your folder with BM25 ranking (the same ' +
-      'approach real search engines use) so large folders return only relevant content instead ' +
-      'of everything — also zero-dependency, no embeddings, no AI model involved. MCP mode runs ' +
-      'a built-in server so Claude Desktop, Claude Code, and other MCP-aware tools pull in your ' +
-      'current context automatically, live, with no copy-paste — that mode is the one part of ' +
-      'this package with real dependencies (the official @modelcontextprotocol/sdk and zod), ' +
-      'documented plainly in README.md rather than hidden. Nothing phones home in any mode: ' +
-      'search and MCP mode both talk only to your local disk/client, and the only network call ' +
-      'anywhere in this package is an optional, content-free log line to MultiWitness (sold ' +
-      'separately) if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
+      'The complete source for a local, AES-256-GCM encrypted context snapshot of one folder ' +
+      'and one calendar file — with two ways to use it. CLI mode (sync + context) is zero-' +
+      'dependency and works exactly like v1. MCP mode runs a built-in server so Claude ' +
+      'Desktop, Claude Code, and other MCP-aware tools pull in your current context ' +
+      'automatically, live, with no copy-paste — that mode is the one part of this package ' +
+      'with real dependencies (the official @modelcontextprotocol/sdk and zod), documented ' +
+      'plainly in README.md rather than hidden. Nothing phones home either way: MCP mode ' +
+      'talks only over stdio to your local AI client, and the only network call anywhere in ' +
+      'this package is an optional, content-free log line to MultiWitness (sold separately) ' +
+      'if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
       'LICENSE.md at the end for the terms.',
     sections: multivaultSections(product),
   }),
@@ -863,7 +852,7 @@ export function deliverableToMarkdown(d: Deliverable): string {
   d.sections.forEach((s, i) => {
     lines.push(`## ${i + 1}. ${s.title}`, '', s.body, '')
   })
-  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — jblessd.com`)
+  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — multinicheai.com`)
   return lines.join('\n')
 }
 
