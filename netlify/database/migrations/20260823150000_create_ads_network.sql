@@ -4,7 +4,7 @@
 -- (20260814200000_seed_self_tenant_and_network_targeting.sql) already assume
 -- these tables exist; this migration is what actually creates them.
 --
--- A "tenant" is any site participating in the network — multinicheai.com itself
+-- A "tenant" is any site participating in the network — jblessd.com itself
 -- included, as a normal row (see the seed migration right after this one).
 -- A tenant offers ad space (a "slot") and/or runs its own ad into other
 -- tenants' slots (a "campaign"). No money changes hands: reciprocal exposure
