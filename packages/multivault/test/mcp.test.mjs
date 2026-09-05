@@ -168,6 +168,46 @@ test('MCP: vault_status reports configured folder without needing a passphrase',
   }
 })
 
+test('MCP: get_context with a query returns ranked, relevant results through the real protocol', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'contract.md'), 'The renewal deadline for the Acme contract is March 15th.')
+    writeFileSync(join(watchedDir, 'lunch.md'), 'Team lunch order: half want tacos, half want sushi.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const result = await client.callTool({ name: 'get_context', arguments: { query: 'contract renewal deadline' } })
+    assert.equal(result.isError, undefined)
+    assert.ok(result.content[0].text.includes('contract.md'))
+    assert.ok(!result.content[0].text.includes('lunch.md'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
+test('MCP: vault_status reflects the index once a query has run', async () => {
+  const watchedDir = tempDir('mcp-watch')
+  const vaultDest = tempDir('mcp-dest')
+  try {
+    writeFileSync(join(watchedDir, 'a.md'), 'Some indexed content.')
+    initVault(vaultDest, { folder: watchedDir })
+    const { client } = await connectedClient(vaultDest)
+
+    const before = await client.callTool({ name: 'vault_status', arguments: {} })
+    assert.ok(before.content[0].text.includes('not built yet'))
+
+    await client.callTool({ name: 'get_context', arguments: { query: 'indexed' } })
+
+    const after = await client.callTool({ name: 'vault_status', arguments: {} })
+    assert.ok(after.content[0].text.includes('1 file(s) tracked'))
+  } finally {
+    rmSync(watchedDir, { recursive: true, force: true })
+    rmSync(vaultDest, { recursive: true, force: true })
+  }
+})
+
 test('MCP: get_context on a never-initialized vault returns isError, not a crash', async () => {
   const emptyDest = tempDir('mcp-never-init')
   try {

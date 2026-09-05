@@ -16,6 +16,9 @@ import { join } from 'node:path'
 import { encrypt, decrypt, generatePassphrase, DecryptError } from './crypto.mjs'
 import { scanFolder } from './scan.mjs'
 import { readIcsFile } from './calendar.mjs'
+import { loadIndex, buildIndex, updateIndex, saveIndex } from './indexer.mjs'
+import { rank } from './bm25.mjs'
+import { tokenize } from './tokenize.mjs'
 
 export { DecryptError }
 
@@ -191,10 +194,73 @@ export function buildLiveContext(dest, opts = {}) {
   if (!meta.folder && !meta.icsPath) {
     throw new Error('Nothing configured. Run "vault init --folder ... [--ics ...]" first.')
   }
+
+  // Query given -> v3's indexed/ranked path: only the relevant chunks, not
+  // the whole folder. No query -> exact v1/v2 behavior, unchanged, so
+  // anything already relying on "get everything" keeps working.
+  if (opts.query && meta.folder) {
+    const index = ensureIndex(dest, meta.folder, opts.scan)
+    const results = rank(tokenize(opts.query), index).slice(0, opts.topK ?? 8)
+    const events = readIcsFile(meta.icsPath)
+    return { snapshot: { query: opts.query, results, events }, text: formatSearchResults(opts.query, results, events, index, opts) }
+  }
+
   const files = meta.folder ? scanFolder(meta.folder, opts.scan) : []
   const events = readIcsFile(meta.icsPath)
   const snapshot = { folder: meta.folder, icsPath: meta.icsPath, files, events, syncedAt: new Date().toISOString() }
   return { snapshot, text: formatContext(snapshot, opts) }
+}
+
+/**
+ * Bring the on-disk index for `dest` up to date with `folder` and persist
+ * it — build fresh if none exists yet (or it's for a different folder),
+ * otherwise an incremental update (see indexer.mjs — cheap for files that
+ * haven't changed). Called automatically by buildLiveContext()'s query path
+ * on every call, so a query always searches current content; also exposed
+ * directly for `vault index` to pre-warm the index ahead of time.
+ */
+export function ensureIndex(dest, folder, scanOpts = {}) {
+  const existing = loadIndex(dest)
+  const index = existing && existing.folder === folder ? updateIndex(existing, folder, scanOpts).index : buildIndex(folder, scanOpts)
+  saveIndex(dest, index)
+  return index
+}
+
+function formatSearchResults(query, results, events, index, { format = 'markdown' } = {}) {
+  if (format === 'json') {
+    return JSON.stringify(
+      { query, resultCount: results.length, indexedFiles: Object.keys(index.files).length, results: results.map((r) => ({ relPath: r.doc.relPath, score: r.score, text: r.doc.text })), events },
+      null,
+      2,
+    )
+  }
+
+  const lines = []
+  lines.push(`# Search: "${query}"`)
+  lines.push(`(${results.length} relevant chunk(s) out of ${Object.keys(index.files).length} indexed file(s))`)
+  lines.push('')
+  if (!results.length) {
+    lines.push('No matching content found. Try different terms, or use `vault context` with no query for the full folder listing.')
+  } else {
+    for (const { doc, score } of results) {
+      lines.push(`## ${doc.relPath} (relevance ${score.toFixed(2)})`)
+      const indented = doc.text
+        .split('\n')
+        .map((l) => `  > ${l}`)
+        .join('\n')
+      lines.push(indented)
+      lines.push('')
+    }
+  }
+  if (events.length) {
+    lines.push('## Calendar')
+    for (const e of events) {
+      const when = [e.start, e.end].filter(Boolean).join(' – ')
+      const where = e.location ? ` @ ${e.location}` : ''
+      lines.push(`- ${e.summary ?? '(untitled)'}${when ? ` — ${when}` : ''}${where}`)
+    }
+  }
+  return lines.join('\n') + '\n'
 }
 
 /**

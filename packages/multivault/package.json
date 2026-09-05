@@ -1,7 +1,7 @@
 {
   "name": "multivault",
-  "version": "2.0.0",
-  "description": "A local, encrypted context snapshot of one folder and one calendar file — plus an MCP server for automatic, zero-paste context, and optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
+  "version": "3.0.0",
+  "description": "A local, encrypted context snapshot of a folder and calendar file, with a BM25-ranked search index for large folders and an MCP server for automatic, zero-paste context. Optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
   "engines": {
@@ -18,7 +18,13 @@
     "./scan": "./lib/scan.mjs",
     "./calendar": "./lib/calendar.mjs",
     "./mcp-server": "./lib/mcp-server.mjs",
-    "./witness-log": "./lib/witness-log.mjs"
+    "./witness-log": "./lib/witness-log.mjs",
+    "./tokenize": "./lib/tokenize.mjs",
+    "./bm25": "./lib/bm25.mjs",
+    "./chunk": "./lib/chunk.mjs",
+    "./index-store": "./lib/index-store.mjs",
+    "./indexer": "./lib/indexer.mjs",
+    "./watcher": "./lib/watcher.mjs"
   },
   "files": [
     "bin",
@@ -30,7 +36,7 @@
   "scripts": {
     "vault": "node bin/vault.mjs",
     "vault-mcp": "node bin/vault-mcp.mjs",
-    "test": "node test/run.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs",
+    "test": "node test/run.mjs && node test/bm25.test.mjs && node test/indexer.test.mjs && node test/query.test.mjs && node test/watcher.test.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs",
     "build:binary": "node scripts/build-sea.mjs"
   },
   "dependencies": {

@@ -27,33 +27,44 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { resolve } from 'node:path'
 import { buildLiveContext, statusVault } from './vault.mjs'
+import { loadIndex } from './index-store.mjs'
 import { logContextServed, witnessConfigured } from './witness-log.mjs'
 
 export function createMultiVaultServer(dest) {
-  const server = new McpServer({ name: 'multivault', version: '2.0.0' })
+  const server = new McpServer({ name: 'multivault', version: '3.0.0' })
 
   server.registerTool(
     'get_context',
     {
       title: 'Get local context',
       description:
-        'Returns a live, current brief of the watched local folder and calendar file — file names, ' +
-        'sizes, and (for a small set of plain-text formats) short excerpts, plus any calendar events. ' +
-        'Nothing is cached: this re-scans the folder and re-reads the calendar file fresh on every ' +
-        'call, so it always reflects the current state, not a snapshot from an earlier `vault sync`.',
+        'Returns local context from the watched folder and calendar file. Two modes: ' +
+        'call with no arguments for a full brief (file names, sizes, short excerpts, calendar events) — ' +
+        'suitable for small-to-medium folders. Call WITH a `query` for large or many-file folders: this ' +
+        'searches an incrementally-maintained local index (BM25 ranking, same approach real search ' +
+        'engines use) and returns only the most relevant chunks instead of everything, so it stays fast ' +
+        'and useful even against thousands of files. Nothing is cached across calls in either mode — the ' +
+        'index updates itself against current disk state on every query, so results always reflect what\'s ' +
+        'actually there now.',
       inputSchema: {
+        query: z.string().optional().describe('Search terms. Omit for a full whole-folder brief instead of a targeted search.'),
+        topK: z.number().int().positive().max(50).optional().describe('Max results when using query. Defaults to 8.'),
         format: z.enum(['markdown', 'json']).optional().describe('Output format. Defaults to markdown.'),
       },
     },
-    async ({ format }) => {
+    async ({ query, topK, format }) => {
       try {
-        const { snapshot, text } = buildLiveContext(dest, { format: format ?? 'markdown' })
+        const { snapshot, text } = buildLiveContext(dest, { query, topK, format: format ?? 'markdown' })
         // Best-effort, non-blocking, content-free logging — see
         // lib/witness-log.mjs. Never awaited-and-branched-on beyond this:
-        // a logging failure must never affect the response below.
-        logContextServed(
-          `${snapshot.files.length} file(s), ${snapshot.events.length} event(s) from ${snapshot.folder ?? '(no folder)'}`,
-        )
+        // a logging failure must never affect the response below. The two
+        // modes have different snapshot shapes (a query returns { results,
+        // events }, no query returns { files, events }), so the logged
+        // detail branches on which one actually ran.
+        const detail = snapshot.results
+          ? `query "${snapshot.query}" -> ${snapshot.results.length} result(s), ${snapshot.events.length} event(s)`
+          : `${snapshot.files.length} file(s), ${snapshot.events.length} event(s) from ${snapshot.folder ?? '(no folder)'}`
+        logContextServed(detail)
         return { content: [{ type: 'text', text }] }
       } catch (err) {
         return {
@@ -81,10 +92,18 @@ export function createMultiVaultServer(dest) {
           isError: true,
         }
       }
+      // Read-only: reports whatever index currently exists on disk without
+      // triggering a build/update, so vault_status stays cheap regardless
+      // of folder size — that cost only happens when get_context is
+      // actually called with a query.
+      const index = loadIndex(dest)
       const lines = [
         `Folder: ${meta.folder ?? '(none configured)'}`,
         `Calendar: ${meta.icsPath ?? '(none configured)'}`,
         `MultiWitness logging: ${witnessConfigured() ? 'active' : 'not configured (set MULTIWITNESS_INGEST_TOKEN to enable)'}`,
+        index
+          ? `Search index: ${Object.keys(index.files).length} file(s) tracked, ${index.docs.length} indexed chunk(s), last updated ${index.builtAt}`
+          : 'Search index: not built yet (built automatically on first query, or run "vault index")',
       ]
       return { content: [{ type: 'text', text: lines.join('\n') }] }
     },
