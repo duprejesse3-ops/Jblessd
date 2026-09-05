@@ -23,6 +23,11 @@
      all — Taboola has no Consent Mode equivalent, so consent is enforced by
      withholding the library rather than by muting it. -->
 <script src="/taboola-pixel.js"></script>
+<!-- X (Twitter) Ads pixel (account tag rf01m). Loaded after marketing-measurement.js
+     so the shared trackMarketingEvent hub can hand it every funnel event, same
+     reasoning as the Taboola pixel above — see x-pixel.js for what's wired and
+     what still needs a per-event id from X's Events Manager. -->
+<script src="/x-pixel.js"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
