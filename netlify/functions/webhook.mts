@@ -116,7 +116,7 @@ function getOrigin(session: Stripe.Checkout.Session): string {
   } catch {
     /* malformed success_url — fall through */
   }
-  return 'https://jblessd.com'
+  return 'https://multinicheai.com'
 }
 
 // Credit a Claude Agent Studio top-up to the buyer's balance and mail them their

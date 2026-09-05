@@ -1,6 +1,6 @@
 <!--
   multiNicheAI storefront chat widget.
-  Drop this snippet before </body> on jblessd.com (Netlify site).
+  Drop this snippet before </body> on multinicheai.com (Netlify site).
   Talks to the same backend as the app — a customer's credit balance
   is shared across the widget, phone app, and Windows app once they log in.
 -->
@@ -104,7 +104,7 @@
 
 <script>
 (function () {
-  const API_BASE_URL = "https://api.jblessd.com";
+  const API_BASE_URL = "https://api.multinicheai.com";
   let token = localStorage.getItem("mnai_token");
   let history = [];
 
@@ -123,7 +123,7 @@
     // Anonymous guest session: creates a lightweight account so visitors can
     // try the widget without a signup wall. Swap for real signup/login UI
     // if you want purchases tied to a named account from the first message.
-    const guestEmail = `guest-${Date.now()}@widget.jblessd.com`;
+    const guestEmail = `guest-${Date.now()}@widget.multinicheai.com`;
     const guestPassword = Math.random().toString(36).slice(2) + "Aa1!";
     const res = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: "POST",

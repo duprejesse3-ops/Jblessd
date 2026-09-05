@@ -10,7 +10,7 @@
 import type { Config } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 
 // The brand share image, declared per-URL via the Google image-sitemap
 // extension so crawlers (and Google Images in particular) pick up the current

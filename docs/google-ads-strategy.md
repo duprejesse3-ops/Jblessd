@@ -39,7 +39,7 @@ Google Ads' guided purchase-conversion setup asks for an **order confirmation
 page URL** and inspects it for a Tag Manager container. Give it:
 
 ```
-https://jblessd.com/order-confirmation
+https://multinicheai.com/order-confirmation
 ```
 
 Stripe sends every paid buyer to `/order-confirmation?checkout=success&session_id=…`,
@@ -61,7 +61,7 @@ confirmation page."** even though the homepage is tagged.
 
 The page is intentionally **not** `noindex`'d and **not** disallowed in
 `robots.txt`: nothing should stand between Google's tag detector and the page.
-`index.html` already declares `<link rel="canonical" href="https://jblessd.com/">`,
+`index.html` already declares `<link rel="canonical" href="https://multinicheai.com/">`,
 so search engines fold the URL into the homepage on their own.
 
 If you finish the guided flow and let the **container** send the purchase
@@ -106,7 +106,7 @@ events fire.
   its conversion tag on.
 - To check container detection the way Google does it, fetch the confirmation page
   and look for the container id in the raw HTML:
-  `curl -s https://jblessd.com/order-confirmation | grep -c GTM-M746RK4R`
+  `curl -s https://multinicheai.com/order-confirmation | grep -c GTM-M746RK4R`
   (expect a non-zero count).
 - In Google Ads, the Purchase conversion action should move from *"No recent
   conversions"* to *"Recording conversions"* within ~24–48h of live traffic.

@@ -12,7 +12,7 @@ function confirmationPage(message: string): Response {
   return new Response(
     `<!doctype html><html><head><meta charset="utf-8"><title>Unsubscribed</title></head>` +
       `<body style="font-family:sans-serif;max-width:480px;margin:80px auto;text-align:center;color:#333">` +
-      `<h1>${message}</h1><p><a href="https://jblessd.com">Back to the store</a></p></body></html>`,
+      `<h1>${message}</h1><p><a href="https://multinicheai.com">Back to the store</a></p></body></html>`,
     { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
   )
 }

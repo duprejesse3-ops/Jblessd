@@ -13,7 +13,7 @@
 import type { Context, Config } from '@netlify/edge-functions'
 import { Resvg, initWasm } from 'https://esm.sh/@resvg/resvg-wasm@2.6.2'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 const STORE = 'MULTINICHE AI'
 const W = 1200
 const H = 630

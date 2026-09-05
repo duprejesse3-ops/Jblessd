@@ -150,7 +150,7 @@ snapshot CLI mode produces.
 Every cloud AI-memory product asks you to trust that it's using your data
 correctly — you can't see their logs. MultiVault can do the opposite: log
 every time context was served to a **tamper-evident, hash-chained** local
-log via [MultiWitness](https://jblessd.com) (sold separately, same store),
+log via [MultiWitness](https://multinicheai.com) (sold separately, same store),
 independently verifiable offline, by you, at any time.
 
 **What gets logged:** only *that* context was served, when, and how much —

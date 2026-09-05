@@ -1,4 +1,4 @@
-# Publishes the jblessd.com storefront image to GitHub Container Registry.
+# Publishes the multinicheai.com storefront image to GitHub Container Registry.
 #
 # NOT ACTIVE WHERE IT SITS. GitHub refuses pushes that touch
 # .github/workflows/ unless the pushing app holds the `workflows` permission,
@@ -72,8 +72,8 @@ jobs:
             type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
           labels: |
-            org.opencontainers.image.title=jblessd.com storefront
-            org.opencontainers.image.url=https://jblessd.com
+            org.opencontainers.image.title=multinicheai.com storefront
+            org.opencontainers.image.url=https://multinicheai.com
 
       - uses: docker/login-action@v3
         if: github.event_name != 'workflow_dispatch'

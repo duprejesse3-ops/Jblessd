@@ -1,9 +1,9 @@
 -- Lets MULTINICHE AI's own store participate in its own ad network the same
 -- way any other MultiNiche Ads tenant does — as a row in ads_tenants — instead
 -- of needing a parallel, single-tenant code path. Two reasons this matters:
---   1. A brand-new network has no other tenants yet, so jblessd.com's own
+--   1. A brand-new network has no other tenants yet, so multinicheai.com's own
 --      campaigns are what fills empty slots until real tenants join.
---   2. jblessd.com can also offer its own storefront as ad space (a slot),
+--   2. multinicheai.com can also offer its own storefront as ad space (a slot),
 --      the same way any tenant would.
 --
 -- The access key below is shown ONLY in this migration's accompanying chat
@@ -13,9 +13,9 @@
 INSERT INTO ads_tenants (name, email, key_hash, site_url, status)
 VALUES (
   'MULTINICHE AI (self)',
-  'store@jblessd.com',
+  'store@multinicheai.com',
   'ec44c724f0751321ab4b42669c33779f13ec989d845786c698f51d5cae8292cd',
-  'https://jblessd.com',
+  'https://multinicheai.com',
   'active'
 )
 ON CONFLICT (email) DO NOTHING;

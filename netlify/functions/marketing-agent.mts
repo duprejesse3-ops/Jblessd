@@ -51,7 +51,7 @@ const STORE_SKU = 'STORE'
 // Canonical site + the shareable image every campaign can attach. Kept in sync
 // with the SEO edge function (netlify/edge-functions/seo.ts), which uses the
 // same domain and OG image for product/store structured data.
-const SITE_URL = 'https://jblessd.com'
+const SITE_URL = 'https://multinicheai.com'
 const CAMPAIGN_IMAGE = `${SITE_URL}/multiniche-ai-og.png`
 
 // The exact page a campaign should drive traffic to: the product deep-link, or

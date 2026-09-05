@@ -26,7 +26,7 @@ const BATCH_SIZE = Number(process.env.X_POST_BATCH_SIZE || 1)
 // Used only to build the human-viewable URL stored alongside the post —
 // matches the account this function already posts as.
 const X_USERNAME = process.env.X_USERNAME || 'DupreJesse14633'
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 
 interface QueuedPost {
   id: string

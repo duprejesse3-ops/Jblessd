@@ -17,7 +17,7 @@ export default async (req: Request, _context: Context) => {
   // Malformed or missing ids: send the visitor home rather than erroring on
   // what is, from their side, just a link they clicked.
   if (!Number.isFinite(campaignId) || campaignId <= 0 || !Number.isFinite(slotId) || slotId <= 0) {
-    return Response.redirect('https://jblessd.com', 302)
+    return Response.redirect('https://multinicheai.com', 302)
   }
 
   try {
@@ -27,7 +27,7 @@ export default async (req: Request, _context: Context) => {
     `) as any[]
 
     if (!campaign?.click_url) {
-      return Response.redirect('https://jblessd.com', 302)
+      return Response.redirect('https://multinicheai.com', 302)
     }
 
     await db.sql`UPDATE ads_network_campaigns SET clicks = clicks + 1 WHERE id = ${campaignId}`
@@ -36,7 +36,7 @@ export default async (req: Request, _context: Context) => {
     return Response.redirect(campaign.click_url, 302)
   } catch (err) {
     console.error('ads-network-click error:', (err as Error).message)
-    return Response.redirect('https://jblessd.com', 302)
+    return Response.redirect('https://multinicheai.com', 302)
   }
 }
 

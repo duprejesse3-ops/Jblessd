@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build — and optionally publish — the jblessd.com container image.
+# Build — and optionally publish — the multinicheai.com container image.
 #
 #   container/image.sh                    # build, tag :dev and :sha-<short>
 #   container/image.sh 1.4.0              # build, tag :1.4.0 :1.4 :1 :latest

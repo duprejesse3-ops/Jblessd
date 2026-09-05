@@ -1,14 +1,14 @@
 # Writing code on the site itself
 
 The site hosts its own development environment. You write code in a browser at
-**[/code](https://jblessd.com/code)** and the site serves it back at
+**[/code](https://multinicheai.com/code)** and the site serves it back at
 `/p/<name>` — instantly, with no build, no deploy, no laptop and no container.
 
 A phone is a sufficient computer for the whole cycle.
 
 ## The loop
 
-1. Open `https://jblessd.com/code` on anything with a browser.
+1. Open `https://multinicheai.com/code` on anything with a browser.
 2. Enter the owner password (the same `ADMIN_PASSWORD` that opens `/admin`).
 3. Tap **+ new**. You get a working three-file app — `index.html`, `style.css`,
    `app.js` — that already renders.
@@ -26,8 +26,8 @@ is in the editor as soon as it saves.
 
 | | |
 | --- | --- |
-| Editor | `https://jblessd.com/code` — owner-only |
-| Your app | `https://jblessd.com/p/<name>/` |
+| Editor | `https://multinicheai.com/code` — owner-only |
+| Your app | `https://multinicheai.com/p/<name>/` |
 | Storage | Netlify Database, so an app started on a phone opens on a laptop |
 | Files per app | up to 24, one folder deep, 512 KB each |
 | File types | `html`, `css`, `js`, `mjs`, `json`, `svg`, `txt`, `md`, `csv`, `xml`, `webmanifest` |

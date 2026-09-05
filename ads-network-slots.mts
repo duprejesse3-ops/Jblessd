@@ -68,7 +68,7 @@ export default async (req: Request, _context: Context) => {
       {
         slot: row,
         embedSnippet:
-          `<script src="https://jblessd.com/ads-network-embed.js" ` +
+          `<script src="https://multinicheai.com/ads-network-embed.js" ` +
           `data-slot="${row.slot_key}" data-container-id="mnads-${row.slot_key}"></script>` +
           `<div id="mnads-${row.slot_key}"></div>`,
       },

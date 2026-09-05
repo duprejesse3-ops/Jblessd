@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  Run the jblessd.com storefront under Podman on Windows.
+  Run the multinicheai.com storefront under Podman on Windows.
 
 .DESCRIPTION
   The Windows counterpart to container/podman.sh. That script is POSIX shell and

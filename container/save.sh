@@ -1,5 +1,5 @@
 #!/bin/sh
-# Export the jblessd.com storefront as a Linux container image tar file, for
+# Export the multinicheai.com storefront as a Linux container image tar file, for
 # machines that cannot pull from a registry.
 #
 #   container/save.sh                          # dist/jblessd-store-dev-linux-amd64.tar

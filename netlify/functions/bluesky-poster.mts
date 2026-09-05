@@ -30,7 +30,7 @@ import { fetchCreativePng } from '../lib/image-render.mts'
 
 const BATCH_SIZE = Number(process.env.BLUESKY_POST_BATCH_SIZE || 1)
 const SERVICE = process.env.BLUESKY_SERVICE || 'https://bsky.social'
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 
 interface QueuedPost {
   id: string

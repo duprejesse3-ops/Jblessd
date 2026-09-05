@@ -1,4 +1,4 @@
-# Running jblessd.com in a container
+# Running multinicheai.com in a container
 
 > **You probably don't need this.** The deployed Netlify site already hosts itself:
 > the code lives on the site, Netlify runs every part of it, and using it means

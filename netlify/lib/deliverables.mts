@@ -852,7 +852,7 @@ export function deliverableToMarkdown(d: Deliverable): string {
   d.sections.forEach((s, i) => {
     lines.push(`## ${i + 1}. ${s.title}`, '', s.body, '')
   })
-  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — jblessd.com`)
+  lines.push('---', '', `SKU ${d.sku} · From MULTINICHE AI — multinicheai.com`)
   return lines.join('\n')
 }
 

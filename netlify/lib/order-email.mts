@@ -74,7 +74,7 @@ export function buildOrderEmail(
     (truncated
       ? `\n\n──────────\n(Some items aren't shown here to keep this email short — open the link above to get all of them.)`
       : '') +
-    `\n\nWhen you've put it to work we'd love a quick review — it helps other buyers and tells us what to build next: https://jblessd.com`
+    `\n\nWhen you've put it to work we'd love a quick review — it helps other buyers and tells us what to build next: https://multinicheai.com`
 
   return { subject: 'Your MULTINICHE AI order — ready to use inside', text }
 }

@@ -5,7 +5,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Point this at your deployed backend. Keep out of source control for prod.
-const API_BASE_URL = "https://api.jblessd.com";
+const API_BASE_URL = "https://api.multinicheai.com";
 
 async function getToken() {
   return AsyncStorage.getItem("access_token");

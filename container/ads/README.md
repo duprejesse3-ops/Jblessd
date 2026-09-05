@@ -52,5 +52,5 @@ worth testing, and which one.
 - **Affiliate/referral**: a `referrals` table + a discount-code-on-signup
   flow, paid only on realized sales.
 - **Embeddable widget**: a lightweight `<script>` embed of a free
-  `/api/run-product` demo, crediting jblessd.com, for customers to put on
+  `/api/run-product` demo, crediting multinicheai.com, for customers to put on
   their own sites.

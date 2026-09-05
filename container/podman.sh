@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run the jblessd.com storefront under Podman, without compose.
+# Run the multinicheai.com storefront under Podman, without compose.
 #
 #   container/podman.sh up             # start Postgres, migrate, start the app
 #   container/podman.sh up --build     # rebuild the image first

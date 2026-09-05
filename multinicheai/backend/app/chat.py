@@ -22,7 +22,7 @@ client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 MODEL = "claude-sonnet-4-6"  # swap per pricing tier if you offer a cheaper/faster model option
 
-BASE_SYSTEM_PROMPT = """You are multiNicheAI, the assistant for jblessd.com (MultiNiche AI).
+BASE_SYSTEM_PROMPT = """You are multiNicheAI, the assistant for multinicheai.com (MultiNiche AI).
 Help customers with product questions, store info, and general chat brainstorming.
 Be concise, friendly, and accurate.
 

@@ -12,8 +12,8 @@
 //   RESEND_API_KEY  — the provider key (required to actually send). The alias
 //                     RESEND_API is also accepted, since that name is easy to
 //                     reach for when configuring the provider.
-//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@jblessd.com>".
-//                     A bare "hello@jblessd.com" (or a value with stray angle
+//   EMAIL_FROM      — the verified From address, e.g. "MULTINICHE AI <hello@multinicheai.com>".
+//                     A bare "hello@multinicheai.com" (or a value with stray angle
 //                     brackets) is normalised into a valid From automatically.
 //
 // If RESEND_API_KEY is not set the sender is a no-op that logs and returns
@@ -121,7 +121,7 @@ function wrapHtml(bodyText: string): string {
     `<div style="background:#0a0400;padding:18px 28px"><span style="color:#FFB020;font-weight:700;letter-spacing:.04em">MULTINICHE AI</span></div>` +
     `<div style="padding:28px">${paragraphs}</div>` +
     `<div style="padding:16px 28px;border-top:1px solid #f0eaea;font-size:12px;color:#7d6b6b">` +
-    `MULTINICHE AI · <a href="https://jblessd.com" style="color:#a61b1b">jblessd.com</a></div>` +
+    `MULTINICHE AI · <a href="https://multinicheai.com" style="color:#a61b1b">multinicheai.com</a></div>` +
     `</div></div>`
   )
 }

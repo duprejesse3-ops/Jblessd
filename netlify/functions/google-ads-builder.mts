@@ -41,7 +41,7 @@ const STORE_SKU = 'STORE'
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
 // Canonical site, kept in sync with the marketing agent and SEO edge function.
-const SITE_URL = 'https://jblessd.com'
+const SITE_URL = 'https://multinicheai.com'
 
 // Google Ads Responsive Search Ad limits (chars). Used both to instruct the
 // model and to hard-trim whatever comes back, so every field is paste-ready.

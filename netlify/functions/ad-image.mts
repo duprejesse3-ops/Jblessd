@@ -27,7 +27,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
 const STORE_NAME = 'MULTINICHE AI'
-const DOMAIN = 'jblessd.com'
+const DOMAIN = 'multinicheai.com'
 
 // Google Ads image-asset dimensions, keyed by the friendly size name the UI uses.
 const SIZES: Record<string, { w: number; h: number }> = {

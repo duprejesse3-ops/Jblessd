@@ -14,7 +14,7 @@
 
 import type { Context, Config } from '@netlify/edge-functions'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 // Stable node id for the store, defined in index.html's static graph. Emitting
 // it as the offer's seller ties every product back to the one brand entity
 // instead of leaving the offers seller-less.

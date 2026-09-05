@@ -1,6 +1,6 @@
 # multiNicheAI 1.0 — backend starter
 
-API-backed AI assistant engine for jblessd.com, using Claude as the underlying
+API-backed AI assistant engine for multinicheai.com, using Claude as the underlying
 model with a fair, transparent credit system on top.
 
 ## What's in here
@@ -44,7 +44,7 @@ model with a fair, transparent credit system on top.
 - `App.js` — navigation entry point
 - `WINDOWS.md` — how to package this same app as a Windows `.exe` via Tauri or Electron
 
-### storefront-widget/ — jblessd.com embed
+### storefront-widget/ — multinicheai.com embed
 - `multinicheai-widget.html` — drop-in chat bubble widget. Creates a lightweight guest account automatically so visitors can chat without a signup wall; shares the same backend and credit system as the app.
 
 ## Setup order

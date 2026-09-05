@@ -47,4 +47,4 @@ Disallow: /
 User-agent: PetalBot
 Disallow: /
 
-Sitemap: https://jblessd.com/sitemap.xml
+Sitemap: https://multinicheai.com/sitemap.xml

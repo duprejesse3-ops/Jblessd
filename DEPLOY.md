@@ -1,4 +1,4 @@
-# Deploying jblessd.com with working Stripe checkout (Netlify)
+# Deploying multinicheai.com with working Stripe checkout (Netlify)
 
 This project has two parts:
 - **Static site**: `index.html`, `multiniche-ai-og.png`, `robots.txt`, `sitemap.xml`
@@ -20,7 +20,7 @@ You already have a site connected — you just need to add these files and an en
 4. Once deployed, confirm the function is live by checking **Site configuration → Functions** — you should see `create-checkout-session` listed
 
 ## 3. Connect your domain
-If `jblessd.com` isn't attached to this Netlify site yet: **Site configuration → Domain management → Add a domain** → follow the DNS instructions at your registrar.
+If `multinicheai.com` isn't attached to this Netlify site yet: **Site configuration → Domain management → Add a domain** → follow the DNS instructions at your registrar.
 
 ## 4. Test a purchase
 1. Visit your live site, add items to cart, hit Checkout
@@ -35,7 +35,7 @@ If `jblessd.com` isn't attached to this Netlify site yet: **Site configuration �
 4. Redeploy
 
 ## 6. Delivering the products (already wired up)
-Checkout success triggers automated fulfillment: `netlify/functions/webhook.mts` listens for Stripe's payment event and emails the buyer their deliverable/download link via Resend (see section 7 below for the required environment variables). In Stripe Dashboard → Developers → Webhooks, add an endpoint pointing to `https://jblessd.com/api/webhook` and copy the signing secret into Netlify as `STRIPE_WEBHOOK_SECRET`.
+Checkout success triggers automated fulfillment: `netlify/functions/webhook.mts` listens for Stripe's payment event and emails the buyer their deliverable/download link via Resend (see section 7 below for the required environment variables). In Stripe Dashboard → Developers → Webhooks, add an endpoint pointing to `https://multinicheai.com/api/webhook` and copy the signing secret into Netlify as `STRIPE_WEBHOOK_SECRET`.
 
 If `RESEND_API_KEY` / `EMAIL_FROM` aren't set yet, email sends are a graceful no-op (logged, not sent) rather than an error — see section 7 — so you can deploy and test checkout before turning email on. Until then, fall back to manually emailing buyers their link (Stripe shows their email under Payments).
 
@@ -53,7 +53,7 @@ deploys and runs fine before you set this up. To turn delivery on, add **both** 
 Site configuration → Environment variables (email stays off unless both are present, since sending from Resend's shared
 sandbox address only reaches the account owner):
 - `RESEND_API_KEY` — your Resend API key
-- `EMAIL_FROM` — the verified From address, e.g. `MULTINICHE AI <hello@jblessd.com>` (must be a domain you've verified in Resend)
+- `EMAIL_FROM` — the verified From address, e.g. `MULTINICHE AI <hello@multinicheai.com>` (must be a domain you've verified in Resend)
 
 The weekly digest is a scheduled function and only runs on **published production deploys**, never on previews.
 

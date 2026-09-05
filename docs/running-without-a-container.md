@@ -9,10 +9,10 @@ installed, and `container/` is not part of that path.
 
 | Surface | URL | What it is |
 | --- | --- | --- |
-| Storefront | `https://jblessd.com/` | The catalog, concierge, checkout |
-| Agent studio | `https://jblessd.com/agent` | Brief a Claude agent, pay per run |
-| Operator console | `https://jblessd.com/admin` | Your private workstation, password-gated |
-| Code workspace | `https://jblessd.com/code` | Write code in the browser; the site serves it at `/p/<name>` |
+| Storefront | `https://multinicheai.com/` | The catalog, concierge, checkout |
+| Agent studio | `https://multinicheai.com/agent` | Brief a Claude agent, pay per run |
+| Operator console | `https://multinicheai.com/admin` | Your private workstation, password-gated |
+| Code workspace | `https://multinicheai.com/code` | Write code in the browser; the site serves it at `/p/<name>` |
 
 Those work on a phone, a tablet, a laptop, a borrowed computer — anything with a
 browser and no setup at all.
@@ -41,7 +41,7 @@ a stale copy would be worse than no copy.
 
 `/code` is the part that used to require a machine. You write an app's source in a
 browser — including on a phone — the site stores it, and it is served back at
-`https://jblessd.com/p/<name>/` as soon as it saves. No build step, no deploy, no
+`https://multinicheai.com/p/<name>/` as soon as it saves. No build step, no deploy, no
 toolchain, no container.
 
 Drafts are visible only to you until you publish them. Apps run sandboxed, so what

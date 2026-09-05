@@ -3,6 +3,22 @@
   functions = "netlify/functions"
   [functions]
   included_files = ["netlify/lib/fonts/*.ttf"]
+
+# Domain migration: jblessd.com -> multinicheai.com. This rule only fires if
+# jblessd.com is still attached to this Netlify site as a domain alias (Site
+# configuration -> Domain management -> Add domain alias) with its DNS still
+# pointed at Netlify. Netlify matches redirects against the request's Host
+# header, so a full-URL "from" like this is how a domain-level redirect is
+# expressed in this file — there is no separate "primary domain" setting here.
+# status = 301 (permanent) so search engines and browsers transfer ranking/
+# bookmarks to the new domain; force = true so it applies even though every
+# path also matches a real file or another rule below.
+[[redirects]]
+  from = "https://jblessd.com/*"
+  to = "https://multinicheai.com/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -156,7 +172,7 @@
 # app answers both URLs.
 #
 # Deliberately NOT noindex'd: index.html carries <link rel="canonical"
-# href="https://jblessd.com/">, so search engines consolidate this URL into the
+# href="https://multinicheai.com/">, so search engines consolidate this URL into the
 # homepage on their own, and nothing (an X-Robots-Tag, a robots.txt Disallow) is
 # left in the way of Google's tag detector fetching the page.
 [[redirects]]

@@ -55,8 +55,8 @@ def create_checkout_session(
             "quantity": 1,
         }],
         mode="payment",  # one-time purchase, not subscription
-        success_url=os.environ.get("CHECKOUT_SUCCESS_URL", "https://jblessd.com/checkout/success"),
-        cancel_url=os.environ.get("CHECKOUT_CANCEL_URL", "https://jblessd.com/checkout/cancel"),
+        success_url=os.environ.get("CHECKOUT_SUCCESS_URL", "https://multinicheai.com/checkout/success"),
+        cancel_url=os.environ.get("CHECKOUT_CANCEL_URL", "https://multinicheai.com/checkout/cancel"),
         client_reference_id=str(user_id),
         metadata={"pack_id": pack_id, "credits": pack["credits"]},
     )

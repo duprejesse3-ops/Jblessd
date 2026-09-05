@@ -1,7 +1,7 @@
 """
 Catalog retrieval for multiNicheAI 1.0.
 
-Pulls real product data from jblessd.com's existing /api/products endpoint
+Pulls real product data from multinicheai.com's existing /api/products endpoint
 (the same Postgres-backed catalog the storefront uses) and does simple
 keyword/category/niche matching to find the products most relevant to
 a customer's message. The matches get injected into the system prompt
@@ -18,7 +18,7 @@ import os
 import time
 import httpx
 
-CATALOG_API_URL = os.environ.get("CATALOG_API_URL", "https://jblessd.com/api/products")
+CATALOG_API_URL = os.environ.get("CATALOG_API_URL", "https://multinicheai.com/api/products")
 CACHE_TTL_SECONDS = 300  # re-fetch the catalog at most every 5 minutes
 
 _cache = {"products": [], "fetched_at": 0}
