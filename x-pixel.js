@@ -12,11 +12,11 @@
 // (Landing page views, Site visits) — no separate event id is needed for
 // those two, they come from the base tag alone.
 //
-// PURCHASE (and any other custom conversion) is NOT wired yet. X ties a
-// specific paid action to a per-event id (shaped like 'tw-rf01m-xxxxx') that
-// Events Manager only hands out once a dedicated conversion event exists
-// there beyond the two auto-created ones. EVENT_IDS below is where that id
-// goes once it exists — until then, trackXEvent() for an unmapped name is a
+// PURCHASE is wired to event id tw-rf01m-rf02g (from X Ads Manager -> Events
+// Manager -> the dedicated Purchase conversion event, not the base pixel's
+// auto-created ones). Any OTHER custom conversion (sign-up, lead, etc.) still
+// needs its own id created the same way before it'll do anything — EVENT_IDS
+// below is where each one goes once it exists. An unmapped name is a
 // deliberate, logged no-op rather than a guess at an id that would silently
 // send nothing (or worse, send to the wrong event).
 (function () {
@@ -26,7 +26,7 @@
   // empty on purpose — see file header. Example once you have one:
   //   purchase: 'tw-rf01m-abcde'
   var EVENT_IDS = {
-    // purchase: '',
+    purchase: 'tw-rf01m-rf02g',
     // sign_up: '',
     // generate_lead: '',
   };
@@ -71,6 +71,12 @@
       payload.currency = details.currency || 'USD';
     }
     if (details.transaction_id) payload.conversion_id = String(details.transaction_id);
+    // Optional, only sent if a call site actually has it — same "never invent
+    // PII the caller didn't hand us" stance as buildUserData() in index.html.
+    // X's own snippet placeholder for this field just says "pass a user's
+    // email address" with no hashing instruction, so this mirrors what that
+    // success-page handler already does for Google: pass it plain, lowercased.
+    if (details.email) payload.email_address = String(details.email).trim().toLowerCase();
     window.twq('event', eventId, payload);
   };
 

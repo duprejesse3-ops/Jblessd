@@ -1851,6 +1851,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             currency: order.currency
           });
         }
+        // X Ads pixel purchase conversion. Same reasoning and same placement
+        // as the Taboola call above — the X pixel's own account/event id is
+        // fixed in x-pixel.js, nothing here depends on the Google env config
+        // fetch below. Email is included (plain, lowercased — x-pixel.js does
+        // the same normalization buildUserData() below does for Google) since
+        // X's own conversion-event snippet offers it for better match rates.
+        if(window.trackXEvent){
+          window.trackXEvent('purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency,
+            email: order.email
+          });
+        }
         // Everything is reported inside analyticsReady: the GA4 measurement ID is
         // configured from server env vars, so a purchase event pushed before that
         // config command lands has no destination and is silently dropped. Both
