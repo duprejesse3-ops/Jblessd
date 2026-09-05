@@ -13,7 +13,11 @@
 // network was slow or absent. It gets its own cache entry rather than sharing the
 // storefront's, because the two are different documents and either one may be the
 // window that was launched.
-const CACHE = 'multiniche-ai-v8';
+// Bumped to v9 for the jblessd.com -> multinicheai.com domain migration: forces
+// every existing install (PWA and any lingering TWA) to drop its old cache and
+// refetch the app shell and icons rather than continuing to serve pre-migration
+// copies.
+const CACHE = 'multiniche-ai-v9';
 const APP_SHELL = [
   '/',
   '/index.html',
