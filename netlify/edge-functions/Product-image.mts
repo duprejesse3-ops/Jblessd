@@ -202,11 +202,47 @@ function isSoftwareProduct(p: ApiProduct): boolean {
   return p.category === 'connectors' || p.name.startsWith('Multi')
 }
 
-function buildSoftwareSvg(p: ApiProduct): string {
+function buildSoftwareSvg(p: ApiProduct, opts: { thumbOnly?: boolean } = {}): string {
   const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
   const [g1, g2] = style.gradient
   const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}`
   const cx = W / 2
+
+  // thumbOnly: used for the storefront's card grid, which crops this image
+  // to a 104px-tall banner via CSS object-fit:cover — only a thin slice from
+  // the vertical center of this 630px-tall canvas is ever visible there. The
+  // full version below (icon + wordmark + store/SKU footer) is built to
+  // stand alone for Schema.org Product images and social share previews,
+  // where the whole 1200x630 canvas is shown — the wordmark sits low in the
+  // frame there on purpose, matching the "logo" layouts this was designed
+  // to mimic. Cropped to a 104px strip, that same low-set wordmark gets
+  // sliced through mid-glyph instead of hidden or fully shown — a card
+  // clipping a name that's shown again, unclipped, right below it in the
+  // card's own <h3> a moment later. thumbOnly skips the wordmark and footer
+  // entirely and centers the icon truly in the middle of the canvas, so ANY
+  // crop height a caller picks always shows a clean, fully-visible icon and
+  // nothing else — see Index.html's buildCard(), which requests this mode.
+  if (opts.thumbOnly) {
+    return `
+<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="${gradId}" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="${g1}"/>
+      <stop offset="100%" stop-color="${g2}"/>
+    </linearGradient>
+    <radialGradient id="${gradId}-glow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#${gradId})"/>
+  <rect width="${W}" height="${H}" fill="url(#${gradId}-glow)"/>
+  <circle cx="${cx}" cy="${H / 2}" r="118" fill="#FFFFFF" fill-opacity="0.12"/>
+  <g transform="translate(${cx}, ${H / 2})">
+    ${style.mark('#FFFFFF')}
+  </g>
+</svg>`.trim()
+  }
 
   // Auto-size + wrap: short names ("MultiVault") stay big and single-line;
   // longer ones ("MultiConnect: Zapier/Webhook Bridge") shrink and wrap onto
@@ -273,10 +309,14 @@ function buildSvg(p: ApiProduct): string {
 }
 
 export default async (req: Request, _context: Context) => {
-  const { pathname } = new URL(req.url)
+  const { pathname, searchParams } = new URL(req.url)
   const match = pathname.match(/^\/product-image\/(.+)\.png$/)
   if (!match) return new Response('Not found', { status: 404 })
   const sku = decodeURIComponent(match[1])
+  // See buildSoftwareSvg's thumbOnly comment: the card grid requests this
+  // variant so its 104px-tall crop always shows a clean icon, never a
+  // sliced-through wordmark.
+  const thumbOnly = searchParams.get('variant') === 'thumb'
 
   try {
     const apiRes = await fetch(new URL('/api/products', req.url), {
@@ -289,10 +329,13 @@ export default async (req: Request, _context: Context) => {
     if (!product) return new Response('Not found', { status: 404 })
 
     await ensureWasm()
-    const font = await getFont()
     const isSoftware = isSoftwareProduct(product)
-    const svg = isSoftware ? buildSoftwareSvg(product) : buildSvg(product)
-    const fontBuffers = isSoftware ? [font, await getMonoFont()] : [font]
+    // Fonts are only needed to render text — the thumbOnly path draws no
+    // text at all, so it skips both font fetches entirely rather than
+    // paying for them on every card-grid load.
+    const font = thumbOnly ? null : await getFont()
+    const svg = isSoftware ? buildSoftwareSvg(product, { thumbOnly }) : buildSvg(product)
+    const fontBuffers = thumbOnly ? [] : isSoftware ? [font!, await getMonoFont()] : [font!]
     const resvg = new Resvg(svg, {
       font: { fontBuffers, defaultFontFamily: 'Inter' },
       fitTo: { mode: 'width', value: W },

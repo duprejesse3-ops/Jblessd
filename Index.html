@@ -2358,7 +2358,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // this is additive, not a redesign of the whole catalog.
     var isSoftware = p.category === 'connectors' || /^Multi/.test(p.name || '');
     var thumbHtml = isSoftware
-      ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
+      ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png?variant=thumb" alt="" loading="lazy">'
       : '';
     if (isSoftware) card.classList.add('has-thumb');
     card.innerHTML =
