@@ -457,14 +457,25 @@ function buildSvg(p: ApiProduct): string {
 }
 
 export default async (req: Request, _context: Context) => {
-  const { pathname, searchParams } = new URL(req.url)
-  const match = pathname.match(/^\/product-image\/(.+)\.png$/)
+  const { pathname } = new URL(req.url)
+  // Thumbnail and full images are separate PATHS (/product-image/thumb/:sku.png
+  // vs /product-image/:sku.png), not the same path with a ?variant=thumb query
+  // string as this used to be. A query string is not a safe way to distinguish
+  // two cached responses on every CDN: some cache configurations key on the
+  // path alone and ignore the query entirely, which silently serves whichever
+  // variant happened to be cached first — observed in production as the full
+  // 1200x630 image (whose Schema.org/social use pre-dates the thumbnail
+  // feature, and so was already cached under the bare path) being squeezed
+  // into the 130px-tall card slot instead of the dedicated thumbnail crop,
+  // cropping out the exact detail (an LED, a dial) the thumbnail crop exists
+  // to keep in frame. Two distinct paths are unambiguous under any CDN's
+  // cache-key scheme, query-string handling included or not.
+  const thumbMatch = pathname.match(/^\/product-image\/thumb\/(.+)\.png$/)
+  const fullMatch = pathname.match(/^\/product-image\/(.+)\.png$/)
+  const match = thumbMatch ?? fullMatch
   if (!match) return new Response('Not found', { status: 404 })
   const sku = decodeURIComponent(match[1])
-  // See buildSoftwareSvg's thumbOnly comment: the card grid requests this
-  // variant so its 104px-tall crop always shows a clean icon, never a
-  // sliced-through wordmark.
-  const thumbOnly = searchParams.get('variant') === 'thumb'
+  const thumbOnly = Boolean(thumbMatch)
 
   try {
     const apiRes = await fetch(new URL('/api/products', req.url), {

@@ -2372,7 +2372,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // Since every category is covered, every card now requests it.
     var hasPhotoArt = true;
     var thumbHtml = hasPhotoArt
-      ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png?variant=thumb" alt="" loading="lazy">'
+      ? '<img class="card-thumb" src="/product-image/thumb/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
       : '';
     if (hasPhotoArt) card.classList.add('has-thumb');
     card.innerHTML =
