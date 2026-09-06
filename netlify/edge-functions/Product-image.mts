@@ -87,23 +87,57 @@ function bufferToBase64(buf: ArrayBuffer): string {
 
 // Per-SKU real photography, embedded in place of the flat-gradient +
 // vector-icon treatment every other software product gets — see the
-// SOFTWARE_STYLE map above. Only used where a genuine product photo exists;
-// everything else keeps the procedural gradient/icon system, which needs no
-// art asset per SKU and scales to a new product with zero extra work. Two
-// derivatives per entry because the same source photo serves two very
-// different aspect ratios (the short thumbnail banner vs. the full
-// 1200x630 social/Schema.org image) — see PRODUCT_PHOTOS_README below for
-// how these were made if a future product needs its own.
+// SOFTWARE_STYLE map above. Two derivatives per entry because the same
+// source photo serves two very different aspect ratios (the short
+// thumbnail banner vs. the full 1200x630 social/Schema.org image) — see
+// PRODUCT_PHOTOS_README below for how these were made if a future product
+// needs its own.
 //
 // PRODUCT_PHOTOS_README: both files are pre-cropped to their target aspect
 // ratio (not left to a generic center-crop) so the photo's actual subject —
-// here, the vault's combination dial — stays in frame. If you add another
-// photo-backed SKU, crop deliberately around whatever the product's most
-// recognizable visual detail is, at exactly 1200x160 (banner) and 1200x630
-// (full), rather than dropping in an arbitrary source image and hoping a
-// centered crop finds something good.
+// the vault's dial, the stamp's press, the clock's face — stays in frame.
+// If you add another photo-backed SKU, crop deliberately around whatever
+// the product's most recognizable visual detail is, AND make sure that
+// detail sits near the horizontal center of the 1200-wide banner source —
+// object-fit:cover always crops symmetrically from the exact middle
+// outward, so anything off-center gets cropped first, before the frame
+// shrinks toward whatever IS centered. The first version of the MultiVault
+// photo (and, in this batch, the first crop of the Deep Work Prompt Pack
+// clock) got this wrong by centering the *photo's own* interesting content
+// within itself rather than within the eventual 1200-wide banner — measure
+// the actual pixel position of the detail in the final banner crop, not
+// just "does this look nice as a standalone photo."
 const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
   'AI-CN-008': { banner: '/icons/multivault-vault-banner.jpg', full: '/icons/multivault-vault-full.jpg' },
+  'AI-CN-006': { banner: '/icons/products/AI-CN-006-banner.jpg', full: '/icons/products/AI-CN-006-full.jpg' },
+  'AI-CN-007': { banner: '/icons/products/AI-CN-007-banner.jpg', full: '/icons/products/AI-CN-007-full.jpg' },
+  'AI-PP-001': { banner: '/icons/products/AI-PP-001-banner.jpg', full: '/icons/products/AI-PP-001-full.jpg' },
+  'AI-AB-002': { banner: '/icons/products/AI-AB-002-banner.jpg', full: '/icons/products/AI-AB-002-full.jpg' },
+  'AI-AG-003': { banner: '/icons/products/AI-AG-003-banner.jpg', full: '/icons/products/AI-AG-003-full.jpg' },
+  'AI-AG-015': { banner: '/icons/products/AI-AG-015-banner.jpg', full: '/icons/products/AI-AG-015-full.jpg' },
+}
+
+const CATEGORY_PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
+  prompts: { banner: '/icons/products/cat-prompts-banner.jpg', full: '/icons/products/cat-prompts-full.jpg' },
+  automations: { banner: '/icons/products/cat-automations-banner.jpg', full: '/icons/products/cat-automations-full.jpg' },
+  templates: { banner: '/icons/products/cat-templates-banner.jpg', full: '/icons/products/cat-templates-full.jpg' },
+  agents: { banner: '/icons/products/cat-agents-banner.jpg', full: '/icons/products/cat-agents-full.jpg' },
+  connectors: { banner: '/icons/products/cat-connectors-banner.jpg', full: '/icons/products/cat-connectors-full.jpg' },
+}
+
+function photoStyleFor(p: ApiProduct): { banner: string; full: string } | undefined {
+  if (PHOTO_STYLE[p.sku]) return PHOTO_STYLE[p.sku]
+  // Six connectors (AI-CN-001 through 005, 009) already have their own
+  // distinct vector icon in SOFTWARE_STYLE — a lightning bolt, a shopping
+  // bag, a grid, an envelope, a chat bubble, a document. Falling back to
+  // the shared "connectors" category photo for these would make all six
+  // look identical in the card grid instead of instantly telling apart —
+  // a real loss of distinctiveness, not a neutral substitution. The
+  // category photo fallback is a strict upgrade for every OTHER category
+  // (prompts/automations/templates/agents never had per-SKU art at all,
+  // just a generic procedural pattern), so it only steps aside here.
+  if (p.category === 'connectors' && SOFTWARE_STYLE[p.sku]) return undefined
+  return CATEGORY_PHOTO_STYLE[p.category]
 }
 
 const photoCache = new Map<string, string>()
@@ -441,28 +475,32 @@ export default async (req: Request, _context: Context) => {
 
     await ensureWasm()
     const isSoftware = isSoftwareProduct(product)
-    const photoStyle = PHOTO_STYLE[product.sku]
+    const photoStyle = photoStyleFor(product)
     const photoDataUri = photoStyle
       ? await getPhotoDataUri(req.url, thumbOnly ? photoStyle.banner : photoStyle.full)
       : undefined
+    const hasPhoto = Boolean(photoDataUri)
     // Whether this SKU's icon is a plain vector shape (no font needed) or
     // the DEFAULT_SOFTWARE_STYLE ">_" glyph — an SVG <text> element set in
     // JetBrains Mono (see its mark() above), for any SKU without its own
     // SOFTWARE_STYLE entry. Irrelevant once a photo replaces the icon
-    // entirely, which is why photoDataUri short-circuits this below.
-    const usesTextGlyph = isSoftware && !SOFTWARE_STYLE[product.sku]
-    // Inter renders product-name text in every path now, including the
-    // thumbnail banner (buildThumbSvg) — there's no longer a text-free
-    // variant. Mono renders either the default ">_" glyph or the full
-    // image's SKU footer. A photo-backed thumb needs neither (no glyph, no
-    // footer at that size); a photo-backed full image still shows the
-    // footer, so it still needs mono for that.
-    const needsMono = isSoftware && (photoDataUri ? !thumbOnly : usesTextGlyph || !thumbOnly)
+    // entirely, which — now that every catalog category has a fallback
+    // photo (see CATEGORY_PHOTO_STYLE) — is effectively always the case;
+    // the vector-icon path only still fires as a defensive fallback if a
+    // photo genuinely can't be found for some reason.
+    const usesTextGlyph = isSoftware && !hasPhoto && !SOFTWARE_STYLE[product.sku]
+    // Inter renders product-name text in every path now. Mono renders
+    // either the default ">_" glyph, or the full (non-thumbnail) image's
+    // SKU footer — which every photo-backed full image shows too, not just
+    // the vector-icon one. buildSvg (the plain template, reached only if
+    // somehow neither a photo nor SOFTWARE_STYLE applies) uses no mono text
+    // at all.
+    const needsMono = hasPhoto ? !thumbOnly : isSoftware && (usesTextGlyph || !thumbOnly)
     const interFont = await getFont()
     const monoFont = needsMono ? await getMonoFont() : null
     const svg = thumbOnly
       ? buildThumbSvg(product, photoDataUri)
-      : isSoftware
+      : isSoftware || hasPhoto
         ? buildSoftwareSvg(product, photoDataUri)
         : buildSvg(product)
     const fontBuffers = [interFont, monoFont].filter((f): f is Uint8Array => f !== null)
