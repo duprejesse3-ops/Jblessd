@@ -2356,7 +2356,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // product's structured data and social previews. Every other category
     // keeps the existing procedural CSS cover art (.card::before) as-is —
     // this is additive, not a redesign of the whole catalog.
-    var isSoftware = p.category === 'connectors' || /^Multi/.test(p.name || '');
+    // Kept in sync with isSoftwareProduct() in netlify/edge-functions/Product-image.mts —
+    // /^Multi[A-Z]/ (not a bare "Multi" prefix) so "Multilingual Support Inbox"
+    // isn't mistaken for a Multi-branded product; see that file's comment for why.
+    var isSoftware = p.category === 'connectors' || /^Multi[A-Z]/.test(p.name || '');
     var thumbHtml = isSoftware
       ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png?variant=thumb" alt="" loading="lazy">'
       : '';

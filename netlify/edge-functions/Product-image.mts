@@ -199,7 +199,14 @@ const DEFAULT_SOFTWARE_STYLE = {
 }
 
 function isSoftwareProduct(p: ApiProduct): boolean {
-  return p.category === 'connectors' || p.name.startsWith('Multi')
+  // p.name.startsWith('Multi') alone is too broad — it also matches ordinary
+  // English words like "Multilingual Support Inbox" that happen to start
+  // with the same five letters as the brand prefix, giving a plain agent
+  // config the Multi-branded logo treatment it has nothing to do with. Real
+  // Multi-brand names smoosh the prefix directly into a capitalized word
+  // with no space ("MultiAgents", "MultiVault", "MultiConnect: …") — /^Multi[A-Z]/
+  // matches those and correctly excludes "Multilingual" (lowercase 'l').
+  return p.category === 'connectors' || /^Multi[A-Z]/.test(p.name)
 }
 
 function buildSoftwareSvg(p: ApiProduct, opts: { thumbOnly?: boolean } = {}): string {
@@ -330,12 +337,23 @@ export default async (req: Request, _context: Context) => {
 
     await ensureWasm()
     const isSoftware = isSoftwareProduct(product)
-    // Fonts are only needed to render text — the thumbOnly path draws no
-    // text at all, so it skips both font fetches entirely rather than
-    // paying for them on every card-grid load.
-    const font = thumbOnly ? null : await getFont()
+    // Whether this SKU's icon is a plain vector shape (no font needed) or
+    // the DEFAULT_SOFTWARE_STYLE ">_" glyph — an SVG <text> element set in
+    // JetBrains Mono (see its mark() above), for any SKU without its own
+    // SOFTWARE_STYLE entry.
+    const usesTextGlyph = isSoftware && !SOFTWARE_STYLE[product.sku]
+    // Inter renders the wordmark + store/SKU footer — never drawn in
+    // thumbOnly mode, so it's skipped there. Mono renders either the
+    // default text glyph or that same footer; thumbOnly still needs it
+    // whenever the icon itself IS that text glyph, or the glyph silently
+    // fails to render, leaving just a blank gradient — exactly the
+    // regression this comment is here to stop from coming back.
+    const needsInter = !thumbOnly
+    const needsMono = isSoftware && (usesTextGlyph || !thumbOnly)
+    const interFont = needsInter ? await getFont() : null
+    const monoFont = needsMono ? await getMonoFont() : null
     const svg = isSoftware ? buildSoftwareSvg(product, { thumbOnly }) : buildSvg(product)
-    const fontBuffers = thumbOnly ? [] : isSoftware ? [font!, await getMonoFont()] : [font!]
+    const fontBuffers = [interFont, monoFont].filter((f): f is Uint8Array => f !== null)
     const resvg = new Resvg(svg, {
       font: { fontBuffers, defaultFontFamily: 'Inter' },
       fitTo: { mode: 'width', value: W },
