@@ -468,7 +468,7 @@ f.parentNode.insertBefore(j,f);
      API — gets an image with no extra markup. Colors stay in the crimson family
      so the art harmonizes with the theme; each category has its own glyph. */
   .card::before{
-    content:""; display:block; height:104px; margin:-22px -22px 18px;
+    content:""; display:block; height:130px; margin:-22px -22px 18px;
     border-bottom:1px solid var(--line);
     border-radius:var(--radius) var(--radius) 0 0;
     background-color:var(--panel-2);
@@ -490,7 +490,7 @@ f.parentNode.insertBefore(j,f);
      stack under each other. */
   .card.has-thumb::before{display:none;}
   .card-thumb{
-    width:calc(100% + 44px); height:104px; margin:-22px -22px 18px; display:block;
+    width:calc(100% + 44px); height:130px; margin:-22px -22px 18px; display:block;
     border-bottom:1px solid var(--line); border-radius:var(--radius) var(--radius) 0 0;
     object-fit:cover; object-position:center; background:var(--panel-2);
   }
@@ -525,7 +525,20 @@ f.parentNode.insertBefore(j,f);
   .trend-badge::before{content:'▲'; font-size:8px;}
   .card.is-trending{border-color:var(--teal); box-shadow:0 0 0 1px var(--teal);}
   .card h3{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 8px; color:var(--paper); line-height:1.3;}
-  .card p{font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;}
+  .card p{
+    font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;
+    /* Cap descriptions at 4 lines. Blurb length varies a lot across the
+       catalog (a 42-character one-liner up to a 280-character MultiConnect
+       one) — uncapped, a handful of long ones stretch their card far past
+       every neighbor's height, which reads as sloppy once a real photo sits
+       at a fixed height above it: the photo stays small and consistent
+       while the text below it runs on, making the card feel unbalanced.
+       Clamping keeps every card close to the same height regardless of
+       blurb length, so the photo above it reads as proportionate. The full
+       description is never truly lost — it's one click away in the product
+       modal (openProductModal), which shows it unclamped. */
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; overflow:hidden;
+  }
   .card-format{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); border-top:1px dashed var(--line); padding-top:11px; margin-bottom:11px;}
   .card-bottom{display:flex; align-items:center; justify-content:space-between;}
   .card-rating{display:flex; align-items:center; gap:7px; margin:-2px 0 11px; font-size:13px;}
