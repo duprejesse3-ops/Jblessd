@@ -72,6 +72,51 @@ async function getMonoFont(): Promise<Uint8Array> {
   return monoFontCache
 }
 
+function bufferToBase64(buf: ArrayBuffer): string {
+  // btoa(String.fromCharCode(...bytes)) blows the call stack on a large
+  // enough buffer since spread turns every byte into its own function
+  // argument — chunking keeps this safe regardless of image size.
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  const CHUNK = 0x8000
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+  }
+  return btoa(binary)
+}
+
+// Per-SKU real photography, embedded in place of the flat-gradient +
+// vector-icon treatment every other software product gets — see the
+// SOFTWARE_STYLE map above. Only used where a genuine product photo exists;
+// everything else keeps the procedural gradient/icon system, which needs no
+// art asset per SKU and scales to a new product with zero extra work. Two
+// derivatives per entry because the same source photo serves two very
+// different aspect ratios (the short thumbnail banner vs. the full
+// 1200x630 social/Schema.org image) — see PRODUCT_PHOTOS_README below for
+// how these were made if a future product needs its own.
+//
+// PRODUCT_PHOTOS_README: both files are pre-cropped to their target aspect
+// ratio (not left to a generic center-crop) so the photo's actual subject —
+// here, the vault's combination dial — stays in frame. If you add another
+// photo-backed SKU, crop deliberately around whatever the product's most
+// recognizable visual detail is, at exactly 1200x160 (banner) and 1200x630
+// (full), rather than dropping in an arbitrary source image and hoping a
+// centered crop finds something good.
+const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
+  'AI-CN-008': { banner: '/icons/multivault-vault-banner.jpg', full: '/icons/multivault-vault-full.jpg' },
+}
+
+const photoCache = new Map<string, string>()
+async function getPhotoDataUri(origin: string, path: string): Promise<string> {
+  const cached = photoCache.get(path)
+  if (cached) return cached
+  const res = await fetch(new URL(path, origin))
+  if (!res.ok) throw new Error(`Could not load product photo ${path} (${res.status})`)
+  const dataUri = `data:image/jpeg;base64,${bufferToBase64(await res.arrayBuffer())}`
+  photoCache.set(path, dataUri)
+  return dataUri
+}
+
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 }
@@ -225,7 +270,7 @@ function truncateForBanner(name: string, maxChars: number): string {
   return name.slice(0, maxChars - 1).trimEnd() + '\u2026'
 }
 
-function buildThumbSvg(p: ApiProduct): string {
+function buildThumbSvg(p: ApiProduct, photoDataUri?: string): string {
   const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
   const [g1, g2] = style.gradient
   const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}-thumb`
@@ -234,14 +279,28 @@ function buildThumbSvg(p: ApiProduct): string {
 
   const longName = p.name.length > 20
   const nameSize = longName ? 30 : 40
-  // Tuned against actual rendered width at the narrowest realistic card
-  // (~280px) — see BTCPAY_SETUP.md's sibling render_check scripts under
-  // /home/claude/thumb-check during development for how these numbers were
-  // chosen; the full product name is always still shown, unclipped, in the
-  // card's own <h3> right below this banner, so truncating here loses
-  // nothing that isn't available a few pixels down.
   const maxChars = longName ? 17 : 16
   const displayName = truncateForBanner(p.name, maxChars)
+
+  if (photoDataUri) {
+    // The photo IS the icon here — no vector mark, no gradient circle badge.
+    // Text is centered with its own dark pill behind it, rather than
+    // anchored to a fixed side of the 1200-wide canvas: object-fit:cover
+    // crops this image symmetrically from both edges on any card narrower
+    // than the source, so anything not centered risks landing outside the
+    // visible window at smaller card widths — the exact bug that broke the
+    // icon+text layout earlier, now avoided here from the start. The pill
+    // (not a directional fade) keeps the name legible regardless of which
+    // part of the photo ends up behind it at any given crop width.
+    const pillW = displayName.length * nameSize * 0.6 + 56
+    const pillH = 56
+    return `
+<svg width="${W}" height="${H_THUMB}" viewBox="0 0 ${W} ${H_THUMB}" xmlns="http://www.w3.org/2000/svg">
+  <image href="${photoDataUri}" x="0" y="0" width="${W}" height="${H_THUMB}" preserveAspectRatio="xMidYMid slice"/>
+  <rect x="${cx - pillW / 2}" y="${cy - pillH / 2}" width="${pillW}" height="${pillH}" rx="12" fill="#0B0E14" fill-opacity="0.68"/>
+  <text x="${cx}" y="${cy + 13}" font-family="Inter" font-weight="700" font-size="${nameSize}" fill="#F4EBDC" text-anchor="middle">${esc(displayName)}</text>
+</svg>`.trim()
+  }
 
   const iconR = 40
   const iconD = iconR * 2
@@ -270,7 +329,7 @@ function buildThumbSvg(p: ApiProduct): string {
 </svg>`.trim()
 }
 
-function buildSoftwareSvg(p: ApiProduct): string {
+function buildSoftwareSvg(p: ApiProduct, photoDataUri?: string): string {
   const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
   const [g1, g2] = style.gradient
   const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}`
@@ -289,6 +348,26 @@ function buildSoftwareSvg(p: ApiProduct): string {
   const nameTspans = nameLines
     .map((line, i) => `<tspan x="${cx}" y="${nameBlockTop + i * lineHeight}">${esc(line)}</tspan>`)
     .join('')
+
+  if (photoDataUri) {
+    // Photo full-bleed, name + store/SKU footer over a bottom fade — same
+    // "the photo IS the art" stance as buildThumbSvg's photo path, just with
+    // room for the usual footer since this version isn't cropped to a sliver.
+    return `
+<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fade-${gradId}" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#0B0E14" stop-opacity="0.92"/>
+      <stop offset="38%" stop-color="#0B0E14" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <image href="${photoDataUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="${W}" height="${H}" fill="url(#fade-${gradId})"/>
+  <text x="60" y="${H - 110}" font-family="Inter" font-weight="700" font-size="${nameSize}" fill="#F4EBDC">${esc(p.name)}</text>
+  <text x="60" y="${H - 46}" font-family="Inter" font-weight="700" font-size="19" letter-spacing="3" fill="#F4EBDC" fill-opacity="0.7">${esc(STORE)}</text>
+  <text x="${W - 60}" y="${H - 46}" font-family="JetBrains Mono" font-size="17" fill="#F4EBDC" fill-opacity="0.55" text-anchor="end">${esc(p.sku)}</text>
+</svg>`.trim()
+  }
 
   return `
 <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
@@ -362,21 +441,30 @@ export default async (req: Request, _context: Context) => {
 
     await ensureWasm()
     const isSoftware = isSoftwareProduct(product)
+    const photoStyle = PHOTO_STYLE[product.sku]
+    const photoDataUri = photoStyle
+      ? await getPhotoDataUri(req.url, thumbOnly ? photoStyle.banner : photoStyle.full)
+      : undefined
     // Whether this SKU's icon is a plain vector shape (no font needed) or
     // the DEFAULT_SOFTWARE_STYLE ">_" glyph — an SVG <text> element set in
     // JetBrains Mono (see its mark() above), for any SKU without its own
-    // SOFTWARE_STYLE entry.
+    // SOFTWARE_STYLE entry. Irrelevant once a photo replaces the icon
+    // entirely, which is why photoDataUri short-circuits this below.
     const usesTextGlyph = isSoftware && !SOFTWARE_STYLE[product.sku]
     // Inter renders product-name text in every path now, including the
     // thumbnail banner (buildThumbSvg) — there's no longer a text-free
     // variant. Mono renders either the default ">_" glyph or the full
-    // image's SKU footer; thumbOnly only needs it when the icon itself IS
-    // that text glyph, since a custom per-SKU mark is a plain vector path
-    // needing no font at all.
-    const needsMono = isSoftware && (usesTextGlyph || !thumbOnly)
+    // image's SKU footer. A photo-backed thumb needs neither (no glyph, no
+    // footer at that size); a photo-backed full image still shows the
+    // footer, so it still needs mono for that.
+    const needsMono = isSoftware && (photoDataUri ? !thumbOnly : usesTextGlyph || !thumbOnly)
     const interFont = await getFont()
     const monoFont = needsMono ? await getMonoFont() : null
-    const svg = thumbOnly ? buildThumbSvg(product) : isSoftware ? buildSoftwareSvg(product) : buildSvg(product)
+    const svg = thumbOnly
+      ? buildThumbSvg(product, photoDataUri)
+      : isSoftware
+        ? buildSoftwareSvg(product, photoDataUri)
+        : buildSvg(product)
     const fontBuffers = [interFont, monoFont].filter((f): f is Uint8Array => f !== null)
     const resvg = new Resvg(svg, {
       font: { fontBuffers, defaultFontFamily: 'Inter' },
