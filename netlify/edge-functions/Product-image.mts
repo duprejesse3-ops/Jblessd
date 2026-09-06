@@ -318,21 +318,24 @@ function buildThumbSvg(p: ApiProduct, photoDataUri?: string): string {
 
   if (photoDataUri) {
     // The photo IS the icon here — no vector mark, no gradient circle badge.
-    // Text is centered with its own dark pill behind it, rather than
-    // anchored to a fixed side of the 1200-wide canvas: object-fit:cover
-    // crops this image symmetrically from both edges on any card narrower
-    // than the source, so anything not centered risks landing outside the
-    // visible window at smaller card widths — the exact bug that broke the
-    // icon+text layout earlier, now avoided here from the start. The pill
-    // (not a directional fade) keeps the name legible regardless of which
-    // part of the photo ends up behind it at any given crop width.
-    const pillW = displayName.length * nameSize * 0.6 + 56
-    const pillH = 56
+    // Name sits in a full-width strip along the bottom, not a pill centered
+    // over the photo: a centered pill and the photo's own centered key
+    // detail (the vault's dial, a lens, an LED) both want the same
+    // horizontal real estate for the same reason — surviving a narrow
+    // card's center-crop — and end up fighting over it. Concretely: for a
+    // 10-character name at this font size, the pill spanned roughly
+    // x=458-742 of the 1200-wide canvas, and MultiVault's dial was cropped
+    // to sit at x≈535 — dead center of the pill, mostly hidden behind it,
+    // not beside it. Separating them onto different vertical bands instead
+    // (photo occupies the top, text strip along the bottom) means neither
+    // has to dodge the other's horizontal position, and it costs only a
+    // little vertical headroom rather than fighting for the same center.
+    const stripH = 46
     return `
 <svg width="${W}" height="${H_THUMB}" viewBox="0 0 ${W} ${H_THUMB}" xmlns="http://www.w3.org/2000/svg">
   <image href="${photoDataUri}" x="0" y="0" width="${W}" height="${H_THUMB}" preserveAspectRatio="xMidYMid slice"/>
-  <rect x="${cx - pillW / 2}" y="${cy - pillH / 2}" width="${pillW}" height="${pillH}" rx="12" fill="#0B0E14" fill-opacity="0.68"/>
-  <text x="${cx}" y="${cy + 13}" font-family="Inter" font-weight="700" font-size="${nameSize}" fill="#F4EBDC" text-anchor="middle">${esc(displayName)}</text>
+  <rect x="0" y="${H_THUMB - stripH}" width="${W}" height="${stripH}" fill="#0B0E14" fill-opacity="0.78"/>
+  <text x="${cx}" y="${H_THUMB - stripH / 2 + nameSize * 0.32}" font-family="Inter" font-weight="700" font-size="${Math.min(nameSize, 26)}" fill="#F4EBDC" text-anchor="middle">${esc(displayName)}</text>
 </svg>`.trim()
   }
 

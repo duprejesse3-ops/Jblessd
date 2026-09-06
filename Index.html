@@ -2350,20 +2350,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
     card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
     card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
-    // Real generated thumbnail for connector/"Multi"-branded products — these
-    // get a distinct app-style image per SKU (window chrome, an icon mark)
-    // from /product-image/:sku.png, the same image already used in this
-    // product's structured data and social previews. Every other category
-    // keeps the existing procedural CSS cover art (.card::before) as-is —
-    // this is additive, not a redesign of the whole catalog.
-    // Kept in sync with isSoftwareProduct() in netlify/edge-functions/Product-image.mts —
-    // /^Multi[A-Z]/ (not a bare "Multi" prefix) so "Multilingual Support Inbox"
-    // isn't mistaken for a Multi-branded product; see that file's comment for why.
-    var isSoftware = p.category === 'connectors' || /^Multi[A-Z]/.test(p.name || '');
-    var thumbHtml = isSoftware
+    // Every catalog category now has real photography (see
+    // CATEGORY_PHOTO_STYLE in netlify/edge-functions/Product-image.mts) —
+    // a SKU-specific photo where one exists, the category's fallback photo
+    // otherwise. That server-side function is the actual source of truth;
+    // this flag only controls whether the CARD requests that image at all
+    // instead of using the old procedural CSS pattern (.card::before).
+    // Since every category is covered, every card now requests it.
+    var hasPhotoArt = true;
+    var thumbHtml = hasPhotoArt
       ? '<img class="card-thumb" src="/product-image/'+encodeURIComponent(id)+'.png?variant=thumb" alt="" loading="lazy">'
       : '';
-    if (isSoftware) card.classList.add('has-thumb');
+    if (hasPhotoArt) card.classList.add('has-thumb');
     card.innerHTML =
       '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
       thumbHtml+
