@@ -470,8 +470,17 @@ export default async (req: Request, _context: Context) => {
   // cropping out the exact detail (an LED, a dial) the thumbnail crop exists
   // to keep in frame. Two distinct paths are unambiguous under any CDN's
   // cache-key scheme, query-string handling included or not.
-  const thumbMatch = pathname.match(/^\/product-image\/thumb\/(.+)\.png$/)
-  const fullMatch = pathname.match(/^\/product-image\/(.+)\.png$/)
+  // Optional /v{N}/ segment right after /product-image/ — present only to
+  // change the URL when we bump ASSET_VERSION below, forcing a fresh fetch
+  // past Netlify's 24h edge cache (Cache-Control: s-maxage=86400 further
+  // down) instead of waiting it out. Purely a cache-buster: it's matched
+  // and discarded, never used to look anything up. Optional (the regex
+  // still matches with it absent) so the existing unversioned URLs baked
+  // into seo.ts and pages.ts for Schema.org/social images keep working
+  // unchanged — only Index.html's own card-grid requests need to force a
+  // refresh on demand, so only those need to include it.
+  const thumbMatch = pathname.match(/^\/product-image\/(?:v\d+\/)?thumb\/(.+)\.png$/)
+  const fullMatch = pathname.match(/^\/product-image\/(?:v\d+\/)?(.+)\.png$/)
   const match = thumbMatch ?? fullMatch
   if (!match) return new Response('Not found', { status: 404 })
   const sku = decodeURIComponent(match[1])

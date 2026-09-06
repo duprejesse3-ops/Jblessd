@@ -2354,6 +2354,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
   }
 
+  // Bump this whenever a photo under icons/ changes (a new crop, a swapped
+  // source image) and you want it live immediately instead of waiting out
+  // Netlify's 24h edge cache on the old URL — see the matching comment in
+  // netlify/edge-functions/Product-image.mts for why a query string isn't
+  // used for this. The number itself is meaningless; only "did it change
+  // since the last deploy" matters, so every card's image URL changes at
+  // once and none of them can still be pointing at a stale cached response.
+  var PRODUCT_IMAGE_ASSET_VERSION = 2;
+
   function buildCard(p){
     var id = p.id || p.sku;
     var catLabel = p.catlabel || p.catLabel || CAT_LABEL[p.category] || p.category;
@@ -2372,7 +2381,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // Since every category is covered, every card now requests it.
     var hasPhotoArt = true;
     var thumbHtml = hasPhotoArt
-      ? '<img class="card-thumb" src="/product-image/thumb/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
+      ? '<img class="card-thumb" src="/product-image/v'+PRODUCT_IMAGE_ASSET_VERSION+'/thumb/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
       : '';
     if (hasPhotoArt) card.classList.add('has-thumb');
     card.innerHTML =
