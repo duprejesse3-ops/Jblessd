@@ -209,47 +209,72 @@ function isSoftwareProduct(p: ApiProduct): boolean {
   return p.category === 'connectors' || /^Multi[A-Z]/.test(p.name)
 }
 
-function buildSoftwareSvg(p: ApiProduct, opts: { thumbOnly?: boolean } = {}): string {
+// thumbOnly is rendered as its own short, wide banner (1200x160) rather than
+// a crop out of the full 1200x630 image — see the H_THUMB comment below for
+// why that specific height, and buildThumbSvg for the icon+name layout.
+// Content is centered on the canvas rather than placed at a fixed left
+// offset: object-fit:cover crops symmetrically from both edges when the
+// card is narrower than this source image, so anything not centered here
+// risks landing outside the visible window at smaller card widths — that
+// was the actual cause of the icon disappearing in an earlier version of
+// this fix.
+const H_THUMB = 160
+
+function truncateForBanner(name: string, maxChars: number): string {
+  if (name.length <= maxChars) return name
+  return name.slice(0, maxChars - 1).trimEnd() + '\u2026'
+}
+
+function buildThumbSvg(p: ApiProduct): string {
   const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
   const [g1, g2] = style.gradient
-  const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}`
+  const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}-thumb`
   const cx = W / 2
+  const cy = H_THUMB / 2
 
-  // thumbOnly: used for the storefront's card grid, which crops this image
-  // to a 104px-tall banner via CSS object-fit:cover — only a thin slice from
-  // the vertical center of this 630px-tall canvas is ever visible there. The
-  // full version below (icon + wordmark + store/SKU footer) is built to
-  // stand alone for Schema.org Product images and social share previews,
-  // where the whole 1200x630 canvas is shown — the wordmark sits low in the
-  // frame there on purpose, matching the "logo" layouts this was designed
-  // to mimic. Cropped to a 104px strip, that same low-set wordmark gets
-  // sliced through mid-glyph instead of hidden or fully shown — a card
-  // clipping a name that's shown again, unclipped, right below it in the
-  // card's own <h3> a moment later. thumbOnly skips the wordmark and footer
-  // entirely and centers the icon truly in the middle of the canvas, so ANY
-  // crop height a caller picks always shows a clean, fully-visible icon and
-  // nothing else — see Index.html's buildCard(), which requests this mode.
-  if (opts.thumbOnly) {
-    return `
-<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  const longName = p.name.length > 20
+  const nameSize = longName ? 30 : 40
+  // Tuned against actual rendered width at the narrowest realistic card
+  // (~280px) — see BTCPAY_SETUP.md's sibling render_check scripts under
+  // /home/claude/thumb-check during development for how these numbers were
+  // chosen; the full product name is always still shown, unclipped, in the
+  // card's own <h3> right below this banner, so truncating here loses
+  // nothing that isn't available a few pixels down.
+  const maxChars = longName ? 17 : 16
+  const displayName = truncateForBanner(p.name, maxChars)
+
+  const iconR = 40
+  const iconD = iconR * 2
+  const gap = 24
+  const avgCharW = nameSize * 0.56
+  const textW = displayName.length * avgCharW
+  const contentW = iconD + gap + textW
+  const startX = cx - contentW / 2
+  const iconCx = startX + iconR
+  const textX = startX + iconD + gap
+
+  return `
+<svg width="${W}" height="${H_THUMB}" viewBox="0 0 ${W} ${H_THUMB}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="${gradId}" x1="15%" y1="0%" x2="85%" y2="100%">
       <stop offset="0%" stop-color="${g1}"/>
       <stop offset="100%" stop-color="${g2}"/>
     </linearGradient>
-    <radialGradient id="${gradId}-glow" cx="50%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
   </defs>
-  <rect width="${W}" height="${H}" fill="url(#${gradId})"/>
-  <rect width="${W}" height="${H}" fill="url(#${gradId}-glow)"/>
-  <circle cx="${cx}" cy="${H / 2}" r="118" fill="#FFFFFF" fill-opacity="0.12"/>
-  <g transform="translate(${cx}, ${H / 2})">
+  <rect width="${W}" height="${H_THUMB}" fill="url(#${gradId})"/>
+  <circle cx="${iconCx}" cy="${cy}" r="${iconR}" fill="#FFFFFF" fill-opacity="0.14"/>
+  <g transform="translate(${iconCx}, ${cy}) scale(0.42)">
     ${style.mark('#FFFFFF')}
   </g>
+  <text x="${textX}" y="${cy + nameSize * 0.34}" font-family="Inter" font-weight="700" font-size="${nameSize}" fill="#FFFFFF">${esc(displayName)}</text>
 </svg>`.trim()
-  }
+}
+
+function buildSoftwareSvg(p: ApiProduct): string {
+  const style = SOFTWARE_STYLE[p.sku] ?? DEFAULT_SOFTWARE_STYLE
+  const [g1, g2] = style.gradient
+  const gradId = `g-${p.sku.replace(/[^a-zA-Z0-9]/g, '')}`
+  const cx = W / 2
 
   // Auto-size + wrap: short names ("MultiVault") stay big and single-line;
   // longer ones ("MultiConnect: Zapier/Webhook Bridge") shrink and wrap onto
@@ -342,17 +367,16 @@ export default async (req: Request, _context: Context) => {
     // JetBrains Mono (see its mark() above), for any SKU without its own
     // SOFTWARE_STYLE entry.
     const usesTextGlyph = isSoftware && !SOFTWARE_STYLE[product.sku]
-    // Inter renders the wordmark + store/SKU footer — never drawn in
-    // thumbOnly mode, so it's skipped there. Mono renders either the
-    // default text glyph or that same footer; thumbOnly still needs it
-    // whenever the icon itself IS that text glyph, or the glyph silently
-    // fails to render, leaving just a blank gradient — exactly the
-    // regression this comment is here to stop from coming back.
-    const needsInter = !thumbOnly
+    // Inter renders product-name text in every path now, including the
+    // thumbnail banner (buildThumbSvg) — there's no longer a text-free
+    // variant. Mono renders either the default ">_" glyph or the full
+    // image's SKU footer; thumbOnly only needs it when the icon itself IS
+    // that text glyph, since a custom per-SKU mark is a plain vector path
+    // needing no font at all.
     const needsMono = isSoftware && (usesTextGlyph || !thumbOnly)
-    const interFont = needsInter ? await getFont() : null
+    const interFont = await getFont()
     const monoFont = needsMono ? await getMonoFont() : null
-    const svg = isSoftware ? buildSoftwareSvg(product, { thumbOnly }) : buildSvg(product)
+    const svg = thumbOnly ? buildThumbSvg(product) : isSoftware ? buildSoftwareSvg(product) : buildSvg(product)
     const fontBuffers = [interFont, monoFont].filter((f): f is Uint8Array => f !== null)
     const resvg = new Resvg(svg, {
       font: { fontBuffers, defaultFontFamily: 'Inter' },
