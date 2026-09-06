@@ -45,6 +45,45 @@ export interface Fulfilment {
 }
 
 /**
+ * Resolve a set of catalog SKUs into their deliverables — the payment-method-
+ * independent core of fulfilment. Both fulfilOrder() below (Stripe) and the
+ * BTCPay Lightning path (netlify/functions/btcpay-webhook.mts) call this, so
+ * "what a paid order actually gets" is defined in exactly one place no matter
+ * which processor the buyer paid through.
+ */
+export async function fulfilSkus(
+  skus: string[],
+  opts: FulfilOptions = {},
+): Promise<FulfilledItem[]> {
+  const { products } = await loadCatalog()
+  const bySku = new Map(products.map((p) => [p.sku, p]))
+
+  const items: FulfilledItem[] = []
+  for (const sku of skus) {
+    const product = bySku.get(sku)
+    if (!product) continue
+    const deliverable = buildDeliverable(product)
+    items.push({ product, deliverable, markdown: deliverableToMarkdown(deliverable) })
+  }
+
+  if (opts.enrich && items.length) {
+    await Promise.all(
+      items.map(async (item) => {
+        const upgraded = await upgradeDeliverable(item.product, {
+          deliverable: item.deliverable,
+          markdown: item.markdown,
+        })
+        item.deliverable = upgraded.deliverable
+        item.markdown = upgraded.markdown
+        item.aiCrafted = upgraded.aiCrafted
+      }),
+    )
+  }
+
+  return items
+}
+
+/**
  * Resolve a Stripe Checkout session into its deliverables. Returns paid:false
  * (with no items) for any session that isn't genuinely paid, so callers never
  * hand over content for an unpaid or tampered session id.
@@ -80,10 +119,9 @@ export async function fulfilOrder(
   }
 
   const { products } = await loadCatalog()
-  const bySku = new Map(products.map((p) => [p.sku, p]))
   const byName = new Map(products.map((p) => [p.name.toLowerCase(), p]))
 
-  const items: FulfilledItem[] = []
+  const skus: string[] = []
   for (const li of lineItems ?? []) {
     const stripeProduct = li.price?.product
     // stripeProduct is a string id, a full Product, or a DeletedProduct. Only a
@@ -93,31 +131,12 @@ export async function fulfilOrder(
         ? stripeProduct
         : undefined
     const sku = liveProduct?.metadata?.sku ?? ''
-    const product =
-      (sku && bySku.get(sku)) ||
-      (li.description ? byName.get(li.description.toLowerCase()) : undefined)
-    if (!product) continue
-    const deliverable = buildDeliverable(product)
-    items.push({ product, deliverable, markdown: deliverableToMarkdown(deliverable) })
+    const product = sku ? undefined : li.description ? byName.get(li.description.toLowerCase()) : undefined
+    if (sku) skus.push(sku)
+    else if (product) skus.push(product.sku)
   }
 
-  // Optionally upgrade every item to its AI-authored deliverable. Done here so
-  // the download page and the confirmation email fulfil from the same enriched
-  // content and can't drift. Run concurrently; each upgrade falls back to its
-  // own template on failure, so this can only improve the result, never break it.
-  if (opts.enrich && items.length) {
-    await Promise.all(
-      items.map(async (item) => {
-        const upgraded = await upgradeDeliverable(item.product, {
-          deliverable: item.deliverable,
-          markdown: item.markdown,
-        })
-        item.deliverable = upgraded.deliverable
-        item.markdown = upgraded.markdown
-        item.aiCrafted = upgraded.aiCrafted
-      }),
-    )
-  }
+  const items = await fulfilSkus(skus, opts)
 
   return {
     paid: true,
