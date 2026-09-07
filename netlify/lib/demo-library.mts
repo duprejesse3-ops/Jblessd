@@ -490,6 +490,17 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Tutor: "Usually true! But water\'s a weird exception. What do you think might happen to water\'s density if it broke that usual pattern when freezing?"\n\n' +
       'Never hands over the answer — narrows the gap with the next question until the student reaches it themselves.',
   },
+  'AI-AG-111': {
+    verb: 'Loading the chair packet and holding office hours',
+    text:
+      'Packet loaded: Intro Statistics, Week 4 notes, syllabus verbs (interpret, derive, compare).\n\n' +
+      'Student: "Can you just define a confidence interval for me?"\n\n' +
+      'Closed Chair: "packet_cite: \'a range that would contain the true value in 95% of repeated samples\' — that\'s the notes\' version, not mine. Say it back in your own words?"\n' +
+      'Student: "So... it\'s where the answer probably is?"\n' +
+      'Closed Chair: "Close, but \'probably is\' isn\'t what the notes say. Try again using \'repeated samples.\'"\n\n' +
+      'integrity: refused — no Wikipedia-smooth definition, no answer handed over. Session closes with TRY: restate it once more from the packet\'s wording. HUMAN: no, not yet.\n\n' +
+      'Ask it something the packet never covered (a late-work policy, an exam date) and it won\'t guess — it says so and sends you to the real professor.',
+  },
   'AI-AG-053': {
     verb: 'Putting this agent to work on a real task',
     text:

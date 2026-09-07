@@ -471,6 +471,44 @@ const SKU_APPS: Record<string, (p: Product) => ProductApp> = {
       },
     ],
   }),
+  'AI-AG-111': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    title: 'Load the chair packet',
+    tagline:
+      'Load your syllabus, rubric, and notes, then ask it something — same as a real office-hours session. If the packet doesn\'t cover it, watch it refuse instead of guessing.',
+    cta: 'Open office hours',
+    runVerb: 'checking the packet',
+    fields: [
+      {
+        id: 'course',
+        label: 'What course is this for?',
+        type: 'text',
+        placeholder: 'e.g. Organic Chemistry II, or Intro Macroeconomics',
+        required: true,
+      },
+      {
+        id: 'packet',
+        label: 'The chair packet — paste your syllabus, rubric, and notes',
+        type: 'textarea',
+        placeholder: 'e.g. Week 4 lecture notes on confidence intervals, the grading rubric for Problem Set 3, the syllabus\'s exam verbs...',
+        required: true,
+      },
+      {
+        id: 'professor',
+        label: 'Professor\'s name, for the human hand-off (optional)',
+        type: 'text',
+        placeholder: 'e.g. Dr. Alvarez',
+      },
+      {
+        id: 'question',
+        label: 'What do you want to work through right now?',
+        type: 'textarea',
+        placeholder: 'e.g. explain what expected value means, or check whether my approach to problem 3 is on the right track',
+        required: true,
+      },
+    ],
+  }),
 }
 
 /** Build the interactive app definition for a product, from its metadata alone. */
@@ -522,6 +560,8 @@ const SKU_RUN_BRIEF: Record<string, string> = {
     'The buyer owns the source of a zero-dependency Node site auditor and needs it running on their own infrastructure. Return a concrete setup plan for the stack they described: which adapter to use (bin/audit.mjs by hand, adapters/cron.sh, adapters/github-actions.yml, or adapters/netlify-scheduled-function.mts), the exact commands and environment variables, a sensible schedule and --max-pages for a site their size, and how to wire the webhook if they mentioned Slack or Discord. Then name which of the sixteen checks should be treated as blocking for their kind of site and why. Do not pretend to have audited their site — you have not fetched it — and do not invent findings.',
   'AI-AG-093':
     'The buyer owns the source of a zero-dependency Node file organizer and needs it running on their own machine. Return a concrete setup plan for the platform they described: which adapter to use (bin/organize.mjs run by hand, adapters/cron.sh on Linux/Mac, adapters/launchd.plist on macOS specifically, or adapters/windows-task.ps1 on Windows), the exact commands and any environment variables or parameters that adapter needs (cron.sh reads ORGANIZE_FOLDER, ORGANIZE_DEST, ORGANIZE_LOG, ORGANIZE_AI; launchd.plist needs its YOUR_USERNAME and path placeholders edited; windows-task.ps1 takes -Folder and -UseAI and is run once via PowerShell to self-register), and a sensible schedule for the frequency they asked for. If they mentioned custom categories or file types, tell them exactly which lines to edit in lib/organize.mjs (the EXT_CATEGORY object or KEYWORD_RULES array) and give a concrete example line for what they described. Do not pretend to have run the organizer on their files — you have not touched their filesystem — and do not invent file counts or results.',
+  'AI-AG-111':
+    'You are Closed Chair: office hours for exactly one loaded course, bound by five locks the listing promises are unbreakable — breaking any one of them in a live run makes the listing false. The buyer\'s "chair packet" field is your ENTIRE knowledge of the course: no other fact about it exists, not from general knowledge, not from what a typical syllabus usually says. Packet lock: cite a short quote (12 words or fewer) from the packet backing anything you say, or say plainly that the packet does not cover it. Silence lock: if the packet does not contain what the student is asking (a policy, a date, a definition it never gave), say exactly that it is not in the packet and — naming the professor by the name given, or "the professor" if none was given — say this goes to them, not you; never fill the gap with a plausible-sounding guess. Integrity lock: never produce a complete definition, a final numeric answer, a finished proof, or any paragraph phrased so it could be pasted into a submission — if the student\'s question is really "give me the answer" or "write this for me," say so plainly (this is a refusal, not a rules violation) and instead ask one short question that would let the student demonstrate they understand it themselves, pointing at exactly where their reasoning breaks (definition, setup, inference, or units). Verb lock: if they are prepping for an exam, follow the syllabus\'s own verbs (derive, compare, interpret, etc.) rather than treating "can define it" as mastery. Tone: dry, short, slightly impatient with vagueness, never cruel — no "great question," no warm filler. Stay in the packet\'s language; a single one-term gloss into the student\'s own language is fine, translating the whole response is not. End with exactly two lines: what the student should try next on their own, and whether this specific question is worth taking to the human professor by name. Do not claim to have attended a lecture that is not in the packet, and do not invent a policy the packet does not state, even a plausible one.',
 }
 
 function summariseInputs(app: ProductApp, inputs: Record<string, string>): string {
