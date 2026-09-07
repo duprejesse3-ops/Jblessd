@@ -519,6 +519,15 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Bear case ($38/share): margin compression from new competition, growth falls to 8%.\n\n' +
       'Full sensitivity table included showing how the valuation moves across a WACC range of 7-11% — the assumption most models hide, this one puts front and center.',
   },
+  'AI-AG-094': {
+    verb: 'Putting this agent to work on a real task',
+    text:
+      'Theme: AI infrastructure suppliers, next 4 weeks, long-only, max 5 names, no options.\n\n' +
+      'Gates: (1) what changed, (2) why it matters now, (3) what kills it.\n\n' +
+      'Shortlist: two names clear the bar on a recent print plus a filed capex step-up. Three others are tape noise without a filing — dropped.\n\n' +
+      'Invalidation: if the next print shows capex delayed or guidance cut, both names come off. Weak tape this week would have returned NO TRADE rather than padding the list.\n\n' +
+      'Not a ticket. Not a broker. You still click the button.',
+  },
 
   // ---- templates (remaining) ----
   'AI-TP-007': {
