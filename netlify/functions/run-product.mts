@@ -45,10 +45,12 @@ export default async (req: Request, _context: Context) => {
   let sessionId = ''
   let sku = ''
   let inputs: Record<string, string> = {}
+  let voice = false
   try {
     const body = await req.json()
     sessionId = String(body?.session_id ?? '').trim()
     sku = String(body?.sku ?? '').trim().slice(0, 32)
+    voice = Boolean(body?.voice)
     const raw = body?.inputs
     if (raw && typeof raw === 'object') {
       for (const [k, v] of Object.entries(raw)) {
@@ -81,7 +83,7 @@ export default async (req: Request, _context: Context) => {
   }
 
   const app = buildProductApp(product)
-  const prompt = buildRunPrompt(product, app, inputs)
+  const prompt = buildRunPrompt(product, app, inputs, voice)
   if (!prompt) {
     return Response.json({ error: 'Fill in at least one field so it has something to work with.' }, { status: 400 })
   }

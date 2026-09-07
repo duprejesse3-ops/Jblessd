@@ -577,11 +577,20 @@ function summariseInputs(app: ProductApp, inputs: Record<string, string>): strin
  * Build the system + user prompt for a real run of the product on the buyer's
  * inputs. Returns null if the buyer left every field blank so the caller can ask
  * for input instead of running an empty prompt.
+ *
+ * voiceMode reuses the exact same doctrine/brief above rather than keeping a
+ * separate, parallel voice-specific prompt somewhere — two copies of the same
+ * rules are two copies that can quietly drift apart. It only adds formatting
+ * guidance on top: short, spoken-friendly turns instead of a paragraph meant
+ * to be read on a screen. It's a formatting hint, not a security boundary —
+ * any product can accept it; only Closed Chair's app panel currently shows a
+ * voice control that sets it.
  */
 export function buildRunPrompt(
   product: Product,
   app: ProductApp,
   inputs: Record<string, string>,
+  voiceMode = false,
 ): { system: string; user: string } | null {
   const filled = summariseInputs(app, inputs)
   if (!filled) return null
@@ -596,8 +605,14 @@ export function buildRunPrompt(
     `clearly stated assumption and continue — do not stall by asking questions.\n` +
     `- Be concrete and genuinely useful. This is the paid product, not a teaser: deliver real, ` +
     `finished work they could act on right now.\n` +
-    `- Return plain text with light structure (short labels ending in a colon, simple lists). No ` +
-    `preamble, no sign-off, and never mention price, buying, or that this is a demo.`
+    (voiceMode
+      ? `- This response will be read aloud by text-to-speech, not displayed as a document. Keep it to a ` +
+        `few short spoken sentences — the length of one natural conversational turn, not a written report. ` +
+        `No markdown, no bullet lists, no headers, no dense notation or equations — say numbers and symbols ` +
+        `the way a person would say them out loud. End with a single spoken question that hands the turn ` +
+        `back, not a written summary.\n`
+      : `- Return plain text with light structure (short labels ending in a colon, simple lists). No ` +
+        `preamble, no sign-off, and never mention price, buying, or that this is a demo.\n`)
 
   const user =
     `Product: ${product.name}\n` +

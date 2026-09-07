@@ -723,6 +723,10 @@ f.parentNode.insertBefore(j,f);
   .pa-dropwrap.dragover{border-color:var(--teal); background:rgba(45,212,191,.06);}
   .pa-filehint{margin:5px 0 0; font-size:10.5px; color:var(--muted-2); line-height:1.4;}
   .pa-filebrowse{background:none; border:0; padding:0; color:var(--teal); font-size:10.5px; text-decoration:underline; cursor:pointer; font-family:inherit;}
+  .pa-voice-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:-4px 0 14px;}
+  .pa-mic{background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:12.5px; padding:8px 13px; border-radius:var(--radius); cursor:pointer;}
+  .pa-mic:hover{border-color:var(--teal);}
+  .pa-voice-status{font-size:11.5px; color:var(--muted-2); line-height:1.4;}
   .pa-run{width:100%; justify-content:center; padding:11px; margin-top:2px;}
   .pa-run[disabled]{opacity:.6; cursor:progress;}
   .pa-out-wrap{margin-top:14px;}
@@ -2291,6 +2295,63 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     form.appendChild(btn);
     panel.appendChild(form);
 
+    // ---- voice: browser-native speech in, Claude (via the exact same
+    // /api/run-product pipeline as the text form) as the only brain that
+    // ever does the thinking, browser-native speech out. Scoped to Closed
+    // Chair for now — this needs a real spoken-session reason to exist
+    // (see buildRunPrompt's voiceMode) before it belongs on an arbitrary
+    // product. Web Speech API recognition has real gaps — solid in
+    // Chrome/Edge, unsupported in Firefox, spotty in Safari — so the mic
+    // control simply doesn't render where the browser doesn't expose it,
+    // rather than showing a control that silently fails.
+    var usedVoiceInput = false;
+    if(item.sku === 'AI-AG-111' && controls['question']){
+      var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(SpeechRec){
+        var micRow = document.createElement('div');
+        micRow.className = 'pa-voice-row';
+        var micBtn = document.createElement('button');
+        micBtn.type = 'button';
+        micBtn.className = 'pa-mic';
+        micBtn.textContent = '🎤 Ask it out loud';
+        var micStatus = document.createElement('span');
+        micStatus.className = 'pa-voice-status';
+        micRow.appendChild(micBtn);
+        micRow.appendChild(micStatus);
+        controls['question'].parentNode.parentNode.insertBefore(micRow, controls['question'].parentNode.nextSibling);
+
+        var recognizing = false;
+        var recognition = null;
+        micBtn.addEventListener('click', function(){
+          if(recognizing){ if(recognition) recognition.stop(); return; }
+          if(window.speechSynthesis) window.speechSynthesis.cancel(); // don't listen over your own answer
+          recognition = new SpeechRec();
+          recognition.lang = 'en-US';
+          recognition.interimResults = false;
+          recognition.maxAlternatives = 1;
+          recognizing = true;
+          micBtn.textContent = '● Listening… (tap to stop)';
+          micStatus.textContent = '';
+          recognition.addEventListener('result', function(e){
+            var transcript = e.results[0][0].transcript;
+            controls['question'].value = transcript;
+            usedVoiceInput = true;
+            micStatus.textContent = 'Heard: "' + transcript + '" — review it, then run.';
+          });
+          recognition.addEventListener('error', function(e){
+            micStatus.textContent = e.error === 'not-allowed'
+              ? 'Microphone access was blocked — allow it in your browser to use voice.'
+              : 'Didn\'t catch that — try again, or just type it.';
+          });
+          recognition.addEventListener('end', function(){
+            recognizing = false;
+            micBtn.textContent = '🎤 Ask it out loud';
+          });
+          try{ recognition.start(); }catch(_){}
+        });
+      }
+    }
+
     var outWrap = document.createElement('div');
     outWrap.className = 'pa-out-wrap';
     outWrap.hidden = true;
@@ -2309,13 +2370,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if(v) anyValue = true;
       });
       if(!anyValue){ toast('Fill in at least one field so it has something to work with.'); return; }
-      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; });
+      var speakResult = usedVoiceInput;
+      usedVoiceInput = false; // each submission's voice-ness is its own — typing the next question shouldn't inherit it
+      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; }, speakResult);
     });
 
     return panel;
   }
 
-  function runProductApp(item, inputs, outWrap, btn, setBusy){
+  function speakAloud(text){
+    if(!window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.0;
+    window.speechSynthesis.speak(utter);
+  }
+
+  function runProductApp(item, inputs, outWrap, btn, setBusy, voice){
     setBusy(true);
     btn.disabled = true;
     outWrap.hidden = false;
@@ -2335,7 +2406,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     fetch('/api/run-product', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs })
+      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs, voice: !!voice })
     }).then(function(res){
       if(!res.ok || !res.body){ throw new Error('unavailable'); }
       var reader = res.body.getReader();
@@ -2370,6 +2441,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(gotText){
         outEl.textContent = answer; // drop the cursor
         statusEl.textContent = 'done';
+        if(voice) speakAloud(answer);
         var actions = document.createElement('div');
         actions.className = 'pa-out-actions';
         var copyBtn = document.createElement('button');
@@ -2390,6 +2462,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         });
         actions.appendChild(copyBtn);
         actions.appendChild(dlBtn);
+        if(voice && window.speechSynthesis){
+          var stopBtn = document.createElement('button');
+          stopBtn.type = 'button';
+          stopBtn.textContent = 'Stop speaking';
+          stopBtn.addEventListener('click', function(){ window.speechSynthesis.cancel(); });
+          actions.appendChild(stopBtn);
+        }
         outWrap.appendChild(actions);
       }else if(!answer){
         outEl.textContent = 'The live engine is warming up (it activates after the first production deploy). Your full item is in the Markdown download below.';
