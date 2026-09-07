@@ -436,6 +436,16 @@
     });
     after.classList.remove('show');
     label.textContent = 'demo · ' + j.sku + ' · idle';
+    // Switching jobs without resetting the terminal left the previous job's
+    // finished output sitting there while the label above it claimed the
+    // newly-picked job was idle — label and content disagreeing about which
+    // product's result was even on screen. Reset both output and the
+    // scenario box: leaving a pasted scenario in place across a job switch
+    // risks silently running an investor-update-shaped input against the
+    // meeting notes agent, or similar, rather than the fresh "pick a job,
+    // paste the work" state the hint text below promises.
+    out.innerHTML = '<span class="hint">Pick a job. Paste the work — or leave it blank and we’ll run a sample. Claude streams the real instrument here.</span>';
+    job.value = '';
     setLinks();
   }
 
