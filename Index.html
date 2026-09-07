@@ -710,6 +710,10 @@ f.parentNode.insertBefore(j,f);
   .pa-input{width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); resize:vertical;}
   .pa-input:focus{outline:none; border-color:var(--teal);}
   textarea.pa-input{min-height:60px; line-height:1.5;}
+  .pa-dropwrap{border:1px dashed transparent; border-radius:calc(var(--radius) + 4px); padding:1px; transition:border-color .15s, background-color .15s;}
+  .pa-dropwrap.dragover{border-color:var(--teal); background:rgba(45,212,191,.06);}
+  .pa-filehint{margin:5px 0 0; font-size:10.5px; color:var(--muted-2); line-height:1.4;}
+  .pa-filebrowse{background:none; border:0; padding:0; color:var(--teal); font-size:10.5px; text-decoration:underline; cursor:pointer; font-family:inherit;}
   .pa-run{width:100%; justify-content:center; padding:11px; margin-top:2px;}
   .pa-run[disabled]{opacity:.6; cursor:progress;}
   .pa-out-wrap{margin-top:14px;}
@@ -843,6 +847,7 @@ f.parentNode.insertBefore(j,f);
     .then(function(cfg){ return (cfg && cfg.purchaseSendTo) || ''; })
     .catch(function(){ return ''; });
 </script>
+<script src="/file-extract.js"></script>
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -1277,9 +1282,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="proof-scenario" id="pm-proof-dropzone">
         <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
         <p class="proof-file-hint">
-          or drop a file (.txt, .csv, .md, .json, .log) —
+          or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) —
           <button type="button" class="proof-file-browse" id="pm-proof-browse">browse</button>
-          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,text/plain,text/csv,text/markdown,application/json" hidden />
+          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf" hidden />
         </p>
       </div>
       <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
@@ -2122,6 +2127,104 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '</main></div></body></html>';
   }
 
+  // Reusable "or drop a file" behavior for any textarea-type field in the
+  // "run it as an app" panel — attached generically wherever product-app.mts
+  // marks a field type:'textarea' (the substantial-content fields: "your raw
+  // material", "context it needs", "one real input to react to"), never to
+  // the short type:'text' fields (a name, a platform, a one-line audience) —
+  // those don't benefit from file upload and the drop UI would just be
+  // clutter next to them.
+  //
+  // Unlike the free demo's 600-character cap, this paid "run it as an app"
+  // flow already allows up to 4000 characters per field (see run-product.mts
+  // and the input.maxLength=4000 set on every field a few lines below) — no
+  // need to apologize for a tight cap here, just be honest if a file is
+  // bigger than even that.
+  var PA_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+  var PA_FILE_MAX_BYTES = 5 * 1024 * 1024;
+
+  function paIsTextFile(name){
+    name = (name || '').toLowerCase();
+    for(var i=0;i<PA_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PA_TEXT_EXTENSIONS[i].length) === PA_TEXT_EXTENSIONS[i]) return true;
+    }
+    return name.indexOf('.') === -1;
+  }
+
+  function attachFileDrop(wrapEl, textareaEl, maxChars){
+    var hint = document.createElement('p');
+    hint.className = 'pa-filehint';
+    var browseBtn = document.createElement('button');
+    browseBtn.type = 'button';
+    browseBtn.className = 'pa-filebrowse';
+    browseBtn.textContent = 'browse';
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.hidden = true;
+    fileInput.accept = '.txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf';
+    hint.appendChild(document.createTextNode('or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) — '));
+    hint.appendChild(browseBtn);
+    hint.appendChild(fileInput);
+    wrapEl.appendChild(hint);
+
+    function handleFile(file){
+      if(!file) return;
+      var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+      if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+        toast('Reading "' + file.name + '"…');
+        window.extractFileText(file).then(function(result){
+          if(result.warning){ toast(result.warning); return; }
+          var truncated = result.text.length > maxChars;
+          textareaEl.value = result.text.slice(0, maxChars);
+          toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + maxChars + ' characters.' : '.'));
+        }).catch(function(err){
+          toast('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+        });
+        return;
+      }
+      if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+        toast('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
+        return;
+      }
+      if(!paIsTextFile(file.name)){
+        toast('"' + file.name + '" isn\'t a type this reads. Try .txt, .csv, .md, .json, .log, .pdf, .docx, or .xlsx.');
+        return;
+      }
+      if(file.size > PA_FILE_MAX_BYTES){
+        toast('"' + file.name + '" is too large — trim it down or paste the relevant part.');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var text = String(reader.result || '');
+        var truncated = text.length > maxChars;
+        textareaEl.value = text.slice(0, maxChars);
+        toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + maxChars + ' characters.' : '.'));
+      };
+      reader.onerror = function(){
+        toast('Couldn\'t read "' + file.name + '" — try pasting the text directly.');
+      };
+      reader.readAsText(file);
+    }
+
+    browseBtn.addEventListener('click', function(){ fileInput.click(); });
+    fileInput.addEventListener('change', function(){
+      var file = fileInput.files && fileInput.files[0];
+      if(file) handleFile(file);
+      fileInput.value = '';
+    });
+    ['dragenter','dragover'].forEach(function(evt){
+      wrapEl.addEventListener(evt, function(e){ e.preventDefault(); wrapEl.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      wrapEl.addEventListener(evt, function(e){ e.preventDefault(); wrapEl.classList.remove('dragover'); });
+    });
+    wrapEl.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) handleFile(file);
+    });
+  }
+
   // Build the interactive "use it as an app" panel: a short form the buyer fills
   // in, a run button, and a live-streamed result from /api/run-product. This is
   // the payoff — the product runs on their own input right here.
@@ -2158,6 +2261,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(f.required){ input.required = true; }
       input.maxLength = 4000;
       fw.appendChild(input);
+      if(f.type === 'textarea'){
+        fw.classList.add('pa-dropwrap');
+        attachFileDrop(fw, input, 4000);
+      }
       if(f.help){
         var help = document.createElement('span');
         help.className = 'pa-help';
@@ -2893,12 +3000,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   function loadProofFile(file){
     if(!file) return;
-    if(/\.(pdf|docx?|xlsx?|pptx?)$/i.test(file.name || '')){
-      proofFileStatus('"' + file.name + '" looks like a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — this box reads plain text only. Export it as .txt or .csv first, or just paste the relevant part directly.');
+    var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+    if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+      proofFileStatus('Reading "' + file.name + '"…');
+      window.extractFileText(file).then(function(result){
+        if(result.warning){ proofFileStatus(result.warning); return; }
+        var truncated = result.text.length > PROOF_SCENARIO_MAX;
+        proofScenario.value = result.text.slice(0, PROOF_SCENARIO_MAX);
+        toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run live demo.');
+      }).catch(function(err){
+        proofFileStatus('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+      });
+      return;
+    }
+    if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      proofFileStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
       return;
     }
     if(!isProbablyTextFile(file)){
-      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log). Paste the relevant text directly instead.');
+      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx). Paste the relevant text directly instead.');
       return;
     }
     if(file.size > PROOF_FILE_MAX_BYTES){

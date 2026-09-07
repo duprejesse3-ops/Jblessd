@@ -46,6 +46,10 @@
     border:1px solid var(--line);border-radius:10px;padding:14px;font:15px/1.5 var(--sans);
   }
   textarea:focus{outline:none;border-color:var(--brass)}
+  .dropzone{border:1px dashed transparent;border-radius:12px;padding:2px;transition:border-color .15s, background-color .15s;}
+  .dropzone.dragover{border-color:var(--brass);background:rgba(255,176,32,.06);}
+  .filehint{margin:6px 2px 0;font-size:11.5px;color:var(--muted-2);line-height:1.4;}
+  .filebrowse{background:none;border:0;padding:0;color:var(--brass);font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
   .chip{
     border:1px solid var(--line);background:#0B1018;color:var(--paper);
@@ -105,6 +109,7 @@
     border-radius:8px;padding:7px 11px;font-size:12.5px;cursor:pointer;
   }
 </style>
+<script src="/file-extract.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -120,7 +125,14 @@
     <section class="bench">
       <div class="card">
         <p class="kicker">Drop the job</p>
-        <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+        <div class="dropzone" id="jobDropzone">
+          <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+          <p class="filehint">
+            or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) —
+            <button type="button" class="filebrowse" id="jobBrowse">browse</button>
+            <input type="file" id="jobFile" accept=".txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf" hidden />
+          </p>
+        </div>
         <div class="chips" id="chips"></div>
         <button class="go" id="run">Run it on this task — free →</button>
         <p class="meta" id="status">You haven’t paid yet. Output is a demo. Buy the instrument to keep the config.</p>
@@ -199,6 +211,91 @@
   var logrow = document.getElementById('logrow');
   var clearLogBtn = document.getElementById('clearlog');
   var lastRun = null; // the most recently completed run, live or shared — what "Share this run" shares
+
+  // ---- drop a real file in instead of typing a scenario ----
+  // Same reasoning as the modal's version of this on the main site: the
+  // server (netlify/functions/demo.mts) caps scenario at 600 characters
+  // regardless of what's sent, a deliberate cost control. Truncating a
+  // dropped file to the same 600 here, client-side, keeps what's shown in
+  // the box honestly equal to what the demo will actually see.
+  var jobDropzone = document.getElementById('jobDropzone');
+  var jobFileInput = document.getElementById('jobFile');
+  var jobBrowseBtn = document.getElementById('jobBrowse');
+  var PROOF_SCENARIO_MAX = 600;
+  var PROOF_FILE_MAX_BYTES = 2 * 1024 * 1024;
+  var PROOF_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+
+  function isProbablyTextFile(file){
+    var name = (file.name || '').toLowerCase();
+    for(var i=0;i<PROOF_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PROOF_TEXT_EXTENSIONS[i].length) === PROOF_TEXT_EXTENSIONS[i]) return true;
+    }
+    return name.indexOf('.') === -1; // no extension at all — let the content speak for itself
+  }
+
+  function loadJobFile(file){
+    if(!file) return;
+    var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+    if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+      flashStatus('Reading "' + file.name + '"…');
+      window.extractFileText(file).then(function(result){
+        if(result.warning){
+          flashStatus(result.warning, 5000);
+          return;
+        }
+        var truncated = result.text.length > PROOF_SCENARIO_MAX;
+        job.value = result.text.slice(0, PROOF_SCENARIO_MAX);
+        flashStatus('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run.', 4000);
+      }).catch(function(err){
+        flashStatus('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.', 5000);
+      });
+      return;
+    }
+    if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      flashStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.', 4500);
+      return;
+    }
+    if(!isProbablyTextFile(file)){
+      flashStatus('"' + file.name + '" isn\'t a type this box can read. Try .txt, .csv, .md, .json, .log, .pdf, .docx, or .xlsx.', 4000);
+      return;
+    }
+    if(file.size > PROOF_FILE_MAX_BYTES){
+      flashStatus('"' + file.name + '" is bigger than this needs — only the first ' + PROOF_SCENARIO_MAX + ' characters are ever used. Trim it or paste the relevant part.', 4500);
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      var truncated = text.length > PROOF_SCENARIO_MAX;
+      job.value = text.slice(0, PROOF_SCENARIO_MAX);
+      flashStatus('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run.', 4000);
+    };
+    reader.onerror = function(){
+      flashStatus('Couldn\'t read "' + file.name + '" — try pasting the text directly.', 4000);
+    };
+    reader.readAsText(file);
+  }
+
+  if(jobDropzone){
+    ['dragenter','dragover'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.remove('dragover'); });
+    });
+    jobDropzone.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) loadJobFile(file);
+    });
+  }
+  if(jobBrowseBtn && jobFileInput){
+    jobBrowseBtn.addEventListener('click', function(){ jobFileInput.click(); });
+    jobFileInput.addEventListener('change', function(){
+      var file = jobFileInput.files && jobFileInput.files[0];
+      if(file) loadJobFile(file);
+      jobFileInput.value = '';
+    });
+  }
 
   // ---- run log: this browser only, never transmitted anywhere ----
   // A pasted scenario can contain a real inbox thread, real numbers, a real
