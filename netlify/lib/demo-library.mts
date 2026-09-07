@@ -68,6 +68,29 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       '  ✅ Nightly backup complete — 1.2GB, 14m, 0 errors\n\n' +
       'A failed run would route to a different channel with an @here instead of sitting quietly in a log nobody checks. Type /status in Slack and the bot replies with the last three job results, pulled live from the same event stream — no dashboard tab required.',
   },
+  'AI-CN-006': {
+    verb: 'Loading the activity log and checking the chain',
+    text:
+      'Deployment agent runs at 14:02 — pushes a config change to production, logs the event.\n\n' +
+      'MultiWitness records: seq #4,821, sha256 hash of the event chained to seq #4,820\'s hash. Nothing about the log itself changed — this is what every entry has looked like since the log started.\n\n' +
+      'Auditor request: "Prove entry #4,821 hasn\'t been altered since it was written."\n\n' +
+      'Verification: recompute the hash of #4,821 plus #4,820\'s hash, compare to what #4,822 recorded as its own "previous hash." They match — if #4,821 had been edited after the fact, this exact check would fail, because every later entry\'s hash depends on it. That\'s the whole proof: not "trust our log," but "here\'s the arithmetic, check it yourself."',
+  },
+  'AI-CN-007': {
+    verb: 'Firing the read-only switch across every connector',
+    text:
+      'Incident: a former contractor\'s laptop still has live tokens for the Slack, Zapier, and Sheets connectors. IT flags it at 3:41pm.\n\n' +
+      'One button in the MultiGuard dashboard: Freeze all. At 3:42pm, all three connectors flip to read-only — they can still see events and log activity, but every write action (a Slack message sent, a Zapier automation triggered, a Sheets row changed) gets rejected at the connector level, not just paused in a queue somewhere.\n\n' +
+      'Checking each connector individually before MultiGuard existed took five dashboard logins and maybe ten minutes if nothing went wrong first. This took one button and sixty seconds — and the dashboard shows all five MultiConnect tools\' current lock state on one screen, not five separate ones.',
+  },
+  'AI-CN-008': {
+    verb: 'Ranking your local files against a real query',
+    text:
+      'Query: "signs we might be losing an enterprise deal."\n\n' +
+      'Not one file in the folder contains that exact phrase. A pure keyword search — the kind most local search tools do — returns nothing.\n\n' +
+      'MultiVault\'s optional semantic-search layer ranks a meeting note near the top anyway: "...Northwind is wobbling on renewal, their new VP wants a competitor bake-off before Q3..." No shared words with the query at all — "wobbling" and "losing a deal" aren\'t the same string, they\'re the same idea, and that\'s exactly the gap semantic ranking exists to close. The BM25 layer alone would have missed this file entirely.\n\n' +
+      'Everything happens on-device. No account, no cloud index, nothing about your files or your query ever leaves the machine.',
+  },
 
   // ---- prompts ----
   'AI-PP-001': {
