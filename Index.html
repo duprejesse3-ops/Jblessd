@@ -525,7 +525,7 @@ f.parentNode.insertBefore(j,f);
   .trend-badge::before{content:'▲'; font-size:8px;}
   .card.is-trending{border-color:var(--teal); box-shadow:0 0 0 1px var(--teal);}
   .card h3{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 8px; color:var(--paper); line-height:1.3;}
-  .card p{
+  .card-blurb{
     font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;
     /* Cap descriptions at 4 lines. Blurb length varies a lot across the
        catalog (a 42-character one-liner up to a 280-character MultiConnect
@@ -1007,7 +1007,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-001</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Deep Work Prompt Pack</h3>
-        <p>Prompts for prioritization, focus blocks, and end-of-day resets.</p>
+        <p class="card-blurb">Prompts for prioritization, focus blocks, and end-of-day resets.</p>
         <p class="card-format">120 prompts · PDF + Notion</p>
         <div class="card-bottom"><span class="price">$19.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1017,7 +1017,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-002</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Inbox Zero Automation</h3>
-        <p>Auto-sorts, drafts replies, and flags what needs a human.</p>
+        <p class="card-blurb">Auto-sorts, drafts replies, and flags what needs a human.</p>
         <p class="card-format">Make.com blueprint</p>
         <div class="card-bottom"><span class="price">$29.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1027,7 +1027,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-003</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Meeting Notes Agent</h3>
-        <p>Turns raw transcripts into decisions, owners, and deadlines.</p>
+        <p class="card-blurb">Turns raw transcripts into decisions, owners, and deadlines.</p>
         <p class="card-format">System prompt + template</p>
         <div class="card-bottom"><span class="price">$15.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1037,7 +1037,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-004</span></div>
         <span class="niche-tag">Students &amp; Researchers</span>
         <h3>Weekly Planning Template</h3>
-        <p>A weekly operating rhythm: plan Monday, review Friday.</p>
+        <p class="card-blurb">A weekly operating rhythm: plan Monday, review Friday.</p>
         <p class="card-format">Notion template</p>
         <div class="card-bottom"><span class="price">$12.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1047,7 +1047,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-005</span></div>
         <span class="niche-tag">Marketers</span>
         <h3>Content Calendar Autopilot</h3>
-        <p>Drafts posts from your notes and queues them by channel.</p>
+        <p class="card-blurb">Drafts posts from your notes and queues them by channel.</p>
         <p class="card-format">Zapier blueprint</p>
         <div class="card-bottom"><span class="price">$24.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1057,7 +1057,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-006</span></div>
         <span class="niche-tag">Students &amp; Researchers</span>
         <h3>Research Assistant Prompts</h3>
-        <p>Structured prompts for literature scans and source comparison.</p>
+        <p class="card-blurb">Structured prompts for literature scans and source comparison.</p>
         <p class="card-format">45 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$22.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1067,7 +1067,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-007</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Client Onboarding Kit</h3>
-        <p>Intake form, welcome sequence, and kickoff checklist in one kit.</p>
+        <p class="card-blurb">Intake form, welcome sequence, and kickoff checklist in one kit.</p>
         <p class="card-format">Notion + email templates</p>
         <div class="card-bottom"><span class="price">$34.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1077,7 +1077,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-008</span></div>
         <span class="niche-tag">Developers</span>
         <h3>Daily Standup Bot</h3>
-        <p>Collects async updates and posts a one-line team digest.</p>
+        <p class="card-blurb">Collects async updates and posts a one-line team digest.</p>
         <p class="card-format">Slack agent config</p>
         <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1087,7 +1087,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-009</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>OKR Tracker Template</h3>
-        <p>Quarterly objectives with auto-calculated confidence scores.</p>
+        <p class="card-blurb">Quarterly objectives with auto-calculated confidence scores.</p>
         <p class="card-format">Sheets template</p>
         <div class="card-bottom"><span class="price">$14.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1097,7 +1097,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-010</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Personal CRM Automation</h3>
-        <p>Reminds you to follow up before a relationship goes cold.</p>
+        <p class="card-blurb">Reminds you to follow up before a relationship goes cold.</p>
         <p class="card-format">Make.com blueprint</p>
         <div class="card-bottom"><span class="price">$25.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1107,7 +1107,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-011</span></div>
         <span class="niche-tag">Writers</span>
         <h3>Writing Style Prompt Kit</h3>
-        <p>Locks tone and voice so drafts sound like you, not a template.</p>
+        <p class="card-blurb">Locks tone and voice so drafts sound like you, not a template.</p>
         <p class="card-format">30 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$16.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1117,7 +1117,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-012</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Financial Categorizer Agent</h3>
-        <p>Reads bank exports and sorts spend into categories you define.</p>
+        <p class="card-blurb">Reads bank exports and sorts spend into categories you define.</p>
         <p class="card-format">Sheets + agent config</p>
         <div class="card-bottom"><span class="price">$27.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1127,7 +1127,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-013</span></div>
         <span class="niche-tag">Developers</span>
         <h3>Code Review Digest</h3>
-        <p>Summarizes open PRs into a daily digest with risk flags.</p>
+        <p class="card-blurb">Summarizes open PRs into a daily digest with risk flags.</p>
         <p class="card-format">GitHub Actions blueprint</p>
         <div class="card-bottom"><span class="price">$26.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1137,7 +1137,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-014</span></div>
         <span class="niche-tag">Marketers</span>
         <h3>Landing Page Copy Prompts</h3>
-        <p>Headline, hero, and CTA variants tuned for conversion testing.</p>
+        <p class="card-blurb">Headline, hero, and CTA variants tuned for conversion testing.</p>
         <p class="card-format">35 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -2518,7 +2518,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '<div class="card-top"><span class="sku">'+esc(id)+'</span></div>'+
       '<span class="trend-badge" hidden>Trending</span>'+
       '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
-      '<h3>'+esc(p.name)+'</h3><p>'+esc(p.blurb)+'</p>'+
+      '<h3>'+esc(p.name)+'</h3><p class="card-blurb">'+esc(p.blurb)+'</p>'+
       '<p class="card-format">'+esc(p.format)+'</p>'+
       '<div class="card-rating" data-rating-for="'+esc(id)+'" hidden></div>'+
       '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
