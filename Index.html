@@ -538,6 +538,15 @@ f.parentNode.insertBefore(j,f);
        description is never truly lost — it's one click away in the product
        modal (openProductModal), which shows it unclamped. */
     display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; overflow:hidden;
+    /* flex:1 + overflow:hidden on a flex item changes its automatic minimum
+       size from "at least its own content's height" to 0 per the flexbox
+       spec — without this, the box can get compressed shorter than even
+       its own text needs and clip mid-line with no ellipsis, well before
+       the 4-line cap above is ever reached. Reported live on mobile: a
+       116-character, 3-line blurb clipped partway through line 3. Pinning
+       an explicit minimum for 4 full lines closes that gap regardless of
+       whatever else is competing for space in the card's flex column. */
+    min-height:calc(1.6em * 4);
   }
   .card-format{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); border-top:1px dashed var(--line); padding-top:11px; margin-bottom:11px;}
   .card-bottom{display:flex; align-items:center; justify-content:space-between;}
@@ -847,6 +856,7 @@ f.parentNode.insertBefore(j,f);
     .then(function(cfg){ return (cfg && cfg.purchaseSendTo) || ''; })
     .catch(function(){ return ''; });
 </script>
+<script src="/file-extract.js"></script>
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -1281,9 +1291,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="proof-scenario" id="pm-proof-dropzone">
         <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
         <p class="proof-file-hint">
-          or drop a file (.txt, .csv, .md, .json, .log) —
+          or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) —
           <button type="button" class="proof-file-browse" id="pm-proof-browse">browse</button>
-          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,text/plain,text/csv,text/markdown,application/json" hidden />
+          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf" hidden />
         </p>
       </div>
       <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
@@ -2160,20 +2170,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.hidden = true;
-    fileInput.accept = '.txt,.csv,.md,.markdown,.json,.log,text/plain,text/csv,text/markdown,application/json';
-    hint.appendChild(document.createTextNode('or drop a file (.txt, .csv, .md, .json, .log) — '));
+    fileInput.accept = '.txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf';
+    hint.appendChild(document.createTextNode('or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) — '));
     hint.appendChild(browseBtn);
     hint.appendChild(fileInput);
     wrapEl.appendChild(hint);
 
     function handleFile(file){
       if(!file) return;
-      if(/\.(pdf|docx?|xlsx?|pptx?)$/i.test(file.name || '')){
-        toast('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' — export as .txt/.csv first, or paste the relevant part.');
+      var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+      if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+        toast('Reading "' + file.name + '"…');
+        window.extractFileText(file).then(function(result){
+          if(result.warning){ toast(result.warning); return; }
+          var truncated = result.text.length > maxChars;
+          textareaEl.value = result.text.slice(0, maxChars);
+          toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + maxChars + ' characters.' : '.'));
+        }).catch(function(err){
+          toast('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+        });
+        return;
+      }
+      if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+        toast('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
         return;
       }
       if(!paIsTextFile(file.name)){
-        toast('"' + file.name + '" isn\'t a type this reads. Try .txt, .csv, .md, .json, or .log.');
+        toast('"' + file.name + '" isn\'t a type this reads. Try .txt, .csv, .md, .json, .log, .pdf, .docx, or .xlsx.');
         return;
       }
       if(file.size > PA_FILE_MAX_BYTES){
@@ -2986,12 +3009,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   function loadProofFile(file){
     if(!file) return;
-    if(/\.(pdf|docx?|xlsx?|pptx?)$/i.test(file.name || '')){
-      proofFileStatus('"' + file.name + '" looks like a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — this box reads plain text only. Export it as .txt or .csv first, or just paste the relevant part directly.');
+    var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+    if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+      proofFileStatus('Reading "' + file.name + '"…');
+      window.extractFileText(file).then(function(result){
+        if(result.warning){ proofFileStatus(result.warning); return; }
+        var truncated = result.text.length > PROOF_SCENARIO_MAX;
+        proofScenario.value = result.text.slice(0, PROOF_SCENARIO_MAX);
+        toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run live demo.');
+      }).catch(function(err){
+        proofFileStatus('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+      });
+      return;
+    }
+    if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      proofFileStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
       return;
     }
     if(!isProbablyTextFile(file)){
-      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log). Paste the relevant text directly instead.');
+      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx). Paste the relevant text directly instead.');
       return;
     }
     if(file.size > PROOF_FILE_MAX_BYTES){
