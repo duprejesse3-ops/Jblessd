@@ -46,6 +46,10 @@
     border:1px solid var(--line);border-radius:10px;padding:14px;font:15px/1.5 var(--sans);
   }
   textarea:focus{outline:none;border-color:var(--brass)}
+  .dropzone{border:1px dashed transparent;border-radius:12px;padding:2px;transition:border-color .15s, background-color .15s;}
+  .dropzone.dragover{border-color:var(--brass);background:rgba(255,176,32,.06);}
+  .filehint{margin:6px 2px 0;font-size:11.5px;color:var(--muted-2);line-height:1.4;}
+  .filebrowse{background:none;border:0;padding:0;color:var(--brass);font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
   .chip{
     border:1px solid var(--line);background:#0B1018;color:var(--paper);
@@ -85,6 +89,25 @@
   .mini{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-2)}
   .mini b{display:block;margin-bottom:4px}
   .mini span{color:var(--muted);font-size:13px}
+  .log{padding:8px 0 4px}
+  .log h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);font-weight:600;margin:0 0 4px}
+  .loghint{color:var(--muted-2);font-size:12.5px;margin:0 0 12px}
+  .logrow{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .logitem{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+    background:var(--panel-2);cursor:pointer;text-align:left;width:100%;
+    font-family:var(--sans);color:var(--paper);
+  }
+  .logitem:hover{border-color:var(--brass)}
+  .logitem .li-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .logitem .li-job{font-size:13.5px;font-weight:600}
+  .logitem .li-snip{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52ch}
+  .logitem .li-time{font-family:var(--mono);font-size:11px;color:var(--muted-2);flex-shrink:0}
+  .clearlog{
+    border:1px solid var(--line);background:transparent;color:var(--muted);
+    border-radius:8px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -101,7 +124,14 @@
     <section class="bench">
       <div class="card">
         <p class="kicker">Drop the job</p>
-        <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+        <div class="dropzone" id="jobDropzone">
+          <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+          <p class="filehint">
+            or drop a file (.txt, .csv, .md, .json, .log) —
+            <button type="button" class="filebrowse" id="jobBrowse">browse</button>
+            <input type="file" id="jobFile" accept=".txt,.csv,.md,.markdown,.json,.log,text/plain,text/csv,text/markdown,application/json" hidden />
+          </p>
+        </div>
         <div class="chips" id="chips"></div>
         <button class="go" id="run">Run it on this task — free →</button>
         <p class="meta" id="status">You haven’t paid yet. Output is a demo. Buy the instrument to keep the config.</p>
@@ -116,8 +146,16 @@
           <a class="buy" id="buy" href="/">Add this instrument →</a>
           <a id="open" href="/">Open spec sheet</a>
           <button type="button" id="again">Run again</button>
+          <button type="button" id="share">Share this run</button>
         </div>
       </div>
+    </section>
+
+    <section class="log" id="logSection" hidden>
+      <h2>Your recent runs</h2>
+      <p class="loghint">Stored in this browser only — never sent anywhere. Clear it any time.</p>
+      <div class="logrow" id="logrow"></div>
+      <button type="button" class="clearlog" id="clearlog">Clear log</button>
     </section>
 
     <section class="proofs">
@@ -166,6 +204,213 @@
   var after = document.getElementById('after');
   var buy = document.getElementById('buy');
   var open = document.getElementById('open');
+  var shareBtn = document.getElementById('share');
+  var status = document.getElementById('status');
+  var logSection = document.getElementById('logSection');
+  var logrow = document.getElementById('logrow');
+  var clearLogBtn = document.getElementById('clearlog');
+  var lastRun = null; // the most recently completed run, live or shared — what "Share this run" shares
+
+  // ---- drop a real file in instead of typing a scenario ----
+  // Same reasoning as the modal's version of this on the main site: the
+  // server (netlify/functions/demo.mts) caps scenario at 600 characters
+  // regardless of what's sent, a deliberate cost control. Truncating a
+  // dropped file to the same 600 here, client-side, keeps what's shown in
+  // the box honestly equal to what the demo will actually see.
+  var jobDropzone = document.getElementById('jobDropzone');
+  var jobFileInput = document.getElementById('jobFile');
+  var jobBrowseBtn = document.getElementById('jobBrowse');
+  var PROOF_SCENARIO_MAX = 600;
+  var PROOF_FILE_MAX_BYTES = 2 * 1024 * 1024;
+  var PROOF_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+
+  function isProbablyTextFile(file){
+    var name = (file.name || '').toLowerCase();
+    for(var i=0;i<PROOF_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PROOF_TEXT_EXTENSIONS[i].length) === PROOF_TEXT_EXTENSIONS[i]) return true;
+    }
+    return name.indexOf('.') === -1; // no extension at all — let the content speak for itself
+  }
+
+  function loadJobFile(file){
+    if(!file) return;
+    if(/\.(pdf|docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      flashStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — this box reads plain text only. Export as .txt/.csv, or paste the relevant part.', 4000);
+      return;
+    }
+    if(!isProbablyTextFile(file)){
+      flashStatus('"' + file.name + '" isn\'t a type this box can read. Try .txt, .csv, .md, .json, or .log.', 4000);
+      return;
+    }
+    if(file.size > PROOF_FILE_MAX_BYTES){
+      flashStatus('"' + file.name + '" is bigger than this needs — only the first ' + PROOF_SCENARIO_MAX + ' characters are ever used. Trim it or paste the relevant part.', 4500);
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      var truncated = text.length > PROOF_SCENARIO_MAX;
+      job.value = text.slice(0, PROOF_SCENARIO_MAX);
+      flashStatus('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run.', 4000);
+    };
+    reader.onerror = function(){
+      flashStatus('Couldn\'t read "' + file.name + '" — try pasting the text directly.', 4000);
+    };
+    reader.readAsText(file);
+  }
+
+  if(jobDropzone){
+    ['dragenter','dragover'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.remove('dragover'); });
+    });
+    jobDropzone.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) loadJobFile(file);
+    });
+  }
+  if(jobBrowseBtn && jobFileInput){
+    jobBrowseBtn.addEventListener('click', function(){ jobFileInput.click(); });
+    jobFileInput.addEventListener('change', function(){
+      var file = jobFileInput.files && jobFileInput.files[0];
+      if(file) loadJobFile(file);
+      jobFileInput.value = '';
+    });
+  }
+
+  // ---- run log: this browser only, never transmitted anywhere ----
+  // A pasted scenario can contain a real inbox thread, real numbers, a real
+  // transcript — genuinely private business detail. Keeping the log in
+  // localStorage rather than any server-side store means it never leaves
+  // this device at all, the same "nothing leaves the machine" stance
+  // MultiVault's own product copy makes elsewhere on this site. It also
+  // means there's nothing new to secure or delete on request — there's
+  // nowhere else it exists.
+  var LOG_KEY = 'mn_proof_runs';
+  var MAX_LOG = 10;
+
+  function loadLog(){
+    try{
+      var raw = window.localStorage.getItem(LOG_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(_){ return []; } // private browsing / storage disabled — log just won't persist
+  }
+
+  function saveLog(arr){
+    try{ window.localStorage.setItem(LOG_KEY, JSON.stringify(arr.slice(0, MAX_LOG))); }catch(_){}
+  }
+
+  function timeAgo(ts){
+    var s = Math.max(1, Math.round((Date.now() - ts) / 1000));
+    if(s < 60) return s + 's ago';
+    var m = Math.round(s / 60);
+    if(m < 60) return m + 'm ago';
+    var h = Math.round(m / 60);
+    if(h < 24) return h + 'h ago';
+    return Math.round(h / 24) + 'd ago';
+  }
+
+  function renderLog(){
+    var arr = loadLog();
+    logrow.innerHTML = '';
+    if(!arr.length){ logSection.hidden = true; return; }
+    logSection.hidden = false;
+    arr.forEach(function(entry){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'logitem';
+      b.innerHTML =
+        '<span class="li-main">' +
+          '<span class="li-job">' + esc(entry.name) + '</span>' +
+          '<span class="li-snip">' + esc(entry.snippet) + '</span>' +
+        '</span>' +
+        '<span class="li-time">' + esc(timeAgo(entry.ts)) + '</span>';
+      b.addEventListener('click', function(){ replay(entry); });
+      logrow.appendChild(b);
+    });
+  }
+
+  clearLogBtn.addEventListener('click', function(){
+    saveLog([]);
+    renderLog();
+  });
+
+  // ---- share: encodes the completed run itself into the URL, not just the
+  // job+scenario, so the person who opens the link sees this EXACT output —
+  // a live re-run against the same scenario could stream something
+  // different, which would undercut "share this run" into "share a prompt
+  // that might not reproduce." No backend storage needed: the link is
+  // fully self-contained. ----
+  function encodePayload(obj){
+    // btoa only handles Latin1; this is the standard (if old-looking)
+    // browser-only trick for round-tripping arbitrary UTF-8 through it
+    // without pulling in a TextEncoder-based implementation for the same
+    // result.
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); // URL-safe base64
+  }
+
+  function decodePayload(str){
+    var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while(b64.length % 4) b64 += '=';
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }
+
+  var SHARE_OUTPUT_CAP = 2000; // keeps the link a sane length; full output already ran live for this visitor
+
+  function buildShareUrl(entry){
+    var payload = {
+      s: entry.sku,
+      n: entry.name,
+      q: entry.scenario,
+      o: entry.answer.length > SHARE_OUTPUT_CAP ? entry.answer.slice(0, SHARE_OUTPUT_CAP) + '…' : entry.answer,
+      t: entry.answer.length > SHARE_OUTPUT_CAP
+    };
+    return location.origin + location.pathname + '?run=' + encodePayload(payload);
+  }
+
+  function flashStatus(msg, revertAfterMs){
+    var prev = status.textContent;
+    status.textContent = msg;
+    if(revertAfterMs) setTimeout(function(){ status.textContent = prev; }, revertAfterMs);
+  }
+
+  async function shareRun(){
+    if(!lastRun) return;
+    var url = buildShareUrl(lastRun);
+    var shareData = { title: 'MULTINICHE AI — ' + lastRun.name + ' (live proof)', text: 'Watch this instrument run a real task.', url: url };
+    if(navigator.share){
+      try{ await navigator.share(shareData); return; }
+      catch(_){ return; } // user cancelled the native share sheet — not an error
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      try{
+        await navigator.clipboard.writeText(url);
+        flashStatus('Link copied — paste it anywhere.', 2500);
+        return;
+      }catch(_){}
+    }
+    window.prompt('Copy this link:', url); // last-resort fallback, very old browsers only
+  }
+
+  shareBtn.addEventListener('click', shareRun);
+
+  // Renders a completed run (live or shared) into the terminal without
+  // making any network call — used both for "shared run" links on page
+  // load and for clicking an entry in your own recent-runs log.
+  function replay(entry){
+    var matchJob = null;
+    for(var i=0;i<JOBS.length;i++){ if(JOBS[i].sku === entry.sku){ matchJob = JOBS[i]; break; } }
+    if(matchJob) select(matchJob);
+    job.value = entry.scenario && entry.scenario !== (matchJob && matchJob.sample) ? entry.scenario : '';
+    out.textContent = entry.answer + (entry.truncated ? '\n\n[shared link truncated — run it yourself above for the full output]' : '');
+    label.textContent = 'demo · replay · ' + entry.sku;
+    after.classList.add('show');
+    lastRun = { sku: entry.sku, name: entry.name, scenario: entry.scenario, answer: entry.answer };
+  }
 
   JOBS.forEach(function(j, i){
     var b = document.createElement('button');
@@ -252,6 +497,18 @@
       out.textContent = answer;
       label.textContent = 'demo · complete · ' + active.sku;
       after.classList.add('show');
+      lastRun = { sku: active.sku, name: active.name, scenario: scenario, answer: answer };
+      var log = loadLog();
+      log.unshift({
+        sku: active.sku,
+        name: active.name,
+        scenario: scenario,
+        answer: answer,
+        snippet: answer.slice(0, 90) + (answer.length > 90 ? '…' : ''),
+        ts: Date.now()
+      });
+      saveLog(log);
+      renderLog();
       if(window.trackMarketingEvent){
         window.trackMarketingEvent('demo_complete', { item_id: active.sku, method: job.value.trim() ? 'custom_scenario' : 'sample' }, { lead: true });
       }
@@ -269,6 +526,23 @@
   job.addEventListener('keydown', function(e){
     if((e.metaKey || e.ctrlKey) && e.key === 'Enter') runDemo();
   });
+
+  // A shared link (?run=...) replays that exact completed output — no live
+  // call, so it can't drift from what was actually shared, and it costs
+  // nothing to open even if the demo rate limit is currently maxed out.
+  (function initFromShareLink(){
+    var raw = new URLSearchParams(location.search).get('run');
+    if(!raw) { renderLog(); return; }
+    try{
+      var payload = decodePayload(raw);
+      if(!payload || !payload.s || typeof payload.o !== 'string') throw new Error('bad payload');
+      replay({ sku: payload.s, name: payload.n || payload.s, scenario: payload.q || '', answer: payload.o, truncated: !!payload.t });
+    }catch(_){
+      // malformed or tampered link — fall through to the normal idle state
+      // rather than showing a broken page.
+    }
+    renderLog();
+  })();
 })();
 </script>
 </body>

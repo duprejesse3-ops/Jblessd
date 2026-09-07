@@ -596,8 +596,11 @@ f.parentNode.insertBefore(j,f);
   .proof-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
   @keyframes proof-pulse{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.35; transform:scale(.8);}}
   .proof-sub{font-size:12.5px; color:var(--muted); line-height:1.4;}
-  .proof-scenario{margin-bottom:10px;}
+  .proof-scenario{margin-bottom:10px; border:1px dashed transparent; border-radius:10px; padding:2px; transition:border-color .15s, background-color .15s;}
+  .proof-scenario.dragover{border-color:var(--brass); background:rgba(255,176,32,.06);}
   .proof-scenario .field{margin-bottom:0; font-size:12.5px;}
+  .proof-file-hint{margin:6px 2px 0; font-size:11px; color:var(--muted-2); line-height:1.4;}
+  .proof-file-browse{background:none; border:0; padding:0; color:var(--brass); font-size:11px; text-decoration:underline; cursor:pointer; font-family:inherit;}
   .proof-terminal{position:relative; background:#0D111C; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:inset 0 0 40px rgba(255,176,32,.06);}
   .proof-topbar{display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line-soft); background:rgba(255,176,32,.03);}
   .proof-tdot{width:8px; height:8px; border-radius:50%; background:var(--line); }
@@ -1271,8 +1274,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="proof-badge"><span class="proof-dot" aria-hidden="true"></span>Live proof</span>
         <span class="proof-sub">Don't take our word for it — watch it run.</span>
       </div>
-      <div class="proof-scenario">
+      <div class="proof-scenario" id="pm-proof-dropzone">
         <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
+        <p class="proof-file-hint">
+          or drop a file (.txt, .csv, .md, .json, .log) —
+          <button type="button" class="proof-file-browse" id="pm-proof-browse">browse</button>
+          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,text/plain,text/csv,text/markdown,application/json" hidden />
+        </p>
       </div>
       <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
         <div class="proof-topbar"><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tlabel" id="pm-proof-label">demo · idle</span></div>
@@ -2818,6 +2826,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var proofOutput = document.getElementById('pm-proof-output');
   var proofLabel = document.getElementById('pm-proof-label');
   var proofScenario = document.getElementById('pm-proof-scenario');
+  var proofDropzone = document.getElementById('pm-proof-dropzone');
+  var proofFileInput = document.getElementById('pm-proof-file');
+  var proofBrowseBtn = document.getElementById('pm-proof-browse');
   var proofRun = document.getElementById('pm-proof-run');
   var proofRunLabel = document.getElementById('pm-proof-run-label');
   var proofShare = document.getElementById('pm-proof-share');
@@ -2852,6 +2863,87 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // Render streamed text with a blinking terminal cursor at the end.
     proofOutput.innerHTML = esc(text) + '<span class="proof-cursor"></span>';
     proofOutput.scrollTop = proofOutput.scrollHeight;
+  }
+
+  // ---- drop a real file in instead of typing a scenario ----
+  // The server (netlify/functions/demo.mts) truncates scenario to 600 chars
+  // regardless of what's sent — a deliberate cost control, not something to
+  // route around. A dropped file's content is truncated to the same 600
+  // here, client-side, so what's shown in the field is honestly what the
+  // demo will actually see — not a silent mismatch between "looks like the
+  // whole file" and "only the first 600 characters were used."
+  var PROOF_FILE_MAX_BYTES = 2 * 1024 * 1024; // read cap; only the first 600 chars ever matter, this just avoids hanging on a huge file
+  var PROOF_SCENARIO_MAX = 600;
+  var PROOF_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+
+  function isProbablyTextFile(file){
+    var name = (file.name || '').toLowerCase();
+    for(var i=0;i<PROOF_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PROOF_TEXT_EXTENSIONS[i].length) === PROOF_TEXT_EXTENSIONS[i]) return true;
+    }
+    // No extension at all (some exported transcripts have none) — allow it
+    // and let FileReader's content speak for itself rather than blocking on
+    // a missing extension alone.
+    return name.indexOf('.') === -1;
+  }
+
+  function proofFileStatus(msg){
+    proofOutput.innerHTML = '<span class="proof-hint">' + esc(msg) + '</span>';
+  }
+
+  function loadProofFile(file){
+    if(!file) return;
+    if(/\.(pdf|docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      proofFileStatus('"' + file.name + '" looks like a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — this box reads plain text only. Export it as .txt or .csv first, or just paste the relevant part directly.');
+      return;
+    }
+    if(!isProbablyTextFile(file)){
+      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log). Paste the relevant text directly instead.');
+      return;
+    }
+    if(file.size > PROOF_FILE_MAX_BYTES){
+      proofFileStatus('"' + file.name + '" is larger than this needs — only the first ' + PROOF_SCENARIO_MAX + ' characters are ever used for a demo anyway. Trim it down and try again, or just paste the relevant part.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      var truncated = text.length > PROOF_SCENARIO_MAX;
+      proofScenario.value = text.slice(0, PROOF_SCENARIO_MAX);
+      var note = 'Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters (that\'s what the demo will see).' : '.') + ' Press Run live demo.';
+      toast(note);
+    };
+    reader.onerror = function(){
+      proofFileStatus('Couldn\'t read "' + file.name + '" — try pasting the text directly instead.');
+    };
+    reader.readAsText(file);
+  }
+
+  if(proofDropzone){
+    ['dragenter','dragover'].forEach(function(evt){
+      proofDropzone.addEventListener(evt, function(e){
+        e.preventDefault();
+        proofDropzone.classList.add('dragover');
+      });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      proofDropzone.addEventListener(evt, function(e){
+        e.preventDefault();
+        proofDropzone.classList.remove('dragover');
+      });
+    });
+    proofDropzone.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) loadProofFile(file);
+    });
+  }
+  if(proofBrowseBtn && proofFileInput){
+    proofBrowseBtn.addEventListener('click', function(){ proofFileInput.click(); });
+    proofFileInput.addEventListener('change', function(){
+      var file = proofFileInput.files && proofFileInput.files[0];
+      if(file) loadProofFile(file);
+      proofFileInput.value = ''; // allow dropping/selecting the same file again later
+    });
   }
 
   async function runProof(){
