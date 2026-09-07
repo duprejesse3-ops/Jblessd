@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MULTINICHE AI — Drop the job</title>
+<meta name="description" content="Paste the work. Watch an instrument run it. Buy only if the output earns its place." />
+<meta name="theme-color" content="#0A0E16" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root{
+    --ink:#070A10; --panel:#10151F; --panel-2:#0C1119; --paper:#EEF1F7;
+    --muted:#9AA3B5; --muted-2:#6B7386; --line:#2A3142; --line-soft:#1C2330;
+    --brass:#FFB020; --teal:#2EE6A6; --radius:10px;
+    --sans:Inter,ui-sans-serif,system-ui,sans-serif;
+    --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0A0E16;color:var(--paper);font-family:var(--sans);}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px;}
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 0;border-bottom:1px solid var(--line-soft);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.04em}
+  .mark{
+    width:28px;height:28px;border:1px solid var(--line);border-radius:6px;
+    display:grid;place-items:center;font-size:12px;color:var(--brass);
+  }
+  nav{display:flex;gap:10px;align-items:center}
+  .ghost{
+    border:1px solid var(--line);background:transparent;color:var(--paper);
+    padding:8px 12px;border-radius:8px;font-size:13px;
+  }
+  .bench{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;padding:28px 0 18px;}
+  @media (max-width:860px){.bench{grid-template-columns:1fr}}
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;padding:18px;
+  }
+  .kicker{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin:0 0 10px}
+  textarea{
+    width:100%;min-height:168px;resize:vertical;background:#0B1018;color:var(--paper);
+    border:1px solid var(--line);border-radius:10px;padding:14px;font:15px/1.5 var(--sans);
+  }
+  textarea:focus{outline:none;border-color:var(--brass)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
+  .chip{
+    border:1px solid var(--line);background:#0B1018;color:var(--paper);
+    border-radius:999px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+  }
+  .chip[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+  .go{
+    width:100%;border:0;border-radius:10px;padding:13px 16px;font-weight:700;
+    background:var(--brass);color:#1A1204;cursor:pointer;font-size:15px;
+  }
+  .go:disabled{opacity:.55;cursor:wait}
+  .meta{margin-top:10px;font-size:12.5px;color:var(--muted-2)}
+  .term{min-height:320px;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line-soft);margin-bottom:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .dot:first-child{background:#7a1f1f}
+  .lbl{margin-left:8px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2)}
+  pre{
+    margin:0;flex:1;white-space:pre-wrap;word-break:break-word;
+    font-family:var(--mono);font-size:12.5px;line-height:1.65;
+    color:#D7E0CE;min-height:220px;
+  }
+  .hint{color:var(--muted-2);font-family:var(--sans);font-size:13.5px;line-height:1.55}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--brass);vertical-align:text-bottom;animation:blink 1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .after{display:none;gap:8px;margin-top:12px}
+  .after.show{display:flex;flex-wrap:wrap}
+  .after a,.after button{
+    border:1px solid var(--line);background:#0B1018;color:var(--paper);
+    border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer;
+  }
+  .after .buy{background:var(--teal);border-color:var(--teal);color:#06281C;font-weight:700}
+  .proofs{padding:8px 0 40px}
+  .proofs h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:860px){.row{grid-template-columns:1fr}}
+  .mini{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-2)}
+  .mini b{display:block;margin-bottom:4px}
+  .mini span{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/"><span class="mark">M</span> MULTINICHE AI</a>
+      <nav>
+        <a class="ghost" href="/agent">Agent studio</a>
+        <a class="ghost" href="/proof">Proofs</a>
+        <a class="ghost" href="/">Catalog</a>
+      </nav>
+    </header>
+
+    <section class="bench">
+      <div class="card">
+        <p class="kicker">Drop the job</p>
+        <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+        <div class="chips" id="chips"></div>
+        <button class="go" id="run">Run it on this task — free →</button>
+        <p class="meta" id="status">You haven’t paid yet. Output is a demo. Buy the instrument to keep the config.</p>
+      </div>
+      <div class="card term">
+        <div class="topbar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="lbl" id="label">demo · idle</span>
+        </div>
+        <pre id="out"><span class="hint">Pick a job. Paste the work — or leave it blank and we’ll run a sample. Claude streams the real instrument here.</span></pre>
+        <div class="after" id="after">
+          <a class="buy" id="buy" href="/">Add this instrument →</a>
+          <a id="open" href="/">Open spec sheet</a>
+          <button type="button" id="again">Run again</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="proofs">
+      <h2>Three jobs. The rest of the catalog waits.</h2>
+      <div class="row">
+        <a class="mini" href="/?product=AI-AB-002"><b>Inbox Zero</b><span>AI-AB-002 · automation</span></a>
+        <a class="mini" href="/?product=AI-TP-027"><b>Investor update</b><span>AI-TP-027 · template</span></a>
+        <a class="mini" href="/?product=AI-AG-003"><b>Meeting → decisions</b><span>AI-AG-003 · agent</span></a>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  var JOBS = [
+    {
+      id: 'inbox',
+      label: 'Hit inbox zero',
+      sku: 'AI-AB-002',
+      name: 'Inbox Zero Automation',
+      sample: '12 unread founder emails: two pricing objections, a churn risk, three FYI newsletters, a hiring inbound, and a vendor asking to hop on a call tomorrow.'
+    },
+    {
+      id: 'update',
+      label: 'Ship investor update',
+      sku: 'AI-TP-027',
+      name: 'Investor Update Template',
+      sample: 'September: MRR $41.2k (+8%), burn $28k, runway 11 months. Shipped MultiVault. Lost one $2k account. Asking for intros to two Series A operators in vertical SaaS.'
+    },
+    {
+      id: 'meeting',
+      label: 'Turn this call into decisions',
+      sku: 'AI-AG-003',
+      name: 'Meeting Notes Agent',
+      sample: 'Alice wants RBAC. Ben says keep it simple. Clara asks who owns provisioning. Dan takes it and will sync with HR. Deadline Friday EOD.'
+    }
+  ];
+
+  var active = JOBS[2];
+  var busy = false;
+  var chips = document.getElementById('chips');
+  var job = document.getElementById('job');
+  var run = document.getElementById('run');
+  var out = document.getElementById('out');
+  var label = document.getElementById('label');
+  var after = document.getElementById('after');
+  var buy = document.getElementById('buy');
+  var open = document.getElementById('open');
+
+  JOBS.forEach(function(j, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = j.label;
+    b.setAttribute('aria-pressed', j === active ? 'true' : 'false');
+    b.addEventListener('click', function(){ select(j); });
+    chips.appendChild(b);
+  });
+
+  function select(j){
+    active = j;
+    Array.prototype.forEach.call(chips.children, function(el){
+      el.setAttribute('aria-pressed', el.textContent === j.label ? 'true' : 'false');
+    });
+    after.classList.remove('show');
+    label.textContent = 'demo · ' + j.sku + ' · idle';
+    setLinks();
+  }
+
+  function setLinks(){
+    var href = '/?product=' + encodeURIComponent(active.sku);
+    buy.href = href;
+    buy.textContent = 'Add ' + active.name + ' →';
+    open.href = href;
+  }
+  setLinks();
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  async function runDemo(){
+    if(busy) return;
+    busy = true;
+    run.disabled = true;
+    after.classList.remove('show');
+    label.textContent = 'demo · booting';
+    out.innerHTML = '<span class="cursor"></span>';
+    var scenario = job.value.trim() || active.sample;
+    var answer = '';
+    try{
+      var res = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: active.sku, scenario: scenario })
+      });
+      if(res.status === 429){
+        var cap = '';
+        try{ cap = (await res.json()).error || ''; }catch(_){}
+        out.innerHTML = '<span class="hint">' + esc(cap || 'Too many tailored demos this hour. Try the sample by clearing the box, or wait a bit.') + '</span>';
+        label.textContent = 'demo · limit reached';
+        return;
+      }
+      if(!res.ok || !res.body) throw new Error('unavailable');
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var got = false;
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for(var i=0;i<lines.length;i++){
+          var line = lines[i].trim();
+          if(!line) continue;
+          var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+          if(ev.type === 'meta'){
+            label.textContent = 'demo · ' + (ev.verb || 'running').toLowerCase() + (ev.cached ? ' · replay' : '');
+          } else if(ev.type === 'text'){
+            got = true;
+            answer += ev.text;
+            out.innerHTML = esc(answer) + '<span class="cursor"></span>';
+            out.scrollTop = out.scrollHeight;
+          }
+        }
+      }
+      if(!got) throw new Error('empty');
+      out.textContent = answer;
+      label.textContent = 'demo · complete · ' + active.sku;
+      after.classList.add('show');
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('demo_complete', { item_id: active.sku, method: job.value.trim() ? 'custom_scenario' : 'sample' }, { lead: true });
+      }
+    }catch(err){
+      out.innerHTML = '<span class="hint">Live engine is not reachable from this file yet. Drop proof-home.html on the Netlify site next to Index.html so /api/demo resolves. Offline preview cannot stream Claude.</span>';
+      label.textContent = 'demo · offline';
+    }finally{
+      busy = false;
+      run.disabled = false;
+    }
+  }
+
+  run.addEventListener('click', runDemo);
+  document.getElementById('again').addEventListener('click', runDemo);
+  job.addEventListener('keydown', function(e){
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') runDemo();
+  });
+})();
+</script>
+</body>
+</html>
