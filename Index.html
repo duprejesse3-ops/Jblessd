@@ -2378,11 +2378,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     return panel;
   }
 
+  // The Web Speech API has no real "gender" field on a voice — that's not
+  // part of the standard. What every major OS's built-in voice set does
+  // have is names, and common female-voice names repeat across them
+  // (Samantha on macOS/iOS, Zira on Windows, "Google UK English Female" on
+  // Chrome/Android, etc.) — matching on those is the closest thing to a
+  // real lever here. Falls back to the browser's own default voice on a
+  // system where nothing matches, rather than forcing a choice that isn't
+  // there. Voices often load asynchronously after the page starts, so this
+  // re-checks once the browser actually reports its voice list.
+  var preferredVoice = null;
+  function refreshPreferredVoice(){
+    if(!window.speechSynthesis) return;
+    var voices = window.speechSynthesis.getVoices();
+    if(!voices.length) return;
+    var patterns = [/female/i, /samantha/i, /zira/i, /karen/i, /victoria/i, /susan/i, /moira/i, /tessa/i, /fiona/i, /google.*female/i];
+    for(var p=0; p<patterns.length; p++){
+      for(var i=0; i<voices.length; i++){
+        if(patterns[p].test(voices[i].name)){ preferredVoice = voices[i]; return; }
+      }
+    }
+  }
+  if(window.speechSynthesis){
+    refreshPreferredVoice();
+    window.speechSynthesis.addEventListener('voiceschanged', refreshPreferredVoice);
+  }
+
   function speakAloud(text){
     if(!window.speechSynthesis || !text) return;
     window.speechSynthesis.cancel();
     var utter = new SpeechSynthesisUtterance(text);
     utter.rate = 1.0;
+    if(preferredVoice) utter.voice = preferredVoice;
     window.speechSynthesis.speak(utter);
   }
 
