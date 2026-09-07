@@ -2164,6 +2164,67 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     return name.indexOf('.') === -1;
   }
 
+  // Dictation — attached to every textarea field in the "run it as an app"
+  // panel, catalog-wide, the same way attachFileDrop already is: a low-risk
+  // convenience, since the transcript always lands in the box for the buyer
+  // to glance at and fix before submitting, never sent straight through.
+  // Deliberately NOT auto-submitted on a clean recognition result, for
+  // exactly that reason — a misheard number in a financial field should be
+  // visibly wrong and correctable, not silently sent. Web Speech API
+  // recognition has real gaps — solid in Chrome/Edge, unsupported in
+  // Firefox, spotty in Safari — so the mic control simply doesn't render
+  // where the browser doesn't expose it, rather than showing a control
+  // that silently fails. onUsed fires once per successful transcription,
+  // for callers that want to know a field was filled by voice (used to
+  // decide whether to read the response back aloud, on the specific
+  // products where that fits — see VOICE_OUTPUT_SKUS below).
+  function attachDictation(wrapEl, textareaEl, onUsed){
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRec) return;
+
+    var micRow = document.createElement('div');
+    micRow.className = 'pa-voice-row';
+    var micBtn = document.createElement('button');
+    micBtn.type = 'button';
+    micBtn.className = 'pa-mic';
+    micBtn.textContent = '🎤 Dictate instead';
+    var micStatus = document.createElement('span');
+    micStatus.className = 'pa-voice-status';
+    micRow.appendChild(micBtn);
+    micRow.appendChild(micStatus);
+    wrapEl.appendChild(micRow);
+
+    var recognizing = false;
+    var recognition = null;
+    micBtn.addEventListener('click', function(){
+      if(recognizing){ if(recognition) recognition.stop(); return; }
+      if(window.speechSynthesis) window.speechSynthesis.cancel(); // don't listen over something still being read aloud
+      recognition = new SpeechRec();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognizing = true;
+      micBtn.textContent = '● Listening… (tap to stop)';
+      micStatus.textContent = '';
+      recognition.addEventListener('result', function(e){
+        var transcript = e.results[0][0].transcript;
+        textareaEl.value = transcript;
+        micStatus.textContent = 'Heard: "' + transcript + '" — check it over, then run.';
+        if(onUsed) onUsed();
+      });
+      recognition.addEventListener('error', function(e){
+        micStatus.textContent = e.error === 'not-allowed'
+          ? 'Microphone access was blocked — allow it in your browser to dictate.'
+          : 'Didn\'t catch that — try again, or just type it.';
+      });
+      recognition.addEventListener('end', function(){
+        recognizing = false;
+        micBtn.textContent = '🎤 Dictate instead';
+      });
+      try{ recognition.start(); }catch(_){}
+    });
+  }
+
   function attachFileDrop(wrapEl, textareaEl, maxChars){
     var hint = document.createElement('p');
     hint.className = 'pa-filehint';
@@ -2258,6 +2319,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     var form = document.createElement('form');
     var controls = {};
+    var usedVoiceInput = false;
     app.fields.forEach(function(f){
       var fw = document.createElement('div');
       fw.className = 'pa-field';
@@ -2277,6 +2339,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(f.type === 'textarea'){
         fw.classList.add('pa-dropwrap');
         attachFileDrop(fw, input, 4000);
+        attachDictation(fw, input, function(){ usedVoiceInput = true; });
       }
       if(f.help){
         var help = document.createElement('span');
@@ -2295,62 +2358,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     form.appendChild(btn);
     panel.appendChild(form);
 
-    // ---- voice: browser-native speech in, Claude (via the exact same
-    // /api/run-product pipeline as the text form) as the only brain that
-    // ever does the thinking, browser-native speech out. Scoped to Closed
-    // Chair for now — this needs a real spoken-session reason to exist
-    // (see buildRunPrompt's voiceMode) before it belongs on an arbitrary
-    // product. Web Speech API recognition has real gaps — solid in
-    // Chrome/Edge, unsupported in Firefox, spotty in Safari — so the mic
-    // control simply doesn't render where the browser doesn't expose it,
-    // rather than showing a control that silently fails.
-    var usedVoiceInput = false;
-    if(item.sku === 'AI-AG-111' && controls['question']){
-      var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(SpeechRec){
-        var micRow = document.createElement('div');
-        micRow.className = 'pa-voice-row';
-        var micBtn = document.createElement('button');
-        micBtn.type = 'button';
-        micBtn.className = 'pa-mic';
-        micBtn.textContent = '🎤 Ask it out loud';
-        var micStatus = document.createElement('span');
-        micStatus.className = 'pa-voice-status';
-        micRow.appendChild(micBtn);
-        micRow.appendChild(micStatus);
-        controls['question'].parentNode.parentNode.insertBefore(micRow, controls['question'].parentNode.nextSibling);
-
-        var recognizing = false;
-        var recognition = null;
-        micBtn.addEventListener('click', function(){
-          if(recognizing){ if(recognition) recognition.stop(); return; }
-          if(window.speechSynthesis) window.speechSynthesis.cancel(); // don't listen over your own answer
-          recognition = new SpeechRec();
-          recognition.lang = 'en-US';
-          recognition.interimResults = false;
-          recognition.maxAlternatives = 1;
-          recognizing = true;
-          micBtn.textContent = '● Listening… (tap to stop)';
-          micStatus.textContent = '';
-          recognition.addEventListener('result', function(e){
-            var transcript = e.results[0][0].transcript;
-            controls['question'].value = transcript;
-            usedVoiceInput = true;
-            micStatus.textContent = 'Heard: "' + transcript + '" — review it, then run.';
-          });
-          recognition.addEventListener('error', function(e){
-            micStatus.textContent = e.error === 'not-allowed'
-              ? 'Microphone access was blocked — allow it in your browser to use voice.'
-              : 'Didn\'t catch that — try again, or just type it.';
-          });
-          recognition.addEventListener('end', function(){
-            recognizing = false;
-            micBtn.textContent = '🎤 Ask it out loud';
-          });
-          try{ recognition.start(); }catch(_){}
-        });
-      }
-    }
+    // Reading the answer aloud only fits products that are genuinely a
+    // conversation — Closed Chair's office-hours exchange, for now. Dictation
+    // above is available on every product's textarea fields; this list only
+    // controls whether a response gets read back afterward, not whether
+    // someone can dictate their input. Add a SKU here only once it has its
+    // own real reason for a spoken reply, the same bar Closed Chair's
+    // buildRunPrompt voiceMode was written to meet — not by default just
+    // because dictation was used to fill the box.
+    var VOICE_OUTPUT_SKUS = ['AI-AG-111'];
 
     var outWrap = document.createElement('div');
     outWrap.className = 'pa-out-wrap';
@@ -2370,7 +2386,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if(v) anyValue = true;
       });
       if(!anyValue){ toast('Fill in at least one field so it has something to work with.'); return; }
-      var speakResult = usedVoiceInput;
+      var speakResult = usedVoiceInput && VOICE_OUTPUT_SKUS.indexOf(item.sku) !== -1;
       usedVoiceInput = false; // each submission's voice-ness is its own — typing the next question shouldn't inherit it
       runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; }, speakResult);
     });
