@@ -355,75 +355,65 @@
     renderLog();
   });
 
-  // ---- share: encodes the completed run itself into the URL, not just the
-  // job+scenario, so the person who opens the link sees this EXACT output —
-  // a live re-run against the same scenario could stream something
-  // different, which would undercut "share this run" into "share a prompt
-  // that might not reproduce." No backend storage needed: the link is
-  // fully self-contained. ----
-  function encodePayload(obj){
-    // btoa only handles Latin1; this is the standard (if old-looking)
-    // browser-only trick for round-tripping arbitrary UTF-8 through it
-    // without pulling in a TextEncoder-based implementation for the same
-    // result.
-    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); // URL-safe base64
-  }
-
-  function decodePayload(str){
-    var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
-    while(b64.length % 4) b64 += '=';
-    return JSON.parse(decodeURIComponent(escape(atob(b64))));
-  }
-
-  var SHARE_OUTPUT_CAP = 2000; // keeps the link a sane length; full output already ran live for this visitor
-
-  function buildShareUrl(entry){
-    var payload = {
-      s: entry.sku,
-      n: entry.name,
-      q: entry.scenario,
-      o: entry.answer.length > SHARE_OUTPUT_CAP ? entry.answer.slice(0, SHARE_OUTPUT_CAP) + '…' : entry.answer,
-      t: entry.answer.length > SHARE_OUTPUT_CAP
-    };
-    return location.origin + location.pathname + '?run=' + encodePayload(payload);
-  }
-
   function flashStatus(msg, revertAfterMs){
     var prev = status.textContent;
     status.textContent = msg;
     if(revertAfterMs) setTimeout(function(){ status.textContent = prev; }, revertAfterMs);
   }
 
+  // ---- share: publish the run to the real, public /proof/:id page ----
+  // This used to build a self-contained link with the run encoded into the
+  // URL itself — shareable peer-to-peer, but never actually reaching the
+  // site: no public page, not in the /proof gallery, not crawlable. The
+  // product modal elsewhere on the site already had a real version of this
+  // (POST to /api/proof, a permanent public URL, listed on /proof) — this
+  // now uses that same endpoint instead of its own separate, weaker
+  // mechanism, so "share this run" means the same thing everywhere on the
+  // site rather than two different things on two different pages.
   async function shareRun(){
     if(!lastRun) return;
-    var url = buildShareUrl(lastRun);
-    var shareData = { title: 'MULTINICHE AI — ' + lastRun.name + ' (live proof)', text: 'Watch this instrument run a real task.', url: url };
-    if(navigator.share){
-      try{ await navigator.share(shareData); return; }
-      catch(_){ return; } // user cancelled the native share sheet — not an error
+    shareBtn.disabled = true;
+    var original = shareBtn.textContent;
+    shareBtn.textContent = 'Publishing…';
+    try{
+      var res = await fetch('/api/proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: lastRun.sku, scenario: lastRun.scenario, output: lastRun.answer })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.url){ throw new Error(data.error || 'Could not publish this proof.'); }
+
+      var shareData = { title: 'MULTINICHE AI — ' + lastRun.name + ' (live proof)', text: 'Watch this instrument run a real task.', url: data.url };
+      if(navigator.share){
+        try{ await navigator.share(shareData); return; }
+        catch(_){ /* user cancelled the native share sheet — not an error */ }
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        try{
+          await navigator.clipboard.writeText(data.url);
+          flashStatus('Published — link copied. Live at ' + data.url, 5000);
+          return;
+        }catch(_){}
+      }
+      window.prompt('Published — copy this link:', data.url);
+    }catch(err){
+      flashStatus(err.message || 'Could not publish this proof.', 4000);
+    }finally{
+      shareBtn.disabled = false;
+      shareBtn.textContent = original;
     }
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      try{
-        await navigator.clipboard.writeText(url);
-        flashStatus('Link copied — paste it anywhere.', 2500);
-        return;
-      }catch(_){}
-    }
-    window.prompt('Copy this link:', url); // last-resort fallback, very old browsers only
   }
 
   shareBtn.addEventListener('click', shareRun);
 
-  // Renders a completed run (live or shared) into the terminal without
-  // making any network call — used both for "shared run" links on page
-  // load and for clicking an entry in your own recent-runs log.
+  // Renders a run from your own local log without making any network call.
   function replay(entry){
     var matchJob = null;
     for(var i=0;i<JOBS.length;i++){ if(JOBS[i].sku === entry.sku){ matchJob = JOBS[i]; break; } }
     if(matchJob) select(matchJob);
     job.value = entry.scenario && entry.scenario !== (matchJob && matchJob.sample) ? entry.scenario : '';
-    out.textContent = entry.answer + (entry.truncated ? '\n\n[shared link truncated — run it yourself above for the full output]' : '');
+    out.textContent = entry.answer;
     label.textContent = 'demo · replay · ' + entry.sku;
     after.classList.add('show');
     lastRun = { sku: entry.sku, name: entry.name, scenario: entry.scenario, answer: entry.answer };
@@ -544,22 +534,7 @@
     if((e.metaKey || e.ctrlKey) && e.key === 'Enter') runDemo();
   });
 
-  // A shared link (?run=...) replays that exact completed output — no live
-  // call, so it can't drift from what was actually shared, and it costs
-  // nothing to open even if the demo rate limit is currently maxed out.
-  (function initFromShareLink(){
-    var raw = new URLSearchParams(location.search).get('run');
-    if(!raw) { renderLog(); return; }
-    try{
-      var payload = decodePayload(raw);
-      if(!payload || !payload.s || typeof payload.o !== 'string') throw new Error('bad payload');
-      replay({ sku: payload.s, name: payload.n || payload.s, scenario: payload.q || '', answer: payload.o, truncated: !!payload.t });
-    }catch(_){
-      // malformed or tampered link — fall through to the normal idle state
-      // rather than showing a broken page.
-    }
-    renderLog();
-  })();
+  renderLog();
 })();
 </script>
 </body>
