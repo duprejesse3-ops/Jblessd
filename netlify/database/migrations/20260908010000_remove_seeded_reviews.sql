@@ -1,0 +1,39 @@
+-- Removes every seeded product review.
+--
+-- Every row currently in this table — from the founding seed in
+-- 20260716120000_create_reviews_table.sql and the three later seed waves
+-- (wave two, wave three, wave four finance) — was fabricated launch-time
+-- placeholder content, written specifically to satisfy Google's "Missing
+-- field aggregateRating" / "Missing field review" Product markup warnings,
+-- not real customer feedback. Every seeded product carried exactly three
+-- reviews and clustered in a narrow, suspiciously uniform rating band
+-- (most averaging 4.7) — a pattern that reads as fabricated regardless of
+-- how individually well-written each review's text was, and displaying it
+-- as genuine customer feedback is a real authenticity problem, not just a
+-- cosmetic one.
+--
+-- Safe to run: pages.ts already omits aggregateRating and review from a
+-- product's structured data entirely when its review count is zero
+-- (emitting one with count 0 is invalid structured data anyway), and shows
+-- "No reviews yet — be the first to review this tool inside the store."
+-- No broken markup, no empty placeholder state that wasn't already built
+-- and tested for.
+--
+-- Companion fix, same change: netlify/lib/site-health.mts previously
+-- hard-failed its "Review data" check whenever zero products had reviews,
+-- contradicting that same file's own documented philosophy a few lines
+-- below ("a product nobody has reviewed yet is a content gap, not an
+-- outage") — a latent bug that had simply never fired before, since the
+-- catalog had never had zero reviews until now. Fixed alongside this
+-- migration so the site health dashboard correctly reports "degraded" (a
+-- content gap) rather than "unhealthy" (something broken) going forward.
+--
+-- Known, accepted tradeoff: Google Search Console will likely re-flag the
+-- missing aggregateRating/review warnings this seed was originally written
+-- to silence, until real reviews accumulate through actual purchases —
+-- made deliberately, in favor of not showing fabricated customer feedback.
+--
+-- Roll-forward only, matching this repo's convention — this IS the forward
+-- change, not a rollback. The seed migrations stay in migration history
+-- unmodified, as a record of what happened.
+DELETE FROM reviews;

@@ -104,7 +104,16 @@ async function checkReviews(origin: string): Promise<{ check: HealthCheck; rated
     const data = (await response.json()) as { aggregates?: Record<string, { count?: unknown }> }
     const aggregates = data.aggregates && typeof data.aggregates === 'object' ? data.aggregates : {}
     const rated = new Set(Object.entries(aggregates).filter(([, entry]) => Number(entry?.count) > 0).map(([sku]) => sku))
-    if (!rated.size) return { check: failed(name, latencyMs, 'No product ratings are available'), rated }
+    // Zero rated products is a content gap (nobody has left a real review
+    // yet), not an outage — nothing here is broken, pages.ts already omits
+    // aggregateRating cleanly when a product has no reviews. This used to
+    // hard-fail unconditionally on rated.size === 0, which never actually
+    // fired while the catalog carried seeded launch-time reviews, and would
+    // have started firing a false "failed" status the moment those seeded
+    // reviews were removed for not being genuine customer feedback — the
+    // exact scenario this file's own inspectSite comment already describes
+    // for the unrated-subset case, just not previously applied here too.
+    if (!rated.size) return { check: warned(name, latencyMs, 'No products have ratings yet — none has a genuine customer review'), rated }
     return { check: passed(name, latencyMs, `${rated.size} products have ratings`), rated }
   } catch (error) {
     return {
@@ -179,7 +188,7 @@ export async function inspectSite(origin: string): Promise<HealthReport> {
   // one of them matches a catalog SKU — that means the two datasets have drifted
   // apart (a renamed SKU, a stale review table) and every rating on the site is
   // being attached to nothing.
-  if (catalog.skus.length && reviews.check.status !== 'failed') {
+  if (catalog.skus.length && reviews.check.status !== 'failed' && reviews.rated.size > 0) {
     const ratedInCatalog = catalog.skus.filter((sku) => reviews.rated.has(sku))
     const unrated = catalog.skus.filter((sku) => !reviews.rated.has(sku))
     if (!ratedInCatalog.length) {
