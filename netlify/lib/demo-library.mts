@@ -254,18 +254,6 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Cascade output: ship the sheet as scoped, but flag the gap — add a 9:05am check for any unconfirmed handoff, escalated to whoever was off-call the week before. Not built by default; the critic\'s job here was to say what\'s missing, not quietly expand the scope on its own.\n\n' +
       'One model, three labeled passes in sequence — not three separate agents, and the critic step was never optional.',
   },
-  'AI-AG-113': {
-    verb: 'Working through the decision, not deciding it',
-    text:
-      'Question: "Should we raise prices 20% or focus on growing volume instead?"\n\n' +
-      'Read as: judgment call — the right answer hinges on churn tolerance and market headroom, neither of which was given.\n\n' +
-      'Most tools would just pick one and sound confident about it. This doesn\'t, because it genuinely can\'t — the right call depends on how much churn you can absorb and how price-sensitive your specific customers actually are, and neither of those was in the question.\n\n' +
-      'Option A — raise prices 20%: faster margin improvement, no execution risk on the growth side, but every point of churn above your current baseline erases part of the gain, and you won\'t know your real churn number until it\'s already happened.\n' +
-      'Option B — hold price, grow volume: no churn risk from the change itself, but it\'s slower, and it assumes there\'s enough addressable market left to actually grow into — worth checking before committing months to it.\n' +
-      'Not fully weighing a hybrid (raise price on new customers only, grandfather existing ones) — flagged, not chosen, since whether that\'s worth the added complexity is itself a judgment call.\n\n' +
-      'WHO DECIDES: you — this hinges on your actual churn tolerance and how much headroom is left in the market, both of which only you have visibility into.\n\n' +
-      'Ask it something with one correct answer instead — a formula, a date, a definition — and the read-as line flips to "single correct answer," it skips the options entirely, and WHO DECIDES names the answer itself, not a person.',
-  },
   'AI-AG-039': {
     verb: 'Putting this agent to work on a real task',
     text:
@@ -583,16 +571,6 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Shortlist: two names clear the bar on a recent print plus a filed capex step-up. Three others are tape noise without a filing — dropped.\n\n' +
       'Invalidation: if the next print shows capex delayed or guidance cut, both names come off. Weak tape this week would have returned NO TRADE rather than padding the list.\n\n' +
       'Not a ticket. Not a broker. You still click the button.',
-  },
-  'AI-AG-114': {
-    verb: 'Checking the market for a real divergence',
-    text:
-      'Market: "Will the Fed cut rates at the March meeting?" — currently pricing 34¢.\n\n' +
-      'Working the public case for both sides: recent inflation prints have cooled two months running, which argues for a cut; but the last FOMC statement leaned on "further evidence" before easing, and nothing since has clearly cleared that bar.\n\n' +
-      'Own estimate: roughly 30–38%, depending on how much weight goes on the inflation trend versus the statement\'s own bar. That range fully contains the market\'s 34¢.\n\n' +
-      'NO FLAG. The market price sits inside my own uncertainty, not outside it — that\'s not a mispriced market, that\'s a market pricing this about as well as the public information supports. Flagging it anyway to look useful would be manufacturing a signal, not finding one.\n\n' +
-      'Paste a real Polymarket link in the paid version and it checks the live price and recent headlines itself before running this same check — this preview reasons from a fixed example instead.\n\n' +
-      'Ask it about a market where the public case and the price genuinely disagree, and it flags that instead — with the specific reasoning, not just a direction. Either way: never a trade, only ever a flag and the reasoning behind it.',
   },
 
   // ---- templates (remaining) ----
