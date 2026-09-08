@@ -258,12 +258,13 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
     verb: 'Working through the decision, not deciding it',
     text:
       'Question: "Should we raise prices 20% or focus on growing volume instead?"\n\n' +
+      'Read as: judgment call — the right answer hinges on churn tolerance and market headroom, neither of which was given.\n\n' +
       'Most tools would just pick one and sound confident about it. This doesn\'t, because it genuinely can\'t — the right call depends on how much churn you can absorb and how price-sensitive your specific customers actually are, and neither of those was in the question.\n\n' +
       'Option A — raise prices 20%: faster margin improvement, no execution risk on the growth side, but every point of churn above your current baseline erases part of the gain, and you won\'t know your real churn number until it\'s already happened.\n' +
       'Option B — hold price, grow volume: no churn risk from the change itself, but it\'s slower, and it assumes there\'s enough addressable market left to actually grow into — worth checking before committing months to it.\n' +
       'Not fully weighing a hybrid (raise price on new customers only, grandfather existing ones) — flagged, not chosen, since whether that\'s worth the added complexity is itself a judgment call.\n\n' +
       'WHO DECIDES: you — this hinges on your actual churn tolerance and how much headroom is left in the market, both of which only you have visibility into.\n\n' +
-      'Ask it something with one correct answer instead — a formula, a date, a definition — and it just answers directly. The discipline is for real judgment calls, not everything.',
+      'Ask it something with one correct answer instead — a formula, a date, a definition — and the read-as line flips to "single correct answer," it skips the options entirely, and WHO DECIDES names the answer itself, not a person.',
   },
   'AI-AG-039': {
     verb: 'Putting this agent to work on a real task',

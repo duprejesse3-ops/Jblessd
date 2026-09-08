@@ -23,6 +23,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 import { DEMO_LIBRARY } from '../lib/demo-library.mjs'
+import { SKU_RUN_BRIEF } from '../lib/product-app.mjs'
 
 const MODEL = 'claude-opus-5' // the flagship — this is the store's showcase
 const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
@@ -100,7 +101,7 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `AI productivity tools. Your job is to PROVE a specific product works by showing it ` +
     `in action — a working demo, not a sales pitch and not a description of features.\n\n` +
     `Rules:\n` +
-    `- ${play.brief}\n` +
+    `- ${SKU_RUN_BRIEF[p.sku] ?? play.brief}\n` +
     `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
     `feels like a real run, but never claim capabilities beyond what the product is.\n` +
     `- If the shopper's own task is genuinely a stretch for what this specific product format ` +
