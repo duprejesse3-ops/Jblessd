@@ -244,15 +244,6 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Seat usage: 2 of 5 seats active, down from 5 of 5\n\n' +
       'Flagged: high churn risk, driven by an unresolved integration blocker, not dissatisfaction with the core product. Suggested play: proactive outreach from support with a direct answer to the export question, not a generic check-in — the risk is specific and fixable.',
   },
-  'AI-AG-115': {
-    verb: 'Checking the internal number against the outside world',
-    text:
-      'Internal signal: UK signups jumped from ~12/week to 47 this week — well outside the normal range, no product change shipped this week.\n\n' +
-      'Checking outside: a UK tech newsletter\'s roundup, published 4 days ago, lists this product in a "tools worth trying" section. Separately, a thread in a UK-focused subreddit from 6 days ago links to it directly, 340 upvotes.\n\n' +
-      'Timing check: both mentions land 4–6 days before the signup jump began — the right order for a plausible cause, not a coincidental aftereffect happening the other way around.\n\n' +
-      'Confidence: moderate, not proven. Two independent public mentions, both correctly time-ordered, both specifically UK-relevant matching the geography of the spike — a real, checkable, plausible story. Not the same as confirmed: the only way to actually know is asking new signups where they heard about it.\n\n' +
-      'A weaker version of this same check — a single mention with no clear timing relationship to the internal number — returns NO LINK instead: a coincidence isn\'t a finding, and forcing a connection to look useful is exactly what this is built not to do.',
-  },
   'AI-AG-112': {
     verb: 'Running the goal through the role cascade',
     text:

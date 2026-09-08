@@ -4,19 +4,36 @@
 // the buyer typed in (which might be stale by the time they submit).
 //
 // Both sources here are genuinely free — no API key, no account, no paid
-// tier: Polymarket's public Gamma API for market price data, and (via
-// live-fetch.mts, shared with MultiSignal) Google's public News RSS search
-// for recent headlines. Deliberately NOT using any paid news API, per an
-// explicit "free news" scope decision.
+// tier: Polymarket's public Gamma API for market price data, and Google's
+// public News RSS search for recent headlines. Deliberately NOT using any
+// paid news API, per an explicit "free news" scope decision.
 //
-// HONESTY FLAG: the Polymarket endpoint shape below is written from best
-// available knowledge, not verified live — this sandbox has no network
-// access to polymarket.com to confirm the exact current response format.
-// Verify against https://docs.polymarket.com (Markets endpoint) with one
-// real market URL before trusting this in front of a paying buyer. See
-// live-fetch.mts for the equivalent flag on the shared News RSS piece.
+// HONESTY FLAG: both endpoint shapes below are written from best available
+// knowledge, not verified live — this sandbox has no network access to
+// polymarket.com or news.google.com to confirm the exact current response
+// format. Verify both against a real request before this goes live:
+//   - Polymarket Gamma API: https://docs.polymarket.com (Markets endpoint)
+//   - Google News RSS: confirm the query format still returns valid RSS
+// Everything here is written to fail safely if either shape has drifted —
+// a bad response degrades to "unavailable," not a crash — but "degrades
+// gracefully" is not the same as "confirmed working." Test with one real
+// market URL and one real question before trusting this in front of a
+// paying buyer.
 
-import { fetchWithTimeout, fetchRecentHeadlines } from './live-fetch.mjs'
+const FETCH_TIMEOUT_MS = 6000
+
+async function fetchWithTimeout(url: string, ms: number): Promise<Response | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'MultiNicheAI-OddsAgent/1.0' } })
+    return res.ok ? res : null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 /** Pulls a Polymarket market slug out of a pasted market URL, or null if it doesn't look like one. */
 function extractSlug(marketUrl: string): string | null {
@@ -32,7 +49,7 @@ interface LivePrice {
 async function fetchLivePrice(marketUrl: string): Promise<LivePrice | null> {
   const slug = extractSlug(marketUrl)
   if (!slug) return null
-  const res = await fetchWithTimeout(`https://gamma-api.polymarket.com/markets?slug=${encodeURIComponent(slug)}`)
+  const res = await fetchWithTimeout(`https://gamma-api.polymarket.com/markets?slug=${encodeURIComponent(slug)}`, FETCH_TIMEOUT_MS)
   if (!res) return null
   try {
     const data = await res.json()
@@ -45,6 +62,32 @@ async function fetchLivePrice(marketUrl: string): Promise<LivePrice | null> {
     return { question: String(market.question ?? ''), priceText }
   } catch {
     return null
+  }
+}
+
+interface Headline {
+  title: string
+  date: string
+}
+
+async function fetchRecentHeadlines(query: string): Promise<Headline[]> {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`
+  const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS)
+  if (!res) return []
+  try {
+    const xml = await res.text()
+    const items: Headline[] = []
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g
+    let m: RegExpExecArray | null
+    while ((m = itemRegex.exec(xml)) && items.length < 6) {
+      const block = m[1]
+      const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim()
+      const date = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim()
+      if (title) items.push({ title: title.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), date: date ?? '' })
+    }
+    return items
+  } catch {
+    return []
   }
 }
 
