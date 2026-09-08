@@ -254,6 +254,17 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Cascade output: ship the sheet as scoped, but flag the gap — add a 9:05am check for any unconfirmed handoff, escalated to whoever was off-call the week before. Not built by default; the critic\'s job here was to say what\'s missing, not quietly expand the scope on its own.\n\n' +
       'One model, three labeled passes in sequence — not three separate agents, and the critic step was never optional.',
   },
+  'AI-AG-113': {
+    verb: 'Working through the decision, not deciding it',
+    text:
+      'Question: "Should we raise prices 20% or focus on growing volume instead?"\n\n' +
+      'Most tools would just pick one and sound confident about it. This doesn\'t, because it genuinely can\'t — the right call depends on how much churn you can absorb and how price-sensitive your specific customers actually are, and neither of those was in the question.\n\n' +
+      'Option A — raise prices 20%: faster margin improvement, no execution risk on the growth side, but every point of churn above your current baseline erases part of the gain, and you won\'t know your real churn number until it\'s already happened.\n' +
+      'Option B — hold price, grow volume: no churn risk from the change itself, but it\'s slower, and it assumes there\'s enough addressable market left to actually grow into — worth checking before committing months to it.\n' +
+      'Not fully weighing a hybrid (raise price on new customers only, grandfather existing ones) — flagged, not chosen, since whether that\'s worth the added complexity is itself a judgment call.\n\n' +
+      'WHO DECIDES: you — this hinges on your actual churn tolerance and how much headroom is left in the market, both of which only you have visibility into.\n\n' +
+      'Ask it something with one correct answer instead — a formula, a date, a definition — and it just answers directly. The discipline is for real judgment calls, not everything.',
+  },
   'AI-AG-039': {
     verb: 'Putting this agent to work on a real task',
     text:
