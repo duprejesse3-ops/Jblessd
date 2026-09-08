@@ -83,7 +83,35 @@ export default async (req: Request, _context: Context) => {
   }
 
   const app = buildProductApp(product)
-  const prompt = buildRunPrompt(product, app, inputs, voice)
+
+  // Live-fetched context for specific SKUs that have it: $Odds Agent
+  // (price + headlines) and MultiSignal (headlines + Reddit). Passed as
+  // its own explicit argument to buildRunPrompt rather than folded into
+  // inputs — summariseInputs only walks the form's own defined fields, so
+  // anything stuffed into inputs under a key with no matching field
+  // definition gets silently dropped and never reaches the model at all.
+  // Caught in review before the first of these shipped; worth remembering
+  // if another SKU ever wants live-fetched context of its own.
+  let liveContext: string | undefined
+  if (product.sku === 'AI-AG-114') {
+    try {
+      const { fetchOddsLiveContext } = await import('../lib/odds-live-context.mjs')
+      liveContext = await fetchOddsLiveContext(inputs.marketUrl ?? '', inputs.market ?? '')
+    } catch (err) {
+      console.error('odds live context fetch failed:', (err as Error).message)
+      liveContext = 'Live price/news lookup failed this run — reason from general knowledge and what the buyer provided.'
+    }
+  } else if (product.sku === 'AI-AG-115') {
+    try {
+      const { fetchSignalLiveContext } = await import('../lib/multisignal-live-context.mjs')
+      liveContext = await fetchSignalLiveContext(inputs.searchQuery ?? inputs.internalSignal ?? '')
+    } catch (err) {
+      console.error('multisignal live context fetch failed:', (err as Error).message)
+      liveContext = 'Live headline/Reddit lookup failed this run — reason only from what the buyer provided.'
+    }
+  }
+
+  const prompt = buildRunPrompt(product, app, inputs, voice, liveContext)
   if (!prompt) {
     return Response.json({ error: 'Fill in at least one field so it has something to work with.' }, { status: 400 })
   }

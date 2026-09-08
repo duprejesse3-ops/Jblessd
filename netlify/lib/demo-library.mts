@@ -244,6 +244,37 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Seat usage: 2 of 5 seats active, down from 5 of 5\n\n' +
       'Flagged: high churn risk, driven by an unresolved integration blocker, not dissatisfaction with the core product. Suggested play: proactive outreach from support with a direct answer to the export question, not a generic check-in — the risk is specific and fixable.',
   },
+  'AI-AG-115': {
+    verb: 'Checking the internal number against the outside world',
+    text:
+      'Internal signal: UK signups jumped from ~12/week to 47 this week — well outside the normal range, no product change shipped this week.\n\n' +
+      'Checking outside: a UK tech newsletter\'s roundup, published 4 days ago, lists this product in a "tools worth trying" section. Separately, a thread in a UK-focused subreddit from 6 days ago links to it directly, 340 upvotes.\n\n' +
+      'Timing check: both mentions land 4–6 days before the signup jump began — the right order for a plausible cause, not a coincidental aftereffect happening the other way around.\n\n' +
+      'Confidence: moderate, not proven. Two independent public mentions, both correctly time-ordered, both specifically UK-relevant matching the geography of the spike — a real, checkable, plausible story. Not the same as confirmed: the only way to actually know is asking new signups where they heard about it.\n\n' +
+      'A weaker version of this same check — a single mention with no clear timing relationship to the internal number — returns NO LINK instead: a coincidence isn\'t a finding, and forcing a connection to look useful is exactly what this is built not to do.',
+  },
+  'AI-AG-112': {
+    verb: 'Running the goal through the role cascade',
+    text:
+      'Goal: a simple internal tool for tracking who\'s on call each week.\n\n' +
+      'Architect: scope is small — one shared rotation, nothing that needs a full cast. Assigning: Builder, Critic. Skipping: a separate Tester and Scribe — for something this size, the builder\'s own spec doubles as its documentation.\n\n' +
+      'Builder: a single shared sheet, five columns — week, primary, backup, handoff time, handoff confirmed. Handoff happens Monday 9am; the outgoing on-call marks their own row confirmed once the incoming person acknowledges.\n\n' +
+      'Critic: real flaw — nothing enforces the handoff actually happening. If Monday 9am passes with the row still unconfirmed, nobody is notified; the sheet would sit there looking normal while nobody is actually covering that week. A five-column sheet doesn\'t catch its own failure mode.\n\n' +
+      'Cascade output: ship the sheet as scoped, but flag the gap — add a 9:05am check for any unconfirmed handoff, escalated to whoever was off-call the week before. Not built by default; the critic\'s job here was to say what\'s missing, not quietly expand the scope on its own.\n\n' +
+      'One model, three labeled passes in sequence — not three separate agents, and the critic step was never optional.',
+  },
+  'AI-AG-113': {
+    verb: 'Working through the decision, not deciding it',
+    text:
+      'Question: "Should we raise prices 20% or focus on growing volume instead?"\n\n' +
+      'Read as: judgment call — the right answer hinges on churn tolerance and market headroom, neither of which was given.\n\n' +
+      'Most tools would just pick one and sound confident about it. This doesn\'t, because it genuinely can\'t — the right call depends on how much churn you can absorb and how price-sensitive your specific customers actually are, and neither of those was in the question.\n\n' +
+      'Option A — raise prices 20%: faster margin improvement, no execution risk on the growth side, but every point of churn above your current baseline erases part of the gain, and you won\'t know your real churn number until it\'s already happened.\n' +
+      'Option B — hold price, grow volume: no churn risk from the change itself, but it\'s slower, and it assumes there\'s enough addressable market left to actually grow into — worth checking before committing months to it.\n' +
+      'Not fully weighing a hybrid (raise price on new customers only, grandfather existing ones) — flagged, not chosen, since whether that\'s worth the added complexity is itself a judgment call.\n\n' +
+      'WHO DECIDES: you — this hinges on your actual churn tolerance and how much headroom is left in the market, both of which only you have visibility into.\n\n' +
+      'Ask it something with one correct answer instead — a formula, a date, a definition — and the read-as line flips to "single correct answer," it skips the options entirely, and WHO DECIDES names the answer itself, not a person.',
+  },
   'AI-AG-039': {
     verb: 'Putting this agent to work on a real task',
     text:
@@ -561,6 +592,16 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Shortlist: two names clear the bar on a recent print plus a filed capex step-up. Three others are tape noise without a filing — dropped.\n\n' +
       'Invalidation: if the next print shows capex delayed or guidance cut, both names come off. Weak tape this week would have returned NO TRADE rather than padding the list.\n\n' +
       'Not a ticket. Not a broker. You still click the button.',
+  },
+  'AI-AG-114': {
+    verb: 'Checking the market for a real divergence',
+    text:
+      'Market: "Will the Fed cut rates at the March meeting?" — currently pricing 34¢.\n\n' +
+      'Working the public case for both sides: recent inflation prints have cooled two months running, which argues for a cut; but the last FOMC statement leaned on "further evidence" before easing, and nothing since has clearly cleared that bar.\n\n' +
+      'Own estimate: roughly 30–38%, depending on how much weight goes on the inflation trend versus the statement\'s own bar. That range fully contains the market\'s 34¢.\n\n' +
+      'NO FLAG. The market price sits inside my own uncertainty, not outside it — that\'s not a mispriced market, that\'s a market pricing this about as well as the public information supports. Flagging it anyway to look useful would be manufacturing a signal, not finding one.\n\n' +
+      'Paste a real Polymarket link in the paid version and it checks the live price and recent headlines itself before running this same check — this preview reasons from a fixed example instead.\n\n' +
+      'Ask it about a market where the public case and the price genuinely disagree, and it flags that instead — with the specific reasoning, not just a direction. Either way: never a trade, only ever a flag and the reasoning behind it.',
   },
 
   // ---- templates (remaining) ----
