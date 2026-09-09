@@ -31,7 +31,21 @@ const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
 // matters most for genuinely hard scenarios (see "Stump the Agent" style
 // challenges) — the old single 900-token cap cut off a real attempt at a hard
 // task mid-thought, which reads as broken rather than as an honest limitation.
-const MAX_TOKENS_SCENARIO = 1700
+const MAX_TOKENS_SCENARIO_DEFAULT = 1700
+
+// A few products' doctrines genuinely produce a longer response than most —
+// $Odds Agent and MultiSignal both reason through multiple candidate
+// explanations with citations, timing checks, and confidence levels before
+// concluding, not a single short verdict. The flat 1700-token default was
+// cutting these off mid-stream in the free demo (reported directly:
+// "streamed but cut off"), not because anything was broken, just because
+// the doctrine had more to honestly say than the ceiling allowed. Scoped to
+// just these SKUs rather than raised for everyone, so the free demo's cost
+// doesn't go up for the many simpler products that never needed the room.
+const SKU_MAX_TOKENS_SCENARIO: Record<string, number> = {
+  'AI-AG-114': 2600, // $Odds Agent
+  'AI-AG-115': 2600, // MultiSignal
+}
 
 // Custom-scenario demos are the one path here that always pays for fresh
 // flagship inference — the default per-SKU demo is served from the Blobs cache,
@@ -232,7 +246,7 @@ export default async (req: Request, context: Context) => {
         const { system, user } = buildPrompt(product, scenario)
         const modelStream = anthropic.messages.stream({
           model: MODEL,
-          max_tokens: scenario ? MAX_TOKENS_SCENARIO : MAX_TOKENS_PREVIEW,
+          max_tokens: scenario ? (SKU_MAX_TOKENS_SCENARIO[product.sku] ?? MAX_TOKENS_SCENARIO_DEFAULT) : MAX_TOKENS_PREVIEW,
           system,
           messages: [{ role: 'user', content: user }],
         })
