@@ -18,6 +18,7 @@ import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.m
 import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
+import { MULTIBOT_SOURCE } from './multibot-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -36,6 +37,11 @@ const EMAIL_EXECUTABLE = new Set(['bin/email-connect.mjs', 'install.sh'])
 const MESSAGING_EXECUTABLE = new Set(['bin/messaging-connect.mjs', 'install.sh'])
 const WITNESS_EXECUTABLE = new Set(['bin/witness.mjs', 'install.sh'])
 const GUARD_EXECUTABLE = new Set(['bin/guard.mjs', 'install.sh'])
+// MultiBøT ships as plain Python for the CLI, invoked as `python3
+// multibot.py`, plus a gui.py desktop app and platform build scripts. Only
+// the shell/batch build scripts need the executable bit — the .py files
+// are run via `python3 file.py`, never executed directly.
+const MULTIBOT_EXECUTABLE = new Set(['build_linux.sh', 'build_mac.sh', 'build_windows.bat'])
 
 // Unzipping into a single top-level directory rather than spraying thirteen
 // files into whatever the buyer's cwd happens to be. Standard courtesy, and it
@@ -48,6 +54,7 @@ const EMAIL_ROOT = 'multiconnect-email-crm'
 const MESSAGING_ROOT = 'multiconnect-slack-discord'
 const WITNESS_ROOT = 'multiwitness'
 const GUARD_ROOT = 'multiguard'
+const MULTIBOT_ROOT = 'multibot'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -113,6 +120,14 @@ function guardFiles(): ArchiveFile[] {
   }))
 }
 
+function multibotFiles(): ArchiveFile[] {
+  return MULTIBOT_SOURCE.map((file) => ({
+    path: `${MULTIBOT_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: MULTIBOT_EXECUTABLE.has(file.path),
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
@@ -122,6 +137,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-CN-005': { filename: 'multiconnect-slack-discord.zip', files: messagingFiles },
   'AI-CN-006': { filename: 'multiwitness.zip', files: witnessFiles },
   'AI-CN-007': { filename: 'multiguard.zip', files: guardFiles },
+  'AI-AG-067': { filename: 'multibot.zip', files: multibotFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */
