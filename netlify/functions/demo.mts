@@ -36,13 +36,17 @@ const MAX_TOKENS_SCENARIO_DEFAULT = 1700
 // A few products' doctrines genuinely produce a longer response than most —
 // $Odds Agent and MultiSignal both reason through multiple candidate
 // explanations with citations, timing checks, and confidence levels before
-// concluding, not a single short verdict. The flat 1700-token default was
-// cutting these off mid-stream in the free demo (reported directly:
-// "streamed but cut off"), not because anything was broken, just because
-// the doctrine had more to honestly say than the ceiling allowed. Scoped to
-// just these SKUs rather than raised for everyone, so the free demo's cost
-// doesn't go up for the many simpler products that never needed the room.
+// concluding, not a single short verdict; MultiCascade can run through an
+// Architect, one or more Builders, a Critic, and a closing summary for a
+// single goal. The flat 1700-token default was cutting these off mid-stream
+// in the free demo (reported directly on both: "streamed but cut off," and
+// a MultiCascade run ending right at "Cascade summary —" with nothing after
+// it), not because anything was broken, just because the doctrine had more
+// to honestly say than the ceiling allowed. Scoped to just these SKUs
+// rather than raised for everyone, so the free demo's cost doesn't go up
+// for the many simpler products that never needed the room.
 const SKU_MAX_TOKENS_SCENARIO: Record<string, number> = {
+  'AI-AG-112': 3000, // MultiCascade — can run Architect + multiple Builders + Critic + summary for a bigger goal
   'AI-AG-114': 2600, // $Odds Agent
   'AI-AG-115': 2600, // MultiSignal
 }
