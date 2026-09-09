@@ -1,0 +1,36 @@
+-- Adds MultiBøT (AI-AG-067) to the catalog.
+--
+-- A real, downloadable Python tool (not just a system prompt) that solves
+-- vehicle routing problems and defends structurally different alternatives
+-- to a baseline route, using NetworkX with optional OR-Tools/OSMnx. Same
+-- Architect/Builder/Builder/Critic cascade pattern as MultiCascade, applied
+-- to a concrete domain — explicitly designed as a companion showcase for
+-- that pattern, per the product's own listing.
+--
+-- Ships as a real desktop app now too (gui.py, plus build_linux.sh /
+-- build_mac.sh / build_windows.bat producing a standalone double-click
+-- executable) alongside the original command-line tool, added to reduce
+-- setup friction for non-technical buyers.
+--
+-- Verified before shipping, not just trusted: ran the actual bundled code
+-- against the included 38-stop Portland demo set and got the exact same
+-- numbers as the listing claims (baseline 341.1 km -> defended alternative
+-- 222.7 km, -118.3 km). The GUI was driven end-to-end under a virtual
+-- display and confirmed to produce the same figure through that path too.
+-- The Linux build was actually compiled with PyInstaller and run from a
+-- completely isolated directory to confirm it's genuinely standalone.
+-- Also scanned for eval/exec/subprocess/network calls — none found; it's a
+-- self-contained, offline computation tool.
+--
+-- Images were NOT included in a site-ready aspect ratio (source assets were
+-- 1:1 icons and a 2.07:1 lockup; the card grid needs 1200x160 and the full
+-- image needs 1200x630) — rebuilt both from the clean icon-1024.png source,
+-- composed onto fresh canvases with the icon centered above the space the
+-- site's own bottom text strip (banner) and name/store/SKU footer (full)
+-- reserve, verified via real resvg rendering the same way as every other
+-- custom product image this store carries.
+--
+-- Roll-forward only, idempotent via ON CONFLICT (sku) DO NOTHING.
+INSERT INTO products (sku, name, category, niche, format, price, blurb, spec) VALUES
+  ('AI-AG-067', 'MultiBøT', 'agents', 'developers', '.zip · Python tool layer + desktop app + Agent Studio config', 49, 'A coding bot that plans vehicle routes, then proposes structurally different alternatives — with real libraries, not three near-identical heuristics. One model, one hat at a time: Architect, Builder, Builder, Critic. Comes as a real desktop app now too — pick a stop list, click Run, no command line required. The critic refuses to ship if the alternatives are just heuristic wobble.', 'NetworkX + optional OR-Tools/OSMnx · one-click desktop app (build once, run anywhere) or CLI · baseline -> named hypotheses -> re-solve -> defended alternative')
+ON CONFLICT (sku) DO NOTHING;
