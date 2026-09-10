@@ -24,6 +24,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   templates: 'Doc Templates',
   agents: 'Agent Configs',
   connectors: 'Connectors',
+  host: 'Host Packs',
 }
 
 interface ApiProduct {
