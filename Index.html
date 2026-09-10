@@ -984,6 +984,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="chip" data-cat="templates" aria-pressed="false">Doc Templates</button>
       <button class="chip" data-cat="agents" aria-pressed="false">Agent Configs</button>
       <button class="chip" data-cat="connectors" aria-pressed="false">Connectors</button>
+      <button class="chip" data-cat="host" aria-pressed="false">Host Packs</button>
     </div>
     <p class="filter-label">Built for</p>
     <div class="chip-row" id="niche-chips" role="group" aria-label="Filter by role">
@@ -1347,6 +1348,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <option value="templates">Doc Templates</option>
       <option value="agents">Agent Configs</option>
       <option value="connectors">Connectors</option>
+          <option value="host">Host Packs</option>
     </select>
     <select class="field" id="f-niche">
       <option value="founders">Founders &amp; Ops</option>
@@ -1586,8 +1588,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var search = document.getElementById('search');
   var activeCat = 'all', activeNiche = 'all';
 
-  var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs', connectors:'Connectors'};
-  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin', finance:'Finance & Investing'};
+  var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs', connectors:'Connectors', host:'Host Packs'};
+  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin', finance:'Finance & Investing', stores:'Store & Site Owners'};
 
   function toast(msg){
     var t = document.getElementById('toast');
