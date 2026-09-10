@@ -22,6 +22,7 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   templates: 'TP',
   agents: 'AG',
   connectors: 'CN',
+  host: 'HOST',
 }
 
 function decorate(p: Product) {
