@@ -123,6 +123,7 @@ const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
   'AI-AG-113': { banner: '/icons/products/AI-AG-113-banner.jpg', full: '/icons/products/AI-AG-113-full.jpg' },
   'AI-AG-115': { banner: '/icons/products/AI-AG-115-banner.jpg', full: '/icons/products/AI-AG-115-full.jpg' },
   'AI-HOST-001': { banner: '/icons/products/AI-HOST-001-banner.jpg', full: '/icons/products/AI-HOST-001-full.jpg' },
+  'AI-HOST-002': { banner: '/icons/products/AI-HOST-002-banner.jpg', full: '/icons/products/AI-HOST-002-full.jpg' },
 }
 
 const CATEGORY_PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
