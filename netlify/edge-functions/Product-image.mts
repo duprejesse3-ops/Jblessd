@@ -117,6 +117,7 @@ const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
   'AI-AG-015': { banner: '/icons/products/AI-AG-015-banner.jpg', full: '/icons/products/AI-AG-015-full.jpg' },
   'AI-AG-094': { banner: '/icons/products/AI-AG-094-banner.jpg', full: '/icons/products/AI-AG-094-full.jpg' },
   'AI-AG-067': { banner: '/icons/products/AI-AG-067-banner.jpg', full: '/icons/products/AI-AG-067-full.jpg' },
+  'AI-HOST-001': { banner: '/icons/products/AI-HOST-001-banner.jpg', full: '/icons/products/AI-HOST-001-full.jpg' },
 }
 
 const CATEGORY_PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
@@ -258,6 +259,13 @@ const SOFTWARE_STYLE: Record<string, { gradient: [string, string]; mark: (color:
   // export-arrow badge (signals "content leaving the document"), in cyan —
   // deliberately distinct from Email/CRM's blue and Sheets/Airtable's teal,
   // the two nearest existing hues in this palette.
+  'AI-HOST-001': {
+    gradient: ['#C4A574', '#0A0E16'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="10">
+      <rect x="-70" y="-70" width="140" height="140" rx="22"/>
+      <path d="M-36 0 H36 M0 -36 V36"/>
+    </g>`,
+  },
   'AI-CN-009': {
     gradient: ['#8DD8FF', '#0C7ABF'],
     mark: (c) => `<g fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
