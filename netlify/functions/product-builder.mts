@@ -43,6 +43,7 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   templates: 'TP',
   agents: 'AG',
   connectors: 'CN',
+  host: 'HOST',
 }
 
 // The design the agent produces — the same fields a real catalog row carries,
