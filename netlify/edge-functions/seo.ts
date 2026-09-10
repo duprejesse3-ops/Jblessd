@@ -46,6 +46,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   automations: 'Automation Blueprints',
   templates: 'Doc Templates',
   agents: 'Agent Configs',
+  connectors: 'Connectors',
 }
 
 interface ApiProduct {
