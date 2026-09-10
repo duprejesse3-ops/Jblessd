@@ -1,0 +1,24 @@
+MULTINICHE AI · how this makes money
+Copyright 2026 MultiNicheAI. All rights reserved.
+
+Architecture (this machine is the shop)
+
+  Buyer
+    → your name (HTTPS, Caddy)
+      → shop on this Pi / laptop / box
+        → Stripe Checkout (keys in container/.env, never Git)
+        → webhook /api/webhook
+        → email deliverable (Resend, optional)
+
+  Firewall: 22, 80, 443 only. Fail2ban on SSH.
+  GitHub is the copy of the shop. Stripe is the till.
+
+One shot
+  sudo ./multinicheai bootstrap shop.yourname.com
+
+Then public
+  sudo ./multinicheai forward shop.yourname.com
+  # if the ISP shares your address (CGNAT): ./multinicheai share
+
+Money does not start until STRIPE_SECRET_KEY is set, webhook lands, and a test card pays.
+This pack does not create a Stripe account.
