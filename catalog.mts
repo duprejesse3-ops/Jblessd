@@ -8,7 +8,7 @@
 export interface Product {
   sku: string
   name: string
-  category: 'prompts' | 'automations' | 'templates' | 'agents' | 'connectors'
+  category: 'prompts' | 'automations' | 'templates' | 'agents' | 'connectors' | 'host'
   niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance' | 'stores'
   format: string
   price: number
@@ -22,6 +22,7 @@ export const CATEGORY_LABEL: Record<Product['category'], string> = {
   templates: 'Doc Templates',
   agents: 'Agent Configs',
   connectors: 'Connectors',
+  host: 'Host Packs',
 }
 
 export const NICHE_LABEL: Record<Product['niche'], string> = {
@@ -39,6 +40,7 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
 }
 
 export const FALLBACK_CATALOG: Product[] = [
+  { sku: 'AI-HOST-001', name: 'Meridian Host', category: 'host', niche: 'stores', format: '.zip · Pi / laptop host pack · one-time license', price: 99, blurb: 'For store owners leaving Netlify, Shopify, and rented hosts. Load your GitHub on a Pi or laptop, paste your Stripe key, take money on hardware you own. Not a copy of MultiNicheAI\'s catalog.', spec: 'One pack · your repo · your Stripe · Pi 4/5 64-bit or Kali/Debian/Ubuntu · firewall 22/80/443' },
   { sku: 'AI-PP-001', name: 'Deep Work Prompt Pack', category: 'prompts', niche: 'founders', format: '120 prompts · PDF + Notion', price: 19, blurb: 'Prompts for prioritization, focus blocks, and end-of-day resets.', spec: 'Works with Claude, ChatGPT, Gemini' },
   { sku: 'AI-AB-002', name: 'Inbox Zero Automation', category: 'automations', niche: 'sales', format: 'Make.com blueprint', price: 29, blurb: 'Auto-sorts, drafts replies, and flags what needs a human.', spec: 'Gmail + Outlook compatible' },
   { sku: 'AI-AG-003', name: 'Meeting Notes Agent', category: 'agents', niche: 'founders', format: 'System prompt + template', price: 15, blurb: 'Turns raw transcripts into decisions, owners, and deadlines.', spec: 'Tuned for Claude Projects' },
