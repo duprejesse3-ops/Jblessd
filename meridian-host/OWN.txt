@@ -1,0 +1,15 @@
+MULTINICHE AI · host pack
+Copyright 2026 MultiNicheAI. All rights reserved.
+
+One shot (Pi 64-bit, Kali, Debian, Ubuntu):
+  sudo ./multinicheai bootstrap shop.yourname.com
+
+That is the product: shop + firewall + HTTPS front on hardware you own.
+Stripe key is asked once and stored in container/.env — never Git.
+
+Then:
+  sudo ./multinicheai forward shop.yourname.com
+  # or ./multinicheai share
+
+Read STEPS.txt and MONEY.txt.
+Raspberry Pi: Pi OS 64-bit, Pi 4 (4 GB) or Pi 5. Official power. Ethernet.

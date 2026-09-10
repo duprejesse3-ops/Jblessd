@@ -1,0 +1,21 @@
+[Unit]
+Description=MultiNicheAI shop (Jblessd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/Jblessd
+EnvironmentFile=-/opt/Jblessd/container/.env
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=TRUST_PROXY=true
+ExecStart=/usr/bin/node --import ./container/hooks/register.mjs container/server.mjs
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
