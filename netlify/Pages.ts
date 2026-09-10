@@ -50,6 +50,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   automations: 'Automation Blueprints',
   templates: 'Doc Templates',
   agents: 'Agent Configs',
+  connectors: 'Connectors',
+  host: 'Host Packs',
 }
 const NICHE_LABEL: Record<string, string> = {
   founders: 'Founders & Ops',
