@@ -109,7 +109,7 @@ function bufferToBase64(buf: ArrayBuffer): string {
 // the actual pixel position of the detail in the final banner crop, not
 // just "does this look nice as a standalone photo."
 const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
-  'AI-CN-008': { banner: '/icons/multivault-vault-banner.jpg', full: '/icons/multivault-vault-full.jpg' },
+  'AI-CN-008': { banner: '/icons/products/AI-CN-008-banner.jpg', full: '/icons/products/AI-CN-008-full.jpg' },
   'AI-CN-006': { banner: '/icons/products/AI-CN-006-banner.jpg', full: '/icons/products/AI-CN-006-full.jpg' },
   'AI-CN-007': { banner: '/icons/products/AI-CN-007-banner.jpg', full: '/icons/products/AI-CN-007-full.jpg' },
   'AI-PP-001': { banner: '/icons/products/AI-PP-001-banner.jpg', full: '/icons/products/AI-PP-001-full.jpg' },
@@ -117,7 +117,11 @@ const PHOTO_STYLE: Record<string, { banner: string; full: string }> = {
   'AI-AG-003': { banner: '/icons/products/AI-AG-003-banner.jpg', full: '/icons/products/AI-AG-003-full.jpg' },
   'AI-AG-015': { banner: '/icons/products/AI-AG-015-banner.jpg', full: '/icons/products/AI-AG-015-full.jpg' },
   'AI-AG-094': { banner: '/icons/products/AI-AG-094-banner.jpg', full: '/icons/products/AI-AG-094-full.jpg' },
+  'AI-AG-114': { banner: '/icons/products/AI-AG-114-banner.jpg', full: '/icons/products/AI-AG-114-full.jpg' },
   'AI-AG-067': { banner: '/icons/products/AI-AG-067-banner.jpg', full: '/icons/products/AI-AG-067-full.jpg' },
+  'AI-AG-112': { banner: '/icons/products/AI-AG-112-banner.jpg', full: '/icons/products/AI-AG-112-full.jpg' },
+  'AI-AG-113': { banner: '/icons/products/AI-AG-113-banner.jpg', full: '/icons/products/AI-AG-113-full.jpg' },
+  'AI-AG-115': { banner: '/icons/products/AI-AG-115-banner.jpg', full: '/icons/products/AI-AG-115-full.jpg' },
   'AI-HOST-001': { banner: '/icons/products/AI-HOST-001-banner.jpg', full: '/icons/products/AI-HOST-001-full.jpg' },
 }
 
