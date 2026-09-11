@@ -180,6 +180,16 @@ export const DEMO_LIBRARY: Record<string, DemoLibraryEntry> = {
       'Automation OCRs each one, categorizes (Travel, Software, Meals & Entertainment, Travel), flags the client dinner for a "who attended" note since it\'s over the $100 auto-approve threshold, and assembles a submission-ready report with all four line items and receipt images attached — ready to submit, one flagged item to confirm.',
   },
 
+  'AI-AB-070': {
+    verb: 'Simulating one run of this automation',
+    text:
+      'Trigger: intent pulse — "I have a catalog and no traffic" (search, heat 0.86), mapped to Inbox Zero Automation.\n\n' +
+      'Hijack: Autopilot spawns eight organisms across four native forms — search intercept, conversation native, proof-loop spec sheet, shadow listing. Local genome writes the copy. No API call.\n\n' +
+      'Tick: 14 simulated hours. Proof-loop CTR 6.8 percent, 3 conversions. Search intercept spends $11.20 for one conversion. Two conversation natives die.\n\n' +
+      'Evolve: generation 2 keeps the spec-sheet champion and a mutated shadow listing. Losers killed.\n\n' +
+      'Output: a paste-ready packet with a UTM link to multinicheai.com/product/AI-AB-002. Autopilot arms the next unused SKU without a click.',
+  },
+
   // ---- templates ----
   'AI-TP-004': {
     verb: 'Filling this template with a real example',
