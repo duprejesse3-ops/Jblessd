@@ -43,13 +43,21 @@
       width: 100%; min-height: 44px; border-radius: 10px; border: 0; background: var(--elevated);
       color: var(--fg); padding: 0 12px; font: 14px "IBM Plex Mono", monospace; box-shadow: 0 0 0 1px var(--border);
     }
+    textarea {
+      width: 100%; min-height: 140px; border-radius: 10px; border: 0; background: var(--elevated);
+      color: var(--fg); padding: 12px; font: 13px/1.45 "IBM Plex Mono", monospace; box-shadow: 0 0 0 1px var(--border);
+      resize: vertical;
+    }
     label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+    .warn { color: #e6c07a; }
+    #reddit-gate { margin-top: 16px; }
+
   </style>
 </head>
 <body>
   <p class="mono">AI-AB-070 · multinicheai.com/swarm</p>
   <h1>SWARM</h1>
-  <p>This is the operator on <strong style="color:var(--fg)">your site</strong>. grok-sandbox can sleep. These cards post from @DupreJesse14633 and u/MultiNicheAI81.</p>
+  <p>This is the operator on <strong style="color:var(--fg)">your site</strong>. grok-sandbox can sleep. X posts go out as ads. Reddit posts do not — r/smallbusiness will remove a product post and can ban u/MultiNicheAI81.</p>
 
   <div class="card pad" id="android-card">
     <p class="mono">Android app</p>
@@ -73,6 +81,19 @@
     <input id="reddit" value="MultiNicheAI81" />
     <label for="sub">Subreddit</label>
     <input id="sub" value="smallbusiness" />
+    <p id="sub-hint" class="mono warn" style="margin:10px 0 0;letter-spacing:0.08em;text-transform:none">r/smallbusiness: weekly Promote-your-business sticky only. A feed post is a ban risk.</p>
+  </div>
+  <div class="card pad" id="reddit-gate" hidden>
+    <p class="mono warn">Reddit · do not submit this as a feed post</p>
+    <h2 id="gate-title" style="margin:8px 0 8px;font-size:1.15rem;font-weight:500">Use the promo sticky</h2>
+    <p id="gate-reason" style="margin:0 0 12px"></p>
+    <label for="gate-text">Comment to paste — no ad image, no fake question</label>
+    <textarea id="gate-text" readonly></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" type="button" id="gate-copy">Copy comment</button>
+      <a class="btn secondary" id="gate-open" href="#" target="_blank" rel="noopener">Open this week's thread</a>
+    </div>
+    <p class="mono" id="gate-copied" hidden style="color:var(--success);margin-top:12px">Copied · paste it as a comment on the sticky, then close the composer you already opened</p>
   </div>
   <p class="mono">© 2026 MULTINICHE AI. Source in /swarm on GitHub Jblessd.</p>
 <script>
@@ -84,6 +105,24 @@ const ADS = [
   { sku: "AI-AG-020", name: "Autonomous SEO Content Agent", headline: "Buying Google ads for AI tools is a tax", body: "Answers the query they typed with a spec, not a bid.", proof: "Intercept the query", price: 39, landing: "https://multinicheai.com/?product=AI-AG-020&utm_source=swarm" }
 ];
 
+// Subs whose main feed is questions-only. A pain-headline + product URL is
+// exactly the "pretend to ask a question just to promote" pattern they ban
+// for, and u/MultiNicheAI81 already trips the AI review filter.
+const REDDIT_PROMO_THREAD = {
+  smallbusiness: {
+    reason: "r/smallbusiness only allows product posts in the weekly Promote-your-business sticky. A feed post with an AI product, a landing URL, or an ad image gets removed and can ban the account — including in other subs.",
+    search: "https://www.reddit.com/r/smallbusiness/search/?q=Promote%20your%20business&restrict_sr=1&sort=new&t=month"
+  },
+  entrepreneur: {
+    reason: "r/Entrepreneur treats a product post in the feed as spam. Use their weekly promo thread, not a new post.",
+    search: "https://www.reddit.com/r/Entrepreneur/search/?q=Promote%20your%20business&restrict_sr=1&sort=new&t=month"
+  },
+  startups: {
+    reason: "r/startups removes product pitches from the feed. Showcase goes in their weekly thread, not a new post.",
+    search: "https://www.reddit.com/r/startups/search/?q=Promote%20your%20startup&restrict_sr=1&sort=new&t=month"
+  }
+};
+
 function dest() {
   return {
     x: document.getElementById("x").value.replace(/^@/, "").trim() || "DupreJesse14633",
@@ -92,14 +131,74 @@ function dest() {
   };
 }
 
+function redditLanding(ad) {
+  return String(ad.landing || "").replace("utm_medium=x", "utm_medium=reddit");
+}
+
+function redditComment(ad, d) {
+  return [
+    ad.name + " — $" + ad.price + " one-time",
+    ad.body,
+    "Proof: " + ad.proof,
+    redditLanding(ad),
+    "I'm the maker (u/" + d.reddit + "). Questions welcome — no DMs."
+  ].join("\n\n");
+}
+
 function tweet(ad) {
   const t = `${ad.headline}\n\n${ad.body}\n\n${ad.landing}`;
   return "https://twitter.com/intent/tweet?text=" + encodeURIComponent(t.slice(0, 280));
 }
-function reddit(ad) {
+
+function redditSubmit(ad, d) {
+  const title = ad.name + " — " + ad.proof;
+  const text = redditComment(ad, d);
+  return `https://www.reddit.com/r/${encodeURIComponent(d.sub)}/submit?title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}`;
+}
+
+function policyFor(sub) {
+  return REDDIT_PROMO_THREAD[String(sub || "").toLowerCase()] || null;
+}
+
+function refreshSubHint() {
+  const hint = document.getElementById("sub-hint");
+  const policy = policyFor(dest().sub);
+  if (!hint) return;
+  if (policy) {
+    hint.classList.add("warn");
+    hint.textContent = "r/" + dest().sub + ": weekly promo sticky only. A feed post is a ban risk.";
+  } else {
+    hint.classList.remove("warn");
+    hint.textContent = "r/" + dest().sub + ": posts as a named product, not a fake question. Still no ad-image spam.";
+  }
+}
+
+function showGate(ad, policy) {
   const d = dest();
-  const body = `${ad.body}\n\nProof: ${ad.proof}\n\n${ad.landing}\n\n— u/${d.reddit}`;
-  return `https://www.reddit.com/r/${encodeURIComponent(d.sub)}/submit?title=${encodeURIComponent(ad.headline)}&text=${encodeURIComponent(body)}`;
+  const gate = document.getElementById("reddit-gate");
+  const reason = document.getElementById("gate-reason");
+  const text = document.getElementById("gate-text");
+  const open = document.getElementById("gate-open");
+  const copied = document.getElementById("gate-copied");
+  const title = document.getElementById("gate-title");
+  if (!gate) return;
+  title.textContent = "r/" + d.sub + " · promo sticky only";
+  reason.textContent = policy.reason + " Close the feed composer if it already opened. Do not attach the ad image.";
+  text.value = redditComment(ad, d);
+  open.href = policy.search;
+  copied.hidden = true;
+  gate.hidden = false;
+  gate.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function postReddit(ad) {
+  const d = dest();
+  const policy = policyFor(d.sub);
+  if (policy) {
+    showGate(ad, policy);
+    return;
+  }
+  window.open(redditSubmit(ad, d), "_blank", "noopener");
 }
 
 const root = document.getElementById("cards");
@@ -119,8 +218,17 @@ ADS.forEach((ad) => {
       </div>
     </div>`;
   el.querySelector("[data-x]").onclick = () => window.open(tweet(ad), "_blank", "noopener");
-  el.querySelector("[data-r]").onclick = () => window.open(reddit(ad), "_blank", "noopener");
+  el.querySelector("[data-r]").onclick = () => postReddit(ad);
   root.appendChild(el);
+});
+
+document.getElementById("sub").addEventListener("input", refreshSubHint);
+refreshSubHint();
+
+document.getElementById("gate-copy").addEventListener("click", async () => {
+  const text = document.getElementById("gate-text").value;
+  try { await navigator.clipboard.writeText(text); } catch (_) {}
+  document.getElementById("gate-copied").hidden = false;
 });
 
 (function () {

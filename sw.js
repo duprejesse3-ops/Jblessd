@@ -22,7 +22,9 @@
 // Bumped to v11 so returning installs drop the old privacy-consent.js that
 // painted the cookie card on first load for every visitor, including US
 // click-throughs from X.
-const CACHE = 'multiniche-ai-v11';
+// Bumped to v12 so the installed SWARM composer stops opening r/smallbusiness
+// feed posts (those get removed as AI promo and can ban the account).
+const CACHE = 'multiniche-ai-v12';
 const APP_SHELL = [
   '/',
   '/index.html',
