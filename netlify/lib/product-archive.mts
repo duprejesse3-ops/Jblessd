@@ -11,6 +11,7 @@
 // adding one entry here rather than touching the endpoint.
 
 import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
+import { INCIDENT_POSTMORTEM_SOURCE } from './incident-postmortem-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
 import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
@@ -30,6 +31,7 @@ export interface ProductArchive {
 // archive unzips 0644. Paths are relative to the package root, before the
 // top-level directory is prefixed on.
 const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
+const POSTMORTEM_EXECUTABLE = new Set(['bin/postmortem.mjs', 'adapters/pagerduty-webhook.mjs', 'install.sh'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
@@ -55,12 +57,21 @@ const MESSAGING_ROOT = 'multiconnect-slack-discord'
 const WITNESS_ROOT = 'multiwitness'
 const GUARD_ROOT = 'multiguard'
 const MULTIBOT_ROOT = 'multibot'
+const POSTMORTEM_ROOT = 'incident-postmortem-automation'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
     path: `${ROOT}/${file.path}`,
     contents: file.contents,
     executable: EXECUTABLE.has(file.path),
+  }))
+}
+
+function postmortemFiles(): ArchiveFile[] {
+  return INCIDENT_POSTMORTEM_SOURCE.map((file) => ({
+    path: `${POSTMORTEM_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: POSTMORTEM_EXECUTABLE.has(file.path),
   }))
 }
 
@@ -130,6 +141,7 @@ function multibotFiles(): ArchiveFile[] {
 
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
+  'AI-AB-037': { filename: 'incident-postmortem-automation.zip', files: postmortemFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
   'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
   'AI-CN-003': { filename: 'multiconnect-sheets-airtable.zip', files: sheetsFiles },
