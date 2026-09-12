@@ -47,6 +47,10 @@ export type Organism = {
   spend: number;
   createdAt: number;
   liveAt?: number;
+  /** Present once /api/swarm-performance has real data for this organism — clicks/conversions/fitness above stop being simulated the moment this is set. */
+  verifiedLandings?: number;
+  verifiedRevenue?: number;
+  verifiedAt?: string;
 };
 
 export type Swarm = {
@@ -81,7 +85,7 @@ export type GeneratedCopy = {
   cta: string;
 };
 
-export type ActivityKind = "hijack" | "evolve" | "pilot" | "live" | "scan";
+export type ActivityKind = "hijack" | "evolve" | "pilot" | "live" | "scan" | "real";
 
 export type Activity = {
   id: string;

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Download, Dna, Ellipsis, Hexagon, Library, Package, Radar, LayoutTemplate } from "lucide-react";
+import { Download, Dna, Ellipsis, Hexagon, Library, Package, Radar, LayoutTemplate, ShieldCheck } from "lucide-react";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSwarmStore } from "@/lib/store";
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/evolve", label: "Evolve", icon: Dna, key: "4" },
   { to: "/catalog", label: "Catalog", icon: Library, key: "5" },
   { to: "/product", label: "Product", icon: Package, key: "6" },
+  { to: "/scorecard", label: "Scorecard", icon: ShieldCheck, key: "7" },
 ] as const;
 
 const PRIMARY = NAV.slice(0, 4);
