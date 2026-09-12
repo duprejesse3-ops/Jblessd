@@ -305,6 +305,13 @@
   [headers.values]
     Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
 
+# Consent script is the first thing a click from X used to see. Always revalidate
+# so a banner fix is not stuck behind the hour-long /*.js cache.
+[[headers]]
+  for = "/privacy-consent.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # Apps written in the browser workspace, served by
 # netlify/functions/code-serve.mts. Never cached, at any layer.
 #
