@@ -246,6 +246,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var ADS = "/api/google-ads-builder";
   var CAMPAIGNS = "/api/marketing-agent";
   var ADIMG = "/api/ad-image";
+  var ARCHIVE = "/api/admin-download";
   var PRODUCTS = "/api/products";
 
   var el = function (id) { return document.getElementById(id); };
@@ -301,6 +302,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  creatives [sku]   generate Google Ads product images (PNG, all 3 sizes)",
     "  creatives all     one Google Ads image file per product (whole catalog)",
     "  code            list the apps in the browser code workspace, and open it",
+  "  download [sku]  get the real product .zip directly — no Stripe, no test cards",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -326,6 +328,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  creatives                    ad images for the whole store",
     "  creatives AI-AG-058          ad images for one product",
     "  creatives all                one ad image per product, catalog-wide",
+  "  download                     list every product with a real .zip to grab",
+  "  download AI-AG-058           download that product's .zip directly",
     ""
   ].join("\n");
 
@@ -447,6 +451,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower.indexOf("creatives ") === 0) { showCreatives(raw.slice(10).trim()); return; }
     if (lower.indexOf("adimages ") === 0) { showCreatives(raw.slice(9).trim()); return; }
     if (lower === "code" || lower === "workspace" || lower === "apps") { listWorkspace(); return; }
+    if (lower === "download" || lower === "downloads") { listDownloads(""); return; }
+    if (lower.indexOf("download ") === 0) { listDownloads(raw.slice(9).trim()); return; }
     ask(raw);
   }
 
@@ -1059,7 +1065,77 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       "run <b>creatives &lt;sku&gt;</b> for a specific product.");
   }
 
-  // ---------- bulk ad creatives: one image file per product ----------
+  // Every archive download link carries the SKU as a data attribute, same
+  // delegated-click pattern as the creatives links above — one handler
+  // covers `download` and `download <sku>` output alike.
+  document.addEventListener("click", function (e) {
+    var archiveLink = e.target.closest("[data-archive-sku]");
+    if (archiveLink) {
+      e.preventDefault();
+      archiveLink.style.opacity = "0.5";
+      downloadArchive(archiveLink.dataset.archiveSku)
+        .catch(function (err) {
+          print("reply err", archiveLink.dataset.archiveSku + " — " + err.message);
+        })
+        .finally(function () { archiveLink.style.opacity = ""; });
+      return;
+    }
+  });
+
+  async function downloadArchive(sku) {
+    var r = await fetch(ARCHIVE + "?sku=" + encodeURIComponent(sku), { headers: { accept: "application/json, application/zip" } });
+    if (!r.ok) {
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      throw new Error((j && j.error) || ("error " + r.status));
+    }
+    var blob = await r.blob();
+    var cd = r.headers.get("content-disposition") || "";
+    var m = /filename="([^"]+)"/.exec(cd);
+    saveBlob(blob, m ? m[1] : (sku + ".zip"));
+  }
+
+  // `download` (no Stripe, no test cards) — the owner already has a session,
+  // so this is buildProductArchive() straight from the catalog. A product
+  // with no .zip archive (docs-only delivery, e.g. Meridian Host) 404s
+  // honestly when clicked rather than pretending to have one.
+  async function listDownloads(arg) {
+    if (busy) return;
+    var sku = (arg || "").trim().toUpperCase();
+    if (sku) {
+      printHTML("reply", "<a href='#' data-archive-sku='" + escapeHtml(sku) + "' class='cyan'>download " +
+        escapeHtml(sku) + ".zip ↓</a>");
+      return;
+    }
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading catalog");
+    try {
+      var r = await fetch(PRODUCTS, { headers: { accept: "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", (j && j.error) || ("error " + r.status)); return; }
+      var products = (j && j.products) || [];
+      if (!products.length) {
+        printHTML("sys", "no products in the catalog yet.");
+        return;
+      }
+      print("sys", "every catalog product — click one to pull its real .zip directly, no Stripe involved. " +
+        "docs-only products (no zip) will say so when clicked.");
+      var rows = products.map(function (p) {
+        return "<div style='margin:2px 0;'>" +
+          "<a href='#' data-archive-sku='" + escapeHtml(p.sku) + "' class='cyan'>" + escapeHtml(p.sku) + "</a>" +
+          " · " + escapeHtml(p.name || "") + " · $" + escapeHtml(String(p.price || "")) +
+          "</div>";
+      }).join("");
+      printHTML("reply", "<div style='margin-top:6px'>" + rows + "</div>");
+    } catch (err) {
+      thinking.remove();
+      print("reply err", "could not load the catalog — " + err.message);
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+
   // Renders a Google Ads image for EVERY product in the live catalog at once,
   // so the owner can grab a ready-to-upload PNG for each listing instead of
   // running `creatives <sku>` sixty-odd times. Each card previews the crisp SVG
