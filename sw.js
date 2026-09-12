@@ -19,7 +19,10 @@
 // copies.
 // Bumped to v10 so the installed SWARM operator at /swarm is in the app shell
 // and Chrome on Android can offer "Install app" / Add to Home screen.
-const CACHE = 'multiniche-ai-v10';
+// Bumped to v11 so returning installs drop the old privacy-consent.js that
+// painted the cookie card on first load for every visitor, including US
+// click-throughs from X.
+const CACHE = 'multiniche-ai-v11';
 const APP_SHELL = [
   '/',
   '/index.html',

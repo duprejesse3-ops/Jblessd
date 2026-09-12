@@ -14,6 +14,21 @@
     };
   }
 
+  // Same heuristic taboola-pixel.js / x-pixel.js already use: no geo round-trip.
+  // The overlay used to paint for everybody on first load, so a US click from X
+  // saw "Your privacy choices" before the proof. Consent Mode already applies
+  // the denied default only to the region list below — the banner is what
+  // didn't match.
+  function consentRequiredHere() {
+    try {
+      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      return /^(Europe|Atlantic)\//.test(zone);
+    } catch (_) {
+      return true;
+    }
+  }
+  window.consentRequiredHere = consentRequiredHere;
+
   var saved = '';
   try { saved = localStorage.getItem(STORAGE_KEY) || ''; } catch (_) {}
   window.getMarketingConsent = function () {
@@ -45,16 +60,30 @@
     if (banner) banner.remove();
   }
 
+  function fromClickThrough() {
+    try {
+      var q = String(location.search || '');
+      if (/[?&](gclid|gbraid|wbraid|fbclid|ttclid|msclkid|twclid|li_fat_id|utm_source|utm_medium|utm_campaign)=/i.test(q)) {
+        return true;
+      }
+      var ref = String(document.referrer || '');
+      return /(^https?:\/\/([^/]+\.)?(t\.co|x\.com|twitter\.com|l\.facebook\.com|lm\.facebook\.com|m\.facebook\.com|instagram\.com|reddit\.com|outbrain\.com|taboola\.com))\//i.test(ref);
+    } catch (_) {
+      return false;
+    }
+  }
+
   function showBanner() {
     if (saved || document.getElementById('privacy-consent')) return;
+    if (!consentRequiredHere()) return;
     var style = document.createElement('style');
-    style.textContent = '#privacy-consent{position:fixed;z-index:10000;left:16px;right:16px;bottom:16px;max-width:720px;margin:auto;padding:18px;border:1px solid #7d2222;border-radius:8px;background:#110807f2;color:#ffd4d4;box-shadow:0 18px 60px #000b;font:14px/1.5 system-ui,sans-serif}#privacy-consent strong{display:block;font:600 17px Georgia,serif;margin-bottom:4px}#privacy-consent p{margin:0 0 12px;color:#e9a0a0}#privacy-consent a{color:#ff6a6a}#privacy-consent .pc-actions{display:flex;gap:9px;flex-wrap:wrap}#privacy-consent button{border:1px solid #ff2a2a;border-radius:4px;padding:9px 14px;background:transparent;color:#ffd4d4;font:600 13px system-ui;cursor:pointer}#privacy-consent button[data-choice="granted"]{background:#ff2a2a;color:#0A0E16}';
+    style.textContent = '#privacy-consent{position:fixed;z-index:40;left:12px;right:12px;bottom:12px;max-width:560px;margin:auto;padding:14px 16px;border:1px solid rgba(235,230,216,0.14);border-radius:10px;background:#12151cf2;color:#e8e4d8;box-shadow:0 12px 40px #0008;font:13px/1.45 system-ui,sans-serif}#privacy-consent strong{display:block;font:600 14px Georgia,serif;margin-bottom:4px;color:#f4f0e6}#privacy-consent p{margin:0 0 10px;color:#b7b3a8}#privacy-consent a{color:#c9c4b4}#privacy-consent .pc-actions{display:flex;gap:8px;flex-wrap:wrap}#privacy-consent button{border:1px solid rgba(235,230,216,0.22);border-radius:4px;padding:8px 12px;background:transparent;color:#e8e4d8;font:600 12px system-ui;cursor:pointer}#privacy-consent button[data-choice="granted"]{background:#e8e4d8;color:#0A0E16;border-color:#e8e4d8}';
     document.head.appendChild(style);
     var banner = document.createElement('aside');
     banner.id = 'privacy-consent';
     banner.setAttribute('role', 'dialog');
     banner.setAttribute('aria-label', 'Privacy choices');
-    banner.innerHTML = '<strong>Your privacy choices</strong><p>We use analytics and advertising cookies to measure what works and improve relevant offers. You can accept or continue with only essential storage. Read our <a href="/privacy-policy/">privacy policy</a>.</p><div class="pc-actions"><button type="button" data-choice="granted">Accept analytics</button><button type="button" data-choice="denied">Essential only</button></div>';
+    banner.innerHTML = '<strong>Cookies</strong><p>Analytics and ads cookies, only if you want them. Otherwise the site still works. <a href="/privacy-policy/">Privacy policy</a>.</p><div class="pc-actions"><button type="button" data-choice="granted">Accept</button><button type="button" data-choice="denied">Essential only</button></div>';
     banner.addEventListener('click', function (event) {
       var button = event.target.closest('button[data-choice]');
       if (button) save(button.getAttribute('data-choice'));
@@ -62,6 +91,14 @@
     document.body.appendChild(banner);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showBanner);
-  else showBanner();
+  // Never the first paint. Paid/social landings wait longer so the proof is
+  // what a click sees, not a consent card sitting on the in-app browser chrome.
+  function scheduleBanner() {
+    if (saved || !consentRequiredHere()) return;
+    var delay = fromClickThrough() ? 14000 : 8000;
+    window.setTimeout(showBanner, delay);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleBanner);
+  else scheduleBanner();
 })();
