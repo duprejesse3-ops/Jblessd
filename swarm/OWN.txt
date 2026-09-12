@@ -1,0 +1,9 @@
+SWARM Intent Autopilot — SKU AI-AB-070
+© 2026 MULTINICHE AI. All rights reserved.
+
+This folder is the app. It does not live on grok-sandbox.com.
+The live operator is multinicheai.com/swarm (swarm.html).
+Source in this directory is what you build if you host it yourself.
+
+X: @DupreJesse14633
+Reddit: u/MultiNicheAI81

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SWARM · MULTINICHE AI</title>
+  <meta name="description" content="Intent-hijack operator for MULTINICHE AI. Post proof-first ads to X and Reddit. Does not depend on Grok." />
+  <meta name="theme-color" content="#0b0c0a" />
+  <link rel="manifest" href="/swarm-manifest.webmanifest" />
+  <link rel="icon" href="/icons/swarm/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/swarm/icon-192.png" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" />
+  <style>
+    :root {
+      --bg: #0b0c0a; --surface: #131511; --elevated: #1a1d17; --fg: #e6eadc;
+      --muted: #9aa18c; --subtle: #6b7264; --accent: #a8d4b0; --accent-fg: #0b0c0a;
+      --border: #2a2e26; --success: #7dba8a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Instrument Sans", system-ui, sans-serif; }
+    body { padding: 24px 16px 96px; max-width: 720px; margin: 0 auto; }
+    a { color: var(--accent); }
+    h1 { font-size: 2rem; font-weight: 500; letter-spacing: -0.03em; margin: 8px 0 0; }
+    p { color: var(--muted); line-height: 1.5; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--subtle); }
+    .card { background: var(--surface); border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,0.08); margin: 16px 0; }
+    .card img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; }
+    .pad { padding: 16px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button, .btn {
+      appearance: none; border: 0; border-radius: 10px; min-height: 44px; padding: 0 16px;
+      font: 500 14px "Instrument Sans", system-ui, sans-serif; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .primary { background: var(--accent); color: var(--accent-fg); flex: 1; }
+    .secondary { background: var(--elevated); color: var(--fg); box-shadow: 0 0 0 1px var(--border); flex: 1; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: var(--elevated); color: var(--accent); }
+    input {
+      width: 100%; min-height: 44px; border-radius: 10px; border: 0; background: var(--elevated);
+      color: var(--fg); padding: 0 12px; font: 14px "IBM Plex Mono", monospace; box-shadow: 0 0 0 1px var(--border);
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+  </style>
+</head>
+<body>
+  <p class="mono">AI-AB-070 · multinicheai.com/swarm</p>
+  <h1>SWARM</h1>
+  <p>This is the operator on <strong style="color:var(--fg)">your site</strong>. grok-sandbox can sleep. These cards post from @DupreJesse14633 and u/MultiNicheAI81.</p>
+  <div class="row" style="margin: 16px 0 8px;">
+    <button class="primary" id="install">Install SWARM</button>
+    <a class="btn secondary" href="https://multinicheai.com/?product=AI-AB-070">Buy on the site</a>
+  </div>
+  <p class="mono" id="status">Lab copy · real posts when you tap Post</p>
+  <div id="cards"></div>
+  <div class="card pad">
+    <p class="mono">Destinations</p>
+    <label for="x">X handle</label>
+    <input id="x" value="DupreJesse14633" />
+    <label for="reddit">Reddit user</label>
+    <input id="reddit" value="MultiNicheAI81" />
+    <label for="sub">Subreddit</label>
+    <input id="sub" value="smallbusiness" />
+  </div>
+  <p class="mono">© 2026 MULTINICHE AI. Source in /swarm on GitHub Jblessd.</p>
+<script>
+const ADS = [
+  { sku: "AI-AB-002", name: "Inbox Zero Automation", headline: "I am drowning in Gmail and ChatGPT is not helping", body: "2,400-email dump sorted, drafted, and flagged in 11 minutes. Not another summarizer.", proof: "11 minutes · 2,400 emails", price: 29, landing: "https://multinicheai.com/proof?utm_source=swarm&utm_medium=x&sku=AI-AB-002" },
+  { sku: "AI-AB-070", name: "SWARM Intent Autopilot", headline: "I have a catalog and no traffic", body: "Maps a pain-utterance to a SKU, spawns eight organisms, evolves winners. Not a Google Ads account.", proof: "Autopilot · local genome", price: 79, landing: "https://multinicheai.com/product/AI-AB-070?utm_source=swarm&utm_medium=x&sku=AI-AB-070" },
+  { sku: "AI-AG-003", name: "Meeting Notes Agent", headline: "I need action items from meetings, not a recap", body: "47-minute standup → 9 decisions, 6 owners, 4 dates — no summary fluff.", proof: "9 decisions · 6 owners", price: 15, landing: "https://multinicheai.com/agent?utm_source=swarm&utm_medium=x&sku=AI-AG-003" },
+  { sku: "AI-AB-005", name: "Content Calendar Autopilot", headline: "The calendar is empty and the draft pile is not", body: "Slots the week from work already done. Acid-green pins, not a slogan.", proof: "Calendar from the pile", price: 29, landing: "https://multinicheai.com/?product=AI-AB-005&utm_source=swarm" },
+  { sku: "AI-AG-020", name: "Autonomous SEO Content Agent", headline: "Buying Google ads for AI tools is a tax", body: "Answers the query they typed with a spec, not a bid.", proof: "Intercept the query", price: 39, landing: "https://multinicheai.com/?product=AI-AG-020&utm_source=swarm" }
+];
+
+function dest() {
+  return {
+    x: document.getElementById("x").value.replace(/^@/, "").trim() || "DupreJesse14633",
+    reddit: document.getElementById("reddit").value.replace(/^u\//, "").trim() || "MultiNicheAI81",
+    sub: document.getElementById("sub").value.replace(/^r\//, "").trim() || "smallbusiness"
+  };
+}
+
+function tweet(ad) {
+  const t = `${ad.headline}\n\n${ad.body}\n\n${ad.landing}`;
+  return "https://twitter.com/intent/tweet?text=" + encodeURIComponent(t.slice(0, 280));
+}
+function reddit(ad) {
+  const d = dest();
+  const body = `${ad.body}\n\nProof: ${ad.proof}\n\n${ad.landing}\n\n— u/${d.reddit}`;
+  return `https://www.reddit.com/r/${encodeURIComponent(d.sub)}/submit?title=${encodeURIComponent(ad.headline)}&text=${encodeURIComponent(body)}`;
+}
+
+const root = document.getElementById("cards");
+ADS.forEach((ad) => {
+  const el = document.createElement("article");
+  el.className = "card";
+  el.innerHTML = `
+    <img src="/icons/swarm/${ad.sku}.jpg" alt="${ad.name}" />
+    <div class="pad">
+      <span class="badge">${ad.sku}</span>
+      <h2 style="margin:8px 0 4px;font-size:1.05rem;font-weight:500">${ad.headline}</h2>
+      <p style="margin:0 0 8px;font-size:14px">${ad.body}</p>
+      <p class="mono">${ad.name} · $${ad.price} one-time</p>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" data-x>Post on X</button>
+        <button class="secondary" data-r>Post Reddit</button>
+      </div>
+    </div>`;
+  el.querySelector("[data-x]").onclick = () => window.open(tweet(ad), "_blank", "noopener");
+  el.querySelector("[data-r]").onclick = () => window.open(reddit(ad), "_blank", "noopener");
+  root.appendChild(el);
+});
+
+let deferred = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
+document.getElementById("install").onclick = async () => {
+  if (deferred) { await deferred.prompt(); return; }
+  alert("Chrome menu → Install app / Add to Home screen. Use this URL, not grok-sandbox.");
+};
+</script>
+</body>
+</html>

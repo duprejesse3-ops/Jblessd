@@ -1,0 +1,25 @@
+{
+  "name": "SWARM",
+  "short_name": "SWARM",
+  "description": "Intent-hijack ad organism for MULTINICHE AI. Intercept demand that already exists.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0c0a",
+  "theme_color": "#0b0c0a",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

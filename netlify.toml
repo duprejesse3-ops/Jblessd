@@ -192,6 +192,37 @@
   to = "/agent.html"
   status = 200
 
+# SWARM operator — lives in this repo, not grok-sandbox. Rewrite so
+# multinicheai.com/swarm stays up with the store.
+[[redirects]]
+  from = "/swarm"
+  to = "/swarm.html"
+  status = 200
+
+[[redirects]]
+  from = "/swarm/"
+  to = "/swarm.html"
+  status = 200
+
+# Hide the nested source tree. Product stills are under /icons/swarm/.
+[[redirects]]
+  from = "/swarm/src/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/swarm/scripts/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/swarm/package.json"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # Private owner-only AI workstation. Served at the clean /admin URL; the page
 # itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
 # session is established, so a public rewrite is safe.

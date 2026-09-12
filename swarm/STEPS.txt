@@ -1,0 +1,5 @@
+1. The site already ships SWARM. Open https://multinicheai.com/swarm
+2. Chrome → Install app. That home-screen icon is yours. Grok can sleep.
+3. Tap Post on X or Post Reddit on a card. Compose opens filled. You hit Post.
+4. Source in this folder is the full operator if you want to run it on a Pi / Vercel.
+5. Product stills live at /icons/swarm/{SKU}.jpg
