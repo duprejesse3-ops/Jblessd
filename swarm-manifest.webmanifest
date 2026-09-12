@@ -1,14 +1,43 @@
 {
+  "id": "/swarm",
   "name": "SWARM",
   "short_name": "SWARM",
-  "description": "Intent-hijack operator for MULTINICHE AI",
-  "start_url": "/swarm",
+  "description": "Intent-hijack operator for MULTINICHE AI. Intercept demand that already exists.",
+  "start_url": "/swarm?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
   "background_color": "#0b0c0a",
   "theme_color": "#0b0c0a",
+  "categories": ["productivity", "business"],
+  "lang": "en",
   "icons": [
-    { "src": "/icons/swarm/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/swarm/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/swarm/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/swarm/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Post on X",
+      "short_name": "X",
+      "url": "/swarm?source=pwa#cards",
+      "icons": [{ "src": "/icons/swarm/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

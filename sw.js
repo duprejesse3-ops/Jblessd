@@ -17,20 +17,27 @@
 // every existing install (PWA and any lingering TWA) to drop its old cache and
 // refetch the app shell and icons rather than continuing to serve pre-migration
 // copies.
-const CACHE = 'multiniche-ai-v9';
+// Bumped to v10 so the installed SWARM operator at /swarm is in the app shell
+// and Chrome on Android can offer "Install app" / Add to Home screen.
+const CACHE = 'multiniche-ai-v10';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/agent',
+  '/swarm',
+  '/swarm.html',
   '/privacy-consent.js',
   '/marketing-measurement.js',
   '/install-app.js',
   '/manifest.webmanifest',
+  '/swarm-manifest.webmanifest',
   '/icons/logo.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
-  '/icons/apple-touch-icon.png'
+  '/icons/apple-touch-icon.png',
+  '/icons/swarm/icon-192.png',
+  '/icons/swarm/icon-512.png'
 ];
 
 // Pre-cache the app shell on install.
@@ -132,17 +139,19 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     const isHome = url.pathname === '/' || url.pathname === '/index.html';
     const isAgent = url.pathname === '/agent' || url.pathname === '/agent.html';
+    const isSwarm = url.pathname === '/swarm' || url.pathname === '/swarm.html';
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (isHome || isAgent) {
+          if (isHome || isAgent || isSwarm) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(isAgent ? '/agent' : '/', copy));
+            const key = isSwarm ? '/swarm' : isAgent ? '/agent' : '/';
+            caches.open(CACHE).then((c) => c.put(key, copy));
           }
           return res;
         })
         .catch(() => {
-          const shell = isAgent ? ['/agent', '/'] : ['/', '/index.html'];
+          const shell = isSwarm ? ['/swarm', '/swarm.html'] : isAgent ? ['/agent', '/'] : ['/', '/index.html'];
           return caches.match(shell[0]).then((r) => r || caches.match(shell[1]));
         })
     );

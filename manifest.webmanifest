@@ -16,6 +16,13 @@
   "dir": "ltr",
   "shortcuts": [
     {
+      "name": "SWARM",
+      "short_name": "SWARM",
+      "description": "Intent-hijack operator. Post proof-first ads to X and Reddit.",
+      "url": "/swarm?source=pwa",
+      "icons": [{ "src": "/icons/swarm/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
       "name": "Claude Agent Studio",
       "short_name": "Agent studio",
       "description": "Brief a Claude agent on real work and pay per run with prepaid credits.",

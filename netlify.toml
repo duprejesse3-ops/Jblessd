@@ -371,6 +371,12 @@
     Content-Type = "application/manifest+json"
     Cache-Control = "public, max-age=0, must-revalidate"
 
+[[headers]]
+  for = "/swarm-manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # App icons can be cached aggressively.
 [[headers]]
   for = "/icons/*"

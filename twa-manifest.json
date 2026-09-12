@@ -23,7 +23,14 @@
   },
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
-  "shortcuts": [],
+  "shortcuts": [
+    {
+      "name": "SWARM",
+      "shortName": "SWARM",
+      "url": "/swarm?source=twa",
+      "icon": { "src": "https://multinicheai.com/icons/swarm/icon-192.png", "sizes": "192x192", "type": "image/png" }
+    }
+  ],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://multinicheai.com/manifest.webmanifest",
   "fallbackType": "customtabs",
