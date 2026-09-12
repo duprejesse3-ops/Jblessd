@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1b0404"/>
-      <stop offset="1" stop-color="#0a0400"/>
+      <stop offset="0" stop-color="#121826"/>
+      <stop offset="1" stop-color="#0a0e16"/>
     </linearGradient>
     <radialGradient id="glow" cx="30%" cy="42%" r="75%">
-      <stop offset="0" stop-color="#ff2a2a" stop-opacity=".10"/>
-      <stop offset="1" stop-color="#ff2a2a" stop-opacity="0"/>
+      <stop offset="0" stop-color="#22d3b0" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#22d3b0" stop-opacity="0"/>
     </radialGradient>
     <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="1.1"/>
@@ -17,14 +17,14 @@
   <rect width="1200" height="630" fill="url(#glow)"/>
 
   <!-- corner frame brackets -->
-  <g stroke="#e03a3a" stroke-width="3" fill="none" opacity=".55">
+  <g stroke="#22d3b0" stroke-width="3" fill="none" opacity=".55">
     <path d="M40 74 V40 H74"/>
     <path d="M1160 74 V40 H1126"/>
     <path d="M40 556 V590 H74"/>
     <path d="M1160 556 V590 H1126"/>
   </g>
 
-  <!-- brand mark: engineered M monogram + cursor -->
+  <!-- brand mark: engineered M monogram + cursor (kept red — see note above) -->
   <g transform="translate(56,62)">
     <rect x="0" y="0" width="78" height="78" rx="16" fill="none" stroke="#ff2a2a" stroke-width="3" opacity=".85"/>
     <g fill="none" stroke="#ff2a2a" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#soft)">
@@ -34,21 +34,21 @@
   </g>
 
   <!-- brand lockup -->
-  <text x="156" y="102" font-family="DejaVu Sans Mono, monospace" font-size="34" font-weight="bold" letter-spacing="6" fill="#ffe8e8">MULTINICHE AI</text>
-  <text x="158" y="130" font-family="DejaVu Sans Mono, monospace" font-size="15" letter-spacing="7" fill="#e03a3a" opacity=".8">LOAD THE TOOL YOU NEED</text>
+  <text x="156" y="102" font-family="DejaVu Sans Mono, monospace" font-size="34" font-weight="bold" letter-spacing="6" fill="#eef1f7">MULTINICHE AI</text>
+  <text x="158" y="130" font-family="DejaVu Sans Mono, monospace" font-size="15" letter-spacing="7" fill="#ffb020" opacity=".8">LOAD THE TOOL YOU NEED</text>
 
   <!-- kicker -->
-  <text x="60" y="234" font-family="DejaVu Sans Mono, monospace" font-size="24" font-weight="bold" letter-spacing="6" fill="#ff2a2a">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>
+  <text x="60" y="234" font-family="DejaVu Sans Mono, monospace" font-size="24" font-weight="bold" letter-spacing="6" fill="#ffb020">&gt; JACK IN — AI PRODUCTIVITY INSTRUMENTS</text>
 
   <!-- headline -->
-  <g font-family="DejaVu Sans Mono, monospace" font-size="52" font-weight="bold" fill="#ffdfdf">
+  <g font-family="DejaVu Sans Mono, monospace" font-size="52" font-weight="bold" fill="#eef1f7">
     <text x="58" y="318">Prompt packs, automations,</text>
     <text x="58" y="388">and agent configs — built once,</text>
-    <text x="58" y="458" fill="#ff2a2a">sold as instruments.</text>
+    <text x="58" y="458" fill="#22d3b0">sold as instruments.</text>
   </g>
 
   <!-- footer -->
-  <line x1="58" y1="540" x2="1142" y2="540" stroke="#7a1f1f" stroke-width="2" opacity=".6"/>
-  <text x="58" y="576" font-family="DejaVu Sans Mono, monospace" font-size="19" font-weight="bold" letter-spacing="3" fill="#e03a3a" opacity=".85">PROMPT PACKS • AUTOMATION BLUEPRINTS • DOC TEMPLATES • AGENT CONFIGS</text>
-  <text x="58" y="606" font-family="DejaVu Sans Mono, monospace" font-size="17" letter-spacing="2" fill="#7a1f1f">multinicheai.com</text>
+  <line x1="58" y1="540" x2="1142" y2="540" stroke="#5c6580" stroke-width="2" opacity=".6"/>
+  <text x="58" y="576" font-family="DejaVu Sans Mono, monospace" font-size="19" font-weight="bold" letter-spacing="3" fill="#22d3b0" opacity=".85">PROMPT PACKS • AUTOMATION BLUEPRINTS • DOC TEMPLATES • AGENT CONFIGS</text>
+  <text x="58" y="606" font-family="DejaVu Sans Mono, monospace" font-size="17" letter-spacing="2" fill="#5c6580">multinicheai.com</text>
 </svg>
