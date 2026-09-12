@@ -571,5 +571,57 @@
   renderLog();
 })();
 </script>
+<script>
+// First-party landing beacon — same beacon Index.html and agent.html fire,
+// added here because this page (the "proof" channel's landing target, and
+// SWARM's highest-CTR channel by design) had no attribution tracking at all:
+// visits carrying utm_source=swarm arrived and were never recorded in
+// ad_events, so /api/swarm-performance had nothing to report for this
+// channel. See trackLanding() in Index.html for the fuller version this is
+// copied from.
+(function(){
+  var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  function deviceHint(){
+    try{
+      var w = window.innerWidth || (screen && screen.width) || 0;
+      if(w > 0 && w < 768) return 'mobile';
+      if(w >= 768 && w < 1024) return 'tablet';
+      return 'desktop';
+    }catch(e){ return null; }
+  }
+  try{
+    var params = new URLSearchParams(window.location.search);
+    var clickId = null, clickSource = null;
+    for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+      var v = params.get(CLICK_ID_PARAMS[i]);
+      if(v){ clickId = v.slice(0, 200); clickSource = CLICK_ID_PARAMS[i]; break; }
+    }
+    var hasUtm = UTM_PARAMS.some(function(p){ return params.get(p); });
+    if(clickId || hasUtm){
+      var referrerHost = null;
+      try{ if(document.referrer){ referrerHost = new URL(document.referrer).hostname; } }catch(e){}
+      var payload = {
+        clickId: clickId || undefined,
+        clickSource: clickSource || undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmTerm: params.get('utm_term') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        landingPath: (window.location.pathname || '/').slice(0, 512),
+        referrerHost: referrerHost || undefined,
+        device: deviceHint() || undefined
+      };
+      var body = JSON.stringify(payload);
+      if(navigator.sendBeacon){
+        navigator.sendBeacon('/api/track-landing', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/track-landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function(){});
+      }
+    }
+  }catch(e){ /* analytics is best-effort; never block the page */ }
+})();
+</script>
 </body>
 </html>

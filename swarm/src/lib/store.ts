@@ -16,6 +16,7 @@ import {
 import type { Activity, Destinations, GeneratedCopy, IntentPulse, LiveHit, Organism, Swarm } from "./types";
 import { uid } from "./utils";
 import { DEFAULT_DESTINATIONS } from "./deploy";
+import { applyRealPerformance, fetchRealPerformance, registerOrganism } from "./real-performance";
 
 type SwarmState = {
   hydrated: boolean;
@@ -29,12 +30,14 @@ type SwarmState = {
   lastAutoHijackAt: number;
   lastAutoEvolveAt: number;
   lastLiveScanAt: number;
+  lastRealSyncAt: number;
   destinations: Destinations;
   setHydrated: () => void;
   select: (id: string | null) => void;
   toggleRun: (swarmId: string) => void;
   setAutopilot: (on: boolean) => void;
   tick: (hours?: number) => void;
+  syncRealPerformance: () => Promise<void>;
   listen: () => void;
   autoStep: () => void;
   hijack: (opts: {
@@ -83,6 +86,7 @@ function initial(): Pick<
   | "lastAutoHijackAt"
   | "lastAutoEvolveAt"
   | "lastLiveScanAt"
+  | "lastRealSyncAt"
   | "destinations"
 > {
   return {
@@ -103,6 +107,7 @@ function initial(): Pick<
     lastAutoHijackAt: 0,
     lastAutoEvolveAt: 0,
     lastLiveScanAt: 0,
+    lastRealSyncAt: 0,
     destinations: { ...DEFAULT_DESTINATIONS },
   };
 }
@@ -152,6 +157,32 @@ export const useSwarmStore = create<SwarmState>()(
         if (next === organisms) return;
         set({ organisms: markChampions(cullDuplicates(next)), swarms: nextSwarms });
       },
+      // Replaces "live" organisms' frozen simulated stats with what their
+      // posts actually did on multinicheai.com (real landings/purchases from
+      // ad_events, via /api/swarm-performance). Best-effort: a fetch failure
+      // (offline, endpoint down) just means fitness stays on its last known
+      // value — never throws into the autopilot loop.
+      syncRealPerformance: async () => {
+        try {
+          const real = await fetchRealPerformance();
+          const { organisms } = get();
+          const priceOf = (sku: string) => productBySku(sku)?.price ?? 29;
+          const next = applyRealPerformance(organisms, real, priceOf);
+          if (next === organisms) return;
+          const changed = next.some((o, i) => o !== organisms[i]);
+          if (!changed) return;
+          set((s) => ({
+            organisms: markChampions(next),
+            lastRealSyncAt: Date.now(),
+            activities: [
+              log("real", "Synced real performance from multinicheai.com."),
+              ...s.activities,
+            ].slice(0, 24),
+          }));
+        } catch {
+          // offline or endpoint unreachable — leave stats as they were
+        }
+      },
       listen: () =>
         set((s) => {
           const pulse = livePulse(s.pulseCursor + 1);
@@ -190,6 +221,10 @@ export const useSwarmStore = create<SwarmState>()(
         if (pulse && after.swarms.length < 5 && now - after.lastAutoHijackAt > 18000) {
           get().hijack({ sku: pulse.sku, intent: pulse.text });
           set({ lastAutoHijackAt: now });
+        }
+        if (now - after.lastRealSyncAt > 60000 && after.organisms.some((o) => o.status === "live")) {
+          set({ lastRealSyncAt: now }); // claim the slot before the await so overlapping ticks don't double-fire
+          void get().syncRealPerformance();
         }
       },
       hijack: ({ sku, intent, copies, name }) => {
@@ -282,6 +317,7 @@ export const useSwarmStore = create<SwarmState>()(
         set((s) => {
           const org = s.organisms.find((o) => o.id === id);
           if (!org || org.status === "killed") return s;
+          void registerOrganism(org);
           return {
             selectedId: id,
             organisms: s.organisms.map((o) =>
@@ -354,6 +390,7 @@ export const useSwarmStore = create<SwarmState>()(
         lastAutoHijackAt: s.lastAutoHijackAt,
         lastAutoEvolveAt: s.lastAutoEvolveAt,
         lastLiveScanAt: s.lastLiveScanAt,
+        lastRealSyncAt: s.lastRealSyncAt,
         destinations: s.destinations ?? DEFAULT_DESTINATIONS,
       }),
       merge: (persisted, current) => {

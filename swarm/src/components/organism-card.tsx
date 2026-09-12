@@ -28,6 +28,7 @@ export function OrganismCard({
   const dest = destOf(destinations);
   const dead = organism.status === "killed";
   const shipped = organism.status === "live";
+  const verified = organism.verifiedLandings != null && organism.verifiedLandings > 0;
   const targets = dead ? [] : deployTargets(organism, dest).slice(0, 2);
 
   async function post(target: DeployTarget, event: MouseEvent) {
@@ -75,6 +76,11 @@ export function OrganismCard({
                 <span className="min-w-0 font-mono text-[10px] uppercase tracking-widest text-subtle">
                   {channelLabel(organism.channel)} · gen {organism.generation}
                 </span>
+                {verified ? (
+                  <Badge variant="accent" title={`Real data as of ${organism.verifiedAt}`}>
+                    verified
+                  </Badge>
+                ) : null}
               </div>
               <h3 className="mt-2 text-sm font-medium leading-snug break-words">{organism.headline}</h3>
               <p className="mt-1 line-clamp-2 text-xs text-muted break-words">{organism.body}</p>
@@ -85,8 +91,16 @@ export function OrganismCard({
             </div>
           </div>
           <div className="mt-3 grid grid-cols-4 gap-2 font-mono text-[11px] tabular-nums text-muted">
-            {shipped ? (
-              <span className="col-span-4 text-success">Shipped · tap Post again to reshare</span>
+            {shipped && verified ? (
+              <>
+                <span className="col-span-2 text-success">
+                  {formatCompact(organism.verifiedLandings ?? 0)} real landings
+                </span>
+                <span>{organism.conversions} conv</span>
+                <span>{formatMoney(organism.verifiedRevenue ?? 0)}</span>
+              </>
+            ) : shipped ? (
+              <span className="col-span-4 text-success">Shipped · waiting on real traffic</span>
             ) : (
               <>
                 <span>{formatCompact(organism.impressions)} imp</span>
