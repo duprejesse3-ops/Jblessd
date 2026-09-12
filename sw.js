@@ -24,7 +24,9 @@
 // click-throughs from X.
 // Bumped to v12 so the installed SWARM composer stops opening r/smallbusiness
 // feed posts (those get removed as AI promo and can ban the account).
-const CACHE = 'multiniche-ai-v12';
+// Bumped to v13 so returning installs pick up the always-visible Download
+// button that installs in Chrome in-app (or hands X/Grok to Chrome).
+const CACHE = 'multiniche-ai-v13';
 const APP_SHELL = [
   '/',
   '/index.html',

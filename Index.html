@@ -888,9 +888,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
         <span class="btn-label">Agent studio</span>
       </a>
-      <!-- Revealed by install-app.js only once the browser confirms the app can be
-           installed (Chrome, Edge, Android), so it is never a dead control. -->
-      <button class="btn" id="install-app" type="button" aria-label="Install app" hidden>
+      <!-- Always visible. install-app.js installs in Chrome in this window, or
+           hands X/Grok in-app browsers to Chrome. Hidden-until-prompt was a dead control. -->
+      <button class="btn" id="install-app" type="button" aria-label="Install app">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
         <span class="install-label">Install app</span>
       </button>

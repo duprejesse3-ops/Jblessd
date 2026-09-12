@@ -62,12 +62,13 @@
   <div class="card pad" id="android-card">
     <p class="mono">Android app</p>
     <h2 style="margin:8px 0 8px;font-size:1.15rem;font-weight:500">Download SWARM to this phone</h2>
-    <p style="margin:0 0 12px">Chrome installs it as a real app icon — home screen, app drawer, no Play Store, no Grok. Open this page in Chrome (not the Grok in-app browser).</p>
-    <button class="primary" id="install-app" type="button" hidden>Download Android app</button>
-    <ol id="android-steps" style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6">
-      <li>Tap the Chrome menu (⋮) at the top right.</li>
-      <li>Tap <strong style="color:var(--fg)">Install app</strong> or <strong style="color:var(--fg)">Add to Home screen</strong>.</li>
-      <li>Tap Add. SWARM appears with the other apps. Open it from there.</li>
+    <p style="margin:0 0 12px">One tap. In Chrome it installs in this window — home screen, app drawer, no Play Store. In X or Grok it opens Chrome and installs there.</p>
+    <button class="primary" id="install-app" type="button">Download Android app</button>
+    <p class="mono" id="install-status" hidden style="margin-top:12px"></p>
+    <ol id="android-steps" hidden style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6">
+      <li>If Chrome did not open, switch to Chrome and open multinicheai.com/swarm.</li>
+      <li>Tap <strong style="color:var(--fg)">Download Android app</strong> again.</li>
+      <li>Accept the install sheet. SWARM appears with the other apps.</li>
     </ol>
     <p class="mono" id="installed-note" hidden style="color:var(--success);margin-top:12px">Installed · you are in the app window</p>
   </div>
