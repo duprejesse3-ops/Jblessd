@@ -111,7 +111,7 @@ setup_shop() {
 
   log "installing dependencies (first run is the slow one)"
   ( cd "$shop" && npm ci --omit=dev --no-audit --no-fund )
-  ( cd "$shop" && npm --prefix container ci --no-audit --no-fund )
+  ( cd "$shop/container" && npm ci --no-audit --no-fund )
 
   if [ ! -f "$shop/container/.env" ]; then
     local admin_pass db_url
