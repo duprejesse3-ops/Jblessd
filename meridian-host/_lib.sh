@@ -41,10 +41,10 @@ ensure_postgres() {
   need_root "$1"
   if ! command -v psql >/dev/null 2>&1; then
     log "installing postgresql"
-    apt-get update -y
-    apt-get install -y postgresql
+    apt-get update -y >&2
+    apt-get install -y postgresql >&2
   fi
-  systemctl enable --now postgresql
+  systemctl enable --now postgresql >&2
 
   local pass_file="/root/.multinicheai-db-password"
   local dbpass
@@ -56,10 +56,19 @@ ensure_postgres() {
     chmod 600 "$pass_file"
   fi
 
+  # This whole function's stdout is captured via command substitution
+  # (db_url="$(ensure_postgres ...)"), so every command above sends its
+  # normal output to stderr (>&2) instead — apt/systemctl/psql all print
+  # real, useful progress text on success, not just on failure, and any of
+  # it leaking into $db_url corrupts the DATABASE_URL line written into
+  # container/.env (this broke setup_shop the first time exactly this way:
+  # psql's "CREATE ROLE"/"CREATE DATABASE" confirmations and systemctl's
+  # "Created symlink..." line ended up as literal, unquoted text inside
+  # container/.env, which then failed to source as shell).
   sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='multinicheai'" | grep -q 1 \
-    || sudo -u postgres psql -c "CREATE ROLE multinicheai LOGIN PASSWORD '$dbpass'"
+    || sudo -u postgres psql -c "CREATE ROLE multinicheai LOGIN PASSWORD '$dbpass'" >/dev/null
   sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='multinicheai'" | grep -q 1 \
-    || sudo -u postgres psql -c "CREATE DATABASE multinicheai OWNER multinicheai"
+    || sudo -u postgres psql -c "CREATE DATABASE multinicheai OWNER multinicheai" >/dev/null
 
   echo "postgres://multinicheai:${dbpass}@127.0.0.1:5432/multinicheai"
 }
