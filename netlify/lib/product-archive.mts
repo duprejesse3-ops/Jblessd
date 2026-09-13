@@ -15,6 +15,7 @@ import { INCIDENT_POSTMORTEM_SOURCE } from './incident-postmortem-source.mjs'
 import { CODE_REVIEW_DIGEST_SOURCE } from './code-review-digest-source.mjs'
 import { RELEASE_NOTES_BOT_SOURCE } from './release-notes-bot-source.mjs'
 import { ARCHITECTURE_DIAGRAM_SYNC_SOURCE } from './architecture-diagram-sync-source.mjs'
+import { MERIDIAN_HOST_SOURCE } from './meridian-host-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
 import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
@@ -38,6 +39,19 @@ const POSTMORTEM_EXECUTABLE = new Set(['bin/postmortem.mjs', 'adapters/pagerduty
 const DIGEST_EXECUTABLE = new Set(['bin/digest.mjs'])
 const RELEASE_NOTES_EXECUTABLE = new Set(['bin/release-notes.mjs'])
 const DIAGRAM_SYNC_EXECUTABLE = new Set(['bin/diagram-sync.mjs'])
+const MERIDIAN_HOST_EXECUTABLE = new Set([
+  'multinicheai',
+  '_lib.sh',
+  'from-github.sh',
+  'firewall.sh',
+  'laptop.sh',
+  'bootstrap.sh',
+  'forward.sh',
+  'share.sh',
+  'install.sh',
+  'uninstall.sh',
+  'run.sh',
+])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
@@ -67,6 +81,7 @@ const POSTMORTEM_ROOT = 'incident-postmortem-automation'
 const DIGEST_ROOT = 'code-review-digest'
 const RELEASE_NOTES_ROOT = 'release-notes-bot'
 const DIAGRAM_SYNC_ROOT = 'architecture-diagram-sync'
+const MERIDIAN_HOST_ROOT = 'meridian-host'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -105,6 +120,14 @@ function diagramSyncFiles(): ArchiveFile[] {
     path: `${DIAGRAM_SYNC_ROOT}/${file.path}`,
     contents: file.contents,
     executable: DIAGRAM_SYNC_EXECUTABLE.has(file.path),
+  }))
+}
+
+function meridianHostFiles(): ArchiveFile[] {
+  return MERIDIAN_HOST_SOURCE.map((file) => ({
+    path: `${MERIDIAN_HOST_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: MERIDIAN_HOST_EXECUTABLE.has(file.path),
   }))
 }
 
@@ -178,6 +201,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-AB-013': { filename: 'code-review-digest.zip', files: digestFiles },
   'AI-AB-028': { filename: 'release-notes-bot.zip', files: releaseNotesFiles },
   'AI-AB-034': { filename: 'architecture-diagram-sync.zip', files: diagramSyncFiles },
+  'AI-HOST-001': { filename: 'meridian-host.zip', files: meridianHostFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
   'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
   'AI-CN-003': { filename: 'multiconnect-sheets-airtable.zip', files: sheetsFiles },
