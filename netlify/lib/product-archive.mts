@@ -12,6 +12,9 @@
 
 import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
 import { INCIDENT_POSTMORTEM_SOURCE } from './incident-postmortem-source.mjs'
+import { CODE_REVIEW_DIGEST_SOURCE } from './code-review-digest-source.mjs'
+import { RELEASE_NOTES_BOT_SOURCE } from './release-notes-bot-source.mjs'
+import { ARCHITECTURE_DIAGRAM_SYNC_SOURCE } from './architecture-diagram-sync-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
 import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
@@ -32,6 +35,9 @@ export interface ProductArchive {
 // top-level directory is prefixed on.
 const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
 const POSTMORTEM_EXECUTABLE = new Set(['bin/postmortem.mjs', 'adapters/pagerduty-webhook.mjs', 'install.sh'])
+const DIGEST_EXECUTABLE = new Set(['bin/digest.mjs'])
+const RELEASE_NOTES_EXECUTABLE = new Set(['bin/release-notes.mjs'])
+const DIAGRAM_SYNC_EXECUTABLE = new Set(['bin/diagram-sync.mjs'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
@@ -58,6 +64,9 @@ const WITNESS_ROOT = 'multiwitness'
 const GUARD_ROOT = 'multiguard'
 const MULTIBOT_ROOT = 'multibot'
 const POSTMORTEM_ROOT = 'incident-postmortem-automation'
+const DIGEST_ROOT = 'code-review-digest'
+const RELEASE_NOTES_ROOT = 'release-notes-bot'
+const DIAGRAM_SYNC_ROOT = 'architecture-diagram-sync'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -72,6 +81,30 @@ function postmortemFiles(): ArchiveFile[] {
     path: `${POSTMORTEM_ROOT}/${file.path}`,
     contents: file.contents,
     executable: POSTMORTEM_EXECUTABLE.has(file.path),
+  }))
+}
+
+function digestFiles(): ArchiveFile[] {
+  return CODE_REVIEW_DIGEST_SOURCE.map((file) => ({
+    path: `${DIGEST_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: DIGEST_EXECUTABLE.has(file.path),
+  }))
+}
+
+function releaseNotesFiles(): ArchiveFile[] {
+  return RELEASE_NOTES_BOT_SOURCE.map((file) => ({
+    path: `${RELEASE_NOTES_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: RELEASE_NOTES_EXECUTABLE.has(file.path),
+  }))
+}
+
+function diagramSyncFiles(): ArchiveFile[] {
+  return ARCHITECTURE_DIAGRAM_SYNC_SOURCE.map((file) => ({
+    path: `${DIAGRAM_SYNC_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: DIAGRAM_SYNC_EXECUTABLE.has(file.path),
   }))
 }
 
@@ -142,6 +175,9 @@ function multibotFiles(): ArchiveFile[] {
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-AB-037': { filename: 'incident-postmortem-automation.zip', files: postmortemFiles },
+  'AI-AB-013': { filename: 'code-review-digest.zip', files: digestFiles },
+  'AI-AB-028': { filename: 'release-notes-bot.zip', files: releaseNotesFiles },
+  'AI-AB-034': { filename: 'architecture-diagram-sync.zip', files: diagramSyncFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
   'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
   'AI-CN-003': { filename: 'multiconnect-sheets-airtable.zip', files: sheetsFiles },

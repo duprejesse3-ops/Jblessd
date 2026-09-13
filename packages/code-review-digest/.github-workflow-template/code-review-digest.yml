@@ -1,0 +1,43 @@
+# Copy this file to .github/workflows/code-review-digest.yml in the repo you
+# want digests for (this exact path — GitHub only runs workflows from
+# .github/workflows/). Also copy the bin/ and lib/ folders somewhere in that
+# repo (e.g. into a tools/code-review-digest/ directory) and adjust the
+# `working-directory` / script path below to match where you put them.
+#
+# Two repo secrets required (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY   your own key from console.anthropic.com
+#   SLACK_WEBHOOK_URL   Slack -> Apps -> Incoming Webhooks
+#
+# GITHUB_TOKEN needs no secret — Actions provides it automatically. The
+# `permissions:` block below is the minimum this needs; GitHub defaults new
+# repos to read-only tokens already, but this makes the requirement explicit
+# rather than relying on an org-wide default that could change.
+
+name: Code review digest
+
+on:
+  schedule:
+    - cron: '0 14 * * 1-5' # 14:00 UTC, weekdays — adjust to your team's morning
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab too
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run digest
+        working-directory: tools/code-review-digest # <- adjust to wherever you put lib/ and bin/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: node bin/digest.mjs

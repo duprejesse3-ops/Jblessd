@@ -1,0 +1,66 @@
+# Copy to .github/workflows/release-notes-bot.yml. Copy bin/ and lib/
+# somewhere in the repo too (adjust `working-directory` below to match).
+#
+# Fires when you publish a GitHub Release (draft or auto-generated release
+# notes both work as the trigger — this replaces what you'd write there).
+# Finds every PR merged since the previous tag, drafts a customer changelog
+# entry and an internal Slack summary, commits CHANGELOG.md, and updates the
+# release body — then posts to Slack.
+#
+# Secrets required (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY   your own key from console.anthropic.com
+#   SLACK_WEBHOOK_URL   Slack -> Apps -> Incoming Webhooks
+#
+# `contents: write` is needed (not just read) because this commits
+# CHANGELOG.md back to the branch and edits the release — a stricter scope
+# than code-review-digest or architecture-diagram-sync need.
+
+name: Release notes bot
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history — needed to diff against the previous tag
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Find previous tag
+        id: prev
+        run: |
+          CURRENT="${GITHUB_REF_NAME}"
+          PREVIOUS=$(git describe --tags --abbrev=0 "${CURRENT}^" 2>/dev/null || echo "")
+          echo "previous=${PREVIOUS}" >> "$GITHUB_OUTPUT"
+
+      - name: Draft release notes
+        working-directory: tools/release-notes-bot # <- adjust to wherever you put lib/ and bin/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CHANGELOG_PATH: ${{ github.workspace }}/CHANGELOG.md
+        run: node bin/release-notes.mjs "${{ steps.prev.outputs.previous }}" "${{ github.ref_name }}" > /tmp/release-notes.md
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git config user.name "release-notes-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet && echo "No changelog changes to commit" || git commit -m "docs: changelog for ${{ github.ref_name }}"
+          git push origin HEAD:main
+
+      - name: Update release body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --notes-file /tmp/release-notes.md

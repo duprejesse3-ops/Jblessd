@@ -1,0 +1,49 @@
+# Copy to .github/workflows/architecture-diagram-sync.yml. Copy bin/ and
+# lib/ somewhere in the repo too (adjust `working-directory` below).
+#
+# Runs on every push to main, scans the repo's real structure, and
+# regenerates docs/architecture.md. Commits only if the diagram actually
+# changed — a push that doesn't touch cross-directory imports produces no
+# commit, so this doesn't create noise on every merge.
+#
+# One secret required:
+#   ANTHROPIC_API_KEY   your own key from console.anthropic.com
+
+name: Architecture diagram sync
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  diagram-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate diagram
+        id: sync
+        working-directory: tools/architecture-diagram-sync # <- adjust to wherever you put lib/ and bin/
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REPO_ROOT: ${{ github.workspace }}
+          DIAGRAM_PATH: ${{ github.workspace }}/docs/architecture.md
+        run: |
+          RESULT=$(node bin/diagram-sync.mjs)
+          echo "result=${RESULT}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit if changed
+        if: steps.sync.outputs.result == 'changed'
+        run: |
+          git config user.name "architecture-diagram-sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/architecture.md
+          git commit -m "docs: regenerate architecture diagram [skip ci]"
+          git push origin HEAD:main
