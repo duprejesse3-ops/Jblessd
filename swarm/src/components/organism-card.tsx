@@ -43,7 +43,13 @@ export function OrganismCard({
   return (
     <article
       className={cn(
-        "w-full max-w-full overflow-hidden rounded-xl text-left shadow-[var(--shadow-border)] transition-[box-shadow,background-color] duration-150",
+        // shrink-0: this card sits inside studio.tsx's max-h-[70vh]
+        // overflow-auto flex column. Without it, flexbox shrinks every card
+        // toward zero height to force them all to fit instead of letting
+        // the container scroll — which is what overflow-auto was there for
+        // in the first place. That's what was squashing every card (image
+        // and text both) down to a sliver in Studio.
+        "w-full max-w-full shrink-0 overflow-hidden rounded-xl text-left shadow-[var(--shadow-border)] transition-[box-shadow,background-color] duration-150",
         selected ? "bg-elevated shadow-[var(--shadow-border-hover)]" : "bg-surface",
         dead && "opacity-50",
       )}

@@ -2,18 +2,21 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-bg: #0b0c0a;
-  --color-surface: #131511;
-  --color-elevated: #1a1d17;
-  --color-fg: #e6eadc;
-  --color-muted: #9aa18c;
-  --color-subtle: #6b7264;
-  --color-accent: #a8d4b0;
-  --color-accent-fg: #0b0c0a;
-  --color-border: #2a2e26;
-  --color-danger: #d4786a;
-  --color-success: #7dba8a;
-  --color-warn: #c4b48a;
+  /* Matches multinicheai.com's current palette (Index.html :root — ink/
+     panel/paper/teal/brass), not the old green jblessd.com theme this app
+     shipped with. */
+  --color-bg: #0a0e16;
+  --color-surface: #121826;
+  --color-elevated: #161e30;
+  --color-fg: #eef1f7;
+  --color-muted: #9aa4bc;
+  --color-subtle: #5c6580;
+  --color-accent: #22d3b0;
+  --color-accent-fg: #0a0e16;
+  --color-border: #232b3d;
+  --color-danger: #e4584c;
+  --color-success: #5fd97a;
+  --color-warn: #ffb020;
 
   --color-background: var(--color-bg);
   --color-foreground: var(--color-fg);
@@ -40,8 +43,8 @@
   --radius-xl: 24px;
   --radius: 12px;
 
-  --shadow-border: 0 0 0 1px rgb(230 234 220 / 0.08);
-  --shadow-border-hover: 0 0 0 1px rgb(230 234 220 / 0.14);
+  --shadow-border: 0 0 0 1px rgb(238 241 247 / 0.08);
+  --shadow-border-hover: 0 0 0 1px rgb(238 241 247 / 0.14);
 }
 
 @layer base {

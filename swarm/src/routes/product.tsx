@@ -47,8 +47,8 @@ function ProductPage() {
         <h1 className="mt-4 text-4xl font-medium tracking-tight">Package it as a product for the site</h1>
         <p className="mt-3 text-base leading-relaxed text-muted">
           Spec sheet in the exact MultiNiche fields: Built for, Category, Format, Spec, cart URL.
-          Copy SQL, fallback catalog, live proof, or llms.txt and paste. SWARM is SKU {SWARM_SKU}
-          under Store & Site Owners.
+          Copy SQL, fallback catalog, live proof, or llms.txt and paste. SWARM is SKU {SWARM_SKU} under
+          Store & Site Owners.
         </p>
       </div>
 

@@ -158,24 +158,59 @@ export function renderInstallPageHtml(template, { host, url } = {}) {
 }
 
 export function renderWebManifest(hostHeader) {
-  const name = appNameFromHost(hostHeader);
+  const site = readOgSite();
+  const fromSite = String(site.title ?? "").trim();
+  const name = fromSite || appNameFromHost(hostHeader);
+  const shortName = fromSite || name;
+  const icons = [];
+  if (existsSync(join(process.cwd(), "public/icon-512.png"))) {
+    icons.push({
+      src: "/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any",
+    });
+    icons.push({
+      src: "/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
+    });
+  }
+  if (existsSync(join(process.cwd(), "public/icon-192.png"))) {
+    icons.push({
+      src: "/icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any",
+    });
+  }
+  icons.push({
+    src: "/__grok/icon-180.png",
+    sizes: "180x180",
+    type: "image/png",
+  });
   return JSON.stringify(
     {
       name,
-      short_name: name,
+      short_name: shortName,
       id: "/",
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#000000",
-      theme_color: "#000000",
-      icons: [
-        {
-          src: "/__grok/icon-180.png",
-          sizes: "180x180",
-          type: "image/png",
-        },
+      display_override: ["window-controls-overlay", "standalone"],
+      orientation: "any",
+      background_color: "#0b0c0a",
+      theme_color: "#0b0c0a",
+      description:
+        "Intent-hijack ad organism for MultiNiche AI. Autopilot proof-first micro-ads.",
+      categories: ["business", "productivity", "marketing"],
+      shortcuts: [
+        { name: "Radar", short_name: "Radar", url: "/", description: "Live intent radar" },
+        { name: "Swarm", short_name: "Swarm", url: "/swarm", description: "Running organisms" },
+        { name: "Product", short_name: "Product", url: "/product", description: "Site listing kit" },
       ],
+      icons,
     },
     null,
     2,

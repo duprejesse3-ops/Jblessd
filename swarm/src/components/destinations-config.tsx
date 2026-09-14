@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_DESTINATIONS, REDDIT_SUBS, destOf, redditUserUrl, xProfileUrl } from "@/lib/deploy";
+import { DEFAULT_DESTINATIONS, REDDIT_SUBS, destOf, redditPolicy, redditUserUrl, xProfileUrl } from "@/lib/deploy";
 import { useSwarmStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ export function DestinationsConfig({ compact }: { compact?: boolean }) {
   const raw = useSwarmStore((s) => s.destinations);
   const setDestinations = useSwarmStore((s) => s.setDestinations);
   const dest = destOf(raw);
+  const policy = redditPolicy(dest.redditSub);
 
   useEffect(() => {
     setMounted(true);
@@ -93,6 +94,16 @@ export function DestinationsConfig({ compact }: { compact?: boolean }) {
             </button>
           ))}
         </div>
+        {policy ? (
+          <p className="text-sm text-warn">
+            r/{dest.redditSub} will remove a product post in the feed. SWARM opens this week's
+            Promote-your-business sticky instead — no fake question, no ad image.
+          </p>
+        ) : (
+          <p className="text-sm text-muted">
+            Posts as a named MULTINICHE AI product, not a cry-for-help headline.
+          </p>
+        )}
       </div>
       <Button
         type="button"

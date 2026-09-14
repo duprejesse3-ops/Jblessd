@@ -14,6 +14,7 @@ import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as EvolveRouteImport } from './routes/evolve'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as ProductRouteImport } from './routes/product'
+import { Route as ScorecardRouteImport } from './routes/scorecard'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SwarmRouteImport } from './routes/swarm'
 
@@ -42,6 +43,11 @@ const ProductRoute = ProductRouteImport.update({
   path: '/product',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScorecardRoute = ScorecardRouteImport.update({
+  id: '/scorecard',
+  path: '/scorecard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/evolve': typeof EvolveRoute
   '/install': typeof InstallRoute
   '/product': typeof ProductRoute
+  '/scorecard': typeof ScorecardRoute
   '/studio': typeof StudioRoute
   '/swarm': typeof SwarmRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/evolve': typeof EvolveRoute
   '/install': typeof InstallRoute
   '/product': typeof ProductRoute
+  '/scorecard': typeof ScorecardRoute
   '/studio': typeof StudioRoute
   '/swarm': typeof SwarmRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/evolve': typeof EvolveRoute
   '/install': typeof InstallRoute
   '/product': typeof ProductRoute
+  '/scorecard': typeof ScorecardRoute
   '/studio': typeof StudioRoute
   '/swarm': typeof SwarmRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/evolve'
     | '/install'
     | '/product'
+    | '/scorecard'
     | '/studio'
     | '/swarm'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/evolve'
     | '/install'
     | '/product'
+    | '/scorecard'
     | '/studio'
     | '/swarm'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/evolve'
     | '/install'
     | '/product'
+    | '/scorecard'
     | '/studio'
     | '/swarm'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   EvolveRoute: typeof EvolveRoute
   InstallRoute: typeof InstallRoute
   ProductRoute: typeof ProductRoute
+  ScorecardRoute: typeof ScorecardRoute
   StudioRoute: typeof StudioRoute
   SwarmRoute: typeof SwarmRoute
 }
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/scorecard': {
+      id: '/scorecard'
+      path: '/scorecard'
+      fullPath: '/scorecard'
+      preLoaderRoute: typeof ScorecardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio': {
       id: '/studio'
       path: '/studio'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   EvolveRoute: EvolveRoute,
   InstallRoute: InstallRoute,
   ProductRoute: ProductRoute,
+  ScorecardRoute: ScorecardRoute,
   StudioRoute: StudioRoute,
   SwarmRoute: SwarmRoute,
 }

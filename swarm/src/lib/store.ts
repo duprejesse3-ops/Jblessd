@@ -8,7 +8,6 @@ import {
   evolveLocal,
   livePulse,
   markChampions,
-  retireStaleSwarms,
   seedExtraSwarms,
   seedOrganisms,
   seedPulses,
@@ -37,6 +36,7 @@ type SwarmState = {
   setHydrated: () => void;
   select: (id: string | null) => void;
   toggleRun: (swarmId: string) => void;
+  retireSwarm: (swarmId: string) => void;
   setAutopilot: (on: boolean) => void;
   tick: (hours?: number) => void;
   syncRealPerformance: () => Promise<void>;
@@ -136,10 +136,47 @@ export const useSwarmStore = create<SwarmState>()(
               : sw,
           ),
         })),
+      // Called by autoStep once a swarm graduates past its generation
+      // ceiling (see the "graduated" check there). Kept as a separate,
+      // named action — rather than folded inline — so it's independently
+      // testable and so a person can trigger it by hand from the UI later
+      // without duplicating the logic.
+      //
+      // Only non-"live" organisms get killed: a live organism is real
+      // running traffic, and retirement should never yank that out from
+      // under a buyer-facing post just because its swarm hit a generation
+      // ceiling. The swarm's SKU stays usable for the next autopilot
+      // hijack regardless, because the used-SKU check in autoStep only
+      // looks at running swarms — see the comment there.
+      retireSwarm: (swarmId) =>
+        set((s) => {
+          const swarm = s.swarms.find((sw) => sw.id === swarmId);
+          if (!swarm) return s;
+          return {
+            swarms: s.swarms.map((sw) =>
+              sw.id === swarmId ? { ...sw, running: false, retired: true } : sw,
+            ),
+            organisms: s.organisms.map((o) =>
+              o.swarmId === swarmId && o.status !== "live" ? { ...o, status: "killed" as const } : o,
+            ),
+            activities: [
+              log(
+                "pilot",
+                `Retired ${swarm.name} at gen ${swarm.generation} — freeing the slot for a product that hasn't been tried yet.`,
+              ),
+              ...s.activities,
+            ].slice(0, 24),
+          };
+        }),
       setAutopilot: (on) =>
         set((s) => ({
           autopilot: on,
-          swarms: on ? s.swarms.map((sw) => ({ ...sw, running: true })) : s.swarms,
+          // A retired swarm is deliberately excluded here: switching
+          // autopilot back on should resume swarms the person (or a
+          // cooldown) paused, not resurrect one that already graduated —
+          // otherwise every autopilot-on click would instantly re-fill
+          // the cap with the same handful of already-tried products.
+          swarms: on ? s.swarms.map((sw) => (sw.retired ? sw : { ...sw, running: true })) : s.swarms,
           activities: [log("pilot", on ? "Autopilot on." : "Autopilot paused."), ...s.activities].slice(
             0,
             24,
@@ -200,33 +237,7 @@ export const useSwarmStore = create<SwarmState>()(
         s.tick(1);
         s.listen();
         const now = Date.now();
-        let after = get();
-
-        // Retire swarms that hit the generation cap without ever finding a
-        // working angle — frees their SKU so a different product can compete
-        // instead of piling up dead, maxed-out lineages.
-        const stale = retireStaleSwarms({ swarms: after.swarms, organisms: after.organisms });
-        if (stale.retiredSwarmIds.length) {
-          const retiredSet = new Set(stale.retiredSwarmIds);
-          const killedSet = new Set(stale.killedOrgIds);
-          set((cur) => ({
-            swarms: cur.swarms.map((sw) =>
-              retiredSet.has(sw.id) ? { ...sw, running: false } : sw,
-            ),
-            organisms: cur.organisms.map((o) =>
-              killedSet.has(o.id) ? { ...o, status: "killed" as const } : o,
-            ),
-            activities: [
-              log(
-                "evolve",
-                `Retired ${stale.retiredSwarmIds.length} stale swarm${stale.retiredSwarmIds.length > 1 ? "s" : ""} (maxed generations, low fitness).`,
-              ),
-              ...cur.activities,
-            ].slice(0, 24),
-          }));
-          after = get();
-        }
-
+        const after = get();
         const ripe = after.swarms.find(
           (sw) =>
             sw.running &&
@@ -245,12 +256,36 @@ export const useSwarmStore = create<SwarmState>()(
           }));
           return;
         }
+        // A swarm that has hit its generation ceiling used to just sit
+        // here forever: not "ripe" (generation < 6 fails), so it was
+        // never evolved again, but still running and still holding both
+        // a cap slot and its SKU — permanently, since nothing else in the
+        // app ever un-hijacks a swarm. Once 5 swarms existed, autopilot
+        // would silently stop introducing new products for good, no
+        // matter how long it kept running. This is what "graduated"
+        // fixes: reaching the ceiling now retires the swarm and frees its
+        // slot immediately, instead of freezing the roster in place.
+        const graduated = after.swarms.find(
+          (sw) => sw.running && sw.generation >= 6 && now - after.lastAutoEvolveAt > 14000,
+        );
+        if (graduated) {
+          after.retireSwarm(graduated.id);
+          set({ lastAutoEvolveAt: now });
+          return;
+        }
+        // Retired and manually-paused swarms are excluded from both the
+        // used-SKU set and the concurrent-swarm cap below — only
+        // currently-running swarms hold a slot. This is what makes
+        // retirement (and a manual pause) actually free up rotation
+        // instead of permanently locking that SKU out of future hijacks.
+        const runningSwarmIds = new Set(after.swarms.filter((sw) => sw.running).map((sw) => sw.id));
         const used = new Set(
-          after.organisms.filter((o) => o.status !== "killed").map((o) => o.sku),
+          after.organisms
+            .filter((o) => o.status !== "killed" && runningSwarmIds.has(o.swarmId))
+            .map((o) => o.sku),
         );
         const pulse = after.pulses.find((p) => !used.has(p.sku));
-        const activeSwarmCount = after.swarms.filter((sw) => sw.running).length;
-        if (pulse && activeSwarmCount < 16 && now - after.lastAutoHijackAt > 18000) {
+        if (pulse && runningSwarmIds.size < 5 && now - after.lastAutoHijackAt > 18000) {
           get().hijack({ sku: pulse.sku, intent: pulse.text });
           set({ lastAutoHijackAt: now });
         }

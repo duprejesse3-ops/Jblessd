@@ -61,6 +61,17 @@ export type Swarm = {
   running: boolean;
   startedAt: number | null;
   simulatedHours: number;
+  /**
+   * Set once a swarm graduates past its generation ceiling (see
+   * store.ts autoStep). A retired swarm stays visible with its history
+   * intact, but is excluded from the SKU-used and concurrent-swarm-cap
+   * checks that gate autopilot's next hijack, and is NOT bulk-resumed
+   * when autopilot is switched back on (unlike an ordinary manual
+   * pause) — retirement is meant to be permanent, freeing the slot for
+   * a product that has never been tried, not a pause the user can
+   * accidentally undo by flipping the global autopilot switch.
+   */
+  retired?: boolean;
 };
 
 export type IntentPulse = {

@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { ExternalLink, Radio, Settings2, Share2, Undo2 } from "lucide-react";
 import {
   channelVerb,
-  copyOrganismPacket,
+  copyForTarget,
   deployTargets,
   destOf,
+  redditPolicy,
   shareOrganism,
 } from "@/lib/deploy";
 import { useSwarmStore } from "@/lib/store";
@@ -33,8 +34,13 @@ export function GoLivePanel({ organism }: { organism: Organism }) {
   const isLive = organism.status === "live";
 
   async function ship(target: DeployTarget) {
-    const copied = await copyOrganismPacket(organism);
-    if (copied) {
+    const copied = await copyForTarget(organism, target, dest);
+    const policy = target.id === "reddit" ? redditPolicy(dest.redditSub) : null;
+    if (policy) {
+      toast.message(`r/${dest.redditSub} bans a feed ad`, {
+        description: "Comment copied. Paste it on this week's sticky. No ad image.",
+      });
+    } else if (copied) {
       toast.success("Packet copied", { description: target.label });
     }
     window.open(target.href, "_blank", "noopener,noreferrer");

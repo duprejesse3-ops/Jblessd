@@ -19,10 +19,37 @@ export const CHANNEL_META: Record<
   shadow: { ctr: 0.024, cvr: 0.048, cpc: 0.55, bonus: 1.06 },
 };
 
-const CTAS = ["Watch the run", "Open the spec", "Get the instrument", "See it work on your task"];
+const CTAS = [
+  "Watch the run",
+  "Open the spec",
+  "Get the instrument",
+  "See it work on your task",
+  "Run it once, decide after",
+  "Check the receipts",
+  "Try it on your own data",
+  "No pitch, just the run",
+];
 
-function pick<T>(arr: T[], i: number) {
-  return arr[i % arr.length]!;
+function cleanLine(s: string) {
+  return s.replace(/[.?!]$/, "").trim();
+}
+
+function capitalize(s: string) {
+  return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;
+}
+
+/** Case-insensitive de-dupe that preserves the first-seen casing/order. */
+function dedupeLines(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const line of lines) {
+    const key = line.toLowerCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      out.push(line);
+    }
+  }
+  return out;
 }
 
 export function buildLanding(product: Product, channel: Channel, swarmId: string, orgId: string) {
@@ -36,54 +63,81 @@ export function buildLanding(product: Product, channel: Channel, swarmId: string
   return url.toString();
 }
 
+/**
+ * Was 3 hardcoded (headline, body) pairs per channel, locked to the same
+ * index — so `salt % 3` was the entire creative space: 3 organisms, not 9,
+ * and both spawnLocalSwarm's and evolveLocal's headline-collision retries
+ * were routinely exhausting it (see their `used` dedup sets). Two fixes:
+ *
+ * 1. Headline and body are now selected independently (via a seeded PRNG
+ *    keyed on `salt`, so it's still deterministic — same salt always
+ *    produces the same organism), turning N headlines x M bodies into a
+ *    real cross product instead of a locked N-way choice.
+ * 2. Each channel's headline pool now blends the hand-written base lines
+ *    with the product's own `queries` and `utterances` from the catalog —
+ *    real search queries and real phrased pain points that were sitting
+ *    unused in every product entry. That's per-product variance that scales
+ *    with the catalog data already there, not just more hardcoded strings.
+ */
 export function localCopy(product: Product, intent: string, channel: Channel, salt: number): GeneratedCopy {
-  const cta = pick(CTAS, salt);
-  const variant = salt % 3;
+  const rand = mulberry32(salt);
   const proofLead = product.proof.split("—")[0]!.trim();
-  const intentLine = intent.replace(/[.?!]$/, "");
+  const intentLine = cleanLine(intent);
+  const queryLines = product.queries.slice(0, 4).map(capitalize);
+  const utteranceLines = product.utterances.slice(0, 4).map(cleanLine);
+
+  function choose(headlines: string[], bodies: string[]): GeneratedCopy {
+    const hOptions = dedupeLines(headlines);
+    const bOptions = dedupeLines(bodies);
+    const headline = hOptions[Math.floor(rand() * hOptions.length)]!;
+    const body = bOptions[Math.floor(rand() * bOptions.length)]!;
+    const cta = CTAS[Math.floor(rand() * CTAS.length)]!;
+    return { channel, headline, body, proofHook: product.proof, cta };
+  }
+
   if (channel === "search") {
-    const headlines = [
-      proofLead,
-      `${product.name} — $${product.price} one-time`,
-      intentLine,
-    ];
-    const bodies = [
-      `${product.job}. ${product.pain} Spec sheet, not a pitch. $${product.price}, one-time.`,
-      `${product.proof}. ${product.job}.`,
-      `Not a Google tax. ${product.proof}. $${product.price}, watch it on your task.`,
-    ];
-    return { channel, headline: headlines[variant]!, body: bodies[variant]!, proofHook: product.proof, cta };
+    return choose(
+      [proofLead, `${product.name} — $${product.price} one-time`, intentLine, ...queryLines],
+      [
+        `${product.job}. ${product.pain} Spec sheet, not a pitch. $${product.price}, one-time.`,
+        `${product.proof}. ${product.job}.`,
+        `Not a Google tax. ${product.proof}. $${product.price}, watch it on your task.`,
+        `${product.job}. $${product.price} one-time — no subscription to cancel later.`,
+      ],
+    );
   }
   if (channel === "conversation") {
-    const headlines = [
-      intentLine,
-      product.pain.replace(/[.?!]$/, ""),
-      product.job.replace(/[.?!]$/, ""),
-    ];
-    const bodies = [
-      `${product.proof}. Not a wrapper — ${product.format.toLowerCase()} you keep. $${product.price}, watch it run first.`,
-      `I ran ${product.name} on the actual job. ${product.proof}. Public run: ${SITE}/proof`,
-      `${product.proof}. $${product.price} one-time, no subscription.`,
-    ];
-    return { channel, headline: headlines[variant]!, body: bodies[variant]!, proofHook: product.proof, cta };
+    return choose(
+      [intentLine, cleanLine(product.pain), cleanLine(product.job), ...utteranceLines],
+      [
+        `${product.proof}. Not a wrapper — ${product.format.toLowerCase()} you keep. $${product.price}, watch it run first.`,
+        `I ran ${product.name} on the actual job. ${product.proof}. Public run: ${SITE}/proof`,
+        `${product.proof}. $${product.price} one-time, no subscription.`,
+      ],
+    );
   }
   if (channel === "proof") {
-    const headlines = [`SPEC ${product.sku}`, `SPEC ${product.sku} · $${product.price}`, `${product.name} spec`];
-    const bodies = [
-      `Job: ${product.job}. Proof: ${product.proof}. Cost: $${product.price} perpetual. First run is free to watch.`,
-      `Built for ${product.role}. ${product.proof}. $${product.price} one-time.`,
-      `${product.job}. Watch it on your own task before you pay. $${product.price}.`,
-    ];
-    return { channel, headline: headlines[variant]!, body: bodies[variant]!, proofHook: product.proof, cta: "Watch the run" };
+    return {
+      ...choose(
+        [`SPEC ${product.sku}`, `SPEC ${product.sku} · $${product.price}`, `${product.name} spec`, ...queryLines.slice(0, 2)],
+        [
+          `Job: ${product.job}. Proof: ${product.proof}. Cost: $${product.price} perpetual. First run is free to watch.`,
+          `Built for ${product.role}. ${product.proof}. $${product.price} one-time.`,
+          `${product.job}. Watch it on your own task before you pay. $${product.price}.`,
+        ],
+      ),
+      cta: "Watch the run",
+    };
   }
   const article = /^[aeiou]/i.test(product.format) ? "an" : "a";
-  const headlines = [product.job, proofLead, `${product.name} vs the wrapper`];
-  const bodies = [
-    `${product.name} is ${article} ${product.format.toLowerCase()} — you can watch it run on your own task before paying. $${product.price}, no subscription.`,
-    `${product.proof}. Sits next to the “what should I use” thread. $${product.price}.`,
-    `Not another summarizer. ${product.job}. $${product.price} one-time.`,
-  ];
-  return { channel, headline: headlines[variant]!, body: bodies[variant]!, proofHook: product.proof, cta };
+  return choose(
+    [product.job, proofLead, `${product.name} vs the wrapper`, ...utteranceLines.slice(0, 3)],
+    [
+      `${product.name} is ${article} ${product.format.toLowerCase()} — you can watch it run on your own task before paying. $${product.price}, no subscription.`,
+      `${product.proof}. Sits next to the "what should I use" thread. $${product.price}.`,
+      `Not another summarizer. ${product.job}. $${product.price} one-time.`,
+    ],
+  );
 }
 
 export function copyToOrganism(opts: {
@@ -242,31 +296,6 @@ export function markChampions(organisms: Organism[]): Organism[] {
     if (o.status === "champion") return { ...o, status: "alive" as const };
     return o;
   });
-}
-
-export function retireStaleSwarms(opts: {
-  swarms: Swarm[];
-  organisms: Organism[];
-  minGeneration?: number;
-  fitnessThreshold?: number;
-}): { retiredSwarmIds: string[]; killedOrgIds: string[] } {
-  const minGeneration = opts.minGeneration ?? 6;
-  const fitnessThreshold = opts.fitnessThreshold ?? 20;
-  const retiredSwarmIds: string[] = [];
-  const killedOrgIds: string[] = [];
-  for (const sw of opts.swarms) {
-    if (!sw.running || sw.generation < minGeneration) continue;
-    const orgs = opts.organisms.filter((o) => o.swarmId === sw.id);
-    if (orgs.some((o) => o.status === "live")) continue; // never retire a swarm with a live placement
-    const alive = orgs.filter((o) => o.status !== "killed");
-    if (alive.length === 0) continue;
-    const bestFitness = Math.max(...alive.map((o) => o.fitness));
-    if (bestFitness < fitnessThreshold) {
-      retiredSwarmIds.push(sw.id);
-      for (const o of alive) killedOrgIds.push(o.id);
-    }
-  }
-  return { retiredSwarmIds, killedOrgIds };
 }
 
 export function cullDuplicates(organisms: Organism[]): Organism[] {
@@ -429,6 +458,12 @@ export function seedOrganisms(): Organism[] {
   return tickOrganisms(all, 8, 48);
 }
 
+// initial() (store.ts) is single-SKU on its own: it only ever calls
+// seedOrganisms(), which hardcodes AI-AB-002. Fresh installs — and every
+// resetLab() — landed on one product with nothing to compete against until
+// autopilot's hijack cooldown eventually introduced a second one. This
+// spawns a handful of additional swarms on distinct SKUs up front so a
+// fresh/reset lab starts with real cross-product competition immediately.
 export function seedExtraSwarms(count = 4): { swarms: Swarm[]; organisms: Organism[] } {
   const swarms: Swarm[] = [];
   const organisms: Organism[] = [];

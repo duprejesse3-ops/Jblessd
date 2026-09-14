@@ -20,7 +20,7 @@ export const Route = createRootRoute({
       },
       { name: "author", content: BRAND },
       { name: "copyright", content: COPYRIGHT },
-      { name: "theme-color", content: "#0b0c0a" },
+      { name: "theme-color", content: "#0a0e16" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "application-name", content: APP_NAME },
     ],
