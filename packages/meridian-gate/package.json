@@ -1,0 +1,28 @@
+{
+  "name": "meridian-gate",
+  "version": "1.0.0",
+  "description": "Sits in front of every outbound AI call on the same machine as Meridian Host. Default is no — a receipt for what left.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "gate": "./bin/gate.mjs"
+  },
+  "main": "./lib/proxy.mjs",
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/gate.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
