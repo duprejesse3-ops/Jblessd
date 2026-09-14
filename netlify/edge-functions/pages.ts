@@ -346,6 +346,7 @@ function page(opts: {
   ogType?: string
   extraMeta?: string
   image?: string
+  adTags?: string
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
@@ -443,10 +444,12 @@ function page(opts: {
     ` height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>` +
     `<div class="wrap">` +
     `<header><a class="brand" href="/">${STORE}</a></header>`
+  const adTags = opts.adTags ? ` data-tags="${esc(opts.adTags)}"` : ''
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
     `<a href="/">Catalog</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/guides">Guides</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
-    `</div><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
+    `<div data-mn-ad data-site="multinicheai.com" data-slot="s_store_page" data-format="display"${adTags} style="margin-top:28px"></div>` +
+    `</div><script src="/mn-ads.js" defer></script><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
 
   return new Response(head + opts.body + foot, {
     status: opts.status ?? 200,
@@ -664,6 +667,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       `<meta property="product:availability" content="in stock"/>` +
       `<meta property="og:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
       `<meta property="og:price:currency" content="USD"/>`,
+    adTags: `${p.niche},${p.category}`,
     body: body + `<script>window.trackMarketingEvent&&window.trackMarketingEvent('view_item',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});document.querySelector('[data-product-cta]')?.addEventListener('click',function(){window.trackMarketingEvent&&window.trackMarketingEvent('add_to_cart',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});});</script>`,
   })
 }
@@ -754,6 +758,7 @@ const faqLd = faqs
     description: intro,
     canonical: url,
     jsonld: [itemListLd, breadcrumb, ...(faqLd ? [faqLd] : [])],
+    adTags: niche,
     body,
   })
 }

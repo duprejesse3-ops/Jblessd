@@ -26,7 +26,9 @@
 // feed posts (those get removed as AI promo and can ban the account).
 // Bumped to v13 so returning installs pick up the always-visible Download
 // button that installs in Chrome in-app (or hands X/Grok to Chrome).
-const CACHE = 'multiniche-ai-v13';
+// Bumped to v14 so returning installs pick up the first-party Multiniche Ads
+// tag on the storefront (mn-ads.js + the catalog slot).
+const CACHE = 'multiniche-ai-v14';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -36,6 +38,7 @@ const APP_SHELL = [
   '/privacy-consent.js',
   '/marketing-measurement.js',
   '/install-app.js',
+  '/mn-ads.js',
   '/manifest.webmanifest',
   '/swarm-manifest.webmanifest',
   '/icons/logo.svg',

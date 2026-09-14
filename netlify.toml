@@ -317,6 +317,11 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
+[[headers]]
+  for = "/mn-ads.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 
 # Apps written in the browser workspace, served by
 # netlify/functions/code-serve.mts. Never cached, at any layer.
