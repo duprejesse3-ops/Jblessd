@@ -8,6 +8,7 @@ import {
   evolveLocal,
   livePulse,
   markChampions,
+  retireStaleSwarms,
   seedOrganisms,
   seedPulses,
   spawnLocalSwarm,
@@ -195,7 +196,33 @@ export const useSwarmStore = create<SwarmState>()(
         s.tick(1);
         s.listen();
         const now = Date.now();
-        const after = get();
+        let after = get();
+
+        // Retire swarms that hit the generation cap without ever finding a
+        // working angle — frees their SKU so a different product can compete
+        // instead of piling up dead, maxed-out lineages.
+        const stale = retireStaleSwarms({ swarms: after.swarms, organisms: after.organisms });
+        if (stale.retiredSwarmIds.length) {
+          const retiredSet = new Set(stale.retiredSwarmIds);
+          const killedSet = new Set(stale.killedOrgIds);
+          set((cur) => ({
+            swarms: cur.swarms.map((sw) =>
+              retiredSet.has(sw.id) ? { ...sw, running: false } : sw,
+            ),
+            organisms: cur.organisms.map((o) =>
+              killedSet.has(o.id) ? { ...o, status: "killed" as const } : o,
+            ),
+            activities: [
+              log(
+                "evolve",
+                `Retired ${stale.retiredSwarmIds.length} stale swarm${stale.retiredSwarmIds.length > 1 ? "s" : ""} (maxed generations, low fitness).`,
+              ),
+              ...cur.activities,
+            ].slice(0, 24),
+          }));
+          after = get();
+        }
+
         const ripe = after.swarms.find(
           (sw) =>
             sw.running &&
@@ -218,7 +245,8 @@ export const useSwarmStore = create<SwarmState>()(
           after.organisms.filter((o) => o.status !== "killed").map((o) => o.sku),
         );
         const pulse = after.pulses.find((p) => !used.has(p.sku));
-        if (pulse && after.swarms.length < 5 && now - after.lastAutoHijackAt > 18000) {
+        const activeSwarmCount = after.swarms.filter((sw) => sw.running).length;
+        if (pulse && activeSwarmCount < 16 && now - after.lastAutoHijackAt > 18000) {
           get().hijack({ sku: pulse.sku, intent: pulse.text });
           set({ lastAutoHijackAt: now });
         }

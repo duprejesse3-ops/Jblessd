@@ -1,5 +1,5 @@
 import { PRODUCTS, SITE, productBySku } from "./catalog";
-import type { Channel, GeneratedCopy, IntentPulse, Organism, Product } from "./types";
+import type { Channel, GeneratedCopy, IntentPulse, Organism, Product, Swarm } from "./types";
 import { clamp, uid } from "./utils";
 
 export const CHANNELS: { id: Channel; label: string; native: string }[] = [
@@ -242,6 +242,31 @@ export function markChampions(organisms: Organism[]): Organism[] {
     if (o.status === "champion") return { ...o, status: "alive" as const };
     return o;
   });
+}
+
+export function retireStaleSwarms(opts: {
+  swarms: Swarm[];
+  organisms: Organism[];
+  minGeneration?: number;
+  fitnessThreshold?: number;
+}): { retiredSwarmIds: string[]; killedOrgIds: string[] } {
+  const minGeneration = opts.minGeneration ?? 6;
+  const fitnessThreshold = opts.fitnessThreshold ?? 20;
+  const retiredSwarmIds: string[] = [];
+  const killedOrgIds: string[] = [];
+  for (const sw of opts.swarms) {
+    if (!sw.running || sw.generation < minGeneration) continue;
+    const orgs = opts.organisms.filter((o) => o.swarmId === sw.id);
+    if (orgs.some((o) => o.status === "live")) continue; // never retire a swarm with a live placement
+    const alive = orgs.filter((o) => o.status !== "killed");
+    if (alive.length === 0) continue;
+    const bestFitness = Math.max(...alive.map((o) => o.fitness));
+    if (bestFitness < fitnessThreshold) {
+      retiredSwarmIds.push(sw.id);
+      for (const o of alive) killedOrgIds.push(o.id);
+    }
+  }
+  return { retiredSwarmIds, killedOrgIds };
 }
 
 export function cullDuplicates(organisms: Organism[]): Organism[] {
