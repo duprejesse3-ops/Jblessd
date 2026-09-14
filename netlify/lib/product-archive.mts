@@ -16,6 +16,7 @@ import { CODE_REVIEW_DIGEST_SOURCE } from './code-review-digest-source.mjs'
 import { RELEASE_NOTES_BOT_SOURCE } from './release-notes-bot-source.mjs'
 import { ARCHITECTURE_DIAGRAM_SYNC_SOURCE } from './architecture-diagram-sync-source.mjs'
 import { MERIDIAN_HOST_SOURCE } from './meridian-host-source.mjs'
+import { MERIDIAN_GATE_SOURCE } from './meridian-gate-source.mjs'
 import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
 import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
 import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
@@ -52,6 +53,7 @@ const MERIDIAN_HOST_EXECUTABLE = new Set([
   'uninstall.sh',
   'run.sh',
 ])
+const MERIDIAN_GATE_EXECUTABLE = new Set(['bin/gate.mjs', 'install.sh'])
 const BRIDGE_EXECUTABLE = new Set(['bin/bridge.mjs', 'install.sh'])
 const SHOPIFY_EXECUTABLE = new Set(['bin/shopify-connect.mjs', 'install.sh'])
 const SHEETS_EXECUTABLE = new Set(['bin/sheets-connect.mjs', 'install.sh'])
@@ -82,6 +84,7 @@ const DIGEST_ROOT = 'code-review-digest'
 const RELEASE_NOTES_ROOT = 'release-notes-bot'
 const DIAGRAM_SYNC_ROOT = 'architecture-diagram-sync'
 const MERIDIAN_HOST_ROOT = 'meridian-host'
+const MERIDIAN_GATE_ROOT = 'meridian-gate'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -128,6 +131,14 @@ function meridianHostFiles(): ArchiveFile[] {
     path: `${MERIDIAN_HOST_ROOT}/${file.path}`,
     contents: file.contents,
     executable: MERIDIAN_HOST_EXECUTABLE.has(file.path),
+  }))
+}
+
+function meridianGateFiles(): ArchiveFile[] {
+  return MERIDIAN_GATE_SOURCE.map((file) => ({
+    path: `${MERIDIAN_GATE_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: MERIDIAN_GATE_EXECUTABLE.has(file.path),
   }))
 }
 
@@ -202,6 +213,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-AB-028': { filename: 'release-notes-bot.zip', files: releaseNotesFiles },
   'AI-AB-034': { filename: 'architecture-diagram-sync.zip', files: diagramSyncFiles },
   'AI-HOST-001': { filename: 'meridian-host.zip', files: meridianHostFiles },
+  'AI-HOST-002': { filename: 'meridian-gate.zip', files: meridianGateFiles },
   'AI-CN-001': { filename: 'multiconnect-webhook-bridge.zip', files: webhookBridgeFiles },
   'AI-CN-002': { filename: 'multiconnect-shopify.zip', files: shopifyFiles },
   'AI-CN-003': { filename: 'multiconnect-sheets-airtable.zip', files: sheetsFiles },
