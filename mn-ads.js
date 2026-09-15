@@ -75,7 +75,7 @@
     }
     return '<div style="font:14px/1.45 ui-sans-serif,system-ui,sans-serif;border:1px solid #232B3D;overflow:hidden;background:#121826;color:#EEF1F7">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:11px;color:#9AA4BC;letter-spacing:.12em;text-transform:uppercase">'
-      + "<span>" + escapeHtml(ad.brand || "Sponsored") + "</span><span>Ads · Multiniche</span></div>"
+      + "<span>" + escapeHtml(ad.brand || "Sponsored") + "</span><span>MultiNicheADS</span></div>"
       + img
       + (img ? "" : '<div style="padding:16px 14px 8px;font-family:Georgia,ui-serif,serif;font-size:20px;line-height:1.2">' + escapeHtml(ad.headline) + "</div>")
       + '<div style="padding:10px 14px 14px">' + (img ? '<div style="font-weight:600">' + escapeHtml(ad.headline) + "</div>" : "")

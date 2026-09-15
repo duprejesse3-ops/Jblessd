@@ -28,11 +28,14 @@
 // button that installs in Chrome in-app (or hands X/Grok to Chrome).
 // Bumped to v14 so returning installs pick up the first-party Multiniche Ads
 // tag on the storefront (mn-ads.js + the catalog slot).
-const CACHE = 'multiniche-ai-v14';
+// Bumped to v15 so the MultiNicheADS icon on the store opens /ads.
+const CACHE = 'multiniche-ai-v15';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/agent',
+  '/ads',
+  '/ads.html',
   '/swarm',
   '/swarm.html',
   '/privacy-consent.js',

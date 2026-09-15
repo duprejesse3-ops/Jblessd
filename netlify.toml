@@ -192,6 +192,13 @@
   to = "/agent.html"
   status = 200
 
+# MultiNicheADS — store-hosted app. Header icon on the catalog goes here.
+# When MN_ADS_ORIGIN is set, ads.html bounces to the published desk.
+[[redirects]]
+  from = "/ads"
+  to = "/ads.html"
+  status = 200
+
 # SWARM operator — lives in this repo, not grok-sandbox. Rewrite so
 # multinicheai.com/swarm stays up with the store.
 [[redirects]]
@@ -352,6 +359,16 @@
 
 [[headers]]
   for = "/agent.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/ads"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/ads.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
