@@ -303,6 +303,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  creatives all     one Google Ads image file per product (whole catalog)",
     "  code            list the apps in the browser code workspace, and open it",
   "  download [sku]  get the real product .zip directly — no Stripe, no test cards",
+    "  edit <sku> <field> <value>   edit a live product (name, price, format, blurb, spec, category, niche)",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -453,6 +454,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower === "code" || lower === "workspace" || lower === "apps") { listWorkspace(); return; }
     if (lower === "download" || lower === "downloads") { listDownloads(""); return; }
     if (lower.indexOf("download ") === 0) { listDownloads(raw.slice(9).trim()); return; }
+    if (lower === "edit" || lower === "edit ") {
+      print("sys", "usage: edit <sku> <field> <new value>   fields: name, price, format, blurb, spec, category, niche\n" +
+        "example: edit AI-PP-001 price 24");
+      return;
+    }
+    if (lower.indexOf("edit ") === 0) { editProduct(raw.slice(5).trim()); return; }
     ask(raw);
   }
 
@@ -1092,6 +1099,50 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var cd = r.headers.get("content-disposition") || "";
     var m = /filename="([^"]+)"/.exec(cd);
     saveBlob(blob, m ? m[1] : (sku + ".zip"));
+  }
+
+  // `edit <sku> <field> <value>` — owner-only product edits (price, blurb,
+  // spec, format, name, category, niche). Calls the PATCH handler added to
+  // /api/products, which is also what stamps updated_at — the field the
+  // storefront's Product.dateModified and the sitemap's <lastmod> read from.
+  // Without ever calling this, those freshness signals never move.
+  var EDITABLE_FIELDS = ["name", "price", "format", "blurb", "spec", "category", "niche"];
+  async function editProduct(arg) {
+    if (busy) return;
+    var parts = (arg || "").trim().split(/\s+/);
+    var sku = (parts.shift() || "").toUpperCase();
+    var field = (parts.shift() || "").toLowerCase();
+    var value = parts.join(" ");
+    if (!sku || !field || !value) {
+      print("sys", "usage: edit <sku> <field> <new value>   fields: " + EDITABLE_FIELDS.join(", "));
+      return;
+    }
+    if (EDITABLE_FIELDS.indexOf(field) === -1) {
+      print("reply err", "unknown field \"" + field + "\" — fields: " + EDITABLE_FIELDS.join(", "));
+      return;
+    }
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "saving " + sku);
+    try {
+      var body = { sku: sku };
+      body[field] = field === "price" ? Number(value) : value;
+      var r = await fetch(PRODUCTS, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", (j && j.error) || ("error " + r.status)); return; }
+      var p = j.product || {};
+      print("reply", "saved — " + sku + " " + field + " is now " + (p[field] !== undefined ? p[field] : value) +
+        (p.updatedAt ? " (updated_at: " + p.updatedAt + ")" : ""));
+    } catch (err) {
+      thinking.remove();
+      print("reply err", "could not save the edit — " + err.message);
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
   }
 
   // `download` (no Stripe, no test cards) — the owner already has a session,
