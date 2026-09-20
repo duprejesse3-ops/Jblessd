@@ -145,6 +145,11 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
     const properties: Array<Record<string, string>> = []
     if (p.format) properties.push({ '@type': 'PropertyValue', name: 'Format', value: p.format })
     if (p.spec && p.spec !== '—') properties.push({ '@type': 'PropertyValue', name: 'Spec', value: p.spec })
+    properties.push({
+      '@type': 'PropertyValue',
+      name: 'Live proof',
+      value: 'A real, unedited run of this tool on a sample or visitor-submitted task, streamed live on its product page before purchase.',
+    })
     if (properties.length) item.additionalProperty = properties
     const agg = aggregates[p.sku]
     if (agg && agg.count > 0) {

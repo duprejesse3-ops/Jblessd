@@ -743,6 +743,11 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       { '@type': 'PropertyValue', name: 'Built for', value: nl },
       { '@type': 'PropertyValue', name: 'Format', value: p.format },
       ...(p.spec && p.spec !== '—' ? [{ '@type': 'PropertyValue', name: 'Spec', value: p.spec }] : []),
+      {
+        '@type': 'PropertyValue',
+        name: 'Live proof',
+        value: 'A real, unedited run of this tool on a sample or visitor-submitted task, streamed live on this page before purchase.',
+      },
     ],
     offers: {
       '@type': 'Offer',
