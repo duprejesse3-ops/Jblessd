@@ -61,6 +61,10 @@ interface ApiProduct {
   nicheLabel?: string
   format?: string
   spec?: string
+  // ISO date (YYYY-MM-DD), already returned by /api/products — see
+  // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
+  // crawlers get a real freshness signal instead of none at all.
+  updatedAt?: string
 }
 
 // JSON embedded in HTML must not contain a literal "</script>" or a raw "<".
@@ -117,6 +121,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
       brand: { '@type': 'Brand', name: 'MULTINICHE AI' },
       image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
       url,
+      ...(p.updatedAt ? { dateModified: p.updatedAt } : {}),
       offers: {
         '@type': 'Offer',
         price: Number(p.price).toFixed(2),

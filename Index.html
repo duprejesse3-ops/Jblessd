@@ -1246,6 +1246,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/use-cases">Use cases</a>
       <a href="/proof">Live proofs</a>
       <a href="/updates">Updates</a>
+      <a href="/compare/">Prompt packs vs. ChatGPT</a>
       <a href="#contact">Contact</a>
       <a href="/privacy-policy/">Privacy</a>
       <a href="/terms/">Terms</a>
@@ -2651,7 +2652,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // Since every category is covered, every card now requests it.
     var hasPhotoArt = true;
     var thumbHtml = hasPhotoArt
-      ? '<img class="card-thumb" src="/product-image/v'+PRODUCT_IMAGE_ASSET_VERSION+'/thumb/'+encodeURIComponent(id)+'.png" alt="" loading="lazy">'
+      ? '<img class="card-thumb" src="/product-image/v'+PRODUCT_IMAGE_ASSET_VERSION+'/thumb/'+encodeURIComponent(id)+'.png" alt="'+esc(p.name)+'" loading="lazy">'
       : '';
     if (hasPhotoArt) card.classList.add('has-thumb');
     card.innerHTML =

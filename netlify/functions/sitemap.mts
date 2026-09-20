@@ -128,6 +128,7 @@ export default async (req: Request) => {
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/free-tool</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE}/compare/</loc>\n    <lastmod>2026-09-20</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     // The Claude Agent Studio is the second revenue line (prepaid credits), so it
     // ranks alongside the catalog rather than below the landing pages.
     `  <url>\n    <loc>${SITE}/agent</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,
@@ -142,7 +143,8 @@ export default async (req: Request) => {
     }),
     ...products.map((p) => {
       const loc = `${SITE}/product/${encodeURIComponent(p.sku)}`
-      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>${imageBlock()}\n  </url>`
+      const lastmod = p.updatedAt ? `\n    <lastmod>${p.updatedAt}</lastmod>` : ''
+      return `  <url>\n    <loc>${xmlEscape(loc)}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>${imageBlock()}\n  </url>`
     }),
     ...proofIds.map((id) => {
       const loc = `${SITE}/proof/${encodeURIComponent(id)}`

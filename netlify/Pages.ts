@@ -381,6 +381,10 @@ interface ApiProduct {
   spec: string
   catLabel?: string
   nicheLabel?: string
+  // ISO date (YYYY-MM-DD), already returned by /api/products — see
+  // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
+  // crawlers get a real freshness signal instead of none at all.
+  updatedAt?: string
 }
 
 interface Aggregate {
@@ -631,7 +635,7 @@ function page(opts: {
   const adTags = opts.adTags ? ` data-tags="${esc(opts.adTags)}"` : ''
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
-    `<a href="/">Catalog</a> · <a href="/ads">MultiNicheADS</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/guides">Guides</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
+    `<a href="/">Catalog</a> · <a href="/ads">MultiNicheADS</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/guides">Guides</a> · <a href="/compare/">Prompt packs vs. ChatGPT</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
     `<div data-mn-ad data-site="multinicheai.com" data-slot="s_store_page" data-format="display"${adTags} style="margin-top:28px"></div>` +
     `</div><script src="/mn-ads.js" defer></script><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
 
@@ -733,6 +737,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
     url,
     mainEntityOfPage: url,
+    ...(p.updatedAt ? { dateModified: p.updatedAt } : {}),
     audience: { '@type': 'Audience', audienceType: nl },
     additionalProperty: [
       { '@type': 'PropertyValue', name: 'Built for', value: nl },
@@ -986,6 +991,7 @@ function renderGuide(g: Guide): Response {
     headline: g.title.slice(0, 110),
     url,
     ...(g.publishedAt ? { datePublished: g.publishedAt } : {}),
+    ...(g.generatedAt ? { dateModified: g.generatedAt.slice(0, 10) } : {}),
     publisher: { '@type': 'Organization', name: STORE, url: SITE },
     about: { '@type': 'Thing', name: `${cl} for ${nl}` },
   }
