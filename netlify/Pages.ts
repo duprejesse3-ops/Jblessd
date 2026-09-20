@@ -112,7 +112,188 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
       a: 'A Prompt Pack is a set of ready-to-paste prompts for a specific job. An Agent Config goes a step further: a configured agent that runs a workflow rather than answering one prompt at a time.',
     },
   ],
+  founders: [
+    {
+      q: 'Do I need to set anything up, or hire someone to configure this?',
+      a: 'No. Prompt Packs and Doc Templates are ready to paste or duplicate as-is. Automation Blueprints and Agent Configs include setup steps in plain language — most take under 15 minutes to connect.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. Describe your own situation on the free tool page and watch a tool run on it live, no signup required.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — you own it outright, with no recurring fee to keep using what you bought.',
+    },
+    {
+      q: 'Which tool should a small team start with?',
+      a: 'Most founders start with whichever recurring task costs them the most weekly time — usually meeting notes, OKR tracking, or inbox triage. The AI concierge on the homepage will name a specific starting tool if you describe your week.',
+    },
+  ],
+  sales: [
+    {
+      q: 'Will these work with the CRM I already use?',
+      a: "Most automations are built on Make.com or Zapier, which connect to the major CRMs and inbox tools directly. Each product page's spec line lists exactly what it's compatible with before you buy.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. You can also describe your own situation on the free tool page and watch a tool run on it live.',
+    },
+    {
+      q: "What's the difference between an Automation Blueprint and a Doc Template here?",
+      a: 'A Blueprint runs on its own once connected — it triages, sorts, or follows up automatically. A Template is something you fill in yourself, like an onboarding kit or intake form, with no automation behind it.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright — no recurring fee.',
+    },
+  ],
+  marketers: [
+    {
+      q: 'Do I need design skills to use these?',
+      a: 'No — Prompt Packs and Automation Blueprints produce copy and content drafts, not finished visuals. You review and ship the output yourself, in whatever tools you already use.',
+    },
+    {
+      q: 'Will the output sound like generic AI copy?',
+      a: "That's what the live proof is for — every listing runs on a real or your own brief before you buy, so you can judge the actual voice and quality rather than trust a description.",
+    },
+    {
+      q: 'Can these match my existing brand voice?',
+      a: "Prompt Packs are editable — most include a tone-setting section you fill in once. If a tool doesn't fit your voice after testing it, don't buy it; that's the point of the live proof.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — you own it outright.',
+    },
+  ],
+  writers: [
+    {
+      q: 'Will this make my writing sound like generic AI output?',
+      a: "These are prompts and templates that lock in your own tone and structure — not a tool that writes for you from scratch. Run the live proof on your own sample first if you're unsure it'll hold your voice.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Use the free tool page to try one on your own draft, no signup required.',
+    },
+    {
+      q: "What's included in a Prompt Pack?",
+      a: 'A set of ready-to-paste prompts for a specific kind of writing task, usually with a few worked examples showing the expected input and output.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you keep — no recurring fee.',
+    },
+  ],
+  students: [
+    {
+      q: 'Do these tools cite sources, or just summarize?',
+      a: "The Research Assistant prompts are built for citation-aware output — comparing and tracing sources rather than paraphrasing without attribution. Each listing's spec line says whether citation formatting is included.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Try one on your own topic from the free tool page first.',
+    },
+    {
+      q: 'Which tool is for ongoing study habits vs. a specific paper?',
+      a: 'The Weekly Planning Template is for an ongoing study rhythm — plan Monday, review Friday. The Research Assistant Prompts are for a specific literature scan or source comparison task.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — no recurring fee.',
+    },
+  ],
+  architects: [
+    {
+      q: 'Do these require a specific stack or toolchain?',
+      a: "No — Doc Templates and Agent Configs here produce decision records, design reviews, and trade-off write-ups in plain formats you can drop into whatever docs system your team already uses.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Describe your own system on the free tool page and watch a tool run on it.',
+    },
+    {
+      q: "What's the difference between an Agent Config and a Doc Template here?",
+      a: 'A Doc Template is a format you fill in yourself, like an architecture decision record. An Agent Config is a configured agent that helps produce the trade-off analysis or design review from your own inputs.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright.',
+    },
+  ],
+  engineers: [
+    {
+      q: 'Do these require an API key or account setup?',
+      a: 'No signup for prompt packs and doc templates. Automation Blueprints and Agent Configs include their own setup instructions where a key, token, or webhook is needed — usually a few minutes of work.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. You can also try one on your own situation from the free tool page.',
+    },
+    {
+      q: 'Are these one-time purchases or subscriptions?',
+      a: 'One-time purchase per tool — you get the blueprint, config, or template outright, with no recurring fee.',
+    },
+    {
+      q: 'What kinds of infrastructure and incident work do these cover?',
+      a: 'Runbooks, incident write-ups, pipeline automations, and monitoring alerts — the recurring operational work around shipping and keeping systems running, not one-off coding tasks.',
+    },
+  ],
+  office: [
+    {
+      q: 'Do I need any technical setup to use these?',
+      a: 'No. Prompt Packs and Doc Templates work as-is in whatever tool you already have open. Automation Blueprints include plain-language setup steps, usually done in under 15 minutes.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Describe your own task on the free tool page and watch a tool run on it live.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright — no recurring fee.',
+    },
+    {
+      q: 'What kind of admin work do these actually handle?',
+      a: 'The recurring tasks that eat an afternoon: inbox triage, meeting notes, expense categorizing, and scheduling follow-ups — not one-off requests.',
+    },
+  ],
+  finance: [
+    {
+      q: 'Do these tools connect to my bank or brokerage?',
+      a: "No — these run on numbers you provide (a CSV export, a statement, your own figures), in the browser or a spreadsheet. Nothing here requires linking a live account.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Run one on your own numbers from the free tool page before you pay anything.',
+    },
+    {
+      q: 'Are these financial advice?',
+      a: "No. These are modeling and organization tools — valuation templates, categorizers, cashflow trackers — not personalized financial advice. You review and apply the output yourself.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright.',
+    },
+  ],
+  stores: [
+    {
+      q: 'Do these run on my own infrastructure, or on MULTINICHE AI\'s servers?',
+      a: "On yours. This niche is built around owning the pieces outright — a host pack you run on your own hardware, monitoring and SEO tools you control — rather than renting monthly access to someone else's platform.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task, before you spend anything.',
+    },
+    {
+      q: 'Do I need to be technical to set these up?',
+      a: "Some, like the host packs, assume basic comfort with a terminal and your own hosting. Each listing's spec line states exactly what's required before you buy.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool here is a one-time license — you own it outright, with no recurring platform fee.',
+    },
+  ],
 }
+
 // Outcome-based landing pages (/use-cases/:slug). These sit orthogonal to the
 // role pages: instead of "who are you", they answer "what do you want to get
 // done". Each matches products by keyword against name/blurb/spec so it tracks
