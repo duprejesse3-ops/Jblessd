@@ -73,6 +73,16 @@ export default async (req: Request, _context: Context) => {
       return Response.json({ received: true })
     }
 
+    // Ads network budget top-up: credits ads_network_campaigns.budget_cents,
+    // the only place that column is ever allowed to increase (see
+    // ads-network-fund.mts and ads-network-campaigns.mts). Idempotent via the
+    // unique constraint on ads_network_budget_topups.stripe_session_id, so a
+    // Stripe retry can't double-credit.
+    if (session.metadata?.kind === 'ads_network_topup') {
+      await creditAdsNetworkTopup(session)
+      return Response.json({ received: true })
+    }
+
     // Custom orders: a paid, AI-generated deliverable built for one buyer's
     // described need. Attach the email Stripe now has (the order row was
     // created before checkout, so it had no email yet), then generate and
@@ -165,6 +175,53 @@ async function grantCreditPurchase(session: Stripe.Checkout.Session): Promise<vo
     })
   } catch (err) {
     console.error('webhook: could not credit purchase —', (err as Error).message)
+  }
+}
+
+// Credit a confirmed Stripe payment to a campaign's real budget_cents.
+// Idempotent: the INSERT into ads_network_budget_topups is the single source
+// of truth for "has this session already been applied?" — only when it
+// actually lands a new row (not a duplicate delivery of the same webhook
+// event) does the campaign's budget move. campaign_id/tenant_id are trusted
+// from Stripe's own session metadata, which ads-network-fund.mts set at
+// checkout-session creation time (never from anything the client sends
+// after the fact).
+async function creditAdsNetworkTopup(session: Stripe.Checkout.Session): Promise<void> {
+  const campaignId = Number(session.metadata?.campaign_id)
+  const tenantId = Number(session.metadata?.tenant_id)
+  const amountCents = session.amount_total ?? 0
+
+  if (!Number.isFinite(campaignId) || campaignId <= 0 || !Number.isFinite(tenantId) || tenantId <= 0 || amountCents <= 0) {
+    console.error('webhook: ads_network_topup session missing usable metadata —', session.id)
+    return
+  }
+
+  const db = getDatabase()
+  try {
+    const inserted = (await db.sql`
+      INSERT INTO ads_network_budget_topups (stripe_session_id, campaign_id, tenant_id, amount_cents)
+      VALUES (${session.id}, ${campaignId}, ${tenantId}, ${amountCents})
+      ON CONFLICT (stripe_session_id) DO NOTHING
+      RETURNING id
+    `) as any[]
+
+    if (!inserted.length) {
+      console.log('webhook: ads_network_topup already applied for session —', session.id)
+      return // already credited by a previous delivery of this same event
+    }
+
+    // A campaign that had run itself to 'exhausted' becomes spendable again
+    // the moment real budget lands; any other status (active/paused) is left
+    // exactly as the tenant set it.
+    await db.sql`
+      UPDATE ads_network_campaigns
+      SET budget_cents = budget_cents + ${amountCents},
+          status = CASE WHEN status = 'exhausted' THEN 'active' ELSE status END
+      WHERE id = ${campaignId}
+    `
+    console.log(`webhook: credited $${(amountCents / 100).toFixed(2)} to ads_network_campaigns.id=${campaignId}`)
+  } catch (err) {
+    console.error('webhook: could not credit ads_network_topup —', (err as Error).message)
   }
 }
 

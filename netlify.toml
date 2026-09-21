@@ -192,6 +192,14 @@
   to = "/agent.html"
   status = 200
 
+# NicheAds tenant dashboard — sign up, create/fund campaigns, register slots.
+# Same pattern as /agent: a static page, no server-side session, the bearer
+# key pasted/stored client-side is the whole login.
+[[redirects]]
+  from = "/nicheads"
+  to = "/nicheads.html"
+  status = 200
+
 # MultiNicheADS — store-hosted app. Header icon on the catalog goes here.
 # When MN_ADS_ORIGIN is set, ads.html bounces to the published desk.
 [[redirects]]
@@ -359,6 +367,16 @@
 
 [[headers]]
   for = "/agent.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/nicheads"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/nicheads.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
