@@ -1245,6 +1245,66 @@ function renderMethodology(): Response {
   })
 }
 
+// ---- /status ----  public health indicator for the site's own infrastructure,
+// not just its products. /api/site-status already exists and is populated by
+// site-health-agent.mts's scheduled runs — this just gives it a page. In
+// keeping with the "we publish failures too" position the scorecard pages
+// take on products, the site's own reliability gets the same treatment
+// instead of only being visible to the owner via the raw API.
+interface HealthRun {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  summary: string
+  recommendation: string
+  durationMs: number
+  checkedAt: string
+}
+function healthTag(s: HealthRun['status']): string {
+  const color = s === 'healthy' ? 'var(--brass)' : s === 'degraded' ? 'var(--muted)' : 'var(--danger)'
+  return `<span style="color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${esc(s)}</span>`
+}
+
+function renderStatus(current: HealthRun | null, history: HealthRun[]): Response {
+  const url = `${SITE}/status`
+  const intro = 'A running record of automated checks against this site itself, published the same way a product benchmark scorecard is.'
+
+  const currentBlock = current
+    ? `<div class="specs">` +
+      `<div class="row"><span>Current status</span><span>${healthTag(current.status)}</span></div>` +
+      `<div class="row"><span>Summary</span><span>${esc(current.summary)}</span></div>` +
+      (current.recommendation
+        ? `<div class="row"><span>Recommendation</span><span>${esc(current.recommendation)}</span></div>`
+        : '') +
+      `<div class="row"><span>Checked</span><span>${esc(new Date(current.checkedAt).toISOString())} (${current.durationMs}ms)</span></div>` +
+      `</div>`
+    : `<p class="lede">No check has completed yet. History becomes available after the first scheduled run.</p>`
+
+  const historyHtml = history.length
+    ? history
+        .map(
+          (h) =>
+            `<div class="rev"><div class="who">${esc(new Date(h.checkedAt).toISOString().slice(0, 16).replace('T', ' '))} · ${healthTag(h.status)}</div><div>${esc(h.summary)}</div></div>`,
+        )
+        .join('')
+    : ''
+
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Status</nav>` +
+    `<h1>Site status</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    currentBlock +
+    (historyHtml ? `<h2>Recent checks</h2>${historyHtml}` : '') +
+    `<div class="buy"><a class="btn ghost" href="/methodology">How scorecards are scored →</a></div>`
+
+  return page({
+    title: `Site status | ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'WebPage', name: 'Site status', url, description: intro }],
+    body,
+    robots: 'noindex, follow',
+  })
+}
+
 // ---- /use-cases/:slug and /use-cases ----
 function matchUseCase(uc: UseCase, all: ApiProduct[]): ApiProduct[] {
   // Word-boundary match (not naive substring) so short tokens like "rag" or
@@ -1668,6 +1728,15 @@ export default async (req: Request, _context: Context) => {
     return renderMethodology()
   }
 
+  // ---- /status ----  reads the same data /api/site-status already exposes.
+  if (parts[0] === 'status') {
+    const res = await getJsonOrFail<{ current: HealthRun | null; history: HealthRun[] }>(
+      new URL('/api/site-status', req.url),
+    )
+    if (!res.ok) return unavailable()
+    return renderStatus(res.data.current ?? null, res.data.history ?? [])
+  }
+
   // ---- /scorecard/:sku ----  catalog-independent for the scorecard data
   // itself; the product lookup below (for name/CTA) reuses getCatalog(), which
   // fetches after this block runs — so it needs its own small catalog call.
@@ -1755,7 +1824,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/custom', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/custom', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology', '/status'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches

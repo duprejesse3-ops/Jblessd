@@ -29,27 +29,48 @@ export default async (req: Request, _context: Context) => {
 
   try {
     const db = getDatabase()
+
+    // The charge used to be read spent_cents in JS, add price_cpc_cents, then
+    // write the sum back in a separate UPDATE. Two clicks arriving close
+    // together (normal under real traffic) could both read the same starting
+    // spent_cents and both write the same sum — one click's charge silently
+    // vanished, and a budget-capped campaign could serve more clicks than it
+    // paid for before ever flipping to 'exhausted'.
+    //
+    // Doing the increment as SQL-side arithmetic in a single UPDATE makes it
+    // atomic at the row level — Postgres serializes concurrent UPDATEs to the
+    // same row, so there is no window where two requests can both read the
+    // pre-charge value. spent_cents only moves for a paid (budget_cents > 0)
+    // campaign, matching the existing "reciprocal campaigns are never
+    // charged" behavior. RETURNING gets the post-charge state back from the
+    // same statement instead of a separate read.
     const [campaign] = (await db.sql`
-      SELECT id, click_url, price_cpc_cents, budget_cents, spent_cents
-      FROM ads_network_campaigns WHERE id = ${campaignId} AND status = 'active'
+      UPDATE ads_network_campaigns
+      SET
+        clicks = clicks + 1,
+        spent_cents = CASE WHEN budget_cents > 0 THEN spent_cents + price_cpc_cents ELSE spent_cents END,
+        status = CASE
+          WHEN budget_cents > 0 AND spent_cents + price_cpc_cents >= budget_cents THEN 'exhausted'
+          ELSE status
+        END
+      WHERE id = ${campaignId} AND status = 'active'
+      RETURNING click_url
     `) as any[]
 
     if (!campaign?.click_url) {
       return Response.redirect('https://multinicheai.com', 302)
     }
 
-    if (campaign.budget_cents > 0) {
-      const newSpent = campaign.spent_cents + campaign.price_cpc_cents
-      const exhausted = newSpent >= campaign.budget_cents
-      await db.sql`
-        UPDATE ads_network_campaigns
-        SET clicks = clicks + 1, spent_cents = ${newSpent}, status = ${exhausted ? 'exhausted' : 'active'}
-        WHERE id = ${campaignId}
-      `
-    } else {
-      await db.sql`UPDATE ads_network_campaigns SET clicks = clicks + 1 WHERE id = ${campaignId}`
+    // The charge has already landed. Losing the event log entry is a real
+    // but much smaller problem than losing the advertiser's click after
+    // they've already paid for it — so a logging failure must not fall
+    // through to the outer catch and redirect the visitor home instead of
+    // to the advertiser's page.
+    try {
+      await db.sql`INSERT INTO ads_network_events (slot_id, campaign_id, type) VALUES (${slotId}, ${campaignId}, 'click')`
+    } catch (logErr) {
+      console.error('ads-network-click event log error:', (logErr as Error).message)
     }
-    await db.sql`INSERT INTO ads_network_events (slot_id, campaign_id, type) VALUES (${slotId}, ${campaignId}, 'click')`
 
     return Response.redirect(campaign.click_url, 302)
   } catch (err) {
