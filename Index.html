@@ -309,8 +309,10 @@ f.parentNode.insertBefore(j,f);
   .brand-mark{width:30px; height:30px; border:1px solid #FF2A2A; display:flex; align-items:center; justify-content:center; font-family:var(--mono); color:#FF2A2A; font-size:14px; box-shadow:0 0 12px rgba(255,42,42,.35); text-shadow:0 0 8px #FF2A2A;}
   .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.12em; color:var(--paper); text-shadow:0 0 10px rgba(255,176,32,.35);}
   .brand-sub{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--muted-2); display:block; margin-top:1px;}
-  nav.actions{display:flex; align-items:center; gap:10px;}
+  nav.actions{display:flex; align-items:center; gap:10px; min-width:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  nav.actions::-webkit-scrollbar{display:none;}
   .btn{
+    flex-shrink:0;
     font-family:var(--sans); font-size:13px; font-weight:500; cursor:pointer;
     border:1px solid var(--line); background:transparent; color:var(--muted);
     padding:9px 15px; border-radius:var(--radius); transition:.18s ease; display:inline-flex; align-items:center; gap:7px;
@@ -358,6 +360,11 @@ f.parentNode.insertBefore(j,f);
        announced correctly for screen readers. */
     nav.actions .btn-label{display:none;}
     nav.actions .btn{padding:9px 11px;}
+    /* Cart is the one action a buyer actually needs — guarantee it's the
+       first thing in the scrollable row (order:-1) rather than trusting it
+       to be reachable at the scrollable-but-out-of-view far end, which is
+       what silently made it unclickable before overflow-x:auto existed. */
+    #open-cart{order:-1;}
     .hero{padding:44px 0 40px;}
     h1{font-size:clamp(30px,8vw,40px);}
     .lede{font-size:16px; margin-bottom:26px;}
