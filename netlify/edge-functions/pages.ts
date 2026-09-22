@@ -574,8 +574,18 @@ function page(opts: {
     `<meta property="og:description" content="${esc(opts.description)}"/>` +
     `<meta property="og:url" content="${esc(opts.canonical)}"/>` +
     `<meta property="og:image" content="${esc(opts.image ?? `${SITE}/multiniche-ai-og.png`)}"/>` +
+    // Twitter's card validator reads twitter:* tags first and only falls
+    // back to og:* when a twitter:* tag is absent — a fallback that has
+    // worked in practice but isn't guaranteed by the spec. title/description
+    // were missing here entirely (only card and image were set), so a
+    // product or scorecard link posted to X was one crawler quirk away from
+    // rendering with no title/description text, same class of "silently
+    // broken preview" as the missing image fallback below.
     `<meta name="twitter:card" content="summary_large_image"/>` +
+    `<meta name="twitter:title" content="${esc(opts.title)}"/>` +
+    `<meta name="twitter:description" content="${esc(opts.description)}"/>` +
     `<meta name="twitter:image" content="${esc(opts.image ?? `${SITE}/multiniche-ai-og.png`)}"/>` +
+    `<meta name="twitter:image:alt" content="${esc(opts.title)}"/>` +
     (opts.extraMeta ?? '') +
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +

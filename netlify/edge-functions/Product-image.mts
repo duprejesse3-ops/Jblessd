@@ -558,6 +558,31 @@ export default async (req: Request, _context: Context) => {
     })
   } catch (err) {
     console.error('product-image edge function:', (err as Error).message)
+    // A hard 500 here doesn't just break the on-page image — it breaks the
+    // og:image/twitter:image a social crawler fetches for every /product/*
+    // and /scorecard/* page (pages.ts points both at this endpoint), so any
+    // failure anywhere in this pipeline — a photo fetch timing out, a font
+    // failing to load, resvg throwing — silently killed the link preview for
+    // that page on X, Slack, iMessage, everywhere. Falling back to the same
+    // static image page() already uses as its site-wide default keeps the
+    // preview working (a generic MULTINICHE AI card instead of the specific
+    // product's) instead of showing nothing at all. Fetched and returned as
+    // real image bytes with a 200, not a redirect — several social crawlers
+    // don't reliably follow a redirect when fetching an og:image URL.
+    try {
+      const fallback = await fetch(new URL('/multiniche-ai-og.png', req.url))
+      if (fallback.ok) {
+        return new Response(fallback.body, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=300',
+            'Netlify-CDN-Cache-Control': 'public, s-maxage=300, durable',
+          },
+        })
+      }
+    } catch (fallbackErr) {
+      console.error('product-image fallback image also failed:', (fallbackErr as Error).message)
+    }
     return new Response('Image generation failed', { status: 500 })
   }
 }
