@@ -452,10 +452,22 @@ f.parentNode.insertBefore(j,f);
   .studio-band .sb-price{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted-2); text-align:center;}
 
   /* catalog */
-  #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper);}
+  #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .catalog-count{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted-2); font-weight:400;}
   .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-bottom:40px;}
   @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+
+  /* showcase — a horizontally scrolling strip of highlighted products above
+     the full catalog grid, so a new visitor gets an immediate sense of the
+     catalog's range without scrolling past it. Reuses .card so a showcased
+     product looks identical to its grid card; only the layout differs. */
+  #showcase-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 14px; color:var(--paper);}
+  .showcase{display:flex; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px 2px 20px; margin-bottom:8px; -webkit-overflow-scrolling:touch;}
+  .showcase::-webkit-scrollbar{height:6px;}
+  .showcase::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+  .showcase .card{flex:0 0 240px; scroll-snap-align:start;}
+  @media (max-width:600px){.showcase .card{flex-basis:200px;}}
 
   .card{
     position:relative; border:1px solid var(--line); background:linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -1020,7 +1032,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="wrap">
     <aside data-mn-ad data-site="multinicheai.com" data-slot="s_store_home" data-format="display" data-tags="founders,stores,prompts,agents" style="margin:0 0 28px" aria-label="Sponsored spec"></aside>
-    <h2 id="catalog-heading">Full catalog</h2>
+    <h2 id="showcase-heading">Showcase</h2>
+    <section class="showcase" id="showcase" aria-labelledby="showcase-heading"></section>
+    <h2 id="catalog-heading">Full catalog <span class="catalog-count" id="catalog-count"></span></h2>
     <section class="grid" id="catalog" aria-labelledby="catalog-heading">
 
       <article class="card" data-cat="prompts" data-niche="founders" data-id="AI-PP-001" data-name="Deep Work Prompt Pack" data-price="19" data-format="120 prompts · PDF + Notion" data-spec="Works with Claude, ChatGPT, Gemini" data-catlabel="Prompt Packs" data-nichelabel="Founders & Ops">
@@ -1602,6 +1616,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   var catalog = document.getElementById('catalog');
+  var showcase = document.getElementById('showcase');
+  var catalogCount = document.getElementById('catalog-count');
   var emptyState = document.getElementById('empty-state');
   var search = document.getElementById('search');
   var activeCat = 'all', activeNiche = 'all';
@@ -1712,7 +1728,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if(pendingProduct){ addToCart(pendingProduct); closeProductModal(); }
   });
 
-  catalog.addEventListener('click', function(e){
+  function handleCardClick(e){
     var addBtn = e.target.closest('.add-btn');
     var tryBtn = e.target.closest('.try-btn');
     var card = e.target.closest('.card');
@@ -1725,7 +1741,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(proofHead) proofHead.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     else{ openProductModal(data); }
-  });
+  }
+  catalog.addEventListener('click', handleCardClick);
+  // Showcase cards are a separate strip outside #catalog, so they need the
+  // same delegated handler — otherwise Try free/+ Add silently do nothing
+  // for anything shown in the showcase.
+  if(showcase) showcase.addEventListener('click', handleCardClick);
 
   function cardToData(card){
     return {
@@ -2680,6 +2701,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     return card;
   }
 
+  // Picks a spread of products for the showcase strip — one per category
+  // first (so the strip reads as "look how much this store covers" rather
+  // than eight prompt packs in a row), then fills any remaining slots.
+  // Best-effort and silent: an empty or malformed catalog just leaves the
+  // showcase empty rather than breaking the page.
+  function pickShowcase(products, max){
+    if(!Array.isArray(products) || !products.length) return [];
+    var seen = {}, picks = [];
+    for(var i=0;i<products.length && picks.length<max;i++){
+      var p = products[i];
+      if(p && p.category && !seen[p.category]){ seen[p.category]=true; picks.push(p); }
+    }
+    for(var j=0;j<products.length && picks.length<max;j++){
+      if(picks.indexOf(products[j])===-1) picks.push(products[j]);
+    }
+    return picks;
+  }
+
+  function renderShowcase(products){
+    if(!showcase) return;
+    showcase.innerHTML = '';
+    pickShowcase(products, 8).forEach(function(p){ showcase.appendChild(buildCard(p)); });
+  }
+
   // Replace the statically-rendered catalog with the live one from the database.
   // If the API is unreachable, the server-rendered cards already in the page
   // remain as a fallback.
@@ -2692,6 +2737,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         catalog.innerHTML = '';
         data.products.forEach(function(p){ catalog.appendChild(buildCard(p)); });
         applyFilters();
+        if(catalogCount) catalogCount.textContent = data.products.length + (data.products.length===1?' product':' products');
+        renderShowcase(data.products);
       }
     }catch(e){ /* keep the static cards */ }
     reconcileCartWithCatalog();
@@ -2766,7 +2813,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(!res.ok) return;
       var data = await res.json().catch(function(){ return {}; });
       var aggs = (data && data.aggregates) || {};
-      catalog.querySelectorAll('.card-rating').forEach(function(el){
+      var cards = catalog.querySelectorAll('.card-rating');
+      if(showcase) cards = Array.prototype.slice.call(cards).concat(Array.prototype.slice.call(showcase.querySelectorAll('.card-rating')));
+      cards.forEach(function(el){
         var sku = el.getAttribute('data-rating-for');
         var agg = aggs[sku];
         if(agg && agg.count > 0){
