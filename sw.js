@@ -29,7 +29,11 @@
 // Bumped to v14 so returning installs pick up the first-party Multiniche Ads
 // tag on the storefront (mn-ads.js + the catalog slot).
 // Bumped to v15 so the MultiNicheADS icon on the store opens /ads.
-const CACHE = 'multiniche-ai-v15';
+// Bumped to v16: /order-confirmation no longer falls back to the cached
+// homepage on a failed fetch — see the comment in the fetch handler. This
+// was silently dropping buyers on what looked like an ordinary homepage
+// after a real, successful payment, with no order and no download link.
+const CACHE = 'multiniche-ai-v16';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -153,8 +157,28 @@ self.addEventListener('fetch', (event) => {
     const isHome = url.pathname === '/' || url.pathname === '/index.html';
     const isAgent = url.pathname === '/agent' || url.pathname === '/agent.html';
     const isSwarm = url.pathname === '/swarm' || url.pathname === '/swarm.html';
+    // /order-confirmation carries one buyer's session_id in its URL and is the
+    // ONLY proof they see that a real purchase went through, plus where their
+    // download link lives. It used to fall into the generic "any other route"
+    // branch below, whose catch() substitutes the cached HOMEPAGE on any
+    // failed fetch — and switching back to the browser/PWA right after Stripe
+    // redirects is exactly when a transient mobile network blip is likely.
+    // The buyer lands on what looks like an ordinary homepage: no error, no
+    // order, no download link, and nothing telling them anything went wrong —
+    // indistinguishable from "checkout silently failed," even when the
+    // payment genuinely succeeded. A short retry absorbs the transient blip;
+    // failing that, this deliberately does NOT substitute a different cached
+    // page. An honest browser offline/error screen at least invites a
+    // reload, and /api/order re-verifies with Stripe on every call, so a
+    // reload alone recovers the order — a silently-wrong homepage doesn't
+    // even suggest reloading is worth trying.
+    const fetchWithRetry = () => fetch(req).catch(() => fetch(req));
+    if (url.pathname === '/order-confirmation') {
+      event.respondWith(fetchWithRetry());
+      return;
+    }
     event.respondWith(
-      fetch(req)
+      fetchWithRetry()
         .then((res) => {
           if (isHome || isAgent || isSwarm) {
             const copy = res.clone();
