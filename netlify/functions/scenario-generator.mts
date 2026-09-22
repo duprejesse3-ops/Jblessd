@@ -116,20 +116,35 @@ export default async (_req: Request) => {
     const newPrompt = await writeSpecificPrompt(r)
     if (!newPrompt) continue
 
+    // Deactivate the generic v1 and insert a specific v2 — mirrors how a
+    // real scenario edit is meant to be versioned (scorecard-runner.mts's
+    // "changing the scenario bumps a version number" contract), so a v1
+    // run and a v2 run are never blended in the same rolling stats.
+    //
+    // These two writes must land together. Split across separate db.sql
+    // calls, a failed INSERT after a committed UPDATE left the SKU with
+    // zero active scenarios — /api/scorecard then returns { scorecard: null }
+    // and the SKU's /scorecard/:sku page 404s, even though the benchmark run
+    // that prompted this rewrite is still logged and still gets posted about.
+    // A single transaction makes the pair atomic: either both land, or
+    // neither does and the existing active scenario is untouched.
+    const client = await db.pool.connect()
     try {
-      // Deactivate the generic v1 and insert a specific v2 — mirrors how a
-      // real scenario edit is meant to be versioned (scorecard-runner.mts's
-      // "changing the scenario bumps a version number" contract), so a v1
-      // run and a v2 run are never blended in the same rolling stats.
-      await db.sql`UPDATE benchmark_scenarios SET active = false WHERE id = ${r.scenario_id}`
-      await db.sql`
-        INSERT INTO benchmark_scenarios (id, sku, prompt, version, active)
-        VALUES (${shortId()}, ${r.sku}, ${newPrompt}, ${r.version + 1}, true)
-      `
+      await client.query('BEGIN')
+      await client.query('UPDATE benchmark_scenarios SET active = false WHERE id = $1', [r.scenario_id])
+      await client.query(
+        `INSERT INTO benchmark_scenarios (id, sku, prompt, version, active)
+         VALUES ($1, $2, $3, $4, true)`,
+        [shortId(), r.sku, newPrompt, r.version + 1],
+      )
+      await client.query('COMMIT')
       rewritten++
       console.log(`[scenario-generator] rewrote scenario for ${r.sku}`)
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
       console.error(`[scenario-generator] failed to save scenario for ${r.sku}:`, (err as Error).message)
+    } finally {
+      client.release()
     }
   }
 
