@@ -20,8 +20,72 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getDatabase } from '@netlify/database'
 import { inspectSite, type HealthReport } from '../lib/site-health.mjs'
 import { cachedRecommendation, diagnosisFingerprint, shouldPruneHistory } from '../lib/agent-diagnosis.mjs'
+import { sendEmail, isEmailConfigured } from '../lib/email.mjs'
 
 const MODEL = 'claude-haiku-4-5'
+
+// Who gets paged when something is actually broken. Same degrade-gracefully
+// pattern as RESEND_API_KEY: unset means alerting is silently off (logged
+// once below) rather than the function erroring — a fresh deploy or preview
+// branch must keep working with zero config.
+const ALERT_EMAIL_NAMES = ['SITE_ALERT_EMAIL', 'ADMIN_EMAIL', 'OWNER_EMAIL']
+function alertRecipient(): string {
+  for (const name of ALERT_EMAIL_NAMES) {
+    const v = process.env[name]
+    if (v) return v
+  }
+  return ''
+}
+
+// Only real failures page anyone — 'degraded' (slow response, no reviews
+// yet, etc.) stays visible on /status for a periodic look, not an email.
+// Throttled to at most one alert per 6 hours so a check that stays broken
+// doesn't spam an inbox once an hour, every hour, forever; a genuinely new
+// failure (a different status than the last alert, or none in 6h) always
+// sends immediately.
+const ALERT_THROTTLE_HOURS = 6
+
+async function maybeAlert(report: HealthReport, recommendation: string): Promise<void> {
+  if (report.status !== 'unhealthy') return
+  const to = alertRecipient()
+  if (!to || !isEmailConfigured()) {
+    console.log('site health: unhealthy, but no alert recipient/email provider configured — skipping email')
+    return
+  }
+
+  try {
+    const db = getDatabase()
+    const [recent] = (await db.sql`
+      SELECT created_at FROM site_health_runs
+      WHERE status = 'unhealthy' AND created_at > now() - interval '1 hour' * ${ALERT_THROTTLE_HOURS}
+      ORDER BY created_at DESC LIMIT 1
+    `) as { created_at: string | Date }[]
+    if (recent) {
+      console.log('site health: unhealthy, but already alerted within the last', ALERT_THROTTLE_HOURS, 'hours')
+      return
+    }
+  } catch (error) {
+    // If the throttle check itself fails, err toward sending — a missed
+    // alert about a real outage is worse than an extra email.
+    console.error('site health alert throttle check failed:', error instanceof Error ? error.message : 'unknown error')
+  }
+
+  const failing = report.checks.filter((c) => c.status === 'failed')
+  const text =
+    `${report.summary}\n\n` +
+    failing.map((c) => `✗ ${c.name}: ${c.detail}`).join('\n') +
+    `\n\nRecommendation:\n${recommendation}\n\n` +
+    `Full history: https://multinicheai.com/status`
+  const result = await sendEmail({
+    to,
+    subject: `[MULTINICHE AI] Site check failed — ${report.summary}`,
+    text,
+  })
+  if (!result.ok) {
+    console.error('site health alert email failed to send:', result.error ?? 'unknown error')
+  }
+}
+
 
 function fallbackRecommendation(report: HealthReport): string {
   if (report.status === 'healthy') return 'No action is needed.'
@@ -44,7 +108,8 @@ async function diagnose(report: HealthReport): Promise<string> {
           role: 'user',
           content:
             'Act as a site-reliability analyst. An automated check just probed a storefront\'s homepage, ' +
-            'catalog API, review API, and sitemap. Give the site owner one concise, safe recommendation to ' +
+            'catalog API, review API, a live scorecard page, Agent Studio, the ads app, the ad-click ' +
+            'endpoint, and sitemap. Give the site owner one concise, safe recommendation to ' +
             'restore or improve availability. If every check failed with the same HTTP status (e.g. every ' +
             'check returns 401 or 403, including the homepage itself), say plainly that this pattern points ' +
             'at something blocking ALL public traffic at the hosting/platform level — most commonly a site-wide ' +
@@ -72,6 +137,8 @@ export default async (req: Request) => {
   const fingerprint = diagnosisFingerprint(report.status, report.checks)
   const reused = report.status === 'healthy' ? null : await cachedRecommendation('site_health_runs', fingerprint)
   const recommendation = reused ?? (await diagnose(report))
+
+  await maybeAlert(report, recommendation)
 
   try {
     const db = getDatabase()
