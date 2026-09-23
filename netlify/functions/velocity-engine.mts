@@ -276,7 +276,14 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
 const MAX_TOKENS: Record<Platform, number> = {
   x: 1000,
   youtube_shorts: 2500,
-  reddit: 700,
+  // Bumped from 700: reddit is the one platform generating two fields
+  // (title + body) rather than one short string, and a "here's something
+  // I found" post explaining a failed benchmark run in first person runs
+  // longer than a plain announcement — the same "too tight for this content
+  // type" failure the youtube_shorts budget above was already raised for
+  // once. 700 was cutting it off mid-string on real runs (stop_reason
+  // max_tokens, "Unterminated string" from JSON.parse).
+  reddit: 1400,
   bluesky: 600,
 }
 
@@ -321,6 +328,24 @@ async function generatePlatformContent(anthropic: Anthropic, platform: Platform,
   return { platform, content }
 }
 
+// Retries a platform generation once on failure before giving up on it.
+// Covers two different failure shapes with the same fix: a truncated/
+// malformed JSON parse error, and syntactically valid JSON where the model
+// nonetheless returned an empty string for its own platform field — the
+// latter isn't a token-budget problem (the response completed normally),
+// just an occasional degenerate completion, which a fresh attempt at the
+// same prompt routinely resolves. Cheap to do since this whole run happens
+// once a day; not worth it for anything user-facing/latency-sensitive, but
+// exactly the right trade here.
+async function generateWithRetry(anthropic: Anthropic, platform: Platform, factSheet: string): Promise<Variant> {
+  try {
+    return await generatePlatformContent(anthropic, platform, factSheet)
+  } catch (err) {
+    console.error(`[velocity-engine] ${platform} generation failed, retrying once:`, (err as Error).message)
+    return generatePlatformContent(anthropic, platform, factSheet)
+  }
+}
+
 async function generateVariants(factSheet: string): Promise<Variant[]> {
   // (factSheet already carries trend context inline when present — see
   // buildFactSheet — so no separate trend param is needed here.)
@@ -328,7 +353,7 @@ async function generateVariants(factSheet: string): Promise<Variant[]> {
   const platforms: Platform[] = ['x', 'youtube_shorts', 'reddit', 'bluesky']
 
   const results = await Promise.allSettled(
-    platforms.map((p) => generatePlatformContent(anthropic, p, factSheet))
+    platforms.map((p) => generateWithRetry(anthropic, p, factSheet))
   )
 
   const variants: Variant[] = []
