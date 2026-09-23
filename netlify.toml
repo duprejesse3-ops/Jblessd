@@ -180,6 +180,19 @@
   to = "/index.html"
   status = 200
 
+# Google Search Console's "Add a new sitemap" field appends a trailing slash
+# to whatever's entered and won't accept a bare filename without one — but
+# the sitemap function below is registered at the exact path /sitemap.xml
+# (no slash), and nothing normalizes the two, so GSC's own submitted URL
+# 404'd against a real, working sitemap ("Couldn't fetch" in the Sitemaps
+# report even though curling /sitemap.xml directly works fine). Rewriting
+# the slash variant onto the real one fixes this without needing GSC to
+# behave differently.
+[[redirects]]
+  from = "/sitemap.xml/"
+  to = "/sitemap.xml"
+  status = 200
+
 # Claude Agent Studio — the customer-facing agent rented by the credit. Served at
 # the clean /agent URL that Stripe's success_url and the access-key emails point
 # at (see netlify/functions/credits.mts), as a rewrite so the buyer returning from
