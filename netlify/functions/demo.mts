@@ -56,9 +56,23 @@ const SKU_MAX_TOKENS_SCENARIO: Record<string, number> = {
 // so it is effectively free and stays unmetered so any shopper can watch it.
 // A unique scenario string defeats the cache by design, which without a ceiling
 // makes this endpoint an open, unauthenticated way to spend the store's
-// inference budget. Ten tailored runs an hour per IP is far more than a real
-// shopper needs and bounds what a script can cost.
-const CUSTOM_DEMO_LIMIT = 10
+// inference budget.
+//
+// Raised from 10 to 30/hour on 2026-09-23: real internal callers (the weekly
+// scorecard sweep, the admin console's run_scorecard action) are supposed to
+// bypass this entirely via INTERNAL_API_SECRET, but if that check ever
+// doesn't match — wrong/missing header, secret unset — every such caller
+// falls back to sharing ONE bucket keyed "unknown" (see checkRateLimit: no
+// real IP on a server-to-server call), because they're all the same
+// unidentifiable caller as far as this limiter can tell. That single shared
+// bucket hitting 10/hour was trivial to exhaust from normal admin-console
+// testing alone, well before any real shopper traffic. 30 is still a real
+// ceiling against a scripted abuse loop, just not one a few minutes of
+// legitimate testing trips by accident. If INTERNAL_API_SECRET is verified
+// working, this limit only ever applies to genuine shopper/anonymous usage
+// (including the product page's own "Run on my own situation"), where 30/hour
+// per real IP is still generous, not permissive.
+const CUSTOM_DEMO_LIMIT = 30
 const CUSTOM_DEMO_WINDOW_MS = 60 * 60 * 1000
 const STORE_NAME = 'MULTINICHE AI'
 const CACHE_VERSION = 'v1' // bump to invalidate all cached demos at once
