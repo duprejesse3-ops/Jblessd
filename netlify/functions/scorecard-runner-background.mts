@@ -57,7 +57,7 @@ const MIN_OUTPUT_LENGTH = 20 // mirrors /api/proof's own "nothing to save yet" f
 // nothing usable) takes close to the same wall-clock time as a success.
 const INFRA_FAILURE_MS = 2000
 
-interface ScenarioRow {
+export interface ScenarioRow {
   id: string
   sku: string
   prompt: string
@@ -109,7 +109,10 @@ async function runScenario(origin: string, sku: string, prompt: string): Promise
   return { text, outcome: text.trim().length >= MIN_OUTPUT_LENGTH ? 'success' : 'failed' }
 }
 
-async function runOne(
+// Exported so admin-run-scorecard.mts can run a single SKU on demand through
+// the exact same logic — same recording rules, same infra-failure guard —
+// rather than a second, drift-prone copy of this function.
+export async function runOne(
   db: ReturnType<typeof getDatabase>,
   origin: string,
   s: ScenarioRow,
