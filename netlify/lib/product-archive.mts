@@ -25,6 +25,7 @@ import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-
 import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
 import { MULTIBOT_SOURCE } from './multibot-source.mjs'
+import { FIELDHAND_SOURCE } from './fieldhand-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -85,6 +86,9 @@ const RELEASE_NOTES_ROOT = 'release-notes-bot'
 const DIAGRAM_SYNC_ROOT = 'architecture-diagram-sync'
 const MERIDIAN_HOST_ROOT = 'meridian-host'
 const MERIDIAN_GATE_ROOT = 'meridian-gate'
+// Fieldhand ships as a single self-contained HTML file plus a README — no
+// scripts to mark executable.
+const FIELDHAND_ROOT = 'fieldhand'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -206,6 +210,14 @@ function multibotFiles(): ArchiveFile[] {
   }))
 }
 
+function fieldhandFiles(): ArchiveFile[] {
+  return FIELDHAND_SOURCE.map((file) => ({
+    path: `${FIELDHAND_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: false,
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-AB-037': { filename: 'incident-postmortem-automation.zip', files: postmortemFiles },
@@ -222,6 +234,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-CN-006': { filename: 'multiwitness.zip', files: witnessFiles },
   'AI-CN-007': { filename: 'multiguard.zip', files: guardFiles },
   'AI-AG-067': { filename: 'multibot.zip', files: multibotFiles },
+  'AI-AG-118': { filename: 'fieldhand.zip', files: fieldhandFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */

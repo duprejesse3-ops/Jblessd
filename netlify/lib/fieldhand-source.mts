@@ -1,0 +1,1078 @@
+// GENERATED FILE — DO NOT EDIT BY HAND.
+//
+// Produced by packages/fieldhand/tools/embed-source.mjs from the real
+// package source. Regenerate after changing the package:
+//
+//   node packages/fieldhand/tools/embed-source.mjs
+//
+// This is the payload for the Fieldhand product (SKU AI-AG-118): the
+// complete file the buyer receives at checkout. It is embedded rather
+// than read from disk so fulfilment cannot fail on a missing file.
+//
+// contents fields are template literals (not JSON strings) so each file
+// keeps its natural line breaks here.
+
+export interface SourceFile {
+  path: string
+  contents: string
+}
+
+export const FIELDHAND_SOURCE: SourceFile[] = [
+  { path: "fieldhand.html", contents: `<title>Fieldhand</title>
+<style>
+:root{
+  --paper:#efe8d8;
+  --paper-raised:#faf6ec;
+  --ink:#211d17;
+  --ink-soft:#5b5346;
+  --rule:#c3b89d;
+  --rule-strong:#a89a76;
+  --accent:#a13d2c;
+  --accent-ink:#fbf3ea;
+  --ok:#35573f;
+  --shadow:rgba(33,29,23,.16);
+  --focus:#2c4a3e;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f2a4a;
+    --paper-raised:#123458;
+    --ink:#e9f0f8;
+    --ink-soft:#9fb4cc;
+    --rule:#2e5686;
+    --rule-strong:#3f6a9c;
+    --accent:#ff9466;
+    --accent-ink:#122744;
+    --ok:#7fd9a8;
+    --shadow:rgba(0,0,0,.45);
+    --focus:#ff9466;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f2a4a;
+  --paper-raised:#123458;
+  --ink:#e9f0f8;
+  --ink-soft:#9fb4cc;
+  --rule:#2e5686;
+  --rule-strong:#3f6a9c;
+  --accent:#ff9466;
+  --accent-ink:#122744;
+  --ok:#7fd9a8;
+  --shadow:rgba(0,0,0,.45);
+  --focus:#ff9466;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+  padding-inline:16px;
+  min-height:100%;
+}
+h1,h2,h3{font-family:'Special Elite','Courier New',monospace; font-weight:400; letter-spacing:.02em;}
+::selection{background:var(--accent); color:var(--accent-ink);}
+
+.wrap{max-width:1180px; margin:0 auto; padding-block:28px 48px;}
+
+.masthead{
+  display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+  border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap;
+}
+.masthead .stamp{
+  font-family:'Special Elite','Courier New',monospace;
+  font-size:clamp(28px,4vw,40px);
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.masthead .stamp span{color:var(--accent);}
+.masthead .tag{
+  font-size:13px; color:var(--ink-soft); max-width:340px; text-wrap:balance; text-align:right;
+}
+.theme-toggle{
+  font-family:'IBM Plex Sans Condensed',sans-serif;
+  font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  background:none; border:1px solid var(--rule-strong); color:var(--ink-soft);
+  padding:5px 10px; border-radius:3px; cursor:pointer;
+}
+.theme-toggle:hover{border-color:var(--ink); color:var(--ink);}
+
+.grid{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.15fr); gap:20px;
+}
+@media (max-width:820px){ .grid{grid-template-columns:1fr;} }
+
+.panel{
+  background:var(--paper-raised);
+  border:1px solid var(--rule);
+  border-radius:4px;
+  box-shadow:0 1px 0 var(--shadow);
+  padding:18px 18px 20px;
+}
+.panel > h2{
+  font-size:15px; text-transform:uppercase; letter-spacing:.08em; margin:0 0 14px;
+  display:flex; align-items:center; gap:8px; color:var(--ink);
+}
+.panel > h2 .n{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:20px; border:1px solid var(--ink); border-radius:50%;
+  font-size:11px; font-family:'IBM Plex Sans Condensed',sans-serif;
+}
+
+fieldset{border:none; padding:0; margin:0 0 16px;}
+fieldset legend{
+  font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft);
+  padding:0 0 6px; border-bottom:1px solid var(--rule); width:100%; margin-bottom:10px;
+}
+.row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+.field{display:flex; flex-direction:column; gap:4px; flex:1 1 140px; min-width:0;}
+.field.wide{flex-basis:100%;}
+label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em;}
+input[type=text],input[type=date],select,textarea{
+  font-family:'IBM Plex Sans Condensed',sans-serif;
+  font-size:14px; color:var(--ink); background:var(--paper);
+  border:1px solid var(--rule-strong); border-radius:3px; padding:7px 9px; width:100%;
+}
+textarea{resize:vertical; min-height:56px; font-family:inherit;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-offset:1px;}
+
+.factlist{display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
+.factrow{display:flex; gap:6px; align-items:center;}
+.factrow input{flex:1;}
+.iconbtn{
+  background:none; border:1px solid var(--rule-strong); color:var(--ink-soft);
+  width:30px; height:30px; border-radius:3px; cursor:pointer; font-size:15px; line-height:1;
+  flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent);}
+
+.btn{
+  font-family:'IBM Plex Sans Condensed',sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+  border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  padding:9px 16px; border-radius:3px; cursor:pointer;
+}
+.btn:hover{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.btn:disabled{opacity:.45; cursor:not-allowed; background:var(--ink); color:var(--paper);}
+.btn.ghost{background:none; color:var(--ink); border:1px solid var(--rule-strong);}
+.btn.ghost:hover{border-color:var(--ink); background:none; color:var(--ink);}
+.btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;}
+
+.addfact{
+  background:none; border:1px dashed var(--rule-strong); color:var(--ink-soft);
+  font-size:12px; padding:6px 10px; border-radius:3px; cursor:pointer; align-self:flex-start;
+}
+.addfact:hover{border-color:var(--accent); color:var(--accent);}
+
+.status{font-size:12px; color:var(--ink-soft); min-height:16px; margin-top:8px;}
+.status.live{color:var(--accent);}
+
+.sheet{
+  background:var(--paper-raised); border:1px solid var(--rule); border-radius:4px;
+  padding:20px 20px 16px; min-height:340px; display:flex; flex-direction:column; gap:10px;
+}
+.sheet .letterhead{
+  display:flex; justify-content:space-between; font-size:11px; color:var(--ink-soft);
+  border-bottom:1px solid var(--rule); padding-bottom:8px; text-transform:uppercase; letter-spacing:.05em;
+}
+.lettertext{
+  font-family:'Courier Prime','Courier New',monospace; font-size:13.5px; line-height:1.65;
+  white-space:pre-wrap; flex:1; min-height:220px; color:var(--ink);
+}
+.lettertext:empty::before{
+  content:"Fill in the ticket on the left and hit Draft Letter. Your draft appears here, already run through the scrub.";
+  color:var(--ink-soft); font-style:normal;
+}
+.scrubreport{
+  font-size:12px; color:var(--ink-soft); border-top:1px dashed var(--rule); padding-top:10px; display:none;
+}
+.scrubreport.show{display:block;}
+.scrubreport ul{margin:6px 0 0; padding-left:18px;}
+.scrubreport li{margin-bottom:2px;}
+.badge{
+  display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+  background:var(--ok); color:var(--paper-raised); padding:2px 7px; border-radius:10px; margin-left:6px;
+}
+
+.drawer{margin-top:20px;}
+.drawer h2{font-size:14px; text-transform:uppercase; letter-spacing:.08em; margin:0 0 10px; color:var(--ink-soft);}
+.log{display:flex; flex-direction:column; gap:8px;}
+.logrow{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  background:var(--paper-raised); border:1px solid var(--rule); border-radius:4px; padding:9px 12px;
+  cursor:pointer; font-size:13px;
+}
+.logrow:hover{border-color:var(--rule-strong);}
+.logrow .meta{color:var(--ink-soft); font-size:11px;}
+.logrow .del{background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:15px; padding:2px 6px;}
+.logrow .del:hover{color:var(--accent);}
+.empty{font-size:12px; color:var(--ink-soft); font-style:italic;}
+.footnote{font-size:11px; color:var(--ink-soft); margin-top:6px;}
+
+.tabs{display:flex; gap:6px; margin-bottom:20px; border-bottom:1px solid var(--rule);}
+.tab{
+  font-family:'IBM Plex Sans Condensed',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:.07em;
+  background:none; border:none; border-bottom:3px solid transparent; color:var(--ink-soft);
+  padding:8px 4px; cursor:pointer; margin-bottom:-1px;
+}
+.tab:hover{color:var(--ink);}
+.tab.active{color:var(--ink); border-bottom-color:var(--accent);}
+.view{display:none;}
+.view.active{display:block;}
+
+.download-panel{max-width:640px;}
+.download-panel p{font-size:14px; line-height:1.6; color:var(--ink); margin:0 0 14px;}
+.download-panel .fine{font-size:12px; color:var(--ink-soft); margin-top:14px; line-height:1.6;}
+.download-panel .steps{margin:14px 0; padding-left:20px; font-size:13px; line-height:1.8; color:var(--ink);}
+
+.dropzone{
+  border:1px dashed var(--rule-strong); border-radius:4px; padding:16px;
+  text-align:center; font-size:12px; color:var(--ink-soft); cursor:pointer;
+  transition:border-color .15s, color .15s;
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent); color:var(--accent);}
+.dropzone strong{color:inherit;}
+.filelist{display:flex; flex-direction:column; gap:6px; margin-top:10px;}
+.filechip{
+  display:flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--rule);
+  border-radius:3px; padding:6px 9px; font-size:12px;
+}
+.filechip .fname{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.filechip .fmeta{color:var(--ink-soft); font-size:10px; text-transform:uppercase; letter-spacing:.04em; flex:0 0 auto;}
+.filechip .fmeta.text{color:var(--ok);}
+.filechip .fmeta.image{color:var(--focus);}
+.filechip .fmeta.binary{color:var(--accent);}
+.filechip .rm{background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:14px; padding:0 2px; flex:0 0 auto;}
+.filechip .rm:hover{color:var(--accent);}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <div class="masthead">
+    <div class="stamp">FIELD<span>HAND</span></div>
+    <div class="tag">Correspondence drafted like a contractor wrote it — not like a machine did.</div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab active" id="tab-draft">Draft</button>
+    <button type="button" class="tab" id="tab-upload">Upload</button>
+    <button type="button" class="tab" id="tab-download">Download App</button>
+  </div>
+
+  <div class="view active" id="view-draft">
+  <div class="grid">
+    <div class="panel" id="ticket-panel">
+      <h2><span class="n">1</span> Job Ticket</h2>
+
+      <fieldset>
+        <legend>Letter</legend>
+        <div class="row">
+          <div class="field">
+            <label for="ltype">Type</label>
+            <select id="ltype">
+              <optgroup label="Bids &amp; Proposals">
+                <option>Request for Proposal (RFP)</option>
+                <option>Request for Quote (RFQ)</option>
+                <option>Bid Proposal / Submission</option>
+                <option>Subcontractor Bid Invitation</option>
+              </optgroup>
+              <optgroup label="Project Administration">
+                <option>RFI Submission</option>
+                <option>RFI Response</option>
+                <option>Notice to Proceed</option>
+                <option>Submittal Transmittal</option>
+                <option>Change Order Request</option>
+                <option>Change Order Justification</option>
+              </optgroup>
+              <optgroup label="Delays &amp; Claims">
+                <option>Notice of Delay</option>
+                <option>Differing Site Conditions Notice</option>
+                <option>Claim Submission</option>
+                <option>Claim Response</option>
+                <option>Stop Work Notice</option>
+              </optgroup>
+              <optgroup label="Payment &amp; Closeout">
+                <option>Payment Application Cover Letter</option>
+                <option>Preliminary Notice / Mechanics Lien</option>
+                <option>Substantial Completion Notice</option>
+                <option>Punch List Follow-Up</option>
+                <option>Warranty Claim / Pushback</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option>General Correspondence</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tone">Tone</label>
+            <select id="tone">
+              <option>Firm</option>
+              <option>Neutral</option>
+              <option>Conciliatory</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ldate">Date</label>
+            <input type="date" id="ldate">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Parties</legend>
+        <div class="row">
+          <div class="field"><label for="fromName">From (name, title)</label><input type="text" id="fromName" placeholder="J. Dupree, Project Manager"></div>
+          <div class="field"><label for="fromCo">Your company</label><input type="text" id="fromCo" placeholder="Dupree Contracting LLC"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="toName">To (name, title)</label><input type="text" id="toName" placeholder="R. Hager, Project Engineer"></div>
+          <div class="field"><label for="toCo">Their company / office</label><input type="text" id="toCo" placeholder="City Engineering Office"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Project</legend>
+        <div class="row">
+          <div class="field"><label for="project">Project</label><input type="text" id="project" placeholder="Elm Street Lift Station Upgrade"></div>
+          <div class="field"><label for="ref">Reference (RFI#, CO#, spec section)</label><input type="text" id="ref" placeholder="RFI-014 / Section 01 26 00"></div>
+        </div>
+        <div class="row">
+          <div class="field wide"><label for="subject">Subject line</label><input type="text" id="subject" placeholder="Response to Notice of Liquidated Damages"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Facts (in the order they should appear)</legend>
+        <div class="factlist" id="factlist"></div>
+        <button type="button" class="addfact" id="addfact">+ add a fact</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Attachments</legend>
+        <div class="row" style="align-items:center;">
+          <div class="field wide" style="flex-direction:row; align-items:center; gap:10px;">
+            <span id="attachSummary" class="footnote" style="margin:0;">No files attached yet.</span>
+            <button type="button" class="btn ghost" id="goUploadBtn" style="margin-left:auto;">Go to Upload tab</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>The ask</legend>
+        <div class="row">
+          <div class="field wide"><label for="ask">What this letter needs to accomplish</label>
+            <textarea id="ask" placeholder="Reject the liquidated damages assessment and request a 21-day time extension tied to the dewatering delay."></textarea>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field wide"><label for="notes">Anything else to steer the draft (optional)</label>
+            <textarea id="notes" placeholder="Keep it short. No legal citations. Reference the daily reports directly."></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="btnrow">
+        <button class="btn" id="draftBtn">Draft Letter</button>
+        <button class="btn ghost" id="clearBtn" type="button">Clear ticket</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="panel" id="letter-panel">
+      <h2><span class="n">2</span> Letter <span id="scrubBadge" class="badge" style="display:none;">scrubbed</span></h2>
+      <div class="sheet">
+        <div class="letterhead">
+          <span id="lh-left">—</span>
+          <span id="lh-right">—</span>
+        </div>
+        <div class="lettertext" id="lettertext"></div>
+        <div class="scrubreport" id="scrubreport">
+          <strong>What got scrubbed:</strong>
+          <ul id="scrublist"></ul>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:12px;">
+        <button class="btn ghost" id="copyBtn" type="button">Copy</button>
+        <button class="btn ghost" id="downloadBtn" type="button">Download .txt</button>
+        <button class="btn ghost" id="reportBtn" type="button">Show scrub report</button>
+      </div>
+      <div class="footnote">Letters you draft here are kept in the Recent list below, in this browser only. Copy or download anything you need to keep.</div>
+    </div>
+  </div>
+
+  <div class="drawer">
+    <h2>Recent</h2>
+    <div class="log" id="log"></div>
+  </div>
+  </div>
+
+  <div class="view" id="view-upload">
+    <div class="panel">
+      <h2><span class="n">↑</span> Upload Job Files</h2>
+      <p style="font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 14px;">Any format — daily reports, photos, RFIs, contracts, spreadsheets, emails. These carry over to the Draft tab automatically.</p>
+      <div class="dropzone" id="dropzone" tabindex="0">
+        <strong>Drop files here</strong> or click to browse — any format, any size.<br>
+        Photos and scans are handed to the draft as images. Text-based files (.txt, .csv, .md, .json, .rtf, .log) are read in as reference text. Other formats (.pdf, .docx, .xlsx, .zip, etc.) attach for your own record but aren't read into the draft — pull the key facts into the Facts list on the Draft tab.
+      </div>
+      <input type="file" id="fileinput" multiple accept="*/*" hidden>
+      <div class="filelist" id="filelist"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-download">
+    <div class="panel download-panel">
+      <h2><span class="n">↓</span> Take Fieldhand With You</h2>
+      <p>This saves the whole app — the job ticket, the letter sheet, the scrubber — as one file you keep. Open it in any browser, no connection to Claude required, no account, nothing sent anywhere.</p>
+      <ol class="steps">
+        <li>Click <strong>Download fieldhand.html</strong> below.</li>
+        <li>Open the saved file in Chrome, Edge, Firefox, or Safari whenever you need it.</li>
+        <li>The job ticket, the scrubber, and your Recent list all work offline, right in the file.</li>
+      </ol>
+      <div class="btnrow">
+        <button class="btn" id="downloadAppBtn" type="button">Download fieldhand.html</button>
+      </div>
+      <div class="status" id="downloadStatus"></div>
+      <p class="fine">One thing doesn't travel with it: the <strong>Draft Letter</strong> button calls Claude to write the first pass, so that step needs this page open here, signed in. Everything after the draft — the scrub, the copy, the download, the recent list — runs entirely in the saved file itself, offline.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- tabs ----------
+  var tabs = {
+    draft: { btn: document.getElementById('tab-draft'), view: document.getElementById('view-draft') },
+    upload: { btn: document.getElementById('tab-upload'), view: document.getElementById('view-upload') },
+    download: { btn: document.getElementById('tab-download'), view: document.getElementById('view-download') }
+  };
+  function showTab(which){
+    Object.keys(tabs).forEach(function(key){
+      var on = key === which;
+      tabs[key].btn.classList.toggle('active', on);
+      tabs[key].view.classList.toggle('active', on);
+    });
+  }
+  Object.keys(tabs).forEach(function(key){
+    tabs[key].btn.addEventListener('click', function(){ showTab(key); });
+  });
+  var goUploadBtn = document.getElementById('goUploadBtn');
+  if (goUploadBtn) goUploadBtn.addEventListener('click', function(){ showTab('upload'); });
+
+  // ---------- download the app itself ----------
+  document.getElementById('downloadAppBtn').addEventListener('click', async function(){
+    var statusEl2 = document.getElementById('downloadStatus');
+    var html = '<!doctype html>\\n' + document.documentElement.outerHTML;
+    if (downloadsFn) {
+      try {
+        await downloadsFn.save({ filename: 'fieldhand.html', data: html });
+        statusFlash(this, 'Saved');
+        return;
+      } catch (e) {
+        // fall through to clipboard fallback below
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(html);
+      statusEl2.textContent = 'Couldn’t trigger a save here, so the file’s HTML is on your clipboard — paste it into a text editor and save as fieldhand.html.';
+    } catch (e) {
+      statusEl2.textContent = 'Couldn’t save or copy automatically in this view. Try the Download .txt-style save from a browser tab instead of an embedded view.';
+    }
+  });
+
+  // ---------- theme toggle (optional manual override) ----------
+  var mh = document.querySelector('.masthead');
+  var tbtn = document.createElement('button');
+  tbtn.className = 'theme-toggle';
+  tbtn.type = 'button';
+  tbtn.textContent = 'Toggle Paper/Blueprint';
+  tbtn.addEventListener('click', function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    if(cur === 'dark'){ root.setAttribute('data-theme','light'); }
+    else if(cur === 'light'){ root.removeAttribute('data-theme'); }
+    else { root.setAttribute('data-theme','dark'); }
+  });
+  mh.appendChild(tbtn);
+
+  // ---------- facts list ----------
+  var factlist = document.getElementById('factlist');
+  function addFact(value){
+    var row = document.createElement('div');
+    row.className = 'factrow';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = value || '';
+    input.placeholder = 'A dated, concrete fact — e.g. "Excavation halted 6/12 per daily report #41 due to groundwater intrusion"';
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'iconbtn';
+    rm.textContent = '×';
+    rm.setAttribute('aria-label','Remove fact');
+    rm.addEventListener('click', function(){ row.remove(); });
+    row.appendChild(input);
+    row.appendChild(rm);
+    factlist.appendChild(row);
+  }
+  document.getElementById('addfact').addEventListener('click', function(){ addFact(''); });
+
+  function getFacts(){
+    return Array.prototype.slice.call(factlist.querySelectorAll('input'))
+      .map(function(i){ return i.value.trim(); })
+      .filter(Boolean);
+  }
+
+  // ---------- example starting state ----------
+  function loadExample(){
+    document.getElementById('ltype').value = 'Claim Response';
+    document.getElementById('tone').value = 'Firm';
+    document.getElementById('ldate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('fromName').value = 'J. Dupree, Project Manager';
+    document.getElementById('fromCo').value = 'Dupree Contracting LLC';
+    document.getElementById('toName').value = 'R. Hager, Project Engineer';
+    document.getElementById('toCo').value = 'City Engineering Office';
+    document.getElementById('project').value = 'Elm Street Lift Station Upgrade';
+    document.getElementById('ref').value = 'Section 01 26 00 — Time Extensions';
+    document.getElementById('subject').value = 'Response to Notice of Liquidated Damages';
+    document.getElementById('ask').value = 'Reject the liquidated damages assessment and request a 21-day time extension tied to the dewatering delay documented in daily reports #38–44.';
+    document.getElementById('notes').value = 'Keep it short and factual. No legal citations. Point directly at the daily reports and the RFI log.';
+    factlist.innerHTML = '';
+    addFact('Unforeseen groundwater intrusion encountered at Station 4+50 on 6/10, confirmed by geotech on 6/11.');
+    addFact('Dewatering equipment mobilized 6/12; excavation resumed 6/19 — 7 working days lost, logged in daily reports #38–44.');
+    addFact('RFI-014 requesting revised shoring design was submitted 6/13 and not answered until 6/24, adding 4 further days of delay not caused by the contractor.');
+  }
+  loadExample();
+
+  // ---------- AI-tell scrubber ----------
+  function scrub(raw){
+    var t = raw;
+    var report = [];
+
+    var uCount = 0;
+    t = t.replace(/[‘’]/g, function(){ uCount++; return "'"; });
+    t = t.replace(/[“”]/g, function(){ uCount++; return '"'; });
+    t = t.replace(/ /g, function(){ uCount++; return ' '; });
+    t = t.replace(/[​‌‍﻿]/g, function(){ uCount++; return ''; });
+    var dashCount = (t.match(/[—–]/g) || []).length;
+    t = t.replace(/\\s*[—–]\\s*/g, ', ');
+    if (uCount || dashCount) report.push('Straightened curly quotes/dashes and stripped hidden characters (' + (uCount + dashCount) + ')');
+
+    var openers = [
+      /^I hope this (email|letter|message) finds you[^.]*\\.\\s*/i,
+      /^I (?:wanted|am writing) to (?:reach out|follow up|inform you)[^.]*\\.\\s*/i
+    ];
+    var openerHits = 0;
+    openers.forEach(function(re){ if (re.test(t)) { t = t.replace(re, ''); openerHits++; } });
+    if (openerHits) report.push('Removed ' + openerHits + ' stock opening line(s)');
+
+    var fillers = [
+      [/\\bFurthermore,\\s*/gi, ''],
+      [/\\bMoreover,\\s*/gi, ''],
+      [/\\bAdditionally,\\s*/gi, ''],
+      [/\\bIn conclusion,\\s*/gi, ''],
+      [/\\bIn summary,\\s*/gi, ''],
+      [/\\bOverall,\\s*/gi, ''],
+      [/\\bIt(?:'|’)?s important to note that\\s*/gi, ''],
+      [/\\bIt is important to note that\\s*/gi, ''],
+      [/\\bPlease don(?:'|’)?t hesitate to\\s*/gi, 'Feel free to '],
+      [/\\bAs (?:mentioned|noted) (?:previously|above),\\s*/gi, ''],
+      [/\\bAt the end of the day,\\s*/gi, ''],
+      [/\\bLet(?:'|’)?s dive in[.,]?\\s*/gi, '']
+    ];
+    var fillerHits = 0;
+    fillers.forEach(function(pair){
+      var m = t.match(pair[0]);
+      if (m) { fillerHits += m.length; t = t.replace(pair[0], pair[1]); }
+    });
+    if (fillerHits) report.push('Cut ' + fillerHits + ' filler/hedge phrase(s)');
+
+    var mdHits = 0;
+    t = t.replace(/\\*\\*(.*?)\\*\\*/g, function(m, p){ mdHits++; return p; });
+    t = t.replace(/(^|\\n)[ \\t]*[-*•][ \\t]+/g, function(m, p){ mdHits++; return p + '- '; });
+    if (mdHits) report.push('Cleaned ' + mdHits + ' markdown artifact(s)');
+
+    t = t.replace(/[ \\t]{2,}/g, ' ').replace(/\\n{3,}/g, '\\n\\n');
+    t = t.replace(/(^|\\n)\\s*([a-z])/g, function(m, p1, p2){ return p1 + p2.toUpperCase(); });
+    t = t.trim();
+
+    return { text: t, report: report };
+  }
+
+  // ---------- capability wiring ----------
+  var sampleFn = null;
+  var downloadsFn = null;
+  var imageLimits = null;
+  (async function(){
+    try {
+      if (window.claude && window.claude.use) {
+        sampleFn = await window.claude.use('sample');
+        downloadsFn = await window.claude.use('downloads');
+      }
+    } catch (e) {}
+    if (!sampleFn) {
+      var draftBtn = document.getElementById('draftBtn');
+      draftBtn.disabled = true;
+      document.getElementById('status').textContent = 'Drafting isn’t available in this view.';
+    } else if (sampleFn.limits) {
+      try {
+        var lims = await sampleFn.limits();
+        imageLimits = lims && lims.images ? lims.images : null;
+      } catch (e) {}
+    }
+    if (!downloadsFn) {
+      document.getElementById('downloadBtn').disabled = true;
+    }
+    renderFileList();
+  })();
+
+  // ---------- attachments ----------
+  var attachments = []; // { file, kind }
+  var TEXT_EXT = /\\.(txt|csv|tsv|md|markdown|json|rtf|log|xml|yaml|yml)$/i;
+
+  function classify(file){
+    if (file.type.indexOf('image/') === 0) return 'image';
+    if (file.type.indexOf('text/') === 0 || file.type === 'application/json' ||
+        file.type === 'application/xml' || TEXT_EXT.test(file.name)) return 'text';
+    return 'binary';
+  }
+  function fmtSize(bytes){
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return Math.round(bytes/1024) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+  function badgeLabel(kind, idx, imageIdxAllowed){
+    if (kind === 'text') return 'text → draft';
+    if (kind === 'image') return imageIdxAllowed ? 'image → draft' : 'image — not sent';
+    return 'attached only';
+  }
+
+  var dropzone = document.getElementById('dropzone');
+  var fileinput = document.getElementById('fileinput');
+  dropzone.addEventListener('click', function(){ fileinput.click(); });
+  dropzone.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileinput.click(); } });
+  ['dragover','dragenter'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave','dragend','drop'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', function(e){
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+  fileinput.addEventListener('change', function(){
+    addFiles(fileinput.files);
+    fileinput.value = '';
+  });
+
+  function addFiles(fileList){
+    Array.prototype.forEach.call(fileList, function(file){
+      attachments.push({ file: file, kind: classify(file) });
+    });
+    renderFileList();
+  }
+
+  function renderFileList(){
+    var el = document.getElementById('filelist');
+    el.innerHTML = '';
+    var imageBudget = imageLimits ? imageLimits.maxCount : 0;
+    var imageSeen = 0;
+    attachments.forEach(function(item, idx){
+      var allowedAsImage = false;
+      if (item.kind === 'image' && imageLimits && imageSeen < imageBudget) {
+        allowedAsImage = true;
+        imageSeen++;
+      }
+      var chip = document.createElement('div');
+      chip.className = 'filechip';
+      var name = document.createElement('span');
+      name.className = 'fname';
+      name.textContent = item.file.name;
+      var meta = document.createElement('span');
+      meta.className = 'fmeta ' + item.kind;
+      meta.textContent = badgeLabel(item.kind, idx, allowedAsImage) + ' · ' + fmtSize(item.file.size);
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'rm';
+      rm.textContent = '×';
+      rm.setAttribute('aria-label', 'Remove attachment');
+      rm.addEventListener('click', function(){
+        attachments.splice(idx, 1);
+        renderFileList();
+      });
+      chip.appendChild(name);
+      chip.appendChild(meta);
+      chip.appendChild(rm);
+      el.appendChild(chip);
+    });
+
+    var summaryEl = document.getElementById('attachSummary');
+    if (summaryEl) {
+      if (!attachments.length) {
+        summaryEl.textContent = 'No files attached yet.';
+      } else {
+        var textN = attachments.filter(function(a){ return a.kind === 'text'; }).length;
+        var imgN = attachments.filter(function(a){ return a.kind === 'image'; }).length;
+        var binN = attachments.filter(function(a){ return a.kind === 'binary'; }).length;
+        var parts = [];
+        if (textN) parts.push(textN + ' text');
+        if (imgN) parts.push(imgN + ' image');
+        if (binN) parts.push(binN + ' other');
+        summaryEl.textContent = attachments.length + ' file' + (attachments.length === 1 ? '' : 's') + ' attached (' + parts.join(', ') + ').';
+      }
+    }
+  }
+
+  function readTextFile(file){
+    return new Promise(function(resolve){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(String(reader.result || '')); };
+      reader.onerror = function(){ resolve(''); };
+      reader.readAsText(file);
+    });
+  }
+
+  var TYPE_GUIDANCE = {
+    'Request for Proposal (RFP)': 'Lay out the scope of work being requested, what a responding proposal needs to include (pricing, schedule, qualifications), and the response deadline. Structure it so each requirement is easy to find.',
+    'Request for Quote (RFQ)': 'Spell out exactly what needs pricing (materials, quantities, specs) and the deadline and format for the quote. Keep it short and itemized.',
+    'Bid Proposal / Submission': 'Present the scope being bid, the price, what is included and excluded, the schedule, and how long the bid holds. Read like a firm offer, not a sales pitch.',
+    'Subcontractor Bid Invitation': 'Invite the trade to bid a defined scope, give the bid deadline, walk-through date if any, and where to send questions.',
+    'RFI Submission': 'State plainly what is unclear or conflicting in the drawings/specs, reference the exact sheet or section, and ask a specific, answerable question. Note the impact on schedule if it goes unanswered by a date.',
+    'RFI Response': 'Answer the question directly first, then give the reasoning or reference that supports the answer.',
+    'Notice to Proceed': 'Confirm the start date, the scope authorized to begin, and any conditions that apply.',
+    'Submittal Transmittal': 'List what is being submitted, the spec section it responds to, and what action or response is needed and by when.',
+    'Change Order Request': 'State the change, why it is needed, the cost and schedule impact, and what approval is being requested.',
+    'Change Order Justification': 'Justify the added cost or time with the specific cause, referencing the facts and any directive that triggered it.',
+    'Notice of Delay': 'Identify the cause of the delay, the date it started, the days affected so far, and that this is formal notice as the contract requires.',
+    'Differing Site Conditions Notice': 'Describe the condition encountered versus what was indicated in the contract documents, the date discovered, and that this is notice under the differing-site-conditions clause.',
+    'Claim Submission': 'State the basis of the claim, the facts supporting it, the amount of time or money being claimed, and the relief requested.',
+    'Claim Response': 'State the position clearly up front (accept, reject, or partial), then walk through the facts and reasoning.',
+    'Stop Work Notice': 'State plainly what work is to stop, effective when, and the reason. No hedging — this needs to be unambiguous.',
+    'Payment Application Cover Letter': 'Reference the application number and period, the amount requested, and note any attachments (schedule of values, lien waivers).',
+    'Preliminary Notice / Mechanics Lien': 'State the statutory notice plainly: the property, the work or materials furnished, and the amount, in the direct language these notices require. Avoid persuasive language entirely.',
+    'Substantial Completion Notice': 'State the date substantial completion was reached, what remains on the punch list, and what happens next (warranty start, retainage release, etc.).',
+    'Punch List Follow-Up': 'Reference the punch list items still open, their status, and the date they will be closed out.',
+    'Warranty Claim / Pushback': 'State the issue, the date it was reported, and either the warranty request or the reason the claim is being pushed back.',
+    'General Correspondence': ''
+  };
+
+  function buildPrompt(f, textExcerpts){
+    var lines = [];
+    lines.push('You are ghostwriting a piece of contractor business correspondence, in the voice of the sender below — not as an AI assistant.');
+    lines.push('Write ONLY the letter body text. No markdown, no headers, no bullet characters unless the facts naturally read as a short list, no bold text, no em dashes.');
+    lines.push('Use plain, direct language a working contractor would actually write: short sentences, concrete dated facts, no corporate throat-clearing, no hedging, no phrases like "I hope this finds you well," "please don\\'t hesitate," "furthermore," or "in conclusion."');
+    var guidance = TYPE_GUIDANCE[f.ltype];
+    if (guidance) lines.push('For this letter type specifically: ' + guidance);
+    lines.push('');
+    lines.push('Letter type: ' + f.ltype);
+    lines.push('Tone: ' + f.tone);
+    lines.push('Date: ' + f.ldate);
+    lines.push('From: ' + f.fromName + ', ' + f.fromCo);
+    lines.push('To: ' + f.toName + ', ' + f.toCo);
+    lines.push('Project: ' + f.project + (f.ref ? ' (Ref: ' + f.ref + ')' : ''));
+    lines.push('Subject: ' + f.subject);
+    lines.push('');
+    lines.push('Facts to include, in this order:');
+    f.facts.forEach(function(fact){ lines.push('- ' + fact); });
+    if (textExcerpts && textExcerpts.length) {
+      lines.push('');
+      lines.push('Reference material from attached files (use for supporting detail and dates, but keep the letter itself short — don\\'t dump this content in verbatim):');
+      textExcerpts.forEach(function(ex){
+        lines.push('--- ' + ex.name + ' ---');
+        lines.push(ex.content);
+      });
+    }
+    lines.push('');
+    lines.push('What this letter needs to accomplish: ' + f.ask);
+    if (f.notes) lines.push('Additional instructions: ' + f.notes);
+    if (attachments.some(function(a){ return a.kind === 'image'; })) {
+      lines.push('Any images attached are photos or scans from the job site or the referenced documents — use them as supporting evidence for the facts above.');
+    }
+    lines.push('');
+    lines.push('Write the full letter body: a short greeting line, the facts stated plainly with their dates, the ask stated explicitly near the end, and a sign-off with the sender\\'s name and title. Keep paragraphs short.');
+    return lines.join('\\n');
+  }
+
+  function readForm(){
+    return {
+      ltype: document.getElementById('ltype').value,
+      tone: document.getElementById('tone').value,
+      ldate: document.getElementById('ldate').value || new Date().toISOString().slice(0,10),
+      fromName: document.getElementById('fromName').value.trim(),
+      fromCo: document.getElementById('fromCo').value.trim(),
+      toName: document.getElementById('toName').value.trim(),
+      toCo: document.getElementById('toCo').value.trim(),
+      project: document.getElementById('project').value.trim(),
+      ref: document.getElementById('ref').value.trim(),
+      subject: document.getElementById('subject').value.trim(),
+      ask: document.getElementById('ask').value.trim(),
+      notes: document.getElementById('notes').value.trim(),
+      facts: getFacts()
+    };
+  }
+
+  var lettertextEl = document.getElementById('lettertext');
+  var statusEl = document.getElementById('status');
+  var scrubBadge = document.getElementById('scrubBadge');
+  var scrubreportEl = document.getElementById('scrubreport');
+  var scrublistEl = document.getElementById('scrublist');
+  var lastFinal = '';
+  var lastReport = [];
+
+  function setLetterhead(f){
+    document.getElementById('lh-left').textContent = (f.fromCo || 'Sender') + ' → ' + (f.toCo || 'Recipient');
+    document.getElementById('lh-right').textContent = f.subject ? (f.subject + ' — ' + f.ldate) : f.ldate;
+  }
+
+  document.getElementById('draftBtn').addEventListener('click', async function(){
+    if (!sampleFn) return;
+    var f = readForm();
+    if (!f.subject || f.facts.length === 0) {
+      statusEl.textContent = 'Add a subject line and at least one fact first.';
+      return;
+    }
+    setLetterhead(f);
+    var btn = this;
+    btn.disabled = true;
+    statusEl.textContent = 'Reading attachments…';
+    statusEl.className = 'status live';
+    scrubBadge.style.display = 'none';
+    lettertextEl.textContent = '';
+    scrubreportEl.classList.remove('show');
+
+    try {
+      var textItems = attachments.filter(function(a){ return a.kind === 'text'; });
+      var textExcerpts = [];
+      for (var i = 0; i < textItems.length; i++) {
+        var content = await readTextFile(textItems[i].file);
+        textExcerpts.push({ name: textItems[i].file.name, content: content.slice(0, 4000) });
+      }
+
+      var imageBudget = imageLimits ? imageLimits.maxCount : 0;
+      var imageFiles = attachments
+        .filter(function(a){ return a.kind === 'image'; })
+        .slice(0, imageBudget)
+        .map(function(a){ return a.file; });
+
+      var prompt = buildPrompt(f, textExcerpts);
+      statusEl.textContent = 'Drafting…';
+      var sampleOpts = {
+        modelTier: 'default',
+        onText: function(chunk){ lettertextEl.textContent = chunk.text; }
+      };
+      if (imageFiles.length) sampleOpts.images = imageFiles;
+      var res = await sampleFn(prompt, sampleOpts);
+      var raw = (res && res.text) ? res.text : lettertextEl.textContent;
+      var cleaned = scrub(raw);
+      lastFinal = cleaned.text;
+      lastReport = cleaned.report;
+      lettertextEl.textContent = lastFinal;
+      scrubBadge.style.display = 'inline-block';
+      scrublistEl.innerHTML = '';
+      if (lastReport.length) {
+        lastReport.forEach(function(line){
+          var li = document.createElement('li');
+          li.textContent = line;
+          scrublistEl.appendChild(li);
+        });
+      } else {
+        var li = document.createElement('li');
+        li.textContent = 'Nothing to clean — draft came back plain.';
+        scrublistEl.appendChild(li);
+      }
+      statusEl.textContent = 'Draft ready.';
+      statusEl.className = 'status';
+      saveToLog(f, lastFinal);
+    } catch (err) {
+      var code = (err && err.code) || 'error';
+      if (code === 'not_granted') {
+        statusEl.textContent = 'Drafting needs to be allowed for this page — try again to get the prompt.';
+      } else if (code === 'rate_limited') {
+        statusEl.textContent = 'Hit a rate limit — wait a moment and try again.';
+      } else if (code === 'cancelled') {
+        statusEl.textContent = 'Cancelled.';
+      } else if (code === 'image_rejected') {
+        statusEl.textContent = 'One of the attached images couldn’t be sent (too large or wrong format) — remove it and try again.';
+      } else if (code === 'images_unavailable') {
+        statusEl.textContent = 'This view can’t send images — attach text files instead, or type the details into the facts list.';
+      } else {
+        statusEl.textContent = 'Could not draft that one. Try again.';
+      }
+      statusEl.className = 'status';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    ['fromName','fromCo','toName','toCo','project','ref','subject','ask','notes'].forEach(function(id){
+      document.getElementById(id).value = '';
+    });
+    factlist.innerHTML = '';
+    addFact('');
+    attachments = [];
+    renderFileList();
+    lettertextEl.textContent = '';
+    scrubBadge.style.display = 'none';
+    scrubreportEl.classList.remove('show');
+    document.getElementById('lh-left').textContent = '—';
+    document.getElementById('lh-right').textContent = '—';
+    statusEl.textContent = '';
+  });
+
+  document.getElementById('reportBtn').addEventListener('click', function(){
+    scrubreportEl.classList.toggle('show');
+    this.textContent = scrubreportEl.classList.contains('show') ? 'Hide scrub report' : 'Show scrub report';
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async function(){
+    if (!lastFinal) return;
+    try {
+      await navigator.clipboard.writeText(lastFinal);
+      statusFlash(this, 'Copied');
+    } catch (e) {
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(lettertextEl);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        statusFlash(this, 'Selected — copy manually');
+      } catch (e2) {}
+    }
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', async function(){
+    if (!lastFinal || !downloadsFn) return;
+    var f = readForm();
+    var name = (f.subject || 'letter').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'letter';
+    try {
+      await downloadsFn.save({ filename: name + '.txt', data: lastFinal });
+      statusFlash(this, 'Saved');
+    } catch (e) {
+      statusFlash(this, 'Declined');
+    }
+  });
+
+  function statusFlash(btn, word){
+    var old = btn.textContent;
+    btn.textContent = word;
+    setTimeout(function(){ btn.textContent = old; }, 1200);
+  }
+
+  // ---------- recent log (localStorage, per-browser convenience only) ----------
+  var LOG_KEY = 'fieldhand_recent_v1';
+  function readLog(){
+    try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function writeLog(list){
+    try { localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, 20))); } catch (e) {}
+  }
+  function saveToLog(f, text){
+    var list = readLog();
+    list.unshift({
+      id: Date.now(),
+      subject: f.subject,
+      project: f.project,
+      date: f.ldate,
+      text: text
+    });
+    writeLog(list);
+    renderLog();
+  }
+  function renderLog(){
+    var el = document.getElementById('log');
+    var list = readLog();
+    el.innerHTML = '';
+    if (!list.length) {
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'Nothing drafted yet in this browser.';
+      el.appendChild(e);
+      return;
+    }
+    list.forEach(function(item){
+      var row = document.createElement('div');
+      row.className = 'logrow';
+      var left = document.createElement('div');
+      left.innerHTML = '<div>' + escapeHtml(item.subject || '(no subject)') + '</div>' +
+        '<div class="meta">' + escapeHtml(item.project || '') + (item.project ? ' — ' : '') + escapeHtml(item.date || '') + '</div>';
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.textContent = '×';
+      del.setAttribute('aria-label', 'Remove from recent');
+      del.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        writeLog(readLog().filter(function(x){ return x.id !== item.id; }));
+        renderLog();
+      });
+      row.appendChild(left);
+      row.appendChild(del);
+      row.addEventListener('click', function(){
+        lettertextEl.textContent = item.text;
+        lastFinal = item.text;
+        document.getElementById('lh-left').textContent = item.project || '—';
+        document.getElementById('lh-right').textContent = (item.subject || '') + ' — ' + (item.date || '');
+        scrubBadge.style.display = 'inline-block';
+        scrublistEl.innerHTML = '<li>Loaded from Recent.</li>';
+      });
+      el.appendChild(row);
+    });
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  renderLog();
+})();
+</script>
+` },
+  { path: "README.md", contents: `# Fieldhand
+
+Draft contractor correspondence — claim responses, RFIs, RFPs, change orders,
+notices, punch-list follow-ups — that reads like you wrote it, not like a
+chatbot did.
+
+## What's in this package
+
+A single self-contained file: \`fieldhand.html\`. No install, no build step,
+no dependencies. Open it in any modern browser.
+
+## What works offline, right out of this zip
+
+- The job-ticket form (letter type, tone, parties, project, facts, the ask)
+- The Upload tab — any file type; text files are read in, images are staged,
+  everything else attaches for your own record
+- The scrub pass that strips stock AI phrasing, em dashes, curly quotes, and
+  hidden Unicode characters from a draft
+- Copy / download of a finished letter as \`.txt\`
+- The Recent list (kept in your browser's local storage on this machine)
+
+## What needs Claude
+
+The **Draft Letter** button asks Claude to write the first pass from your
+ticket. That call only works when this page is opened as a Claude artifact
+(claude.ai), signed in — it is not bundled into this offline file, because
+it runs on Claude's own infrastructure, not in your browser.
+
+Two ways to use the AI drafting step:
+
+1. Open the hosted copy at the link on your order confirmation page and work
+   from there directly — the Upload tab, the scrub pass, and the Recent list
+   all work there too.
+2. Or draft the letter in any chat model you already use, paste the result
+   into this offline copy, and run it through the scrub pass here before you
+   send it — the scrub pass itself needs nothing but the browser.
+
+## License
+
+One-time license, for your own use. Not for resale or redistribution as a
+standalone product.
+` },
+]

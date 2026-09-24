@@ -9,7 +9,7 @@ export interface Product {
   sku: string
   name: string
   category: 'prompts' | 'automations' | 'templates' | 'agents' | 'connectors' | 'host'
-  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance' | 'stores'
+  niche: 'founders' | 'sales' | 'marketers' | 'developers' | 'writers' | 'students' | 'architects' | 'engineers' | 'office' | 'finance' | 'stores' | 'contractors'
   format: string
   price: number
   blurb: string
@@ -41,6 +41,7 @@ export const NICHE_LABEL: Record<Product['niche'], string> = {
   office: 'Office & Admin',
   finance: 'Finance & Investing',
   stores: 'Store & Site Owners',
+  contractors: 'Contractors & Trades',
 }
 
 export const FALLBACK_CATALOG: Product[] = [
@@ -51,6 +52,7 @@ export const FALLBACK_CATALOG: Product[] = [
   { sku: 'AI-AB-071', name: 'Local SEO Agency Blueprint', category: 'automations', niche: 'marketers', format: '5 Make.com blueprints + Notion report template \u00b7 one-time license', price: 75, blurb: 'Before you buy: try it on a real client site and watch it actually fetch and parse that page live \u2014 title, meta, schema, alt text, robots/sitemap \u2014 not a script reading out a canned script. Then the full system to run a local-SEO service on: that real audit, a Google Business Profile checklist, automated review-response drafts, a white-label monthly report, and the outreach script to land the first client. One license, unlimited clients \u2014 you are the agency.', spec: 'Live on-page scan (title/meta/schema/alt/robots, fetched for real) + GBP checklist + review-response automation + white-label report + outreach script \u00b7 unlimited clients', timeSaved: '~6 hrs saved per client per month' },
   { sku: 'AI-PP-116', name: 'Faceless Video Script-to-B-Roll Prompt Kit', category: 'prompts', niche: 'writers', format: '40 prompts \u00b7 PDF + Notion', price: 24, blurb: 'Script the hook, generate matched B-roll prompts for Runway or Midjourney, and get a shot list out the other end \u2014 built for faceless short-form channels so the visuals stop being an afterthought.', spec: 'Hook scripts + Runway/Midjourney B-roll prompts + shot-list export' },
   { sku: 'AI-AG-117', name: 'Brand Voice Memory Block', category: 'agents', niche: 'marketers', format: 'System prompt + Notion database template', price: 27, blurb: 'Stores each client\'s brand voice as a structured, reusable memory block instead of a paragraph pasted into every prompt \u2014 so an agency\'s output stops drifting toward generic AI text as accounts pile up.', spec: 'Brand-voice intake \u2192 structured memory block \u2192 consistent output across writers', timeSaved: '~1 hr saved per piece of client content' },
+  { sku: 'AI-AG-118', name: 'Fieldhand', category: 'agents', niche: 'contractors', format: 'Web app \u00b7 offline HTML download \u00b7 one-time license', price: 29, blurb: 'Drafts contractor correspondence \u2014 claim responses, RFIs, RFPs, change orders, notices of delay, punch-list follow-ups \u2014 in plain contractor voice, then runs it through a built-in scrub pass that strips stock AI phrasing, em dashes, and hidden Unicode characters before it ever leaves the page. Upload any file type as source material; download the whole tool as one offline HTML file when you\'re done.', spec: '20 letter types across bids, RFIs, claims, and closeout \u00b7 any-format upload (text read in, photos sent as images) \u00b7 built-in AI-phrasing scrubber with a change report \u00b7 offline-capable download', timeSaved: '~30 min saved per letter drafted' },
   { sku: 'AI-PP-001', name: 'Deep Work Prompt Pack', category: 'prompts', niche: 'founders', format: '120 prompts · PDF + Notion', price: 19, blurb: 'Prompts for prioritization, focus blocks, and end-of-day resets.', spec: 'Works with Claude, ChatGPT, Gemini' },
   { sku: 'AI-AB-002', name: 'Inbox Zero Automation', category: 'automations', niche: 'sales', format: 'Make.com blueprint', price: 29, blurb: 'Auto-sorts, drafts replies, and flags what needs a human.', spec: 'Gmail + Outlook compatible' },
   { sku: 'AI-AG-003', name: 'Meeting Notes Agent', category: 'agents', niche: 'founders', format: 'System prompt + template', price: 15, blurb: 'Turns raw transcripts into decisions, owners, and deadlines.', spec: 'Tuned for Claude Projects' },

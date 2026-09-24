@@ -65,6 +65,7 @@ const NICHE_LABEL: Record<string, string> = {
   office: 'Office & Admin',
   finance: 'Finance & Investing',
   stores: 'Store & Site Owners',
+  contractors: 'Contractors & Trades',
 }
 const NICHE_INTRO: Record<string, string> = {
   founders: 'Tools that give a small team back its time — planning, meetings, follow-ups, and the busywork around them.',
@@ -78,6 +79,7 @@ const NICHE_INTRO: Record<string, string> = {
   office: 'Get through the workday faster — email, meetings, expenses, and the recurring admin that eats an afternoon.',
   finance: 'Money decisions, done in the browser — valuation, rebalancing, cashflow, and the models investors expect, run live on your own numbers.',
   stores: 'Keep your own storefront healthy — monitoring, SEO, and link checks you run on your own infrastructure, owned outright instead of rented monthly.',
+  contractors: 'Correspondence that holds up on a job site — claim responses, RFIs, change orders, and notices that read like you wrote them, not like a template.',
 }
 interface NicheFaqItem { q: string; a: string }
 
