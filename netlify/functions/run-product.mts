@@ -94,6 +94,7 @@ export default async (req: Request, _context: Context) => {
   // model at all. Caught in review before shipping; worth remembering if
   // another SKU ever wants live-fetched context of its own.
   let liveContext: string | undefined
+  let fixPack: string | undefined
   if (product.sku === 'AI-AG-114') {
     try {
       const { fetchOddsLiveContext } = await import('../lib/odds-live-context.mjs')
@@ -104,15 +105,23 @@ export default async (req: Request, _context: Context) => {
     }
   } else if (product.sku === 'AI-AB-071') {
     try {
-      const { fetchSeoLiveContext } = await import('../lib/seo-live-context.mjs')
-      liveContext = await fetchSeoLiveContext(inputs.url ?? '')
+      const { runSeoAudit, buildFixPack } = await import('../lib/seo-live-context.mjs')
+      const audit = await runSeoAudit(inputs.url ?? '')
+      liveContext = audit.message
+      if (audit.ok && audit.findings) {
+        fixPack = buildFixPack(audit.findings, {
+          businessName: inputs.businessName,
+          targetCity: inputs.targetCity,
+          category: inputs.category,
+        })
+      }
     } catch (err) {
       console.error('seo live context fetch failed:', (err as Error).message)
       liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
     }
   }
 
-  const prompt = buildRunPrompt(product, app, inputs, voice, liveContext)
+  const prompt = buildRunPrompt(product, app, inputs, voice, liveContext, fixPack)
   if (!prompt) {
     return Response.json({ error: 'Fill in at least one field so it has something to work with.' }, { status: 400 })
   }

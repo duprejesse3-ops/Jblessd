@@ -124,16 +124,26 @@ function fallbackDemo(p: Product, scenario: string): string {
 
 // Build the system + user prompt that makes Claude *demonstrate* the product.
 // liveContext, when present, is real fetched-and-parsed data (currently only
-// for AI-AB-071 — see fetchSeoLiveContext) that grounds the demo in an
-// actual scan instead of an invented one. When present, the system prompt
-// gets an extra rule forbidding invented specifics about the scanned page.
-function buildPrompt(p: Product, scenario: string, liveContext?: string): { system: string; user: string } {
+// for AI-AB-071 — see runSeoAudit) that grounds the demo in an actual scan
+// instead of an invented one. When present, the system prompt gets an extra
+// rule forbidding invented specifics about the scanned page. fixPack, when
+// present, is the deterministic (no model involved) set of ready-to-paste
+// fixes generated straight from that same real scan — see buildFixPack.
+function buildPrompt(
+  p: Product,
+  scenario: string,
+  liveContext?: string,
+  fixPack?: string,
+): { system: string; user: string } {
   const play = PLAYBOOK[p.category]
   const lengthRule = scenario
     ? 'Give this real, submitted task room to breathe: roughly 250–450 words — enough to actually work through it, not just gesture at it.'
     : 'Keep it tight: roughly 150–260 words. This renders in a small terminal panel.'
   const liveContextRule = liveContext
     ? `- A "Live scan" section is provided below, fetched and parsed from a real page moments before this ran. Treat it as ground truth for anything about that specific page — title, meta description, schema, headings, images, etc. Never invent, guess, or contradict a specific fact about that page beyond what the live scan states; if the live scan says something is missing, say it's missing, and if it says something is present, quote or describe what was actually found. For anything the live scan explicitly says was NOT checked (e.g. Google Business Profile, competitor listings), explain that part of the product conceptually without inventing specific numbers or findings for it.\n`
+    : ''
+  const fixPackRule = fixPack
+    ? `- A "Fix pack" section is provided below — ready-to-paste code generated deterministically by code, not by you, straight from the live scan's real findings. Reproduce its content faithfully (the tags, the JSON-LD, the exact suggested copy) rather than paraphrasing or rewriting it into your own version, then explain in your own words what each fix does and why it matters. If a section says a fix isn't needed, or explains why one was skipped (e.g. no business name/city given), say that plainly rather than inventing a fix anyway.\n`
     : ''
   const system =
     `You are the live demonstration engine for ${STORE_NAME}, a store of ready-to-use ` +
@@ -142,6 +152,7 @@ function buildPrompt(p: Product, scenario: string, liveContext?: string): { syst
     `Rules:\n` +
     `- ${SKU_RUN_BRIEF[p.sku] ?? play.brief}\n` +
     liveContextRule +
+    fixPackRule +
     `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
     `feels like a real run, but never claim capabilities beyond what the product is` +
     (liveContext ? ', and never invent details about a real page covered by the Live scan section below — use what it actually found' : '') +
@@ -172,9 +183,12 @@ function buildPrompt(p: Product, scenario: string, liveContext?: string): { syst
     `- Spec: ${p.spec}\n` +
     `- What it does: ${p.blurb}\n` +
     (liveContext ? `\nLive scan (real, fetched just now):\n"""${liveContext}"""\n` : '') +
+    (fixPack ? `\nFix pack (generated deterministically, not by you):\n"""${fixPack}"""\n` : '') +
     (scenario
       ? `\nTailor the demonstration to this shopper's own situation:\n"""${scenario}"""\n`
-      : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
+      : liveContext
+        ? `\nNo scenario was given, so this is the default demo: it just scanned ${STORE_NAME}'s own homepage for real (see the Live scan section above) — walk through what that scan actually found as the worked example, exactly as you would for a shopper's own page.\n`
+        : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
 
   return { system, user }
 }
@@ -269,17 +283,25 @@ export default async (req: Request, context: Context) => {
 
       send({ type: 'meta', verb: PLAYBOOK[product.category].verb, cached: false })
 
-      // Local SEO Agency Blueprint only: when the shopper gave their own
-      // situation (which is the only case that can name a real page — the
-      // no-scenario default demo below has nothing to scan), fetch and
-      // parse that page for real before building the prompt, so the demo
-      // reports what's actually on it instead of a plausible guess. See
-      // seo-live-context.mts for what's checked and its stated scope.
+      // Local SEO Agency Blueprint only: run a real live scan every time — of
+      // the shopper's own page when they gave one, or of MULTINICHE AI's own
+      // homepage for the default (no-scenario) demo, so even the free,
+      // cached default view is grounded in an actual scan instead of an
+      // invented one. From the same real findings, also generate a
+      // deterministic (no model call — see buildFixPack) fix pack, so the
+      // demo can show the product actually fixing what it finds, not just
+      // diagnosing it. See seo-live-context.mts for what's checked, its
+      // stated scope, and how the fix pack is built.
       let liveContext: string | undefined
-      if (product.sku === 'AI-AB-071' && scenario) {
+      let fixPack: string | undefined
+      if (product.sku === 'AI-AB-071') {
         try {
-          const { fetchSeoLiveContext } = await import('../lib/seo-live-context.mjs')
-          liveContext = await fetchSeoLiveContext(scenario)
+          const { runSeoAudit, buildFixPack } = await import('../lib/seo-live-context.mjs')
+          const audit = await runSeoAudit(scenario || 'https://multinicheai.com')
+          liveContext = audit.message
+          if (audit.ok && audit.findings) {
+            fixPack = buildFixPack(audit.findings, {})
+          }
         } catch (err) {
           console.error('seo live context fetch failed:', (err as Error).message)
           liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
@@ -289,7 +311,7 @@ export default async (req: Request, context: Context) => {
       let full = ''
       try {
         const anthropic = new Anthropic()
-        const { system, user } = buildPrompt(product, scenario, liveContext)
+        const { system, user } = buildPrompt(product, scenario, liveContext, fixPack)
         const modelStream = anthropic.messages.stream({
           model: MODEL,
           max_tokens: scenario ? (SKU_MAX_TOKENS_SCENARIO[product.sku] ?? MAX_TOKENS_SCENARIO_DEFAULT) : MAX_TOKENS_PREVIEW,
