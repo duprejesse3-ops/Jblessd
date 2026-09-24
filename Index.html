@@ -578,6 +578,10 @@ f.parentNode.insertBefore(j,f);
   .bundle-offer-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
   .bundle-offer-value{font-family:var(--mono); font-size:25px; color:var(--paper); line-height:1;}
   .bundle-offer-value span{display:block; margin-top:7px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-2); text-align:right;}
+  .kit-offer{margin-top:16px;}
+  .kit-items{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:5px; max-width:38ch;}
+  .kit-items li{display:flex; justify-content:space-between; font-size:13px; font-family:var(--mono); color:var(--muted);}
+  .kit-items li span:last-child{color:var(--paper);}
   .price{font-family:var(--mono); font-size:15px; color:var(--brass);}
   .card-actions{display:flex; align-items:center; gap:7px;}
   .try-btn{
@@ -619,6 +623,7 @@ f.parentNode.insertBefore(j,f);
   .modal p.desc{font-size:14px; color:var(--muted); line-height:1.6; margin:0 0 20px;}
   .spec-table{border-top:1px dashed var(--line); padding-top:16px; margin-bottom:24px;}
   .spec-row{display:flex; justify-content:space-between; font-size:13.5px; padding:5px 0;}
+  .spec-row[hidden]{display:none;}
   .spec-row span:first-child{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); letter-spacing:.06em;}
   .spec-row span:last-child{color:var(--paper); text-align:right;}
   .modal-bottom{display:flex; align-items:center; justify-content:space-between;}
@@ -1205,6 +1210,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="wrap">
+    <section class="bundle-offer kit-offer" id="kit-solopreneur" aria-label="Featured kit: AI Solopreneur Operations Kit">
+      <div class="bundle-offer-inner">
+        <div>
+          <span class="niche-tag">Featured kit · Founders &amp; Ops</span>
+          <h2>AI Solopreneur Operations Kit</h2>
+          <p>The daily rhythm, covered: plan the day, run the meeting, track the goal. Three tools, one click — the 15% bundle discount applies automatically at checkout.</p>
+          <ul class="kit-items">
+            <li><span>Deep Work Prompt Pack</span><span>$19.00</span></li>
+            <li><span>Meeting Notes Agent</span><span>$15.00</span></li>
+            <li><span>OKR Tracker Template</span><span>$14.00</span></li>
+          </ul>
+        </div>
+        <div class="bundle-offer-buy">
+          <span class="bundle-offer-value">$40.80<span>after 15% off $48.00</span></span>
+          <button type="button" class="btn btn-gold" id="kit-solopreneur-add">Add kit to cart</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
     <section class="lead" id="lead-magnet" aria-label="Free prompt pack">
       <h2>Get a free prompt pack</h2>
       <p>Drop your email and we'll unlock a free starter prompt pack right here — plus a heads-up whenever we release a new tool. No spam, unsubscribe anytime.</p>
@@ -1312,21 +1338,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="sku" id="pm-sku"></span>
     <h2 id="pm-name"></h2>
     <p class="desc" id="pm-desc"></p>
-    <div class="spec-table">
-      <div class="spec-row"><span>BUILT FOR</span><span id="pm-niche"></span></div>
-      <div class="spec-row"><span>CATEGORY</span><span id="pm-cat"></span></div>
-      <div class="spec-row"><span>FORMAT</span><span id="pm-format"></span></div>
-      <div class="spec-row"><span>SPEC</span><span id="pm-spec"></span></div>
-    </div>
-    <div class="modal-bottom">
-      <span class="price-lg" id="pm-price"></span>
-      <button class="btn btn-solid" id="pm-add">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Add to cart
-      </button>
-    </div>
 
-    <!-- Live Proof: watch the product actually work before you buy it -->
+    <!-- Live Proof: moved to directly under the title/desc so it's the very
+         first thing an unlogged visitor interacts with, ahead of the spec
+         sheet, price, and Add to cart — the "will this work for me?" answer
+         comes before the "is it worth the money?" one. -->
     <div class="pm-proof" id="pm-proof">
       <div class="proof-head">
         <span class="proof-badge"><span class="proof-dot" aria-hidden="true"></span>Live proof</span>
@@ -1353,6 +1369,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="proof-share-link" id="pm-proof-share-link" hidden></div>
       </div>
       <p class="pm-app-note">This is a free preview. Own it and you can run it as a full app — fill in a short form and it does the work on your own input, right on your download page, as many times as you like.</p>
+    </div>
+
+    <div class="spec-table">
+      <div class="spec-row"><span>BUILT FOR</span><span id="pm-niche"></span></div>
+      <div class="spec-row"><span>CATEGORY</span><span id="pm-cat"></span></div>
+      <div class="spec-row"><span>FORMAT</span><span id="pm-format"></span></div>
+      <div class="spec-row"><span>SPEC</span><span id="pm-spec"></span></div>
+      <!-- Only rendered when the product has a timeSaved value (see openProductModal). -->
+      <div class="spec-row" id="pm-timesaved-row" hidden><span>TIME SAVED</span><span id="pm-timesaved"></span></div>
+    </div>
+    <div class="modal-bottom">
+      <span class="price-lg" id="pm-price"></span>
+      <button class="btn btn-solid" id="pm-add">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add to cart
+      </button>
     </div>
 
     <div class="pm-reviews" id="pm-reviews">
@@ -1695,6 +1727,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.getElementById('pm-cat').textContent = data.catLabel;
     document.getElementById('pm-format').textContent = data.format;
     document.getElementById('pm-spec').textContent = data.spec;
+    var timeSavedRow = document.getElementById('pm-timesaved-row');
+    if(data.timeSaved){
+      document.getElementById('pm-timesaved').textContent = data.timeSaved;
+      timeSavedRow.hidden = false;
+    } else {
+      timeSavedRow.hidden = true;
+    }
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
     // Set the modal's cover art to match the product's category. Fall back to
     // inferring it from the SKU prefix so shared/deep-linked opens still show art.
@@ -1729,6 +1768,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return true;
   }
+  // Featured kit: "Add kit to cart" adds a fixed set of SKUs in one click.
+  // The 15% bundle discount is not applied here — it's the existing
+  // cart-level "3+ unique tools" logic in renderCart() that does that
+  // automatically, so this just needs to get the right items into the cart.
+  function addKitToCart(skus){
+    var added = 0;
+    skus.forEach(function(sku){
+      if(cart.some(function(item){ return item.id === sku; })) return; // already in cart
+      var card = catalog.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]')
+        || (showcase && showcase.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]'));
+      if(card){ addToCart(cardToData(card)); added++; }
+    });
+    if(added){ openCart(); }
+    else { toast('Those tools are already in your cart.'); }
+  }
+  var kitSolopreneurBtn = document.getElementById('kit-solopreneur-add');
+  if(kitSolopreneurBtn){
+    kitSolopreneurBtn.addEventListener('click', function(){
+      addKitToCart(['AI-PP-001', 'AI-AG-003', 'AI-TP-009']);
+    });
+  }
+
   document.getElementById('pm-close').addEventListener('click', closeProductModal);
   productOverlay.addEventListener('click', function(e){ if(e.target === productOverlay) closeProductModal(); });
   document.getElementById('pm-add').addEventListener('click', function(){
@@ -1760,7 +1821,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       id: card.dataset.id, name: card.dataset.name, price: card.dataset.price,
       format: card.dataset.format, spec: card.dataset.spec, blurb: card.querySelector('p').textContent,
       catLabel: card.dataset.catlabel, nicheLabel: card.dataset.nichelabel,
-      category: card.dataset.cat, niche: card.dataset.niche
+      category: card.dataset.cat, niche: card.dataset.niche,
+      timeSaved: card.dataset.timesaved || ''
     };
   }
 
@@ -2676,6 +2738,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
     card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
     card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
+    if(p.timeSaved) card.dataset.timesaved = p.timeSaved;
     // Every catalog category now has real photography (see
     // CATEGORY_PHOTO_STYLE in netlify/edge-functions/Product-image.mts) —
     // a SKU-specific photo where one exists, the category's fallback photo

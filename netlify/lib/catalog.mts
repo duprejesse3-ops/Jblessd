@@ -14,6 +14,10 @@ export interface Product {
   price: number
   blurb: string
   spec: string
+  /** Optional. A short, concrete estimate of setup/manual time this product
+   *  saves (e.g. "~3.5 hrs per setup"). Shown as its own spec-sheet line
+   *  when present; omitted entirely otherwise. */
+  timeSaved?: string
 }
 
 export const CATEGORY_LABEL: Record<Product['category'], string> = {
@@ -44,6 +48,9 @@ export const FALLBACK_CATALOG: Product[] = [
 
   { sku: 'AI-HOST-002', name: 'Meridian Gate', category: 'host', niche: 'stores', format: '.zip · outbound AI proxy · one-time license', price: 59, blurb: 'Sits in front of every AI call on the same machine as Host. Customer data and Stripe keys do not leave unless you say so. Default is no. A receipt for what left.', spec: 'Same Pi / laptop as Host · outbound proxy · witness log · named human' },
   { sku: 'AI-AB-070', name: 'SWARM Intent Autopilot', category: 'automations', niche: 'stores', format: 'Installed app · GitHub source · one-time license', price: 79, blurb: 'Hijacks demand that already exists and evolves proof-first ads on autopilot. Maps a pain-utterance to a SKU, spawns eight organisms, kills losers. Not a Google Ads account.', spec: 'Chrome/Edge PWA · Android + Windows · local genome · copy-ready packets' },
+  { sku: 'AI-AB-071', name: 'Local SEO Agency Blueprint', category: 'automations', niche: 'marketers', format: '5 Make.com blueprints + Notion report template \u00b7 one-time license', price: 75, blurb: 'Everything to run a local-SEO service on, not just run once on your own store: the Maps/competitor audit, a Google Business Profile checklist, automated review-response drafts, a white-label monthly report your clients actually read, and the outreach script to land the first one. One license, unlimited clients \u2014 you are the agency.', spec: 'GBP audit + review-response automation + white-label report + outreach script \u00b7 unlimited clients', timeSaved: '~6 hrs saved per client per month' },
+  { sku: 'AI-PP-116', name: 'Faceless Video Script-to-B-Roll Prompt Kit', category: 'prompts', niche: 'writers', format: '40 prompts \u00b7 PDF + Notion', price: 24, blurb: 'Script the hook, generate matched B-roll prompts for Runway or Midjourney, and get a shot list out the other end \u2014 built for faceless short-form channels so the visuals stop being an afterthought.', spec: 'Hook scripts + Runway/Midjourney B-roll prompts + shot-list export' },
+  { sku: 'AI-AG-117', name: 'Brand Voice Memory Block', category: 'agents', niche: 'marketers', format: 'System prompt + Notion database template', price: 27, blurb: 'Stores each client\'s brand voice as a structured, reusable memory block instead of a paragraph pasted into every prompt \u2014 so an agency\'s output stops drifting toward generic AI text as accounts pile up.', spec: 'Brand-voice intake \u2192 structured memory block \u2192 consistent output across writers', timeSaved: '~1 hr saved per piece of client content' },
   { sku: 'AI-PP-001', name: 'Deep Work Prompt Pack', category: 'prompts', niche: 'founders', format: '120 prompts · PDF + Notion', price: 19, blurb: 'Prompts for prioritization, focus blocks, and end-of-day resets.', spec: 'Works with Claude, ChatGPT, Gemini' },
   { sku: 'AI-AB-002', name: 'Inbox Zero Automation', category: 'automations', niche: 'sales', format: 'Make.com blueprint', price: 29, blurb: 'Auto-sorts, drafts replies, and flags what needs a human.', spec: 'Gmail + Outlook compatible' },
   { sku: 'AI-AG-003', name: 'Meeting Notes Agent', category: 'agents', niche: 'founders', format: 'System prompt + template', price: 15, blurb: 'Turns raw transcripts into decisions, owners, and deadlines.', spec: 'Tuned for Claude Projects' },

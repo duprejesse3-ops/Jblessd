@@ -97,6 +97,7 @@ export default async (req: Request, _context: Context) => {
       format: String(body.format ?? '').trim().slice(0, 120) || 'Digital download',
       blurb: String(body.blurb ?? '').trim().slice(0, 400) || 'No description yet.',
       spec: String(body.spec ?? '').trim().slice(0, 200) || '—',
+      timeSaved: String(body.timeSaved ?? '').trim().slice(0, 80) || null,
     }
 
     try {
@@ -109,9 +110,9 @@ export default async (req: Request, _context: Context) => {
       const sku = `AI-${SKU_PREFIX[category]}-${String(next).padStart(3, '0')}`
 
       const [row] = (await db.sql`
-        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec)
-        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec})
-        RETURNING sku, name, category, niche, format, price, blurb, spec
+        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved)
+        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved})
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved
       `) as Array<any>
 
       // Drop the cached catalog so the new product shows up on the next read
@@ -124,7 +125,13 @@ export default async (req: Request, _context: Context) => {
       }
 
       return Response.json(
-        { product: decorate({ ...(row as Product), price: Number(row.price) }) },
+        {
+          product: decorate({
+            ...(row as Product),
+            price: Number(row.price),
+            ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
+          }),
+        },
         { status: 201 },
       )
     } catch (err) {
@@ -156,11 +163,12 @@ export default async (req: Request, _context: Context) => {
 
     // Only touch fields the caller actually sent, so a single-field edit
     // (e.g. just a price change) can't accidentally blank out the rest.
-    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche', unknown>> = {}
+    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved', unknown>> = {}
     if (body.name !== undefined) fields.name = String(body.name).trim().slice(0, 120)
     if (body.format !== undefined) fields.format = String(body.format).trim().slice(0, 120)
     if (body.blurb !== undefined) fields.blurb = String(body.blurb).trim().slice(0, 400)
     if (body.spec !== undefined) fields.spec = String(body.spec).trim().slice(0, 200)
+    if (body.timeSaved !== undefined) fields.timeSaved = String(body.timeSaved).trim().slice(0, 80)
     if (body.price !== undefined) {
       const price = Number(body.price)
       if (!Number.isFinite(price) || price <= 0 || price > 100000) {
@@ -196,9 +204,10 @@ export default async (req: Request, _context: Context) => {
           spec = COALESCE(${(fields.spec as string) ?? null}, spec),
           category = COALESCE(${(fields.category as string) ?? null}, category),
           niche = COALESCE(${(fields.niche as string) ?? null}, niche),
+          time_saved = COALESCE(${(fields.timeSaved as string) ?? null}, time_saved),
           updated_at = now()
         WHERE sku = ${sku}
-        RETURNING sku, name, category, niche, format, price, blurb, spec, updated_at
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, updated_at
       `) as Array<any>
 
       if (!row) return Response.json({ error: `No product with sku ${sku}` }, { status: 404, headers: NO_STORE })
@@ -214,6 +223,7 @@ export default async (req: Request, _context: Context) => {
           product: decorate({
             ...(row as Product),
             price: Number(row.price),
+            ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
             updatedAt: row.updated_at ? new Date(row.updated_at).toISOString().slice(0, 10) : undefined,
           }),
         },
