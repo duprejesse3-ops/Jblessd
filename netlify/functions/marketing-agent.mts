@@ -44,14 +44,14 @@ const READ_CACHE: Record<string, string> = {
   'Cache-Tag': CAMPAIGNS_CACHE_TAG,
 }
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const STORE_SKU = 'STORE'
 
 // Canonical site + the shareable image every campaign can attach. Kept in sync
 // with the SEO edge function (netlify/edge-functions/seo.ts), which uses the
 // same domain and OG image for product/store structured data.
-const SITE_URL = 'https://jblessd.com'
+const SITE_URL = 'https://multinicheai.com'
 const CAMPAIGN_IMAGE = `${SITE_URL}/multiniche-ai-og.png`
 
 // The exact page a campaign should drive traffic to: the product deep-link, or
@@ -202,7 +202,7 @@ async function aiCampaign(target: Product | null, goal: string, catalog: Product
 
       const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 5300,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'compose_campaign' },
     messages: [

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SWARM · MULTINICHE AI</title>
+  <meta name="description" content="Intent-hijack operator for MULTINICHE AI. Post proof-first ads to X and Reddit. Does not depend on Grok." />
+  <meta name="theme-color" content="#0b0c0a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="SWARM" />
+  <meta name="application-name" content="SWARM" />
+  <link rel="manifest" href="/swarm-manifest.webmanifest" />
+  <link rel="icon" href="/icons/swarm/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/swarm/icon-192.png" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" />
+  <style>
+    :root {
+      --bg: #0b0c0a; --surface: #131511; --elevated: #1a1d17; --fg: #e6eadc;
+      --muted: #9aa18c; --subtle: #6b7264; --accent: #a8d4b0; --accent-fg: #0b0c0a;
+      --border: #2a2e26; --success: #7dba8a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Instrument Sans", system-ui, sans-serif; }
+    body { padding: 24px 16px 96px; max-width: 720px; margin: 0 auto; }
+    a { color: var(--accent); }
+    h1 { font-size: 2rem; font-weight: 500; letter-spacing: -0.03em; margin: 8px 0 0; }
+    p { color: var(--muted); line-height: 1.5; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--subtle); }
+    .card { background: var(--surface); border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,0.08); margin: 16px 0; }
+    .card img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; }
+    .pad { padding: 16px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button, .btn {
+      appearance: none; border: 0; border-radius: 10px; min-height: 44px; padding: 0 16px;
+      font: 500 14px "Instrument Sans", system-ui, sans-serif; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .primary { background: var(--accent); color: var(--accent-fg); flex: 1; }
+    .secondary { background: var(--elevated); color: var(--fg); box-shadow: 0 0 0 1px var(--border); flex: 1; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: var(--elevated); color: var(--accent); }
+    input {
+      width: 100%; min-height: 44px; border-radius: 10px; border: 0; background: var(--elevated);
+      color: var(--fg); padding: 0 12px; font: 14px "IBM Plex Mono", monospace; box-shadow: 0 0 0 1px var(--border);
+    }
+    textarea {
+      width: 100%; min-height: 140px; border-radius: 10px; border: 0; background: var(--elevated);
+      color: var(--fg); padding: 12px; font: 13px/1.45 "IBM Plex Mono", monospace; box-shadow: 0 0 0 1px var(--border);
+      resize: vertical;
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+    .warn { color: #e6c07a; }
+    #reddit-gate { margin-top: 16px; }
+
+  </style>
+</head>
+<body>
+  <p class="mono">AI-AB-070 · multinicheai.com/swarm</p>
+  <h1>SWARM</h1>
+  <p>This is the operator on <strong style="color:var(--fg)">your site</strong>. grok-sandbox can sleep. X posts go out as ads. Reddit posts do not — r/smallbusiness will remove a product post and can ban u/MultiNicheAI81.</p>
+
+  <div class="card pad" id="android-card">
+    <p class="mono">Android app</p>
+    <h2 style="margin:8px 0 8px;font-size:1.15rem;font-weight:500">Download SWARM to this phone</h2>
+    <p style="margin:0 0 12px">One tap. In Chrome it installs in this window — home screen, app drawer, no Play Store. In X or Grok it opens Chrome and installs there.</p>
+    <button class="primary" id="install-app" type="button">Download Android app</button>
+    <p class="mono" id="install-status" hidden style="margin-top:12px"></p>
+    <ol id="android-steps" hidden style="margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6">
+      <li>If Chrome did not open, switch to Chrome and open multinicheai.com/swarm.</li>
+      <li>Tap <strong style="color:var(--fg)">Download Android app</strong> again.</li>
+      <li>Accept the install sheet. SWARM appears with the other apps.</li>
+    </ol>
+    <p class="mono" id="installed-note" hidden style="color:var(--success);margin-top:12px">Installed · you are in the app window</p>
+  </div>
+  <p class="mono" id="status">Lab copy · real posts when you tap Post</p>
+  <div id="cards"></div>
+  <div class="card pad">
+    <p class="mono">Destinations</p>
+    <label for="x">X handle</label>
+    <input id="x" value="DupreJesse14633" />
+    <label for="reddit">Reddit user</label>
+    <input id="reddit" value="MultiNicheAI81" />
+    <label for="sub">Subreddit</label>
+    <input id="sub" value="smallbusiness" />
+    <p id="sub-hint" class="mono warn" style="margin:10px 0 0;letter-spacing:0.08em;text-transform:none">r/smallbusiness: weekly Promote-your-business sticky only. A feed post is a ban risk.</p>
+  </div>
+  <div class="card pad" id="reddit-gate" hidden>
+    <p class="mono warn">Reddit · do not submit this as a feed post</p>
+    <h2 id="gate-title" style="margin:8px 0 8px;font-size:1.15rem;font-weight:500">Use the promo sticky</h2>
+    <p id="gate-reason" style="margin:0 0 12px"></p>
+    <label for="gate-text">Comment to paste — no ad image, no fake question</label>
+    <textarea id="gate-text" readonly></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" type="button" id="gate-copy">Copy comment</button>
+      <a class="btn secondary" id="gate-open" href="#" target="_blank" rel="noopener">Open this week's thread</a>
+    </div>
+    <p class="mono" id="gate-copied" hidden style="color:var(--success);margin-top:12px">Copied · paste it as a comment on the sticky, then close the composer you already opened</p>
+  </div>
+  <p class="mono">© 2026 MULTINICHE AI. Source in /swarm on GitHub Jblessd.</p>
+<script>
+const ADS = [
+  { sku: "AI-AB-002", name: "Inbox Zero Automation", headline: "I am drowning in Gmail and ChatGPT is not helping", body: "2,400-email dump sorted, drafted, and flagged in 11 minutes. Not another summarizer.", proof: "11 minutes · 2,400 emails", price: 29, landing: "https://multinicheai.com/proof?utm_source=swarm&utm_medium=x&sku=AI-AB-002" },
+  { sku: "AI-AB-070", name: "SWARM Intent Autopilot", headline: "I have a catalog and no traffic", body: "Maps a pain-utterance to a SKU, spawns eight organisms, evolves winners. Not a Google Ads account.", proof: "Autopilot · local genome", price: 79, landing: "https://multinicheai.com/product/AI-AB-070?utm_source=swarm&utm_medium=x&sku=AI-AB-070" },
+  { sku: "AI-AG-003", name: "Meeting Notes Agent", headline: "I need action items from meetings, not a recap", body: "47-minute standup → 9 decisions, 6 owners, 4 dates — no summary fluff.", proof: "9 decisions · 6 owners", price: 15, landing: "https://multinicheai.com/agent?utm_source=swarm&utm_medium=x&sku=AI-AG-003" },
+  { sku: "AI-AB-005", name: "Content Calendar Autopilot", headline: "The calendar is empty and the draft pile is not", body: "Slots the week from work already done. Acid-green pins, not a slogan.", proof: "Calendar from the pile", price: 29, landing: "https://multinicheai.com/?product=AI-AB-005&utm_source=swarm" },
+  { sku: "AI-AG-020", name: "Autonomous SEO Content Agent", headline: "Buying Google ads for AI tools is a tax", body: "Answers the query they typed with a spec, not a bid.", proof: "Intercept the query", price: 39, landing: "https://multinicheai.com/?product=AI-AG-020&utm_source=swarm" }
+];
+
+// Subs whose main feed is questions-only. A pain-headline + product URL is
+// exactly the "pretend to ask a question just to promote" pattern they ban
+// for, and u/MultiNicheAI81 already trips the AI review filter.
+const REDDIT_PROMO_THREAD = {
+  smallbusiness: {
+    reason: "r/smallbusiness only allows product posts in the weekly Promote-your-business sticky. A feed post with an AI product, a landing URL, or an ad image gets removed and can ban the account — including in other subs.",
+    search: "https://www.reddit.com/r/smallbusiness/search/?q=Promote%20your%20business&restrict_sr=1&sort=new&t=month"
+  },
+  entrepreneur: {
+    reason: "r/Entrepreneur treats a product post in the feed as spam. Use their weekly promo thread, not a new post.",
+    search: "https://www.reddit.com/r/Entrepreneur/search/?q=Promote%20your%20business&restrict_sr=1&sort=new&t=month"
+  },
+  startups: {
+    reason: "r/startups removes product pitches from the feed. Showcase goes in their weekly thread, not a new post.",
+    search: "https://www.reddit.com/r/startups/search/?q=Promote%20your%20startup&restrict_sr=1&sort=new&t=month"
+  }
+};
+
+function dest() {
+  return {
+    x: document.getElementById("x").value.replace(/^@/, "").trim() || "DupreJesse14633",
+    reddit: document.getElementById("reddit").value.replace(/^u\//, "").trim() || "MultiNicheAI81",
+    sub: document.getElementById("sub").value.replace(/^r\//, "").trim() || "smallbusiness"
+  };
+}
+
+function redditLanding(ad) {
+  return String(ad.landing || "").replace("utm_medium=x", "utm_medium=reddit");
+}
+
+function redditComment(ad, d) {
+  return [
+    ad.name + " — $" + ad.price + " one-time",
+    ad.body,
+    "Proof: " + ad.proof,
+    redditLanding(ad),
+    "I'm the maker (u/" + d.reddit + "). Questions welcome — no DMs."
+  ].join("\n\n");
+}
+
+function tweet(ad) {
+  const t = `${ad.headline}\n\n${ad.body}\n\n${ad.landing}`;
+  return "https://twitter.com/intent/tweet?text=" + encodeURIComponent(t.slice(0, 280));
+}
+
+function redditSubmit(ad, d) {
+  const title = ad.name + " — " + ad.proof;
+  const text = redditComment(ad, d);
+  return `https://www.reddit.com/r/${encodeURIComponent(d.sub)}/submit?title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}`;
+}
+
+function policyFor(sub) {
+  return REDDIT_PROMO_THREAD[String(sub || "").toLowerCase()] || null;
+}
+
+function refreshSubHint() {
+  const hint = document.getElementById("sub-hint");
+  const policy = policyFor(dest().sub);
+  if (!hint) return;
+  if (policy) {
+    hint.classList.add("warn");
+    hint.textContent = "r/" + dest().sub + ": weekly promo sticky only. A feed post is a ban risk.";
+  } else {
+    hint.classList.remove("warn");
+    hint.textContent = "r/" + dest().sub + ": posts as a named product, not a fake question. Still no ad-image spam.";
+  }
+}
+
+function showGate(ad, policy) {
+  const d = dest();
+  const gate = document.getElementById("reddit-gate");
+  const reason = document.getElementById("gate-reason");
+  const text = document.getElementById("gate-text");
+  const open = document.getElementById("gate-open");
+  const copied = document.getElementById("gate-copied");
+  const title = document.getElementById("gate-title");
+  if (!gate) return;
+  title.textContent = "r/" + d.sub + " · promo sticky only";
+  reason.textContent = policy.reason + " Close the feed composer if it already opened. Do not attach the ad image.";
+  text.value = redditComment(ad, d);
+  open.href = policy.search;
+  copied.hidden = true;
+  gate.hidden = false;
+  gate.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function postReddit(ad) {
+  const d = dest();
+  const policy = policyFor(d.sub);
+  if (policy) {
+    showGate(ad, policy);
+    return;
+  }
+  window.open(redditSubmit(ad, d), "_blank", "noopener");
+}
+
+const root = document.getElementById("cards");
+ADS.forEach((ad) => {
+  const el = document.createElement("article");
+  el.className = "card";
+  el.innerHTML = `
+    <img src="/icons/swarm/${ad.sku}.jpg" alt="${ad.name}" />
+    <div class="pad">
+      <span class="badge">${ad.sku}</span>
+      <h2 style="margin:8px 0 4px;font-size:1.05rem;font-weight:500">${ad.headline}</h2>
+      <p style="margin:0 0 8px;font-size:14px">${ad.body}</p>
+      <p class="mono">${ad.name} · $${ad.price} one-time</p>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" data-x>Post on X</button>
+        <button class="secondary" data-r>Post Reddit</button>
+      </div>
+    </div>`;
+  el.querySelector("[data-x]").onclick = () => window.open(tweet(ad), "_blank", "noopener");
+  el.querySelector("[data-r]").onclick = () => postReddit(ad);
+  root.appendChild(el);
+});
+
+document.getElementById("sub").addEventListener("input", refreshSubHint);
+refreshSubHint();
+
+document.getElementById("gate-copy").addEventListener("click", async () => {
+  const text = document.getElementById("gate-text").value;
+  try { await navigator.clipboard.writeText(text); } catch (_) {}
+  document.getElementById("gate-copied").hidden = false;
+});
+
+(function () {
+  var standalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.matchMedia("(display-mode: window-controls-overlay)").matches
+    || (window.navigator.standalone === true);
+  if (!standalone) return;
+  var steps = document.getElementById("android-steps");
+  var note = document.getElementById("installed-note");
+  var btn = document.getElementById("install-app");
+  if (steps) steps.hidden = true;
+  if (btn) btn.hidden = true;
+  if (note) note.hidden = false;
+})();
+</script>
+<script src="/install-app.js" defer></script>
+</body>
+</html>

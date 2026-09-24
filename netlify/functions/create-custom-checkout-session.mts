@@ -19,7 +19,7 @@ const stripe = new Stripe(STRIPE_KEY)
 // Flat price for any custom order, regardless of category — server-side
 // authority, never trust a price the browser sends.
 const CUSTOM_ORDER_PRICE_CENTS = 4900 // $49.00
-const VALID_CATEGORIES = ['prompts', 'automations', 'templates', 'agents']
+const VALID_CATEGORIES = ['prompts', 'automations', 'templates', 'agents', 'connectors']
 const MAX_DESCRIPTION_LENGTH = 4000
 
 function shortId(): string {

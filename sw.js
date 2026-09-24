@@ -13,20 +13,48 @@
 // network was slow or absent. It gets its own cache entry rather than sharing the
 // storefront's, because the two are different documents and either one may be the
 // window that was launched.
-const CACHE = 'multiniche-ai-v8';
+// Bumped to v9 for the jblessd.com -> multinicheai.com domain migration: forces
+// every existing install (PWA and any lingering TWA) to drop its old cache and
+// refetch the app shell and icons rather than continuing to serve pre-migration
+// copies.
+// Bumped to v10 so the installed SWARM operator at /swarm is in the app shell
+// and Chrome on Android can offer "Install app" / Add to Home screen.
+// Bumped to v11 so returning installs drop the old privacy-consent.js that
+// painted the cookie card on first load for every visitor, including US
+// click-throughs from X.
+// Bumped to v12 so the installed SWARM composer stops opening r/smallbusiness
+// feed posts (those get removed as AI promo and can ban the account).
+// Bumped to v13 so returning installs pick up the always-visible Download
+// button that installs in Chrome in-app (or hands X/Grok to Chrome).
+// Bumped to v14 so returning installs pick up the first-party Multiniche Ads
+// tag on the storefront (mn-ads.js + the catalog slot).
+// Bumped to v15 so the MultiNicheADS icon on the store opens /ads.
+// Bumped to v16: /order-confirmation no longer falls back to the cached
+// homepage on a failed fetch — see the comment in the fetch handler. This
+// was silently dropping buyers on what looked like an ordinary homepage
+// after a real, successful payment, with no order and no download link.
+const CACHE = 'multiniche-ai-v16';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/agent',
+  '/ads',
+  '/ads.html',
+  '/swarm',
+  '/swarm.html',
   '/privacy-consent.js',
   '/marketing-measurement.js',
   '/install-app.js',
+  '/mn-ads.js',
   '/manifest.webmanifest',
+  '/swarm-manifest.webmanifest',
   '/icons/logo.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
-  '/icons/apple-touch-icon.png'
+  '/icons/apple-touch-icon.png',
+  '/icons/swarm/icon-192.png',
+  '/icons/swarm/icon-512.png'
 ];
 
 // Pre-cache the app shell on install.
@@ -128,17 +156,39 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     const isHome = url.pathname === '/' || url.pathname === '/index.html';
     const isAgent = url.pathname === '/agent' || url.pathname === '/agent.html';
+    const isSwarm = url.pathname === '/swarm' || url.pathname === '/swarm.html';
+    // /order-confirmation carries one buyer's session_id in its URL and is the
+    // ONLY proof they see that a real purchase went through, plus where their
+    // download link lives. It used to fall into the generic "any other route"
+    // branch below, whose catch() substitutes the cached HOMEPAGE on any
+    // failed fetch — and switching back to the browser/PWA right after Stripe
+    // redirects is exactly when a transient mobile network blip is likely.
+    // The buyer lands on what looks like an ordinary homepage: no error, no
+    // order, no download link, and nothing telling them anything went wrong —
+    // indistinguishable from "checkout silently failed," even when the
+    // payment genuinely succeeded. A short retry absorbs the transient blip;
+    // failing that, this deliberately does NOT substitute a different cached
+    // page. An honest browser offline/error screen at least invites a
+    // reload, and /api/order re-verifies with Stripe on every call, so a
+    // reload alone recovers the order — a silently-wrong homepage doesn't
+    // even suggest reloading is worth trying.
+    const fetchWithRetry = () => fetch(req).catch(() => fetch(req));
+    if (url.pathname === '/order-confirmation') {
+      event.respondWith(fetchWithRetry());
+      return;
+    }
     event.respondWith(
-      fetch(req)
+      fetchWithRetry()
         .then((res) => {
-          if (isHome || isAgent) {
+          if (isHome || isAgent || isSwarm) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(isAgent ? '/agent' : '/', copy));
+            const key = isSwarm ? '/swarm' : isAgent ? '/agent' : '/';
+            caches.open(CACHE).then((c) => c.put(key, copy));
           }
           return res;
         })
         .catch(() => {
-          const shell = isAgent ? ['/agent', '/'] : ['/', '/index.html'];
+          const shell = isSwarm ? ['/swarm', '/swarm.html'] : isAgent ? ['/agent', '/'] : ['/', '/index.html'];
           return caches.match(shell[0]).then((r) => r || caches.match(shell[1]));
         })
     );

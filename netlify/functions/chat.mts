@@ -19,7 +19,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const MAX_STEPS = 5 // safety cap on the agent's tool-use loop
 const STORE_NAME = 'MULTINICHE AI'
 
@@ -191,7 +191,7 @@ export default async (req: Request, context: Context) => {
         for (let step = 0; step < MAX_STEPS; step++) {
           const modelStream = anthropic.messages.stream({
             model: MODEL,
-            max_tokens: 1024,
+            max_tokens: 1330,
             system: SYSTEM(products),
             tools: TOOLS,
             messages,

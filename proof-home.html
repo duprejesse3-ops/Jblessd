@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MULTINICHE AI — Drop the job</title>
+<meta name="description" content="Paste the work. Watch an instrument run it. Buy only if the output earns its place." />
+<meta name="theme-color" content="#0A0E16" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root{
+    --ink:#070A10; --panel:#10151F; --panel-2:#0C1119; --paper:#EEF1F7;
+    --muted:#9AA3B5; --muted-2:#6B7386; --line:#2A3142; --line-soft:#1C2330;
+    --brass:#FFB020; --teal:#2EE6A6; --radius:10px;
+    --sans:Inter,ui-sans-serif,system-ui,sans-serif;
+    --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0A0E16;color:var(--paper);font-family:var(--sans);}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px;}
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 0;border-bottom:1px solid var(--line-soft);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.04em}
+  .mark{
+    width:28px;height:28px;border:1px solid var(--line);border-radius:6px;
+    display:grid;place-items:center;font-size:12px;color:var(--brass);
+  }
+  nav{display:flex;gap:10px;align-items:center}
+  .ghost{
+    border:1px solid var(--line);background:transparent;color:var(--paper);
+    padding:8px 12px;border-radius:8px;font-size:13px;
+  }
+  .bench{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;padding:28px 0 18px;}
+  @media (max-width:860px){.bench{grid-template-columns:1fr}}
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;padding:18px;
+  }
+  .kicker{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin:0 0 10px}
+  textarea{
+    width:100%;min-height:168px;resize:vertical;background:#0B1018;color:var(--paper);
+    border:1px solid var(--line);border-radius:10px;padding:14px;font:15px/1.5 var(--sans);
+  }
+  textarea:focus{outline:none;border-color:var(--brass)}
+  .dropzone{border:1px dashed transparent;border-radius:12px;padding:2px;transition:border-color .15s, background-color .15s;}
+  .dropzone.dragover{border-color:var(--brass);background:rgba(255,176,32,.06);}
+  .filehint{margin:6px 2px 0;font-size:11.5px;color:var(--muted-2);line-height:1.4;}
+  .filebrowse{background:none;border:0;padding:0;color:var(--brass);font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
+  .chip{
+    border:1px solid var(--line);background:#0B1018;color:var(--paper);
+    border-radius:999px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+  }
+  .chip[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+  .go{
+    width:100%;border:0;border-radius:10px;padding:13px 16px;font-weight:700;
+    background:var(--brass);color:#1A1204;cursor:pointer;font-size:15px;
+  }
+  .go:disabled{opacity:.55;cursor:wait}
+  .meta{margin-top:10px;font-size:12.5px;color:var(--muted-2)}
+  .term{min-height:320px;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line-soft);margin-bottom:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .dot:first-child{background:#7a1f1f}
+  .lbl{margin-left:8px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2)}
+  pre{
+    margin:0;flex:1;white-space:pre-wrap;word-break:break-word;
+    font-family:var(--mono);font-size:12.5px;line-height:1.65;
+    color:#D7E0CE;min-height:220px;
+  }
+  .hint{color:var(--muted-2);font-family:var(--sans);font-size:13.5px;line-height:1.55}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--brass);vertical-align:text-bottom;animation:blink 1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .after{display:none;gap:8px;margin-top:12px}
+  .after.show{display:flex;flex-wrap:wrap}
+  .after a,.after button{
+    border:1px solid var(--line);background:#0B1018;color:var(--paper);
+    border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer;
+  }
+  .after .buy{background:var(--teal);border-color:var(--teal);color:#06281C;font-weight:700}
+  .proofs{padding:8px 0 40px}
+  .proofs h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:860px){.row{grid-template-columns:1fr}}
+  .mini{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel-2)}
+  .mini b{display:block;margin-bottom:4px}
+  .mini span{color:var(--muted);font-size:13px}
+  .log{padding:8px 0 4px}
+  .log h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);font-weight:600;margin:0 0 4px}
+  .loghint{color:var(--muted-2);font-size:12.5px;margin:0 0 12px}
+  .logrow{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .logitem{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+    background:var(--panel-2);cursor:pointer;text-align:left;width:100%;
+    font-family:var(--sans);color:var(--paper);
+  }
+  .logitem:hover{border-color:var(--brass)}
+  .logitem .li-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .logitem .li-job{font-size:13.5px;font-weight:600}
+  .logitem .li-snip{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52ch}
+  .logitem .li-time{font-family:var(--mono);font-size:11px;color:var(--muted-2);flex-shrink:0}
+  .clearlog{
+    border:1px solid var(--line);background:transparent;color:var(--muted);
+    border-radius:8px;padding:7px 11px;font-size:12.5px;cursor:pointer;
+  }
+</style>
+<script src="/file-extract.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/"><span class="mark">M</span> MULTINICHE AI</a>
+      <nav>
+        <a class="ghost" href="/agent">Agent studio</a>
+        <a class="ghost" href="/proof">Proofs</a>
+        <a class="ghost" href="/">Catalog</a>
+      </nav>
+    </header>
+
+    <section class="bench">
+      <div class="card">
+        <p class="kicker">Drop the job</p>
+        <div class="dropzone" id="jobDropzone">
+          <textarea id="job" placeholder="Paste a transcript, inbox thread, brief, or describe the task…"></textarea>
+          <p class="filehint">
+            or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) —
+            <button type="button" class="filebrowse" id="jobBrowse">browse</button>
+            <input type="file" id="jobFile" accept=".txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf" hidden />
+          </p>
+        </div>
+        <div class="chips" id="chips"></div>
+        <button class="go" id="run">Run it on this task — free →</button>
+        <p class="meta" id="status">You haven’t paid yet. Output is a demo. Buy the instrument to keep the config.</p>
+      </div>
+      <div class="card term">
+        <div class="topbar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="lbl" id="label">demo · idle</span>
+        </div>
+        <pre id="out"><span class="hint">Pick a job. Paste the work — or leave it blank and we’ll run a sample. Claude streams the real instrument here.</span></pre>
+        <div class="after" id="after">
+          <a class="buy" id="buy" href="/">Add this instrument →</a>
+          <a id="open" href="/">Open spec sheet</a>
+          <button type="button" id="again">Run again</button>
+          <button type="button" id="share">Share this run</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="log" id="logSection" hidden>
+      <h2>Your recent runs</h2>
+      <p class="loghint">Stored in this browser only — never sent anywhere. Clear it any time.</p>
+      <div class="logrow" id="logrow"></div>
+      <button type="button" class="clearlog" id="clearlog">Clear log</button>
+    </section>
+
+    <section class="proofs">
+      <h2>Six jobs. The rest of the catalog waits.</h2>
+      <div class="row">
+        <a class="mini" href="/?product=AI-AB-002"><b>Inbox Zero</b><span>AI-AB-002 · automation</span></a>
+        <a class="mini" href="/?product=AI-TP-027"><b>Investor update</b><span>AI-TP-027 · template</span></a>
+        <a class="mini" href="/?product=AI-AG-003"><b>Meeting → decisions</b><span>AI-AG-003 · agent</span></a>
+        <a class="mini" href="/?product=AI-CN-008"><b>MultiVault</b><span>AI-CN-008 · connector</span></a>
+        <a class="mini" href="/?product=AI-CN-007"><b>MultiGuard</b><span>AI-CN-007 · connector</span></a>
+        <a class="mini" href="/?product=AI-CN-006"><b>MultiWitness</b><span>AI-CN-006 · connector</span></a>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  var JOBS = [
+    {
+      id: 'inbox',
+      label: 'Hit inbox zero',
+      sku: 'AI-AB-002',
+      name: 'Inbox Zero Automation',
+      sample: '12 unread founder emails: two pricing objections, a churn risk, three FYI newsletters, a hiring inbound, and a vendor asking to hop on a call tomorrow.'
+    },
+    {
+      id: 'update',
+      label: 'Ship investor update',
+      sku: 'AI-TP-027',
+      name: 'Investor Update Template',
+      sample: 'September: MRR $41.2k (+8%), burn $28k, runway 11 months. Shipped MultiVault. Lost one $2k account. Asking for intros to two Series A operators in vertical SaaS.'
+    },
+    {
+      id: 'meeting',
+      label: 'Turn this call into decisions',
+      sku: 'AI-AG-003',
+      name: 'Meeting Notes Agent',
+      sample: 'Alice wants RBAC. Ben says keep it simple. Clara asks who owns provisioning. Dan takes it and will sync with HR. Deadline Friday EOD.'
+    },
+    {
+      id: 'vault',
+      label: 'Find it in my files',
+      sku: 'AI-CN-008',
+      name: 'MultiVault',
+      sample: 'Somewhere across 40 project docs and email exports is the reason we rejected the Q2 pricing model — can\'t remember which file, just that Sarah pushed back on it in a thread.'
+    },
+    {
+      id: 'guard',
+      label: 'Freeze every connector',
+      sku: 'AI-CN-007',
+      name: 'MultiGuard',
+      sample: 'A former contractor\'s laptop still has live tokens for Slack, Zapier, and the Sheets connector. IT flagged it an hour ago. Need everything switched to read-only before end of day.'
+    },
+    {
+      id: 'witness',
+      label: 'Prove what it did',
+      sku: 'AI-CN-006',
+      name: 'MultiWitness',
+      sample: 'Auditor wants a verifiable record of exactly which files the deployment agent touched last Tuesday between 2 and 4pm — not our say-so, something they can check themselves.'
+    }
+  ];
+
+  var active = JOBS[2];
+  var busy = false;
+  var chips = document.getElementById('chips');
+  var job = document.getElementById('job');
+  var run = document.getElementById('run');
+  var out = document.getElementById('out');
+  var label = document.getElementById('label');
+  var after = document.getElementById('after');
+  var buy = document.getElementById('buy');
+  var open = document.getElementById('open');
+  var shareBtn = document.getElementById('share');
+  var status = document.getElementById('status');
+  var logSection = document.getElementById('logSection');
+  var logrow = document.getElementById('logrow');
+  var clearLogBtn = document.getElementById('clearlog');
+  var lastRun = null; // the most recently completed run, live or shared — what "Share this run" shares
+
+  // ---- drop a real file in instead of typing a scenario ----
+  // Same reasoning as the modal's version of this on the main site: the
+  // server (netlify/functions/demo.mts) caps scenario at 600 characters
+  // regardless of what's sent, a deliberate cost control. Truncating a
+  // dropped file to the same 600 here, client-side, keeps what's shown in
+  // the box honestly equal to what the demo will actually see.
+  var jobDropzone = document.getElementById('jobDropzone');
+  var jobFileInput = document.getElementById('jobFile');
+  var jobBrowseBtn = document.getElementById('jobBrowse');
+  var PROOF_SCENARIO_MAX = 600;
+  var PROOF_FILE_MAX_BYTES = 2 * 1024 * 1024;
+  var PROOF_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+
+  function isProbablyTextFile(file){
+    var name = (file.name || '').toLowerCase();
+    for(var i=0;i<PROOF_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PROOF_TEXT_EXTENSIONS[i].length) === PROOF_TEXT_EXTENSIONS[i]) return true;
+    }
+    return name.indexOf('.') === -1; // no extension at all — let the content speak for itself
+  }
+
+  function loadJobFile(file){
+    if(!file) return;
+    var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+    if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+      flashStatus('Reading "' + file.name + '"…');
+      window.extractFileText(file).then(function(result){
+        if(result.warning){
+          flashStatus(result.warning, 5000);
+          return;
+        }
+        var truncated = result.text.length > PROOF_SCENARIO_MAX;
+        job.value = result.text.slice(0, PROOF_SCENARIO_MAX);
+        flashStatus('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run.', 4000);
+      }).catch(function(err){
+        flashStatus('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.', 5000);
+      });
+      return;
+    }
+    if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      flashStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.', 4500);
+      return;
+    }
+    if(!isProbablyTextFile(file)){
+      flashStatus('"' + file.name + '" isn\'t a type this box can read. Try .txt, .csv, .md, .json, .log, .pdf, .docx, or .xlsx.', 4000);
+      return;
+    }
+    if(file.size > PROOF_FILE_MAX_BYTES){
+      flashStatus('"' + file.name + '" is bigger than this needs — only the first ' + PROOF_SCENARIO_MAX + ' characters are ever used. Trim it or paste the relevant part.', 4500);
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      var truncated = text.length > PROOF_SCENARIO_MAX;
+      job.value = text.slice(0, PROOF_SCENARIO_MAX);
+      flashStatus('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run.', 4000);
+    };
+    reader.onerror = function(){
+      flashStatus('Couldn\'t read "' + file.name + '" — try pasting the text directly.', 4000);
+    };
+    reader.readAsText(file);
+  }
+
+  if(jobDropzone){
+    ['dragenter','dragover'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      jobDropzone.addEventListener(evt, function(e){ e.preventDefault(); jobDropzone.classList.remove('dragover'); });
+    });
+    jobDropzone.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) loadJobFile(file);
+    });
+  }
+  if(jobBrowseBtn && jobFileInput){
+    jobBrowseBtn.addEventListener('click', function(){ jobFileInput.click(); });
+    jobFileInput.addEventListener('change', function(){
+      var file = jobFileInput.files && jobFileInput.files[0];
+      if(file) loadJobFile(file);
+      jobFileInput.value = '';
+    });
+  }
+
+  // ---- run log: this browser only, never transmitted anywhere ----
+  // A pasted scenario can contain a real inbox thread, real numbers, a real
+  // transcript — genuinely private business detail. Keeping the log in
+  // localStorage rather than any server-side store means it never leaves
+  // this device at all, the same "nothing leaves the machine" stance
+  // MultiVault's own product copy makes elsewhere on this site. It also
+  // means there's nothing new to secure or delete on request — there's
+  // nowhere else it exists.
+  var LOG_KEY = 'mn_proof_runs';
+  var MAX_LOG = 10;
+
+  function loadLog(){
+    try{
+      var raw = window.localStorage.getItem(LOG_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(_){ return []; } // private browsing / storage disabled — log just won't persist
+  }
+
+  function saveLog(arr){
+    try{ window.localStorage.setItem(LOG_KEY, JSON.stringify(arr.slice(0, MAX_LOG))); }catch(_){}
+  }
+
+  function timeAgo(ts){
+    var s = Math.max(1, Math.round((Date.now() - ts) / 1000));
+    if(s < 60) return s + 's ago';
+    var m = Math.round(s / 60);
+    if(m < 60) return m + 'm ago';
+    var h = Math.round(m / 60);
+    if(h < 24) return h + 'h ago';
+    return Math.round(h / 24) + 'd ago';
+  }
+
+  function renderLog(){
+    var arr = loadLog();
+    logrow.innerHTML = '';
+    if(!arr.length){ logSection.hidden = true; return; }
+    logSection.hidden = false;
+    arr.forEach(function(entry){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'logitem';
+      b.innerHTML =
+        '<span class="li-main">' +
+          '<span class="li-job">' + esc(entry.name) + '</span>' +
+          '<span class="li-snip">' + esc(entry.snippet) + '</span>' +
+        '</span>' +
+        '<span class="li-time">' + esc(timeAgo(entry.ts)) + '</span>';
+      b.addEventListener('click', function(){ replay(entry); });
+      logrow.appendChild(b);
+    });
+  }
+
+  clearLogBtn.addEventListener('click', function(){
+    saveLog([]);
+    renderLog();
+  });
+
+  function flashStatus(msg, revertAfterMs){
+    var prev = status.textContent;
+    status.textContent = msg;
+    if(revertAfterMs) setTimeout(function(){ status.textContent = prev; }, revertAfterMs);
+  }
+
+  // ---- share: publish the run to the real, public /proof/:id page ----
+  // This used to build a self-contained link with the run encoded into the
+  // URL itself — shareable peer-to-peer, but never actually reaching the
+  // site: no public page, not in the /proof gallery, not crawlable. The
+  // product modal elsewhere on the site already had a real version of this
+  // (POST to /api/proof, a permanent public URL, listed on /proof) — this
+  // now uses that same endpoint instead of its own separate, weaker
+  // mechanism, so "share this run" means the same thing everywhere on the
+  // site rather than two different things on two different pages.
+  async function shareRun(){
+    if(!lastRun) return;
+    shareBtn.disabled = true;
+    var original = shareBtn.textContent;
+    shareBtn.textContent = 'Publishing…';
+    try{
+      var res = await fetch('/api/proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: lastRun.sku, scenario: lastRun.scenario, output: lastRun.answer })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok || !data.url){ throw new Error(data.error || 'Could not publish this proof.'); }
+
+      var shareData = { title: 'MULTINICHE AI — ' + lastRun.name + ' (live proof)', text: 'Watch this instrument run a real task.', url: data.url };
+      if(navigator.share){
+        try{ await navigator.share(shareData); return; }
+        catch(_){ /* user cancelled the native share sheet — not an error */ }
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        try{
+          await navigator.clipboard.writeText(data.url);
+          flashStatus('Published — link copied. Live at ' + data.url, 5000);
+          return;
+        }catch(_){}
+      }
+      window.prompt('Published — copy this link:', data.url);
+    }catch(err){
+      flashStatus(err.message || 'Could not publish this proof.', 4000);
+    }finally{
+      shareBtn.disabled = false;
+      shareBtn.textContent = original;
+    }
+  }
+
+  shareBtn.addEventListener('click', shareRun);
+
+  // Renders a run from your own local log without making any network call.
+  function replay(entry){
+    var matchJob = null;
+    for(var i=0;i<JOBS.length;i++){ if(JOBS[i].sku === entry.sku){ matchJob = JOBS[i]; break; } }
+    if(matchJob) select(matchJob);
+    job.value = entry.scenario && entry.scenario !== (matchJob && matchJob.sample) ? entry.scenario : '';
+    out.textContent = entry.answer;
+    label.textContent = 'demo · replay · ' + entry.sku;
+    after.classList.add('show');
+    lastRun = { sku: entry.sku, name: entry.name, scenario: entry.scenario, answer: entry.answer };
+  }
+
+  JOBS.forEach(function(j, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = j.label;
+    b.setAttribute('aria-pressed', j === active ? 'true' : 'false');
+    b.addEventListener('click', function(){ select(j); });
+    chips.appendChild(b);
+  });
+
+  function select(j){
+    active = j;
+    Array.prototype.forEach.call(chips.children, function(el){
+      el.setAttribute('aria-pressed', el.textContent === j.label ? 'true' : 'false');
+    });
+    after.classList.remove('show');
+    label.textContent = 'demo · ' + j.sku + ' · idle';
+    // Switching jobs without resetting the terminal left the previous job's
+    // finished output sitting there while the label above it claimed the
+    // newly-picked job was idle — label and content disagreeing about which
+    // product's result was even on screen. Reset both output and the
+    // scenario box: leaving a pasted scenario in place across a job switch
+    // risks silently running an investor-update-shaped input against the
+    // meeting notes agent, or similar, rather than the fresh "pick a job,
+    // paste the work" state the hint text below promises.
+    out.innerHTML = '<span class="hint">Pick a job. Paste the work — or leave it blank and we’ll run a sample. Claude streams the real instrument here.</span>';
+    job.value = '';
+    setLinks();
+  }
+
+  function setLinks(){
+    var href = '/?product=' + encodeURIComponent(active.sku);
+    buy.href = href;
+    buy.textContent = 'Add ' + active.name + ' →';
+    open.href = href;
+  }
+  setLinks();
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  async function runDemo(){
+    if(busy) return;
+    busy = true;
+    run.disabled = true;
+    after.classList.remove('show');
+    label.textContent = 'demo · booting';
+    out.innerHTML = '<span class="cursor"></span>';
+    var scenario = job.value.trim() || active.sample;
+    var answer = '';
+    try{
+      var res = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: active.sku, scenario: scenario })
+      });
+      if(res.status === 429){
+        var cap = '';
+        try{ cap = (await res.json()).error || ''; }catch(_){}
+        out.innerHTML = '<span class="hint">' + esc(cap || 'Too many tailored demos this hour. Try the sample by clearing the box, or wait a bit.') + '</span>';
+        label.textContent = 'demo · limit reached';
+        return;
+      }
+      if(!res.ok || !res.body) throw new Error('unavailable');
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var got = false;
+      while(true){
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for(var i=0;i<lines.length;i++){
+          var line = lines[i].trim();
+          if(!line) continue;
+          var ev; try{ ev = JSON.parse(line); }catch(_){ continue; }
+          if(ev.type === 'meta'){
+            label.textContent = 'demo · ' + (ev.verb || 'running').toLowerCase() + (ev.cached ? ' · replay' : '');
+          } else if(ev.type === 'text'){
+            got = true;
+            answer += ev.text;
+            out.innerHTML = esc(answer) + '<span class="cursor"></span>';
+            out.scrollTop = out.scrollHeight;
+          }
+        }
+      }
+      if(!got) throw new Error('empty');
+      out.textContent = answer;
+      label.textContent = 'demo · complete · ' + active.sku;
+      after.classList.add('show');
+      lastRun = { sku: active.sku, name: active.name, scenario: scenario, answer: answer };
+      var log = loadLog();
+      log.unshift({
+        sku: active.sku,
+        name: active.name,
+        scenario: scenario,
+        answer: answer,
+        snippet: answer.slice(0, 90) + (answer.length > 90 ? '…' : ''),
+        ts: Date.now()
+      });
+      saveLog(log);
+      renderLog();
+      if(window.trackMarketingEvent){
+        window.trackMarketingEvent('demo_complete', { item_id: active.sku, method: job.value.trim() ? 'custom_scenario' : 'sample' }, { lead: true });
+      }
+    }catch(err){
+      out.innerHTML = '<span class="hint">Live engine is not reachable from this file yet. Drop proof-home.html on the Netlify site next to Index.html so /api/demo resolves. Offline preview cannot stream Claude.</span>';
+      label.textContent = 'demo · offline';
+    }finally{
+      busy = false;
+      run.disabled = false;
+    }
+  }
+
+  run.addEventListener('click', runDemo);
+  document.getElementById('again').addEventListener('click', runDemo);
+  job.addEventListener('keydown', function(e){
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') runDemo();
+  });
+
+  renderLog();
+})();
+</script>
+<script>
+// First-party landing beacon — same beacon Index.html and agent.html fire,
+// added here because this page (the "proof" channel's landing target, and
+// SWARM's highest-CTR channel by design) had no attribution tracking at all:
+// visits carrying utm_source=swarm arrived and were never recorded in
+// ad_events, so /api/swarm-performance had nothing to report for this
+// channel. See trackLanding() in Index.html for the fuller version this is
+// copied from.
+(function(){
+  var CLICK_ID_PARAMS = ['gclid', 'gbraid', 'wbraid'];
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  function deviceHint(){
+    try{
+      var w = window.innerWidth || (screen && screen.width) || 0;
+      if(w > 0 && w < 768) return 'mobile';
+      if(w >= 768 && w < 1024) return 'tablet';
+      return 'desktop';
+    }catch(e){ return null; }
+  }
+  try{
+    var params = new URLSearchParams(window.location.search);
+    var clickId = null, clickSource = null;
+    for(var i = 0; i < CLICK_ID_PARAMS.length; i++){
+      var v = params.get(CLICK_ID_PARAMS[i]);
+      if(v){ clickId = v.slice(0, 200); clickSource = CLICK_ID_PARAMS[i]; break; }
+    }
+    var hasUtm = UTM_PARAMS.some(function(p){ return params.get(p); });
+    if(clickId || hasUtm){
+      var referrerHost = null;
+      try{ if(document.referrer){ referrerHost = new URL(document.referrer).hostname; } }catch(e){}
+      var payload = {
+        clickId: clickId || undefined,
+        clickSource: clickSource || undefined,
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmTerm: params.get('utm_term') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        landingPath: (window.location.pathname || '/').slice(0, 512),
+        referrerHost: referrerHost || undefined,
+        device: deviceHint() || undefined
+      };
+      var body = JSON.stringify(payload);
+      if(navigator.sendBeacon){
+        navigator.sendBeacon('/api/track-landing', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/track-landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function(){});
+      }
+    }
+  }catch(e){ /* analytics is best-effort; never block the page */ }
+})();
+</script>
+</body>
+</html>

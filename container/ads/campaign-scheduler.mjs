@@ -21,7 +21,7 @@ const STALE_DAYS = Number(process.env.MULTIADS_STALE_DAYS || 30)
 const BATCH_SIZE = Number(process.env.MULTIADS_BATCH_SIZE || 3)
 // Same site URL server.mjs falls back to, so a newly published /updates/:id
 // page resolves to a real absolute URL for IndexNow regardless of environment.
-const SITE_URL = (process.env.SITE_URL || 'https://jblessd.com').replace(/\/$/, '')
+const SITE_URL = (process.env.SITE_URL || 'https://multinicheai.com').replace(/\/$/, '')
 
 async function getLastCampaignDates() {
   const db = getDatabase()

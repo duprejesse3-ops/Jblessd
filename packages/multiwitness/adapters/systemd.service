@@ -1,0 +1,25 @@
+# Copyright (c) 2026 [SELLER]. All rights reserved.
+# Licensed to a single purchaser under the terms in LICENSE.md.
+# Redistribution or resale of this source, in whole or in part, is not permitted.
+#
+# Linux equivalent of adapters/windows-task.ps1.
+#
+# Install:
+#   sed -i "s|REPLACE_WITH_PACKAGE_PATH|$(pwd)|g" adapters/systemd.service
+#   mkdir -p ~/.config/systemd/user
+#   cp adapters/systemd.service ~/.config/systemd/user/multiwitness.service
+#   systemctl --user enable --now multiwitness
+
+[Unit]
+Description=MultiWitness
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=REPLACE_WITH_PACKAGE_PATH
+ExecStart=/usr/bin/env node REPLACE_WITH_PACKAGE_PATH/bin/witness.mjs start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

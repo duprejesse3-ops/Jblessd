@@ -22,23 +22,57 @@ import { getStore } from '@netlify/blobs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
+import { DEMO_LIBRARY } from '../lib/demo-library.mjs'
+import { SKU_RUN_BRIEF } from '../lib/product-app.mjs'
 
-const MODEL = 'claude-opus-4-8' // the flagship — this is the store's showcase
+const MODEL = 'claude-opus-5' // the flagship — this is the store's showcase
 const MAX_TOKENS_PREVIEW = 900 // the quick, cached, no-scenario demo
 // A shopper's own submitted task gets real room to work through it. This
 // matters most for genuinely hard scenarios (see "Stump the Agent" style
 // challenges) — the old single 900-token cap cut off a real attempt at a hard
 // task mid-thought, which reads as broken rather than as an honest limitation.
-const MAX_TOKENS_SCENARIO = 1700
+const MAX_TOKENS_SCENARIO_DEFAULT = 1700
+
+// A few products' doctrines genuinely produce a longer response than most —
+// $Odds Agent and MultiSignal both reason through multiple candidate
+// explanations with citations, timing checks, and confidence levels before
+// concluding, not a single short verdict; MultiCascade can run through an
+// Architect, one or more Builders, a Critic, and a closing summary for a
+// single goal. The flat 1700-token default was cutting these off mid-stream
+// in the free demo (reported directly on both: "streamed but cut off," and
+// a MultiCascade run ending right at "Cascade summary —" with nothing after
+// it), not because anything was broken, just because the doctrine had more
+// to honestly say than the ceiling allowed. Scoped to just these SKUs
+// rather than raised for everyone, so the free demo's cost doesn't go up
+// for the many simpler products that never needed the room.
+const SKU_MAX_TOKENS_SCENARIO: Record<string, number> = {
+  'AI-AG-112': 3000, // MultiCascade — can run Architect + multiple Builders + Critic + summary for a bigger goal
+  'AI-AG-114': 2600, // $Odds Agent
+  'AI-AG-115': 2600, // MultiSignal
+}
 
 // Custom-scenario demos are the one path here that always pays for fresh
 // flagship inference — the default per-SKU demo is served from the Blobs cache,
 // so it is effectively free and stays unmetered so any shopper can watch it.
 // A unique scenario string defeats the cache by design, which without a ceiling
 // makes this endpoint an open, unauthenticated way to spend the store's
-// inference budget. Ten tailored runs an hour per IP is far more than a real
-// shopper needs and bounds what a script can cost.
-const CUSTOM_DEMO_LIMIT = 10
+// inference budget.
+//
+// Raised from 10 to 30/hour on 2026-09-23: real internal callers (the weekly
+// scorecard sweep, the admin console's run_scorecard action) are supposed to
+// bypass this entirely via INTERNAL_API_SECRET, but if that check ever
+// doesn't match — wrong/missing header, secret unset — every such caller
+// falls back to sharing ONE bucket keyed "unknown" (see checkRateLimit: no
+// real IP on a server-to-server call), because they're all the same
+// unidentifiable caller as far as this limiter can tell. That single shared
+// bucket hitting 10/hour was trivial to exhaust from normal admin-console
+// testing alone, well before any real shopper traffic. 30 is still a real
+// ceiling against a scripted abuse loop, just not one a few minutes of
+// legitimate testing trips by accident. If INTERNAL_API_SECRET is verified
+// working, this limit only ever applies to genuine shopper/anonymous usage
+// (including the product page's own "Run on my own situation"), where 30/hour
+// per real IP is still generous, not permissive.
+const CUSTOM_DEMO_LIMIT = 30
 const CUSTOM_DEMO_WINDOW_MS = 60 * 60 * 1000
 const STORE_NAME = 'MULTINICHE AI'
 const CACHE_VERSION = 'v1' // bump to invalidate all cached demos at once
@@ -66,6 +100,11 @@ const PLAYBOOK: Record<Product['category'], { verb: string; brief: string }> = {
     brief:
       'Role-play this agent handling one representative task end to end: show the incoming request, then the agent’s actual response/output in character. Demonstrate the behavior the config produces.',
   },
+  connectors: {
+    verb: 'Running a live sync through this connector',
+    brief:
+      'Show this connector app in action: a realistic trigger or sync event on one side (the outside service — Zapier, Shopify, Sheets, email, Slack, etc.) and the concrete result it produces on the agent side, or vice versa. Make it read like a real connection firing, not a feature list.',
+  },
 }
 
 // ---- fallback: a serviceable, product-specific sample without the model ----
@@ -84,24 +123,51 @@ function fallbackDemo(p: Product, scenario: string): string {
 }
 
 // Build the system + user prompt that makes Claude *demonstrate* the product.
-function buildPrompt(p: Product, scenario: string): { system: string; user: string } {
+// liveContext, when present, is real fetched-and-parsed data (currently only
+// for AI-AB-071 — see runSeoAudit) that grounds the demo in an actual scan
+// instead of an invented one. When present, the system prompt gets an extra
+// rule forbidding invented specifics about the scanned page. fixPack, when
+// present, is the deterministic (no model involved) set of ready-to-paste
+// fixes generated straight from that same real scan — see buildFixPack.
+function buildPrompt(
+  p: Product,
+  scenario: string,
+  liveContext?: string,
+  fixPack?: string,
+): { system: string; user: string } {
   const play = PLAYBOOK[p.category]
   const lengthRule = scenario
     ? 'Give this real, submitted task room to breathe: roughly 250–450 words — enough to actually work through it, not just gesture at it.'
     : 'Keep it tight: roughly 150–260 words. This renders in a small terminal panel.'
+  const liveContextRule = liveContext
+    ? `- A "Live scan" section is provided below, fetched and parsed from a real page moments before this ran. Treat it as ground truth for anything about that specific page — title, meta description, schema, headings, images, etc. Never invent, guess, or contradict a specific fact about that page beyond what the live scan states; if the live scan says something is missing, say it's missing, and if it says something is present, quote or describe what was actually found. For anything the live scan explicitly says was NOT checked (e.g. Google Business Profile, competitor listings), explain that part of the product conceptually without inventing specific numbers or findings for it.\n`
+    : ''
+  const fixPackRule = fixPack
+    ? `- A "Fix pack" section is provided below — ready-to-paste code generated deterministically by code, not by you, straight from the live scan's real findings. Reproduce its content faithfully (the tags, the JSON-LD, the exact suggested copy) rather than paraphrasing or rewriting it into your own version, then explain in your own words what each fix does and why it matters. If a section says a fix isn't needed, or explains why one was skipped (e.g. no business name/city given), say that plainly rather than inventing a fix anyway.\n`
+    : ''
   const system =
     `You are the live demonstration engine for ${STORE_NAME}, a store of ready-to-use ` +
     `AI productivity tools. Your job is to PROVE a specific product works by showing it ` +
     `in action — a working demo, not a sales pitch and not a description of features.\n\n` +
     `Rules:\n` +
-    `- ${play.brief}\n` +
+    `- ${SKU_RUN_BRIEF[p.sku] ?? play.brief}\n` +
+    liveContextRule +
+    fixPackRule +
     `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
-    `feels like a real run, but never claim capabilities beyond what the product is.\n` +
+    `feels like a real run, but never claim capabilities beyond what the product is` +
+    (liveContext ? ', and never invent details about a real page covered by the Live scan section below — use what it actually found' : '') +
+    `.\n` +
     `- If the shopper's own task is genuinely a stretch for what this specific product format ` +
     `can do, say so plainly and specifically — name the exact limitation — rather than papering ` +
     `over the gap with generic filler. Give your best real attempt first, then the honest ` +
     `assessment. "Here's how far this gets, and here's what would close the rest" builds more ` +
     `trust than pretending a poor fit is a perfect one.\n` +
+    `- When you name a limitation, do not also invent a specific technical workaround for it ` +
+    `unless you are certain it actually works as described. A plausible-sounding but wrong claim ` +
+    `about how a third-party service behaves (what a sync tool actually writes to disk, what an ` +
+    `export produces, etc.) is worse than naming the limitation and stopping there — confidently ` +
+    `wrong is a bigger trust problem than incomplete. If you don't know a workaround holds up, ` +
+    `just state the limitation.\n` +
     `- ${lengthRule}\n` +
     `- Plain text only. No markdown headers or code fences. You may use simple line ` +
     `breaks, short labels ending in a colon, and "▸" or "—" as light structure.\n` +
@@ -116,9 +182,13 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `- Format: ${p.format}\n` +
     `- Spec: ${p.spec}\n` +
     `- What it does: ${p.blurb}\n` +
+    (liveContext ? `\nLive scan (real, fetched just now):\n"""${liveContext}"""\n` : '') +
+    (fixPack ? `\nFix pack (generated deterministically, not by you):\n"""${fixPack}"""\n` : '') +
     (scenario
       ? `\nTailor the demonstration to this shopper's own situation:\n"""${scenario}"""\n`
-      : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
+      : liveContext
+        ? `\nNo scenario was given, so this is the default demo: it just scanned ${STORE_NAME}'s own homepage for real (see the Live scan section above) — walk through what that scan actually found as the worked example, exactly as you would for a shopper's own page.\n`
+        : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
 
   return { system, user }
 }
@@ -141,7 +211,15 @@ export default async (req: Request, context: Context) => {
   if (!sku) return Response.json({ error: 'A product SKU is required.' }, { status: 400 })
 
   // Only the uncacheable, always-fresh path is metered — see CUSTOM_DEMO_LIMIT.
-  if (scenario) {
+  const internalSecret = process.env.INTERNAL_API_SECRET
+  const isInternalCaller = Boolean(internalSecret) && req.headers.get('x-internal-secret') === internalSecret
+
+  // The shopper-abuse limiter below exists to stop a script from scripting
+  // unlimited custom demos through a real browser/IP. It was never meant to
+  // apply to our own scorecard-runner, which legitimately needs to run many
+  // more than 10 fixed, versioned scenarios per hour — trusted internal
+  // callers (verified via a shared secret only they know) skip it entirely.
+  if (scenario && !isInternalCaller) {
     const ip = context.ip || req.headers.get('x-nf-client-connection-ip') || undefined
     const limit = await checkRateLimit('demo-custom', ip, {
       limit: CUSTOM_DEMO_LIMIT,
@@ -163,6 +241,21 @@ export default async (req: Request, context: Context) => {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
+
+      // Free tier, checked first: a hand-written demo costs nothing to serve,
+      // no matter how much traffic it gets — no Blobs read, no model call.
+      // Only the default (no-scenario) view can use it; a shopper's own
+      // scenario is inherently something no static text can answer.
+      const libraryEntry = scenario.length === 0 ? DEMO_LIBRARY[product.sku] : undefined
+      if (libraryEntry) {
+        send({ type: 'meta', verb: libraryEntry.verb, cached: true })
+        for (const piece of libraryEntry.text.match(/[\s\S]{1,24}/g) ?? [libraryEntry.text]) {
+          send({ type: 'text', text: piece })
+        }
+        send({ type: 'done' })
+        controller.close()
+        return
+      }
 
       // Only the default (no-scenario) demo is cacheable — custom scenarios are
       // unique to the shopper and always run fresh.
@@ -190,13 +283,38 @@ export default async (req: Request, context: Context) => {
 
       send({ type: 'meta', verb: PLAYBOOK[product.category].verb, cached: false })
 
+      // Local SEO Agency Blueprint only: run a real live scan every time — of
+      // the shopper's own page when they gave one, or of MULTINICHE AI's own
+      // homepage for the default (no-scenario) demo, so even the free,
+      // cached default view is grounded in an actual scan instead of an
+      // invented one. From the same real findings, also generate a
+      // deterministic (no model call — see buildFixPack) fix pack, so the
+      // demo can show the product actually fixing what it finds, not just
+      // diagnosing it. See seo-live-context.mts for what's checked, its
+      // stated scope, and how the fix pack is built.
+      let liveContext: string | undefined
+      let fixPack: string | undefined
+      if (product.sku === 'AI-AB-071') {
+        try {
+          const { runSeoAudit, buildFixPack } = await import('../lib/seo-live-context.mjs')
+          const audit = await runSeoAudit(scenario || 'https://multinicheai.com')
+          liveContext = audit.message
+          if (audit.ok && audit.findings) {
+            fixPack = buildFixPack(audit.findings, {})
+          }
+        } catch (err) {
+          console.error('seo live context fetch failed:', (err as Error).message)
+          liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
+        }
+      }
+
       let full = ''
       try {
         const anthropic = new Anthropic()
-        const { system, user } = buildPrompt(product, scenario)
+        const { system, user } = buildPrompt(product, scenario, liveContext, fixPack)
         const modelStream = anthropic.messages.stream({
           model: MODEL,
-          max_tokens: scenario ? MAX_TOKENS_SCENARIO : MAX_TOKENS_PREVIEW,
+          max_tokens: scenario ? (SKU_MAX_TOKENS_SCENARIO[product.sku] ?? MAX_TOKENS_SCENARIO_DEFAULT) : MAX_TOKENS_PREVIEW,
           system,
           messages: [{ role: 'user', content: user }],
         })

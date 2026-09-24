@@ -1,5 +1,5 @@
 // Netlify Function: POST /api/inbound-email
-// Resend calls this endpoint when an email arrives at any @jblessd.com
+// Resend calls this endpoint when an email arrives at any @multinicheai.com
 // address (via the inbound MX record). The webhook payload is metadata
 // only — sender, recipients, subject, attachment filenames — so the full
 // body is fetched separately via resend.emails.receiving.get().

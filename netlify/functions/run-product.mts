@@ -30,7 +30,7 @@ import type { Product } from '../lib/catalog.mjs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
 
-const MODEL = 'claude-opus-4-8' // the flagship — the app is the paid experience
+const MODEL = 'claude-opus-5' // the flagship — the app is the paid experience
 const MAX_TOKENS = 1400
 
 export default async (req: Request, _context: Context) => {
@@ -45,10 +45,12 @@ export default async (req: Request, _context: Context) => {
   let sessionId = ''
   let sku = ''
   let inputs: Record<string, string> = {}
+  let voice = false
   try {
     const body = await req.json()
     sessionId = String(body?.session_id ?? '').trim()
     sku = String(body?.sku ?? '').trim().slice(0, 32)
+    voice = Boolean(body?.voice)
     const raw = body?.inputs
     if (raw && typeof raw === 'object') {
       for (const [k, v] of Object.entries(raw)) {
@@ -81,7 +83,45 @@ export default async (req: Request, _context: Context) => {
   }
 
   const app = buildProductApp(product)
-  const prompt = buildRunPrompt(product, app, inputs)
+
+  // $Odds Agent only: fetch live price + recent headlines before building
+  // the prompt, so the model reasons against what's actually true right
+  // now instead of whatever the buyer typed (which may already be stale by
+  // submission time). Passed as its own explicit argument to buildRunPrompt
+  // rather than folded into inputs — summariseInputs only walks the form's
+  // own defined fields, so anything stuffed into inputs under a key with no
+  // matching field definition gets silently dropped and never reaches the
+  // model at all. Caught in review before shipping; worth remembering if
+  // another SKU ever wants live-fetched context of its own.
+  let liveContext: string | undefined
+  let fixPack: string | undefined
+  if (product.sku === 'AI-AG-114') {
+    try {
+      const { fetchOddsLiveContext } = await import('../lib/odds-live-context.mjs')
+      liveContext = await fetchOddsLiveContext(inputs.marketUrl ?? '', inputs.market ?? '')
+    } catch (err) {
+      console.error('odds live context fetch failed:', (err as Error).message)
+      liveContext = 'Live price/news lookup failed this run — reason from general knowledge and what the buyer provided.'
+    }
+  } else if (product.sku === 'AI-AB-071') {
+    try {
+      const { runSeoAudit, buildFixPack } = await import('../lib/seo-live-context.mjs')
+      const audit = await runSeoAudit(inputs.url ?? '')
+      liveContext = audit.message
+      if (audit.ok && audit.findings) {
+        fixPack = buildFixPack(audit.findings, {
+          businessName: inputs.businessName,
+          targetCity: inputs.targetCity,
+          category: inputs.category,
+        })
+      }
+    } catch (err) {
+      console.error('seo live context fetch failed:', (err as Error).message)
+      liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
+    }
+  }
+
+  const prompt = buildRunPrompt(product, app, inputs, voice, liveContext, fixPack)
   if (!prompt) {
     return Response.json({ error: 'Fill in at least one field so it has something to work with.' }, { status: 400 })
   }

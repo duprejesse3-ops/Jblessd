@@ -1,0 +1,33 @@
+{
+  "name": "multiconnect-sheets-airtable",
+  "version": "1.0.0",
+  "description": "Turn a spreadsheet into your agent's database. Two-way sync with Google Sheets or Airtable — no code needed.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiconnect-sheets": "./bin/sheets-connect.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./config": "./lib/config.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/sheets-connect.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

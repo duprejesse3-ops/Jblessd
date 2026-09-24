@@ -1,0 +1,27 @@
+{
+  "name": "release-notes-bot",
+  "version": "1.0.0",
+  "description": "A GitHub Actions workflow that drafts real release notes and a changelog entry from merged PRs, commits them, and posts to Slack — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "release-notes": "./bin/release-notes.mjs"
+  },
+  "main": "./lib/release-notes.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "release-notes": "node bin/release-notes.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

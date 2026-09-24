@@ -57,7 +57,7 @@ const MIN_OUTPUT_LENGTH = 20 // mirrors /api/proof's own "nothing to save yet" f
 // nothing usable) takes close to the same wall-clock time as a success.
 const INFRA_FAILURE_MS = 2000
 
-interface ScenarioRow {
+export interface ScenarioRow {
   id: string
   sku: string
   prompt: string
@@ -72,7 +72,13 @@ function shortId(): string {
 async function runScenario(origin: string, sku: string, prompt: string): Promise<{ text: string; outcome: 'success' | 'failed' }> {
   const res = await fetch(`${origin}/api/demo`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // Identifies this as a trusted internal call so /api/demo skips the
+      // shopper-facing rate limit — see demo.mts. Without INTERNAL_API_SECRET
+      // set, this header is empty and the limiter applies as before.
+      'X-Internal-Secret': process.env.INTERNAL_API_SECRET ?? '',
+    },
     body: JSON.stringify({ sku, scenario: prompt }),
   })
   if (!res.ok || !res.body) return { text: '', outcome: 'failed' }
@@ -103,7 +109,10 @@ async function runScenario(origin: string, sku: string, prompt: string): Promise
   return { text, outcome: text.trim().length >= MIN_OUTPUT_LENGTH ? 'success' : 'failed' }
 }
 
-async function runOne(
+// Exported so admin-run-scorecard.mts can run a single SKU on demand through
+// the exact same logic — same recording rules, same infra-failure guard —
+// rather than a second, drift-prone copy of this function.
+export async function runOne(
   db: ReturnType<typeof getDatabase>,
   origin: string,
   s: ScenarioRow,
@@ -202,7 +211,7 @@ export default async (req: Request) => {
 }
 
 export const config: Config = {
-  // Weekly, off-peak Sunday — separate from multiads-scheduler's daily 13:00
-  // slot so the two never contend for the same cold-start window.
+  // Weekly, off-peak Sunday — separate from other scheduled functions
+  // so multiple jobs never contend for the same cold-start window.
   schedule: '0 11 * * 0',
 }

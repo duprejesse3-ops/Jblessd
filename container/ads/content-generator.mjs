@@ -62,7 +62,7 @@ function buildPrompt({ niche, category, products }) {
     .map((p) => `- ${p.name} (${p.sku}, $${p.price}): ${p.blurb}`)
     .join("\n");
 
-  return `You are writing an SEO landing page for jblessd.com, a store selling AI tools organized by niche and category.
+  return `You are writing an SEO landing page for multinicheai.com, a store selling AI tools organized by niche and category.
 
 Niche: ${nicheLabel}
 Category: ${categoryLabel}

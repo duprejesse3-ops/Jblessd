@@ -10,7 +10,7 @@ server-rendered, indexable page on the site (see `netlify/edge-functions/pages.t
 and `netlify/functions/sitemap.mts`), so ads never point at a dead or client-only
 route. This doc is the companion to [`google-ads-strategy.md`](./google-ads-strategy.md).
 
-Base domain: `https://jblessd.com`
+Base domain: `https://multinicheai.com`
 
 ## Character limits (enforce these when editing)
 

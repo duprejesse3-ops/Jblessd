@@ -28,7 +28,7 @@ import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
@@ -42,6 +42,8 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   automations: 'AB',
   templates: 'TP',
   agents: 'AG',
+  connectors: 'CN',
+  host: 'HOST',
 }
 
 // The design the agent produces — the same fields a real catalog row carries,
@@ -103,6 +105,7 @@ function heuristicDesign(brief: string, hints: Partial<Design>): Design {
     automations: 'Make.com blueprint',
     templates: 'Notion + Markdown template',
     agents: 'Agent config + guardrails',
+    connectors: 'Downloadable app · one-time license',
   }
 
   return {
@@ -155,7 +158,7 @@ async function aiDesign(brief: string, hints: Partial<Design>, catalog: Product[
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 1330,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'design_product' },
     messages: [

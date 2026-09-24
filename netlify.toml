@@ -1,6 +1,23 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+  [functions]
+  included_files = ["netlify/lib/fonts/*.ttf"]
+
+# Domain migration: jblessd.com -> multinicheai.com. This rule only fires if
+# jblessd.com is still attached to this Netlify site as a domain alias (Site
+# configuration -> Domain management -> Add domain alias) with its DNS still
+# pointed at Netlify. Netlify matches redirects against the request's Host
+# header, so a full-URL "from" like this is how a domain-level redirect is
+# expressed in this file — there is no separate "primary domain" setting here.
+# status = 301 (permanent) so search engines and browsers transfer ranking/
+# bookmarks to the new domain; force = true so it applies even though every
+# path also matches a real file or another rule below.
+[[redirects]]
+  from = "https://jblessd.com/*"
+  to = "https://multinicheai.com/:splat"
+  status = 301
+  force = true
 
 [[redirects]]
   from = "/api/*"
@@ -155,12 +172,25 @@
 # app answers both URLs.
 #
 # Deliberately NOT noindex'd: index.html carries <link rel="canonical"
-# href="https://jblessd.com/">, so search engines consolidate this URL into the
+# href="https://multinicheai.com/">, so search engines consolidate this URL into the
 # homepage on their own, and nothing (an X-Robots-Tag, a robots.txt Disallow) is
 # left in the way of Google's tag detector fetching the page.
 [[redirects]]
   from = "/order-confirmation"
   to = "/index.html"
+  status = 200
+
+# Google Search Console's "Add a new sitemap" field appends a trailing slash
+# to whatever's entered and won't accept a bare filename without one — but
+# the sitemap function below is registered at the exact path /sitemap.xml
+# (no slash), and nothing normalizes the two, so GSC's own submitted URL
+# 404'd against a real, working sitemap ("Couldn't fetch" in the Sitemaps
+# report even though curling /sitemap.xml directly works fine). Rewriting
+# the slash variant onto the real one fixes this without needing GSC to
+# behave differently.
+[[redirects]]
+  from = "/sitemap.xml/"
+  to = "/sitemap.xml"
   status = 200
 
 # Claude Agent Studio — the customer-facing agent rented by the credit. Served at
@@ -174,6 +204,52 @@
   from = "/agent"
   to = "/agent.html"
   status = 200
+
+# NicheAds tenant dashboard — sign up, create/fund campaigns, register slots.
+# Same pattern as /agent: a static page, no server-side session, the bearer
+# key pasted/stored client-side is the whole login.
+[[redirects]]
+  from = "/nicheads"
+  to = "/nicheads.html"
+  status = 200
+
+# MultiNicheADS — store-hosted app. Header icon on the catalog goes here.
+# When MN_ADS_ORIGIN is set, ads.html bounces to the published desk.
+[[redirects]]
+  from = "/ads"
+  to = "/ads.html"
+  status = 200
+
+# SWARM operator — lives in this repo, not grok-sandbox. Rewrite so
+# multinicheai.com/swarm stays up with the store.
+[[redirects]]
+  from = "/swarm"
+  to = "/swarm.html"
+  status = 200
+
+[[redirects]]
+  from = "/swarm/"
+  to = "/swarm.html"
+  status = 200
+
+# Hide the nested source tree. Product stills are under /icons/swarm/.
+[[redirects]]
+  from = "/swarm/src/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/swarm/scripts/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/swarm/package.json"
+  to = "/404.html"
+  status = 404
+  force = true
 
 # Private owner-only AI workstation. Served at the clean /admin URL; the page
 # itself is a static login gate that reveals nothing until the ADMIN_PASSWORD
@@ -257,6 +333,24 @@
   [headers.values]
     Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
 
+# Consent script is the first thing a click from X used to see. Always revalidate
+# so a banner fix is not stuck behind the hour-long /*.js cache.
+[[headers]]
+  for = "/privacy-consent.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/install-app.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/mn-ads.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+
 # Apps written in the browser workspace, served by
 # netlify/functions/code-serve.mts. Never cached, at any layer.
 #
@@ -286,6 +380,26 @@
 
 [[headers]]
   for = "/agent.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/nicheads"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/nicheads.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/ads"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/ads.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
@@ -319,6 +433,12 @@
 
 [[headers]]
   for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/swarm-manifest.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
     Cache-Control = "public, max-age=0, must-revalidate"

@@ -1,0 +1,7 @@
+14:02 UTC — Checkout API p99 latency alert fires, PagerDuty pages on-call.
+14:05 UTC — On-call engineer acks. Sees Postgres connection pool exhausted on checkout-db.
+14:08 UTC — Confirms a deploy at 13:58 UTC added a new query in the checkout
+  path that runs inside the request instead of a background job.
+14:11 UTC — Engineer rolls back the deploy.
+14:14 UTC — Latency recovers, connection pool drains back to normal.
+14:20 UTC — Incident marked resolved. Checkout error rate during the window: 2.1%.

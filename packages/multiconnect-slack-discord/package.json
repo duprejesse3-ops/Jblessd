@@ -1,0 +1,33 @@
+{
+  "name": "multiconnect-slack-discord",
+  "version": "1.0.0",
+  "description": "Bring your AI agent into the channels you already use. Automated updates, alerts, and commands in Slack or Discord.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiconnect-messaging": "./bin/messaging-connect.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./config": "./lib/config.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/messaging-connect.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

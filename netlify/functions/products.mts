@@ -1,8 +1,13 @@
 // Netlify Function: /api/products
-//   GET  — returns the live catalog (from Netlify Database, with a bundled
-//          fallback so the storefront always renders).
-//   POST — lists a new product. Persists it to the database so user-listed
-//          products survive reloads and are visible to the AI concierge.
+//   GET   — returns the live catalog (from Netlify Database, with a bundled
+//           fallback so the storefront always renders).
+//   POST  — lists a new product. Persists it to the database so user-listed
+//           products survive reloads and are visible to the AI concierge.
+//   PATCH — owner-only. Edits an existing product (price, blurb, spec, format,
+//           name) and stamps updated_at, which is what Product.dateModified in
+//           the storefront's structured data and the sitemap's <lastmod> are
+//           sourced from. Without this endpoint that field never changes after
+//           a product is first listed — see netlify/lib/db.mts.
 //
 // Reachable at /api/products via the /api/* rewrite in netlify.toml.
 
@@ -11,6 +16,9 @@ import { purgeCache } from '@netlify/functions'
 import { getDatabase } from '@netlify/database'
 import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
+import { isConfigured, isAuthed } from '../lib/admin-auth.mjs'
+
+const NO_STORE = { 'Cache-Control': 'no-store' }
 
 // Cache tag for the catalog response, purged whenever a product is listed so a
 // new product is visible immediately rather than after the TTL expires.
@@ -21,6 +29,8 @@ const SKU_PREFIX: Record<Product['category'], string> = {
   automations: 'AB',
   templates: 'TP',
   agents: 'AG',
+  connectors: 'CN',
+  host: 'HOST',
 }
 
 function decorate(p: Product) {
@@ -87,6 +97,7 @@ export default async (req: Request, _context: Context) => {
       format: String(body.format ?? '').trim().slice(0, 120) || 'Digital download',
       blurb: String(body.blurb ?? '').trim().slice(0, 400) || 'No description yet.',
       spec: String(body.spec ?? '').trim().slice(0, 200) || '—',
+      timeSaved: String(body.timeSaved ?? '').trim().slice(0, 80) || null,
     }
 
     try {
@@ -99,9 +110,9 @@ export default async (req: Request, _context: Context) => {
       const sku = `AI-${SKU_PREFIX[category]}-${String(next).padStart(3, '0')}`
 
       const [row] = (await db.sql`
-        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec)
-        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec})
-        RETURNING sku, name, category, niche, format, price, blurb, spec
+        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved)
+        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved})
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved
       `) as Array<any>
 
       // Drop the cached catalog so the new product shows up on the next read
@@ -114,7 +125,13 @@ export default async (req: Request, _context: Context) => {
       }
 
       return Response.json(
-        { product: decorate({ ...(row as Product), price: Number(row.price) }) },
+        {
+          product: decorate({
+            ...(row as Product),
+            price: Number(row.price),
+            ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
+          }),
+        },
         { status: 201 },
       )
     } catch (err) {
@@ -126,7 +143,99 @@ export default async (req: Request, _context: Context) => {
     }
   }
 
-  return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST' } })
+  if (req.method === 'PATCH') {
+    if (!isConfigured()) {
+      return Response.json({ error: 'Editing is not configured (ADMIN_PASSWORD unset).' }, { status: 503, headers: NO_STORE })
+    }
+    if (!isAuthed(req, Date.now())) {
+      return Response.json({ error: 'Not authorized. Sign in first.' }, { status: 401, headers: NO_STORE })
+    }
+
+    let body: Partial<Product> & { sku?: string }
+    try {
+      body = await req.json()
+    } catch {
+      return Response.json({ error: 'Invalid request body' }, { status: 400, headers: NO_STORE })
+    }
+
+    const sku = String(body.sku ?? '').trim().toUpperCase()
+    if (!sku) return Response.json({ error: 'A sku is required' }, { status: 400, headers: NO_STORE })
+
+    // Only touch fields the caller actually sent, so a single-field edit
+    // (e.g. just a price change) can't accidentally blank out the rest.
+    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved', unknown>> = {}
+    if (body.name !== undefined) fields.name = String(body.name).trim().slice(0, 120)
+    if (body.format !== undefined) fields.format = String(body.format).trim().slice(0, 120)
+    if (body.blurb !== undefined) fields.blurb = String(body.blurb).trim().slice(0, 400)
+    if (body.spec !== undefined) fields.spec = String(body.spec).trim().slice(0, 200)
+    if (body.timeSaved !== undefined) fields.timeSaved = String(body.timeSaved).trim().slice(0, 80)
+    if (body.price !== undefined) {
+      const price = Number(body.price)
+      if (!Number.isFinite(price) || price <= 0 || price > 100000) {
+        return Response.json({ error: 'A valid price is required' }, { status: 400, headers: NO_STORE })
+      }
+      fields.price = price
+    }
+    if (body.category !== undefined) {
+      if (!(body.category in SKU_PREFIX)) return Response.json({ error: 'Unknown category' }, { status: 400, headers: NO_STORE })
+      fields.category = body.category
+    }
+    if (body.niche !== undefined) {
+      if (!(body.niche in NICHE_LABEL)) return Response.json({ error: 'Unknown niche' }, { status: 400, headers: NO_STORE })
+      fields.niche = body.niche
+    }
+
+    if (!Object.keys(fields).length) {
+      return Response.json({ error: 'Nothing to update' }, { status: 400, headers: NO_STORE })
+    }
+
+    try {
+      const db = getDatabase()
+      // Netlify's tagged-template db.sql doesn't build a dynamic SET list, so
+      // each possible column is a separate, always-safe COALESCE-style branch:
+      // an unset field is passed back as its own current value via the
+      // fields object above rather than left out of the statement.
+      const [row] = (await db.sql`
+        UPDATE products SET
+          name = COALESCE(${(fields.name as string) ?? null}, name),
+          price = COALESCE(${(fields.price as number) ?? null}, price),
+          format = COALESCE(${(fields.format as string) ?? null}, format),
+          blurb = COALESCE(${(fields.blurb as string) ?? null}, blurb),
+          spec = COALESCE(${(fields.spec as string) ?? null}, spec),
+          category = COALESCE(${(fields.category as string) ?? null}, category),
+          niche = COALESCE(${(fields.niche as string) ?? null}, niche),
+          time_saved = COALESCE(${(fields.timeSaved as string) ?? null}, time_saved),
+          updated_at = now()
+        WHERE sku = ${sku}
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, updated_at
+      `) as Array<any>
+
+      if (!row) return Response.json({ error: `No product with sku ${sku}` }, { status: 404, headers: NO_STORE })
+
+      try {
+        await purgeCache({ tags: [CATALOG_CACHE_TAG] })
+      } catch (err) {
+        console.error('Catalog cache purge failed:', (err as Error).message)
+      }
+
+      return Response.json(
+        {
+          product: decorate({
+            ...(row as Product),
+            price: Number(row.price),
+            ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
+            updatedAt: row.updated_at ? new Date(row.updated_at).toISOString().slice(0, 10) : undefined,
+          }),
+        },
+        { headers: NO_STORE },
+      )
+    } catch (err) {
+      console.error('Edit product error:', (err as Error).message)
+      return Response.json({ error: 'Could not save the edit right now. Please try again.' }, { status: 503, headers: NO_STORE })
+    }
+  }
+
+  return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST, PATCH' } })
 }
 
 export const config: Config = {

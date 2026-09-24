@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# MultiNicheAI host control
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cmd="${1:-}"
+case "$cmd" in
+  run|"")
+    exec bash "${ROOT}/run.sh"
+    ;;
+  laptop)
+    exec bash "${ROOT}/laptop.sh"
+    ;;
+  share)
+    exec bash "${ROOT}/share.sh"
+    ;;
+  forward)
+    exec bash "${ROOT}/forward.sh" "${2:-host.multinicheai.com}"
+    ;;
+  bootstrap|one)
+    if [ -n "${3:-}" ]; then export REPO="$3"; fi
+    exec bash "${ROOT}/bootstrap.sh" "${2:-host.multinicheai.com}"
+    ;;
+  firewall)
+    exec bash "${ROOT}/firewall.sh"
+    ;;
+  install)
+    exec bash "${ROOT}/install.sh" "${2:-multinicheai.com}"
+    ;;
+  uninstall)
+    exec bash "${ROOT}/uninstall.sh"
+    ;;
+  status)
+    systemctl status multinicheai --no-pager 2>/dev/null \
+      || systemctl status meridian --no-pager 2>/dev/null \
+      || echo "No system install. Laptop mode: ./multinicheai laptop"
+    ;;
+  from-github|pull)
+    exec bash "${ROOT}/from-github.sh" "${2:-}"
+    ;;
+  *)
+    echo "MULTINICHE AI · your machine is the host"
+    echo "  sudo ./multinicheai bootstrap NAME # one shot: shop, firewall, Caddy"
+    echo "  ./multinicheai laptop              # this laptop is the VPS"
+    echo "  ./multinicheai from-github [REPO]  # their GitHub, or ours"
+    echo "  ./multinicheai share               # public tunnel; shop stays here"
+    echo "  sudo ./multinicheai forward NAME   # router 80/443 → this laptop"
+    echo "  ./multinicheai run                 # Meridian only"
+    echo "  sudo ./multinicheai install NAME   # rented virtual server (optional)"
+    echo "  sudo ./multinicheai uninstall"
+    echo "  ./multinicheai status"
+    exit 1
+    ;;
+esac

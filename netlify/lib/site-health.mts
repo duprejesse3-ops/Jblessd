@@ -16,7 +16,13 @@ export interface HealthReport {
 }
 
 const REQUEST_TIMEOUT_MS = 5000
-const SLOW_RESPONSE_MS = 2500
+// Observed homepage latency straddles the old 2500ms line (seen anywhere from
+// ~400ms to ~2700ms run to run), which made this check flip passed/warning on
+// ordinary variance rather than a real slowdown — and each flip changed the
+// diagnosis fingerprint, forcing a fresh LLM call in agent-diagnosis.mts for
+// what wasn't actually a new problem. 3200ms gives headroom above normal
+// variance while still catching genuine slowness.
+const SLOW_RESPONSE_MS = 3200
 
 function elapsed(startedAt: number): number {
   return Math.max(0, Math.round(performance.now() - startedAt))
@@ -98,7 +104,16 @@ async function checkReviews(origin: string): Promise<{ check: HealthCheck; rated
     const data = (await response.json()) as { aggregates?: Record<string, { count?: unknown }> }
     const aggregates = data.aggregates && typeof data.aggregates === 'object' ? data.aggregates : {}
     const rated = new Set(Object.entries(aggregates).filter(([, entry]) => Number(entry?.count) > 0).map(([sku]) => sku))
-    if (!rated.size) return { check: failed(name, latencyMs, 'No product ratings are available'), rated }
+    // Zero rated products is a content gap (nobody has left a real review
+    // yet), not an outage — nothing here is broken, pages.ts already omits
+    // aggregateRating cleanly when a product has no reviews. This used to
+    // hard-fail unconditionally on rated.size === 0, which never actually
+    // fired while the catalog carried seeded launch-time reviews, and would
+    // have started firing a false "failed" status the moment those seeded
+    // reviews were removed for not being genuine customer feedback — the
+    // exact scenario this file's own inspectSite comment already describes
+    // for the unrated-subset case, just not previously applied here too.
+    if (!rated.size) return { check: warned(name, latencyMs, 'No products have ratings yet — none has a genuine customer review'), rated }
     return { check: passed(name, latencyMs, `${rated.size} products have ratings`), rated }
   } catch (error) {
     return {
@@ -119,6 +134,78 @@ async function checkSitemap(origin: string): Promise<HealthCheck> {
       return failed(name, latencyMs, 'Sitemap does not include product pages')
     }
     return passed(name, latencyMs, 'Product URLs are discoverable')
+  } catch (error) {
+    return failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed')
+  }
+}
+
+// Added after a real incident: scenario-generator.mts's non-atomic write left
+// SKUs with zero active benchmark scenarios, and /scorecard/:sku silently
+// 404'd for weeks with nothing here catching it — a customer clicking a
+// social post found it first. Sampling one live catalog SKU's scorecard page
+// is exactly the check that would have caught it same-day instead.
+async function checkScorecard(origin: string, sku: string | null): Promise<HealthCheck> {
+  const name = 'Scorecard pages'
+  if (!sku) return warned(name, 0, 'Skipped: no catalog SKU available to sample')
+  const startedAt = performance.now()
+  try {
+    const url = new URL(`/scorecard/${encodeURIComponent(sku)}`, origin)
+    const { response, latencyMs } = await fetchWithTimeout(url, 'text/html')
+    if (!response.ok) return failed(name, latencyMs, `HTTP ${response.status} for ${sku} — a scorecard page that should exist is 404ing or erroring`)
+    const html = await response.text()
+    if (!html.includes('benchmark scorecard')) {
+      return failed(name, latencyMs, `Scorecard page for ${sku} loaded but is missing its expected content`)
+    }
+    return passed(name, latencyMs, `Scorecard for ${sku} is live`)
+  } catch (error) {
+    return failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed')
+  }
+}
+
+async function checkAgentStudio(origin: string): Promise<HealthCheck> {
+  const name = 'Agent Studio'
+  const startedAt = performance.now()
+  try {
+    const { response, latencyMs } = await fetchWithTimeout(new URL('/agent', origin), 'text/html')
+    if (!response.ok) return failed(name, latencyMs, `HTTP ${response.status}`)
+    return passed(name, latencyMs, '/agent is reachable')
+  } catch (error) {
+    return failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed')
+  }
+}
+
+async function checkAdsApp(origin: string): Promise<HealthCheck> {
+  const name = 'MultiNicheADS'
+  const startedAt = performance.now()
+  try {
+    const { response, latencyMs } = await fetchWithTimeout(new URL('/ads', origin), 'text/html')
+    if (!response.ok) return failed(name, latencyMs, `HTTP ${response.status}`)
+    return passed(name, latencyMs, '/ads is reachable')
+  } catch (error) {
+    return failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed')
+  }
+}
+
+// Exercises the ad-click endpoint's basic liveness WITHOUT charging any real
+// campaign. campaignId=0 is guaranteed to hit ads-network-click.mts's
+// invalid-id guard and redirect immediately, before any database read or
+// write — a genuine paid click is deliberately never simulated here, since
+// that would spend a real advertiser's budget on every hourly check.
+async function checkAdsClickEndpoint(origin: string): Promise<HealthCheck> {
+  const name = 'Ad click endpoint'
+  const startedAt = performance.now()
+  try {
+    const url = new URL('/api/ads/network/click?campaignId=0&slotId=0', origin)
+    const response = await fetch(url, {
+      headers: { 'user-agent': 'MULTINICHE-site-maintenance/1.0' },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      redirect: 'manual',
+    })
+    const latencyMs = elapsed(startedAt)
+    if (response.status < 300 || response.status >= 400) {
+      return failed(name, latencyMs, `Expected a redirect for an invalid id, got HTTP ${response.status}`)
+    }
+    return passed(name, latencyMs, 'Click endpoint responds correctly to an invalid id')
   } catch (error) {
     return failed(name, elapsed(startedAt), error instanceof Error ? error.message : 'Request failed')
   }
@@ -153,11 +240,14 @@ async function checkProductSchema(origin: string, sku: string | null): Promise<H
 
 export async function inspectSite(origin: string): Promise<HealthReport> {
   const startedAt = performance.now()
-  const [homepage, catalog, reviews, sitemap] = await Promise.all([
+  const [homepage, catalog, reviews, sitemap, agentStudio, adsApp, adsClick] = await Promise.all([
     checkHomepage(origin),
     checkProducts(origin),
     checkReviews(origin),
     checkSitemap(origin),
+    checkAgentStudio(origin),
+    checkAdsApp(origin),
+    checkAdsClickEndpoint(origin),
   ])
   // A product nobody has reviewed yet is a content gap, not an outage. This used
   // to flip the whole check to `failed`, which made the site read as unhealthy —
@@ -173,7 +263,7 @@ export async function inspectSite(origin: string): Promise<HealthReport> {
   // one of them matches a catalog SKU — that means the two datasets have drifted
   // apart (a renamed SKU, a stale review table) and every rating on the site is
   // being attached to nothing.
-  if (catalog.skus.length && reviews.check.status !== 'failed') {
+  if (catalog.skus.length && reviews.check.status !== 'failed' && reviews.rated.size > 0) {
     const ratedInCatalog = catalog.skus.filter((sku) => reviews.rated.has(sku))
     const unrated = catalog.skus.filter((sku) => !reviews.rated.has(sku))
     if (!ratedInCatalog.length) {
@@ -200,7 +290,11 @@ export async function inspectSite(origin: string): Promise<HealthReport> {
     origin,
     catalog.skus.find((sku) => reviews.rated.has(sku)) ?? null,
   )
-  const checks = [homepage, catalog.check, reviews.check, productSchema, sitemap]
+  // Any catalog SKU works here — after the scorecard repair migration, every
+  // live product has an active scenario, unlike checkProductSchema above
+  // which needs one specifically with reviews.
+  const scorecard = await checkScorecard(origin, catalog.skus[0] ?? null)
+  const checks = [homepage, catalog.check, reviews.check, productSchema, scorecard, agentStudio, adsApp, adsClick, sitemap]
   const failures = checks.filter((check) => check.status === 'failed').length
   const warnings = checks.filter((check) => check.status === 'warning').length
   const status: SiteStatus = failures ? 'unhealthy' : warnings ? 'degraded' : 'healthy'

@@ -1,0 +1,33 @@
+{
+  "name": "multiwitness",
+  "version": "1.0.0",
+  "description": "A tamper-evident, hash-chained action log for your AI agents — proof of what they did, checkable by anyone with the file.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiwitness": "./bin/witness.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./chain": "./lib/chain.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/witness.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,6 +1,6 @@
 // MultiNiche Ads network embed. Drop this on any page:
 //
-//   <script src="https://jblessd.com/ads-network-embed.js"
+//   <script src="https://multinicheai.com/ads-network-embed.js"
 //           data-slot="slot_XXXXXXXXXX" data-container-id="mnads-slot_XXXXXXXXXX"></script>
 //   <div id="mnads-slot_XXXXXXXXXX"></div>
 //
@@ -57,7 +57,7 @@
     var container = document.getElementById(containerId);
     if (!container) return;
 
-    fetch('https://jblessd.com/api/ads/network/serve?slotKey=' + encodeURIComponent(slotKey))
+    fetch('https://multinicheai.com/api/ads/network/serve?slotKey=' + encodeURIComponent(slotKey))
       .then(function (res) { return res.json(); })
       .then(function (data) { render(container, data.ad); })
       .catch(function () { container.style.display = 'none'; });

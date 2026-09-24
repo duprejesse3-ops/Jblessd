@@ -1,0 +1,53 @@
+{
+  "name": "multivault",
+  "version": "3.1.0",
+  "description": "A local, encrypted context snapshot of a folder and calendar file, with a hybrid BM25 + local-semantic-embedding search index for large folders and an MCP server for automatic, zero-paste context. Optional provably-logged serving via MultiWitness. No account, no OAuth, no cloud storage.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "vault": "./bin/vault.mjs",
+    "vault-mcp": "./bin/vault-mcp.mjs"
+  },
+  "main": "./lib/vault.mjs",
+  "exports": {
+    ".": "./lib/vault.mjs",
+    "./crypto": "./lib/crypto.mjs",
+    "./scan": "./lib/scan.mjs",
+    "./calendar": "./lib/calendar.mjs",
+    "./mcp-server": "./lib/mcp-server.mjs",
+    "./witness-log": "./lib/witness-log.mjs",
+    "./tokenize": "./lib/tokenize.mjs",
+    "./bm25": "./lib/bm25.mjs",
+    "./chunk": "./lib/chunk.mjs",
+    "./index-store": "./lib/index-store.mjs",
+    "./indexer": "./lib/indexer.mjs",
+    "./watcher": "./lib/watcher.mjs",
+    "./embeddings": "./lib/embeddings.mjs",
+    "./hybrid-rank": "./lib/hybrid-rank.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "vault": "node bin/vault.mjs",
+    "vault-mcp": "node bin/vault-mcp.mjs",
+    "test": "node test/run.mjs && node test/bm25.test.mjs && node test/indexer.test.mjs && node test/query.test.mjs && node test/watcher.test.mjs && node test/mcp.test.mjs && node test/witness-log.test.mjs && node test/hybrid-rank.test.mjs",
+    "build:binary": "node scripts/build-sea.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@xenova/transformers": "^2.17.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
+  }
+}

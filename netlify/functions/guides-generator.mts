@@ -94,8 +94,8 @@ async function generateGuideContent(group: Group): Promise<GuideContent> {
           description:
             '350-550 words of HTML using only <h1>, <p>, and <ul>/<li> tags (no head/body wrapper, no inline styles, no classes). ' +
             `Speak directly to a ${nicheLabel} reader's real pain points, explain why ${categoryLabel} solves them, ` +
-            'naturally reference the specific products by name, and end with a clear call to action linking to "/free-pack" ' +
-            '(a free sample) using an <a href="/free-pack"> tag.',
+            'naturally reference the specific products by name, and end with a clear call to action linking to "/free-tool" ' +
+            '(watch a tool run live on your own task, free, no signup) using an <a href="/free-tool"> tag.',
         },
       },
       required: ['title', 'metaDescription', 'bodyHtml'],

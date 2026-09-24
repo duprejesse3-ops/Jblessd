@@ -23,6 +23,11 @@
      all — Taboola has no Consent Mode equivalent, so consent is enforced by
      withholding the library rather than by muting it. -->
 <script src="/taboola-pixel.js"></script>
+<!-- X (Twitter) Ads pixel (account tag rf01m). Loaded after marketing-measurement.js
+     so the shared trackMarketingEvent hub can hand it every funnel event, same
+     reasoning as the Taboola pixel above — see x-pixel.js for what's wired and
+     what still needs a per-event id from X's Events Manager. -->
+<script src="/x-pixel.js"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -48,7 +53,7 @@ f.parentNode.insertBefore(j,f);
 <!-- End Google Tag Manager -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#080000" />
+<meta name="theme-color" content="#0A0E16" />
 
 <!-- Core SEO tags first: title, description, and an explicit language
      declaration. Kept at the very top of <head> so any crawler that reads
@@ -74,16 +79,16 @@ f.parentNode.insertBefore(j,f);
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="keywords" content="AI prompt packs, AI automation templates, Notion templates, AI agent configs, productivity tools, AI templates for business" />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-<link rel="canonical" href="https://jblessd.com/" />
+<link rel="canonical" href="https://multinicheai.com/" />
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="MULTINICHE AI" />
 <meta property="og:title" content="MULTINICHE AI | AI Prompt Packs & Automations" />
 <meta property="og:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
-<meta property="og:url" content="https://jblessd.com/" />
+<meta property="og:url" content="https://multinicheai.com/" />
 <meta property="og:locale" content="en_US" />
-<meta property="og:image" content="https://jblessd.com/multiniche-ai-og.png" />
+<meta property="og:image" content="https://multinicheai.com/multiniche-ai-og.png?v=2" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -93,7 +98,7 @@ f.parentNode.insertBefore(j,f);
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="MULTINICHE AI | AI Productivity Tools" />
 <meta name="twitter:description" content="Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role." />
-<meta name="twitter:image" content="https://jblessd.com/multiniche-ai-og.png" />
+<meta name="twitter:image" content="https://multinicheai.com/multiniche-ai-og.png?v=2" />
 <meta name="twitter:image:alt" content="MULTINICHE AI — AI productivity tools, organized by role." />
 
 <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -109,15 +114,15 @@ f.parentNode.insertBefore(j,f);
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "@id": "https://jblessd.com/#website",
+  "@id": "https://multinicheai.com/#website",
   "name": "MULTINICHE AI",
   "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
-  "url": "https://jblessd.com/",
+  "url": "https://multinicheai.com/",
   "inLanguage": "en-US",
-  "publisher": { "@id": "https://jblessd.com/#organization" },
+  "publisher": { "@id": "https://multinicheai.com/#organization" },
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://jblessd.com/?q={search_term_string}",
+    "target": "https://multinicheai.com/?q={search_term_string}",
     "query-input": "required name=search_term_string"
   }
 }
@@ -132,21 +137,21 @@ f.parentNode.insertBefore(j,f);
 {
   "@context": "https://schema.org",
   "@type": ["Organization", "OnlineStore"],
-  "@id": "https://jblessd.com/#organization",
+  "@id": "https://multinicheai.com/#organization",
   "name": "MULTINICHE AI",
   "alternateName": ["Multi-Niche AI", "Multi Niche AI", "MultiNiche AI", "Multiniche AI", "Multiniche"],
-  "url": "https://jblessd.com/",
+  "url": "https://multinicheai.com/",
   "logo": {
     "@type": "ImageObject",
-    "@id": "https://jblessd.com/#logo",
-    "url": "https://jblessd.com/icons/icon-512.png",
+    "@id": "https://multinicheai.com/#logo",
+    "url": "https://multinicheai.com/icons/icon-512.png",
     "width": 512,
     "height": 512,
     "caption": "MULTINICHE AI"
   },
-  "image": "https://jblessd.com/multiniche-ai-og.png",
+  "image": "https://multinicheai.com/multiniche-ai-og.png",
   "description": "MULTINICHE AI sells AI productivity tools — prompt packs, automation blueprints, doc templates, and agent configs — as ready-to-use digital downloads.",
-  "disambiguatingDescription": "MULTINICHE AI (jblessd.com) is a digital storefront for AI prompt packs, automations, templates, and agent configs. It is a distinct brand and is not affiliated with, or the same as, \"Multiverse AI\" or any similarly named service.",
+  "disambiguatingDescription": "MULTINICHE AI (multinicheai.com) is a digital storefront for AI prompt packs, automations, templates, and agent configs. It is a distinct brand and is not affiliated with, or the same as, \"Multiverse AI\" or any similarly named service.",
   "slogan": "Load any tool you need.",
   "knowsAbout": ["AI prompt engineering", "Workflow automation", "Productivity templates", "AI agents", "Generative AI tools"],
   "currenciesAccepted": "USD",
@@ -154,7 +159,7 @@ f.parentNode.insertBefore(j,f);
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "customer support",
-    "url": "https://jblessd.com/#contact",
+    "url": "https://multinicheai.com/#contact",
     "availableLanguage": ["English"]
   }
 }
@@ -165,16 +170,16 @@ f.parentNode.insertBefore(j,f);
 {
   "@context": "https://schema.org",
   "@type": ["WebPage", "CollectionPage"],
-  "@id": "https://jblessd.com/#webpage",
-  "url": "https://jblessd.com/",
+  "@id": "https://multinicheai.com/#webpage",
+  "url": "https://multinicheai.com/",
   "name": "MULTINICHE AI | AI Prompt Packs & Automations",
   "description": "Prompt packs, automation blueprints, doc templates and agent configs you can watch run on your own task before you buy. AI tools organized by role.",
-  "isPartOf": { "@id": "https://jblessd.com/#website" },
-  "about": { "@id": "https://jblessd.com/#organization" },
+  "isPartOf": { "@id": "https://multinicheai.com/#website" },
+  "about": { "@id": "https://multinicheai.com/#organization" },
   "inLanguage": "en-US",
   "primaryImageOfPage": {
     "@type": "ImageObject",
-    "url": "https://jblessd.com/multiniche-ai-og.png",
+    "url": "https://multinicheai.com/multiniche-ai-og.png",
     "width": 1200,
     "height": 630
   }
@@ -184,9 +189,9 @@ f.parentNode.insertBefore(j,f);
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  "@id": "https://jblessd.com/#faq",
-  "isPartOf": { "@id": "https://jblessd.com/#webpage" },
-  "about": { "@id": "https://jblessd.com/#organization" },
+  "@id": "https://multinicheai.com/#faq",
+  "isPartOf": { "@id": "https://multinicheai.com/#webpage" },
+  "about": { "@id": "https://multinicheai.com/#organization" },
   "inLanguage": "en-US",
   "mainEntity": [
     {
@@ -217,7 +222,7 @@ f.parentNode.insertBefore(j,f);
     {
       "@type": "Question",
       "name": "Is MULTINICHE AI the same as Multiverse AI?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. MULTINICHE AI (spelled M-U-L-T-I-N-I-C-H-E, at jblessd.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for \"Multi-Niche AI,\" \"Multiniche AI,\" or \"Multi Niche AI,\" you are in the right place." }
+      "acceptedAnswer": { "@type": "Answer", "text": "No. MULTINICHE AI (spelled M-U-L-T-I-N-I-C-H-E, at multinicheai.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for \"Multi-Niche AI,\" \"Multiniche AI,\" or \"Multi Niche AI,\" you are in the right place." }
     }
   ]
 }
@@ -232,20 +237,20 @@ f.parentNode.insertBefore(j,f);
   "name": "MULTINICHE AI — catalog",
   "numberOfItems": 14,
   "itemListElement": [
-    {"@type":"ListItem","position":1,"item":{"@type":"Product","name":"Deep Work Prompt Pack","sku":"AI-PP-001","category":"Prompt Packs","description":"120 prompts for prioritization, focus blocks, and end-of-day resets.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-001","offers":{"@type":"Offer","price":"19.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-001","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":2,"item":{"@type":"Product","name":"Inbox Zero Automation","sku":"AI-AB-002","category":"Automation Blueprints","description":"Auto-sorts, drafts replies, and flags what needs a human.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-002","offers":{"@type":"Offer","price":"29.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-002","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":3,"item":{"@type":"Product","name":"Meeting Notes Agent","sku":"AI-AG-003","category":"Agent Configs","description":"Turns raw transcripts into decisions, owners, and deadlines.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-003","offers":{"@type":"Offer","price":"15.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-003","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":4,"item":{"@type":"Product","name":"Weekly Planning Template","sku":"AI-TP-004","category":"Doc Templates","description":"A weekly operating rhythm: plan Monday, review Friday.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-004","offers":{"@type":"Offer","price":"12.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-004","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":5,"item":{"@type":"Product","name":"Content Calendar Autopilot","sku":"AI-AB-005","category":"Automation Blueprints","description":"Drafts posts from your notes and queues them by channel.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-005","offers":{"@type":"Offer","price":"24.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-005","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":6,"item":{"@type":"Product","name":"Research Assistant Prompts","sku":"AI-PP-006","category":"Prompt Packs","description":"Structured prompts for literature scans and source comparison.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-006","offers":{"@type":"Offer","price":"22.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-006","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":7,"item":{"@type":"Product","name":"Client Onboarding Kit","sku":"AI-TP-007","category":"Doc Templates","description":"Intake form, welcome sequence, and kickoff checklist in one kit.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-007","offers":{"@type":"Offer","price":"34.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-007","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":8,"item":{"@type":"Product","name":"Daily Standup Bot","sku":"AI-AG-008","category":"Agent Configs","description":"Collects async updates and posts a one-line team digest.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-008","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-008","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":9,"item":{"@type":"Product","name":"OKR Tracker Template","sku":"AI-TP-009","category":"Doc Templates","description":"Quarterly objectives with auto-calculated confidence scores.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-TP-009","offers":{"@type":"Offer","price":"14.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-TP-009","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":10,"item":{"@type":"Product","name":"Personal CRM Automation","sku":"AI-AB-010","category":"Automation Blueprints","description":"Reminds you to follow up before a relationship goes cold.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-010","offers":{"@type":"Offer","price":"25.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-010","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":11,"item":{"@type":"Product","name":"Writing Style Prompt Kit","sku":"AI-PP-011","category":"Prompt Packs","description":"Locks tone and voice so drafts sound like you, not a template.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-011","offers":{"@type":"Offer","price":"16.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-011","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":12,"item":{"@type":"Product","name":"Financial Categorizer Agent","sku":"AI-AG-012","category":"Agent Configs","description":"Reads bank exports and sorts spend into categories you define.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AG-012","offers":{"@type":"Offer","price":"27.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AG-012","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":13,"item":{"@type":"Product","name":"Code Review Digest","sku":"AI-AB-013","category":"Automation Blueprints","description":"Summarizes open PRs into a daily digest with risk flags.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-AB-013","offers":{"@type":"Offer","price":"26.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-AB-013","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}},
-    {"@type":"ListItem","position":14,"item":{"@type":"Product","name":"Landing Page Copy Prompts","sku":"AI-PP-014","category":"Prompt Packs","description":"Headline, hero, and CTA variants tuned for conversion testing.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://jblessd.com/multiniche-ai-og.png","url":"https://jblessd.com/product/AI-PP-014","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://jblessd.com/product/AI-PP-014","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://jblessd.com/refund-policy/"}}}}
+    {"@type":"ListItem","position":1,"item":{"@type":"Product","name":"Deep Work Prompt Pack","sku":"AI-PP-001","category":"Prompt Packs","description":"120 prompts for prioritization, focus blocks, and end-of-day resets.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-PP-001","offers":{"@type":"Offer","price":"19.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-PP-001","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":2,"item":{"@type":"Product","name":"Inbox Zero Automation","sku":"AI-AB-002","category":"Automation Blueprints","description":"Auto-sorts, drafts replies, and flags what needs a human.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AB-002","offers":{"@type":"Offer","price":"29.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AB-002","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":3,"item":{"@type":"Product","name":"Meeting Notes Agent","sku":"AI-AG-003","category":"Agent Configs","description":"Turns raw transcripts into decisions, owners, and deadlines.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AG-003","offers":{"@type":"Offer","price":"15.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AG-003","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":4,"item":{"@type":"Product","name":"Weekly Planning Template","sku":"AI-TP-004","category":"Doc Templates","description":"A weekly operating rhythm: plan Monday, review Friday.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-TP-004","offers":{"@type":"Offer","price":"12.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-TP-004","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":5,"item":{"@type":"Product","name":"Content Calendar Autopilot","sku":"AI-AB-005","category":"Automation Blueprints","description":"Drafts posts from your notes and queues them by channel.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AB-005","offers":{"@type":"Offer","price":"24.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AB-005","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":6,"item":{"@type":"Product","name":"Research Assistant Prompts","sku":"AI-PP-006","category":"Prompt Packs","description":"Structured prompts for literature scans and source comparison.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-PP-006","offers":{"@type":"Offer","price":"22.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-PP-006","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":7,"item":{"@type":"Product","name":"Client Onboarding Kit","sku":"AI-TP-007","category":"Doc Templates","description":"Intake form, welcome sequence, and kickoff checklist in one kit.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-TP-007","offers":{"@type":"Offer","price":"34.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-TP-007","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":8,"item":{"@type":"Product","name":"Daily Standup Bot","sku":"AI-AG-008","category":"Agent Configs","description":"Collects async updates and posts a one-line team digest.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AG-008","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AG-008","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":9,"item":{"@type":"Product","name":"OKR Tracker Template","sku":"AI-TP-009","category":"Doc Templates","description":"Quarterly objectives with auto-calculated confidence scores.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-TP-009","offers":{"@type":"Offer","price":"14.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-TP-009","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":10,"item":{"@type":"Product","name":"Personal CRM Automation","sku":"AI-AB-010","category":"Automation Blueprints","description":"Reminds you to follow up before a relationship goes cold.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AB-010","offers":{"@type":"Offer","price":"25.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AB-010","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":11,"item":{"@type":"Product","name":"Writing Style Prompt Kit","sku":"AI-PP-011","category":"Prompt Packs","description":"Locks tone and voice so drafts sound like you, not a template.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-PP-011","offers":{"@type":"Offer","price":"16.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-PP-011","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":12,"item":{"@type":"Product","name":"Financial Categorizer Agent","sku":"AI-AG-012","category":"Agent Configs","description":"Reads bank exports and sorts spend into categories you define.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AG-012","offers":{"@type":"Offer","price":"27.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AG-012","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":13,"item":{"@type":"Product","name":"Code Review Digest","sku":"AI-AB-013","category":"Automation Blueprints","description":"Summarizes open PRs into a daily digest with risk flags.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-AB-013","offers":{"@type":"Offer","price":"26.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-AB-013","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}},
+    {"@type":"ListItem","position":14,"item":{"@type":"Product","name":"Landing Page Copy Prompts","sku":"AI-PP-014","category":"Prompt Packs","description":"Headline, hero, and CTA variants tuned for conversion testing.","brand":{"@type":"Brand","name":"MULTINICHE AI"},"image":"https://multinicheai.com/multiniche-ai-og.png","url":"https://multinicheai.com/product/AI-PP-014","offers":{"@type":"Offer","price":"18.00","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://multinicheai.com/product/AI-PP-014","priceValidUntil":"2027-12-31","validFrom":"2025-01-01","shippingDetails":{"@type":"OfferShippingDetails","shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},"shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},"deliveryTime":{"@type":"ShippingDeliveryTime","handlingTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"},"transitTime":{"@type":"QuantitativeValue","minValue":0,"maxValue":0,"unitCode":"DAY"}}},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://multinicheai.com/refund-policy/"}}}}
   ]
 }
 </script>
@@ -253,43 +258,43 @@ f.parentNode.insertBefore(j,f);
 
 <style>
   :root{
-    --ink:#080000;
-    --panel:#110807;
-    --panel-2:#0A0303;
-    --line:#4A1212;
-    --line-soft:#2A0A0A;
-    --paper:#FFD4D4;
-    --muted:#E86A6A;
-    --muted-2:#9A3C3C;
-    --brass:#FF2A2A;
-    --brass-soft:#E03A3A;
-    --teal:#FF7A7A;
+    --ink:#0A0E16;
+    --panel:#121826;
+    --panel-2:#0D111C;
+    --line:#232B3D;
+    --line-soft:#161C29;
+    --paper:#EEF1F7;
+    --muted:#9AA4BC;
+    --muted-2:#5C6580;
+    --brass:#FFB020;
+    --brass-soft:#FFC966;
+    --teal:#22D3B0;
     /* Placeholder / hint text — kept lighter than --muted-2 so it stays legible
-       on the near-black panels (the darker red failed contrast, notably on the
-       concierge field and search box on mobile). */
-    --placeholder:#D46A6A;
-    --radius:2px;
-    --serif:'JetBrains Mono', ui-monospace, monospace;
+       on the dark panels. */
+    --placeholder:#6B7590;
+    --radius:6px;
+    --serif:'Fraunces', Georgia, serif;
     --sans:'Inter', -apple-system, sans-serif;
     --mono:'JetBrains Mono', ui-monospace, monospace;
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth; scroll-padding-top:76px;}
+  html{scroll-behavior:smooth; scroll-padding-top:76px; overflow-x:hidden;}
   body{
     margin:0; background:var(--ink); color:var(--paper);
     font-family:var(--sans); -webkit-font-smoothing:antialiased;
-    position:relative;
+    position:relative; overflow-x:hidden; max-width:100vw;
   }
   body::before{
     content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
     background-image:
       linear-gradient(var(--line-soft) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
-    background-size:44px 44px;
-    opacity:.18;
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px),
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:22px 22px, 22px 22px, 176px 176px, 176px 176px;
+    opacity:.16;
     mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
   }
-  #matrix-rain{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.42;}
   body::after{
     content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
     background:radial-gradient(ellipse 100% 80% at 50% 40%, transparent 55%, rgba(0,0,0,.65) 100%);
@@ -298,21 +303,23 @@ f.parentNode.insertBefore(j,f);
   .wrap{max-width:1120px; margin:0 auto; padding:0 24px; position:relative; z-index:1;}
 
   /* header */
-  header{border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(4,0,0,.88); backdrop-filter:blur(10px); z-index:40;}
+  header{border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(6,9,15,.88); backdrop-filter:blur(10px); z-index:40;}
   .headrow{display:flex; align-items:center; justify-content:space-between; padding:18px 0;}
   .brand{display:flex; align-items:center; gap:10px; text-decoration:none;}
-  .brand-mark{width:30px; height:30px; border:1px solid var(--brass); display:flex; align-items:center; justify-content:center; font-family:var(--mono); color:var(--brass); font-size:14px; box-shadow:0 0 12px rgba(255,42,42,.35); text-shadow:0 0 8px var(--brass);}
-  .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.12em; color:var(--paper); text-shadow:0 0 10px rgba(255,42,42,.35);}
+  .brand-mark{width:30px; height:30px; border:1px solid #FF2A2A; display:flex; align-items:center; justify-content:center; font-family:var(--mono); color:#FF2A2A; font-size:14px; box-shadow:0 0 12px rgba(255,42,42,.35); text-shadow:0 0 8px #FF2A2A;}
+  .brand-name{font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.12em; color:var(--paper); text-shadow:0 0 10px rgba(255,176,32,.35);}
   .brand-sub{font-family:var(--mono); font-size:9px; letter-spacing:.22em; color:var(--muted-2); display:block; margin-top:1px;}
-  nav.actions{display:flex; align-items:center; gap:10px;}
+  nav.actions{display:flex; align-items:center; gap:10px; min-width:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  nav.actions::-webkit-scrollbar{display:none;}
   .btn{
+    flex-shrink:0;
     font-family:var(--sans); font-size:13px; font-weight:500; cursor:pointer;
     border:1px solid var(--line); background:transparent; color:var(--muted);
     padding:9px 15px; border-radius:var(--radius); transition:.18s ease; display:inline-flex; align-items:center; gap:7px;
   }
   .btn:hover{border-color:var(--teal); color:var(--paper);}
   .btn-solid{background:var(--teal); border-color:var(--teal); color:var(--ink); font-weight:600;}
-  .btn-solid:hover{background:#ffb0b0; color:var(--ink);}
+  .btn-solid:hover{background:#5EEAC7; color:var(--ink);}
   .btn-gold{background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600;}
   .btn-gold:hover{background:#ff5a5a;}
   .cart-count{font-family:var(--mono); font-size:11px; background:var(--brass); color:var(--ink); min-width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; padding:0 4px;}
@@ -324,7 +331,7 @@ f.parentNode.insertBefore(j,f);
     font-family:var(--serif); font-weight:500; font-size:clamp(34px,5vw,54px); line-height:1.08;
     max-width:760px; margin:0 0 22px; color:var(--paper); letter-spacing:-.01em;
   }
-  h1 em{color:var(--brass); font-style:italic; text-shadow:0 0 14px rgba(255,42,42,.4);}
+  h1 em{color:var(--brass); font-style:italic; text-shadow:0 0 14px rgba(255,176,32,.4);}
   .lede{font-size:17px; line-height:1.65; color:var(--muted); max-width:560px; margin:0 0 36px;}
   .search-row{display:flex; flex-direction:column; align-items:flex-start; gap:9px; max-width:480px; margin-top:26px;}
   .search-lead{font-family:var(--mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted-2);}
@@ -344,8 +351,20 @@ f.parentNode.insertBefore(j,f);
     /* The install button only ever appears on browsers that support installing,
        which on a phone means Android Chrome — a fourth control in a nav that does
        not wrap. Drop to the icon alone there; the aria-label carries the name. */
-    nav.actions{gap:8px;}
+    nav.actions{gap:6px;}
     #install-app .install-label{display:none;}
+    /* "Agent studio" and "List a product" as full-text buttons plus the cart
+       don't fit next to the brand name on a phone-width screen — that's what
+       was pushing the whole header (and with it the page) wider than the
+       viewport. Icon-only here; aria-label on each control keeps them
+       announced correctly for screen readers. */
+    nav.actions .btn-label{display:none;}
+    nav.actions .btn{padding:9px 11px;}
+    /* Cart is the one action a buyer actually needs — guarantee it's the
+       first thing in the scrollable row (order:-1) rather than trusting it
+       to be reachable at the scrollable-but-out-of-view far end, which is
+       what silently made it unclickable before overflow-x:auto existed. */
+    #open-cart{order:-1;}
     .hero{padding:44px 0 40px;}
     h1{font-size:clamp(30px,8vw,40px);}
     .lede{font-size:16px; margin-bottom:26px;}
@@ -377,7 +396,7 @@ f.parentNode.insertBefore(j,f);
   .concierge{
     border:1px solid var(--line); border-radius:var(--radius); background:
       radial-gradient(120% 140% at 0% 0%, rgba(199,72,72,.08), transparent 55%),
-      radial-gradient(120% 140% at 100% 0%, rgba(255,42,42,.10), transparent 55%),
+      radial-gradient(120% 140% at 100% 0%, rgba(255,176,32,.10), transparent 55%),
       var(--panel);
     padding:26px 26px 24px; margin:0 0 56px; position:relative; overflow:hidden;
   }
@@ -425,7 +444,7 @@ f.parentNode.insertBefore(j,f);
      credits to get one job done today. */
   .studio-band{
     border:1px solid var(--line); border-radius:var(--radius); background:
-      radial-gradient(130% 150% at 100% 0%, rgba(255,42,42,.13), transparent 58%),
+      radial-gradient(130% 150% at 100% 0%, rgba(255,176,32,.13), transparent 58%),
       var(--panel);
     padding:24px 26px; margin:0 0 40px; display:flex; gap:26px; align-items:center; flex-wrap:wrap;
   }
@@ -440,10 +459,22 @@ f.parentNode.insertBefore(j,f);
   .studio-band .sb-price{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted-2); text-align:center;}
 
   /* catalog */
-  #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper);}
+  #catalog-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 26px; color:var(--paper); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .catalog-count{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted-2); font-weight:400;}
   .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-bottom:40px;}
   @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+
+  /* showcase — a horizontally scrolling strip of highlighted products above
+     the full catalog grid, so a new visitor gets an immediate sense of the
+     catalog's range without scrolling past it. Reuses .card so a showcased
+     product looks identical to its grid card; only the layout differs. */
+  #showcase-heading{font-family:var(--serif); font-weight:500; font-size:22px; margin:0 0 14px; color:var(--paper);}
+  .showcase{display:flex; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px 2px 20px; margin-bottom:8px; -webkit-overflow-scrolling:touch;}
+  .showcase::-webkit-scrollbar{height:6px;}
+  .showcase::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+  .showcase .card{flex:0 0 240px; scroll-snap-align:start;}
+  @media (max-width:600px){.showcase .card{flex-basis:200px;}}
 
   .card{
     position:relative; border:1px solid var(--line); background:linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -456,13 +487,13 @@ f.parentNode.insertBefore(j,f);
      API — gets an image with no extra markup. Colors stay in the crimson family
      so the art harmonizes with the theme; each category has its own glyph. */
   .card::before{
-    content:""; display:block; height:104px; margin:-22px -22px 18px;
+    content:""; display:block; height:130px; margin:-22px -22px 18px;
     border-bottom:1px solid var(--line);
     border-radius:var(--radius) var(--radius) 0 0;
     background-color:var(--panel-2);
     background-image:
       var(--art-glyph, none),
-      radial-gradient(120% 130% at var(--art-x,78%) -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      radial-gradient(120% 130% at var(--art-x,78%) -20%, var(--art-glow, rgba(255,176,32,.2)), transparent 60%),
       linear-gradient(var(--line-soft) 1px, transparent 1px),
       linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
     background-repeat:no-repeat, no-repeat, repeat, repeat;
@@ -471,16 +502,27 @@ f.parentNode.insertBefore(j,f);
     transition:filter .2s ease;
   }
   .card:hover::before{filter:brightness(1.12) saturate(1.08);}
+  /* Real generated thumbnail (connector/Multi products) — same bleed and
+     height as the procedural .card::before art above, so a mixed grid of
+     real-thumbnail and procedural-art cards still lines up edge to edge.
+     The procedural pattern is suppressed via .has-thumb so the two never
+     stack under each other. */
+  .card.has-thumb::before{display:none;}
+  .card-thumb{
+    width:calc(100% + 44px); height:130px; margin:-22px -22px 18px; display:block;
+    border-bottom:1px solid var(--line); border-radius:var(--radius) var(--radius) 0 0;
+    object-fit:cover; object-position:center; background:var(--panel-2);
+  }
   /* Nudge the glow across the grid so identical categories don't line up. */
   .card:nth-of-type(4n+2)::before{--art-x:26%;}
   .card:nth-of-type(4n+3)::before{--art-x:52%;}
   .card:nth-of-type(4n)::before{--art-x:92%;}
-  [data-cat="prompts"]{--art-glow:rgba(255,42,42,.22); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF6A6A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M16 20 28 32 16 44'/><path d='M34 44h16'/></svg>");}
-  [data-cat="automations"]{--art-glow:rgba(255,106,58,.18); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF8A5A' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='15' cy='32' r='6'/><circle cx='49' cy='32' r='6'/><path d='M21 32h16'/><path d='M33 26l6 6-6 6'/></svg>");}
-  [data-cat="templates"]{--art-glow:rgba(255,92,138,.16); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF7DA6' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><rect x='19' y='12' width='26' height='40' rx='3'/><path d='M25 24h14M25 32h14M25 40h9'/></svg>");}
-  [data-cat="agents"]{--art-glow:rgba(199,31,58,.24); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FF5A6E' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M32 9 52 20.5v23L32 55 12 43.5v-23z'/><circle cx='32' cy='32' r='5.5'/></svg>");}
-  .corner{position:absolute; width:9px; height:9px; border-color:var(--brass); opacity:0; transition:.2s;}
-  .card:hover .corner{opacity:1;}
+  [data-cat="prompts"]{--art-glow:rgba(255,176,32,.22); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%23FFB020' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M16 20 28 32 16 44'/><path d='M34 44h16'/></svg>");}
+  [data-cat="automations"]{--art-glow:rgba(34,211,176,.18); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%2322D3B0' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='15' cy='32' r='6'/><circle cx='49' cy='32' r='6'/><path d='M21 32h16'/><path d='M33 26l6 6-6 6'/></svg>");}
+  [data-cat="templates"]{--art-glow:rgba(139,124,255,.16); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%238B7CFF' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><rect x='19' y='12' width='26' height='40' rx='3'/><path d='M25 24h14M25 32h14M25 40h9'/></svg>");}
+  [data-cat="agents"]{--art-glow:rgba(99,102,241,.24); --art-glyph:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none' stroke='%236366F1' stroke-opacity='.5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M32 9 52 20.5v23L32 55 12 43.5v-23z'/><circle cx='32' cy='32' r='5.5'/></svg>");}
+  .corner{position:absolute; width:9px; height:9px; border-color:var(--line); opacity:.7; transition:.2s;}
+  .card:hover .corner{opacity:1; border-color:var(--brass);}
   .c-tl{top:-1px; left:-1px; border-top:1px solid; border-left:1px solid;}
   .c-tr{top:-1px; right:-1px; border-top:1px solid; border-right:1px solid;}
   .c-bl{bottom:-1px; left:-1px; border-bottom:1px solid; border-left:1px solid;}
@@ -502,25 +544,58 @@ f.parentNode.insertBefore(j,f);
   .trend-badge::before{content:'▲'; font-size:8px;}
   .card.is-trending{border-color:var(--teal); box-shadow:0 0 0 1px var(--teal);}
   .card h3{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 8px; color:var(--paper); line-height:1.3;}
-  .card p{font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;}
+  .card-blurb{
+    font-size:13.5px; line-height:1.6; color:var(--muted); margin:0 0 16px; flex:1;
+    /* Cap descriptions at 4 lines. Blurb length varies a lot across the
+       catalog (a 42-character one-liner up to a 280-character MultiConnect
+       one) — uncapped, a handful of long ones stretch their card far past
+       every neighbor's height, which reads as sloppy once a real photo sits
+       at a fixed height above it: the photo stays small and consistent
+       while the text below it runs on, making the card feel unbalanced.
+       Clamping keeps every card close to the same height regardless of
+       blurb length, so the photo above it reads as proportionate. The full
+       description is never truly lost — it's one click away in the product
+       modal (openProductModal), which shows it unclamped. */
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; overflow:hidden;
+    /* flex:1 + overflow:hidden on a flex item changes its automatic minimum
+       size from "at least its own content's height" to 0 per the flexbox
+       spec — without this, the box can get compressed shorter than even
+       its own text needs and clip mid-line with no ellipsis, well before
+       the 4-line cap above is ever reached. Reported live on mobile: a
+       116-character, 3-line blurb clipped partway through line 3. Pinning
+       an explicit minimum for 4 full lines closes that gap regardless of
+       whatever else is competing for space in the card's flex column. */
+    min-height:calc(1.6em * 4);
+  }
   .card-format{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); border-top:1px dashed var(--line); padding-top:11px; margin-bottom:11px;}
   .card-bottom{display:flex; align-items:center; justify-content:space-between;}
   .card-rating{display:flex; align-items:center; gap:7px; margin:-2px 0 11px; font-size:13px;}
   .card-rating .rating-meta{font-family:var(--mono); font-size:10.5px; color:var(--muted-2);}
-  .bundle-offer{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(255,42,42,.05), rgba(255,42,42,.01)); margin-top:8px;}
+  .bundle-offer{border:1px solid var(--line); border-radius:var(--radius); padding:26px 28px; background:linear-gradient(135deg, rgba(255,176,32,.05), rgba(255,176,32,.01)); margin-top:8px;}
   .bundle-offer-inner{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
   .bundle-offer h2{margin:10px 0 6px;}
   .bundle-offer p{color:var(--muted); max-width:58ch; margin:0;}
   .bundle-offer-buy{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
   .bundle-offer-value{font-family:var(--mono); font-size:25px; color:var(--paper); line-height:1;}
   .bundle-offer-value span{display:block; margin-top:7px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-2); text-align:right;}
+  .kit-offer{margin-top:16px;}
+  .kit-items{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:5px; max-width:38ch;}
+  .kit-items li{display:flex; justify-content:space-between; font-size:13px; font-family:var(--mono); color:var(--muted);}
+  .kit-items li span:last-child{color:var(--paper);}
   .price{font-family:var(--mono); font-size:15px; color:var(--brass);}
+  .card-actions{display:flex; align-items:center; gap:7px;}
+  .try-btn{
+    font-family:var(--sans); font-size:11px; font-weight:600; background:transparent; color:var(--brass);
+    border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer;
+    transition:.15s;
+  }
+  .try-btn:hover{border-color:var(--brass); background:rgba(255,176,32,.06);}
   .add-btn{
     font-family:var(--sans); font-size:11.5px; font-weight:600; background:var(--teal); color:var(--ink);
     border:none; padding:8px 13px; border-radius:var(--radius); cursor:pointer; display:inline-flex; align-items:center; gap:5px;
     transition:.15s;
   }
-  .add-btn:hover{background:#ffb0b0;}
+  .add-btn:hover{background:#5EEAC7;}
 
   .empty-state{text-align:center; padding:60px 0; color:var(--muted-2); font-size:14px;}
 
@@ -536,7 +611,7 @@ f.parentNode.insertBefore(j,f);
     border-radius:var(--radius) var(--radius) 0 0; background-color:var(--panel-2);
     background-image:
       var(--art-glyph, none),
-      radial-gradient(120% 130% at 74% -20%, var(--art-glow, rgba(255,42,42,.2)), transparent 60%),
+      radial-gradient(120% 130% at 74% -20%, var(--art-glow, rgba(255,176,32,.2)), transparent 60%),
       linear-gradient(var(--line-soft) 1px, transparent 1px),
       linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
     background-repeat:no-repeat, no-repeat, repeat, repeat;
@@ -548,6 +623,7 @@ f.parentNode.insertBefore(j,f);
   .modal p.desc{font-size:14px; color:var(--muted); line-height:1.6; margin:0 0 20px;}
   .spec-table{border-top:1px dashed var(--line); padding-top:16px; margin-bottom:24px;}
   .spec-row{display:flex; justify-content:space-between; font-size:13.5px; padding:5px 0;}
+  .spec-row[hidden]{display:none;}
   .spec-row span:first-child{font-family:var(--mono); font-size:10.5px; color:var(--muted-2); letter-spacing:.06em;}
   .spec-row span:last-child{color:var(--paper); text-align:right;}
   .modal-bottom{display:flex; align-items:center; justify-content:space-between;}
@@ -556,18 +632,21 @@ f.parentNode.insertBefore(j,f);
   /* Live Proof — the "watch it work" terminal */
   .pm-proof{border-top:1px solid var(--line); margin-top:22px; padding-top:20px;}
   .proof-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
-  .proof-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--brass); display:inline-flex; align-items:center; gap:7px; text-shadow:0 0 8px rgba(255,42,42,.4);}
+  .proof-badge{font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--brass); display:inline-flex; align-items:center; gap:7px; text-shadow:0 0 8px rgba(255,176,32,.4);}
   .proof-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
   @keyframes proof-pulse{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.35; transform:scale(.8);}}
   .proof-sub{font-size:12.5px; color:var(--muted); line-height:1.4;}
-  .proof-scenario{margin-bottom:10px;}
+  .proof-scenario{margin-bottom:10px; border:1px dashed transparent; border-radius:10px; padding:2px; transition:border-color .15s, background-color .15s;}
+  .proof-scenario.dragover{border-color:var(--brass); background:rgba(255,176,32,.06);}
   .proof-scenario .field{margin-bottom:0; font-size:12.5px;}
-  .proof-terminal{position:relative; background:#110000; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:inset 0 0 40px rgba(255,42,42,.06);}
-  .proof-topbar{display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line-soft); background:rgba(255,42,42,.03);}
+  .proof-file-hint{margin:6px 2px 0; font-size:11px; color:var(--muted-2); line-height:1.4;}
+  .proof-file-browse{background:none; border:0; padding:0; color:var(--brass); font-size:11px; text-decoration:underline; cursor:pointer; font-family:inherit;}
+  .proof-terminal{position:relative; background:#0D111C; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:inset 0 0 40px rgba(255,176,32,.06);}
+  .proof-topbar{display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line-soft); background:rgba(255,176,32,.03);}
   .proof-tdot{width:8px; height:8px; border-radius:50%; background:var(--line); }
   .proof-tdot:nth-child(1){background:#7a1f1f;} .proof-tdot:nth-child(2){background:#5e1515;}
   .proof-tlabel{margin-left:8px; font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted-2);}
-  .proof-output{margin:0; padding:14px 15px; max-height:300px; overflow-y:auto; font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--paper); white-space:pre-wrap; word-wrap:break-word; text-shadow:0 0 6px rgba(255,42,42,.18); min-height:64px;}
+  .proof-output{margin:0; padding:14px 15px; max-height:300px; overflow-y:auto; font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--paper); white-space:pre-wrap; word-wrap:break-word; text-shadow:0 0 6px rgba(255,176,32,.18); min-height:64px;}
   .proof-hint{color:var(--muted-2); text-shadow:none; font-family:var(--sans); font-size:12.5px; line-height:1.5;}
   .proof-hint b{color:var(--brass); font-family:var(--mono); font-size:11px;}
   .proof-terminal[data-empty="false"] .proof-output{color:var(--teal);}
@@ -576,13 +655,13 @@ f.parentNode.insertBefore(j,f);
   .proof-run{margin-top:12px; width:100%; justify-content:center; padding:11px;}
   .proof-share{margin-top:10px; text-align:center;}
   .proof-share-btn,.proof-copy{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:8px 14px; cursor:pointer;}
-  .proof-share-btn:hover,.proof-copy:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+  .proof-share-btn:hover,.proof-copy:hover{border-color:var(--brass); background:rgba(255,176,32,.06);}
   .proof-share-link{margin-top:10px; font-family:var(--mono); font-size:11.5px; word-break:break-all; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;}
   .proof-share-link a{color:var(--teal);}
   .proof-copy{padding:4px 10px;}
   .proof-run[disabled]{opacity:.6; cursor:progress;}
   .proof-run.secondary{background:transparent; color:var(--brass); border:1px solid var(--line);}
-  .proof-run.secondary:hover{border-color:var(--brass); background:rgba(255,42,42,.05);}
+  .proof-run.secondary:hover{border-color:var(--brass); background:rgba(255,176,32,.05);}
 
   /* form fields */
   .field{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); margin-bottom:10px;}
@@ -626,7 +705,7 @@ f.parentNode.insertBefore(j,f);
   .foot-links a{text-decoration:none; color:var(--muted);}
   .foot-links a:hover{color:var(--teal);}
   .foot-copy{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted-2); margin:22px 0 0; padding-top:20px; border-top:1px solid var(--line-soft); display:flex; align-items:center; gap:9px;}
-  .foot-logo{width:22px; height:22px; flex:none; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--brass); border-radius:var(--radius); box-shadow:0 0 9px rgba(255,42,42,.28);}
+  .foot-logo{width:22px; height:22px; flex:none; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; color:var(--brass); border-radius:var(--radius); box-shadow:0 0 9px rgba(255,176,32,.28);}
 
   #toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--paper); color:var(--ink); font-size:13.5px; font-weight:500; padding:11px 18px; border-radius:var(--radius); z-index:100; opacity:0; pointer-events:none; transition:.25s ease; display:flex; align-items:center; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,.4);}
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -660,7 +739,7 @@ f.parentNode.insertBefore(j,f);
   .oi-value{color:var(--paper); font-family:var(--mono); text-align:right; word-break:break-all;}
 
   /* Product-as-app — the interactive "use it now" form on the success page */
-  .pa{border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(135deg, rgba(255,42,42,.05), rgba(255,42,42,.01)); padding:16px 17px; margin:16px 0 4px;}
+  .pa{border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(135deg, rgba(255,176,32,.05), rgba(255,176,32,.01)); padding:16px 17px; margin:16px 0 4px;}
   .pa-head{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
   .pa-badge{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink); background:var(--brass); border-radius:999px; padding:3px 9px; font-weight:600;}
   .pa-title{font-family:var(--serif); font-weight:500; font-size:15px; color:var(--paper);}
@@ -671,15 +750,23 @@ f.parentNode.insertBefore(j,f);
   .pa-input{width:100%; background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:13.5px; padding:10px 12px; border-radius:var(--radius); resize:vertical;}
   .pa-input:focus{outline:none; border-color:var(--teal);}
   textarea.pa-input{min-height:60px; line-height:1.5;}
+  .pa-dropwrap{border:1px dashed transparent; border-radius:calc(var(--radius) + 4px); padding:1px; transition:border-color .15s, background-color .15s;}
+  .pa-dropwrap.dragover{border-color:var(--teal); background:rgba(45,212,191,.06);}
+  .pa-filehint{margin:5px 0 0; font-size:10.5px; color:var(--muted-2); line-height:1.4;}
+  .pa-filebrowse{background:none; border:0; padding:0; color:var(--teal); font-size:10.5px; text-decoration:underline; cursor:pointer; font-family:inherit;}
+  .pa-voice-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:-4px 0 14px;}
+  .pa-mic{background:var(--ink); border:1px solid var(--line); color:var(--paper); font-family:var(--sans); font-size:12.5px; padding:8px 13px; border-radius:var(--radius); cursor:pointer;}
+  .pa-mic:hover{border-color:var(--teal);}
+  .pa-voice-status{font-size:11.5px; color:var(--muted-2); line-height:1.4;}
   .pa-run{width:100%; justify-content:center; padding:11px; margin-top:2px;}
   .pa-run[disabled]{opacity:.6; cursor:progress;}
   .pa-out-wrap{margin-top:14px;}
   .pa-out-bar{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:8px;}
   .pa-out-dot{width:7px; height:7px; border-radius:50%; background:var(--brass); box-shadow:0 0 8px var(--brass); animation:proof-pulse 1.6s ease-in-out infinite;}
-  .pa-output{white-space:pre-wrap; word-wrap:break-word; font:13px/1.65 var(--mono); background:#110000; border:1px solid var(--line); border-radius:var(--radius); padding:14px 15px; color:var(--teal); margin:0; max-height:340px; overflow-y:auto; text-shadow:0 0 6px rgba(255,42,42,.14);}
+  .pa-output{white-space:pre-wrap; word-wrap:break-word; font:13px/1.65 var(--mono); background:#0D111C; border:1px solid var(--line); border-radius:var(--radius); padding:14px 15px; color:var(--teal); margin:0; max-height:340px; overflow-y:auto; text-shadow:0 0 6px rgba(255,176,32,.14);}
   .pa-out-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
   .pa-out-actions button{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); background:transparent; border:1px solid var(--line); border-radius:var(--radius); padding:7px 13px; cursor:pointer;}
-  .pa-out-actions button:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+  .pa-out-actions button:hover{border-color:var(--brass); background:rgba(255,176,32,.06);}
   .pa-cursor{display:inline-block; width:7px; height:14px; background:var(--teal); margin-left:2px; vertical-align:middle; animation:proof-pulse 1s steps(2) infinite;}
   /* Teaser shown in the product modal so shoppers know it becomes an app once owned */
   .pm-app-note{margin-top:12px; font-size:12px; color:var(--muted); border-left:2px solid var(--brass); padding:2px 0 2px 11px; line-height:1.55;}
@@ -730,11 +817,11 @@ f.parentNode.insertBefore(j,f);
   .modal.modal-wide{max-width:680px;}
   .hero-cta{display:flex; flex-wrap:wrap; gap:12px; margin:20px 0 6px;}
   .btn-line{background:transparent; color:var(--brass); border:1px solid var(--line);}
-  .btn-line:hover{border-color:var(--brass); background:rgba(255,42,42,.06);}
+  .btn-line:hover{border-color:var(--brass); background:rgba(255,176,32,.06);}
 
   /* AI "write the description" button + highlights (list-a-product modal) */
   .ai-write-btn{width:100%; justify-content:center; padding:9px; margin-bottom:10px; border-style:dashed; color:var(--teal);}
-  .ai-write-btn:hover{border-color:var(--teal); background:rgba(255,122,122,.06);}
+  .ai-write-btn:hover{border-color:var(--teal); background:rgba(34,211,176,.06);}
   .ai-write-btn[disabled]{opacity:.6; cursor:progress;}
   .ai-highlights{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px;}
   .ai-hl{font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--line-soft); padding:4px 8px; border-radius:var(--radius);}
@@ -745,10 +832,10 @@ f.parentNode.insertBefore(j,f);
     display:inline-flex; align-items:center; gap:8px;
     font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
     background:var(--brass); color:var(--ink); border:1px solid var(--brass);
-    padding:11px 16px; border-radius:999px; box-shadow:0 0 20px rgba(255,42,42,.35);
+    padding:11px 16px; border-radius:999px; box-shadow:0 0 20px rgba(255,176,32,.35);
     transition:.18s ease;
   }
-  #chat-fab:hover{background:#ffb0b0; box-shadow:0 0 26px rgba(255,42,42,.5);}
+  #chat-fab:hover{background:var(--brass-soft); box-shadow:0 0 26px rgba(255,176,32,.5);}
   #chat-fab.hidden{display:none;}
   #chat-panel{
     position:fixed; right:20px; bottom:20px; z-index:71;
@@ -804,14 +891,13 @@ f.parentNode.insertBefore(j,f);
     .then(function(cfg){ return (cfg && cfg.purchaseSendTo) || ''; })
     .catch(function(){ return ''; });
 </script>
+<script src="/file-extract.js"></script>
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M746RK4R"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
-
-<canvas id="matrix-rain" aria-hidden="true"></canvas>
 
 <header>
   <div class="wrap headrow">
@@ -825,19 +911,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </span>
     </a>
     <nav class="actions" aria-label="Primary">
-      <a class="btn" href="/agent">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
-        Agent studio
+      <a class="btn" href="/proof-home.html" aria-label="Drop the job">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span class="btn-label">Drop the job</span>
       </a>
-      <!-- Revealed by install-app.js only once the browser confirms the app can be
-           installed (Chrome, Edge, Android), so it is never a dead control. -->
-      <button class="btn" id="install-app" type="button" aria-label="Install app" hidden>
+      <a class="btn" href="/agent" aria-label="Agent studio">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+        <span class="btn-label">Agent studio</span>
+      </a>
+      <a class="btn" href="/ads" aria-label="MultiNicheADS">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" fill="currentColor" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" stroke="currentColor" stroke-width="1.6" opacity=".45"/><rect x="13.5" y="13.5" width="7" height="7" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span class="btn-label">MultiNicheADS</span>
+      </a>
+      <a class="btn" href="/nicheads" aria-label="NicheAds">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l4 4-4 4"/><path d="M4 12v-1a3 3 0 0 1 3-3h13"/><path d="M8 21l-4-4 4-4"/><path d="M20 12v1a3 3 0 0 1-3 3H4"/></svg>
+        <span class="btn-label">NicheAds</span>
+      </a>
+      <!-- Always visible. install-app.js installs in Chrome in this window, or
+           hands X/Grok in-app browsers to Chrome. Hidden-until-prompt was a dead control. -->
+      <button class="btn" id="install-app" type="button" aria-label="Install app">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
         <span class="install-label">Install app</span>
       </button>
-      <button class="btn" id="open-add-desktop" aria-haspopup="dialog" aria-expanded="false">
+      <button class="btn" id="open-add-desktop" aria-haspopup="dialog" aria-expanded="false" aria-label="List a product">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        List a product
+        <span class="btn-label">List a product</span>
       </button>
       <button class="btn" id="open-cart" aria-haspopup="dialog" aria-expanded="false">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -924,6 +1022,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="chip" data-cat="automations" aria-pressed="false">Automation Blueprints</button>
       <button class="chip" data-cat="templates" aria-pressed="false">Doc Templates</button>
       <button class="chip" data-cat="agents" aria-pressed="false">Agent Configs</button>
+      <button class="chip" data-cat="connectors" aria-pressed="false">Connectors</button>
+      <button class="chip" data-cat="host" aria-pressed="false">Host Packs</button>
     </div>
     <p class="filter-label">Built for</p>
     <div class="chip-row" id="niche-chips" role="group" aria-label="Filter by role">
@@ -943,7 +1043,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="wrap">
-    <h2 id="catalog-heading">Full catalog</h2>
+    <aside data-mn-ad data-site="multinicheai.com" data-slot="s_store_home" data-format="display" data-tags="founders,stores,prompts,agents" style="margin:0 0 28px" aria-label="Sponsored spec"></aside>
+    <h2 id="showcase-heading">Showcase</h2>
+    <section class="showcase" id="showcase" aria-labelledby="showcase-heading"></section>
+    <h2 id="catalog-heading">Full catalog <span class="catalog-count" id="catalog-count"></span></h2>
     <section class="grid" id="catalog" aria-labelledby="catalog-heading">
 
       <article class="card" data-cat="prompts" data-niche="founders" data-id="AI-PP-001" data-name="Deep Work Prompt Pack" data-price="19" data-format="120 prompts · PDF + Notion" data-spec="Works with Claude, ChatGPT, Gemini" data-catlabel="Prompt Packs" data-nichelabel="Founders & Ops">
@@ -951,7 +1054,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-001</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Deep Work Prompt Pack</h3>
-        <p>Prompts for prioritization, focus blocks, and end-of-day resets.</p>
+        <p class="card-blurb">Prompts for prioritization, focus blocks, and end-of-day resets.</p>
         <p class="card-format">120 prompts · PDF + Notion</p>
         <div class="card-bottom"><span class="price">$19.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -961,7 +1064,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-002</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Inbox Zero Automation</h3>
-        <p>Auto-sorts, drafts replies, and flags what needs a human.</p>
+        <p class="card-blurb">Auto-sorts, drafts replies, and flags what needs a human.</p>
         <p class="card-format">Make.com blueprint</p>
         <div class="card-bottom"><span class="price">$29.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -971,7 +1074,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-003</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Meeting Notes Agent</h3>
-        <p>Turns raw transcripts into decisions, owners, and deadlines.</p>
+        <p class="card-blurb">Turns raw transcripts into decisions, owners, and deadlines.</p>
         <p class="card-format">System prompt + template</p>
         <div class="card-bottom"><span class="price">$15.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -981,7 +1084,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-004</span></div>
         <span class="niche-tag">Students &amp; Researchers</span>
         <h3>Weekly Planning Template</h3>
-        <p>A weekly operating rhythm: plan Monday, review Friday.</p>
+        <p class="card-blurb">A weekly operating rhythm: plan Monday, review Friday.</p>
         <p class="card-format">Notion template</p>
         <div class="card-bottom"><span class="price">$12.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -991,7 +1094,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-005</span></div>
         <span class="niche-tag">Marketers</span>
         <h3>Content Calendar Autopilot</h3>
-        <p>Drafts posts from your notes and queues them by channel.</p>
+        <p class="card-blurb">Drafts posts from your notes and queues them by channel.</p>
         <p class="card-format">Zapier blueprint</p>
         <div class="card-bottom"><span class="price">$24.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1001,7 +1104,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-006</span></div>
         <span class="niche-tag">Students &amp; Researchers</span>
         <h3>Research Assistant Prompts</h3>
-        <p>Structured prompts for literature scans and source comparison.</p>
+        <p class="card-blurb">Structured prompts for literature scans and source comparison.</p>
         <p class="card-format">45 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$22.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1011,7 +1114,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-007</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Client Onboarding Kit</h3>
-        <p>Intake form, welcome sequence, and kickoff checklist in one kit.</p>
+        <p class="card-blurb">Intake form, welcome sequence, and kickoff checklist in one kit.</p>
         <p class="card-format">Notion + email templates</p>
         <div class="card-bottom"><span class="price">$34.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1021,7 +1124,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-008</span></div>
         <span class="niche-tag">Developers</span>
         <h3>Daily Standup Bot</h3>
-        <p>Collects async updates and posts a one-line team digest.</p>
+        <p class="card-blurb">Collects async updates and posts a one-line team digest.</p>
         <p class="card-format">Slack agent config</p>
         <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1031,7 +1134,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-TP-009</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>OKR Tracker Template</h3>
-        <p>Quarterly objectives with auto-calculated confidence scores.</p>
+        <p class="card-blurb">Quarterly objectives with auto-calculated confidence scores.</p>
         <p class="card-format">Sheets template</p>
         <div class="card-bottom"><span class="price">$14.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1041,7 +1144,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-010</span></div>
         <span class="niche-tag">Sales &amp; CS</span>
         <h3>Personal CRM Automation</h3>
-        <p>Reminds you to follow up before a relationship goes cold.</p>
+        <p class="card-blurb">Reminds you to follow up before a relationship goes cold.</p>
         <p class="card-format">Make.com blueprint</p>
         <div class="card-bottom"><span class="price">$25.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1051,7 +1154,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-011</span></div>
         <span class="niche-tag">Writers</span>
         <h3>Writing Style Prompt Kit</h3>
-        <p>Locks tone and voice so drafts sound like you, not a template.</p>
+        <p class="card-blurb">Locks tone and voice so drafts sound like you, not a template.</p>
         <p class="card-format">30 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$16.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1061,7 +1164,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AG-012</span></div>
         <span class="niche-tag">Founders &amp; Ops</span>
         <h3>Financial Categorizer Agent</h3>
-        <p>Reads bank exports and sorts spend into categories you define.</p>
+        <p class="card-blurb">Reads bank exports and sorts spend into categories you define.</p>
         <p class="card-format">Sheets + agent config</p>
         <div class="card-bottom"><span class="price">$27.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1071,7 +1174,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-AB-013</span></div>
         <span class="niche-tag">Developers</span>
         <h3>Code Review Digest</h3>
-        <p>Summarizes open PRs into a daily digest with risk flags.</p>
+        <p class="card-blurb">Summarizes open PRs into a daily digest with risk flags.</p>
         <p class="card-format">GitHub Actions blueprint</p>
         <div class="card-bottom"><span class="price">$26.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1081,7 +1184,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="card-top"><span class="sku">AI-PP-014</span></div>
         <span class="niche-tag">Marketers</span>
         <h3>Landing Page Copy Prompts</h3>
-        <p>Headline, hero, and CTA variants tuned for conversion testing.</p>
+        <p class="card-blurb">Headline, hero, and CTA variants tuned for conversion testing.</p>
         <p class="card-format">35 prompts · PDF</p>
         <div class="card-bottom"><span class="price">$18.00</span><button class="add-btn">+ Add</button></div>
       </article>
@@ -1101,6 +1204,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="bundle-offer-buy">
           <span class="bundle-offer-value">15% off<span>3+ tools</span></span>
           <a class="btn btn-gold" href="#concierge">Build my bundle →</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section class="bundle-offer kit-offer" id="kit-solopreneur" aria-label="Featured kit: AI Solopreneur Operations Kit">
+      <div class="bundle-offer-inner">
+        <div>
+          <span class="niche-tag">Featured kit · Founders &amp; Ops</span>
+          <h2>AI Solopreneur Operations Kit</h2>
+          <p>The daily rhythm, covered: plan the day, run the meeting, track the goal. Three tools, one click — the 15% bundle discount applies automatically at checkout.</p>
+          <ul class="kit-items">
+            <li><span>Deep Work Prompt Pack</span><span>$19.00</span></li>
+            <li><span>Meeting Notes Agent</span><span>$15.00</span></li>
+            <li><span>OKR Tracker Template</span><span>$14.00</span></li>
+          </ul>
+        </div>
+        <div class="bundle-offer-buy">
+          <span class="bundle-offer-value">$40.80<span>after 15% off $48.00</span></span>
+          <button type="button" class="btn btn-gold" id="kit-solopreneur-add">Add kit to cart</button>
         </div>
       </div>
     </section>
@@ -1151,7 +1275,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <details><summary>Do you offer discounts for buying more than one tool?</summary><p>Yes — add three or more different tools to your cart and 15% bundle savings are applied automatically at checkout. Promo codes are also accepted at checkout.</p></details>
       <details><summary>Can I try a tool before I buy it?</summary><p>Yes. Open any product and hit “Run live demo,” or use the free <a href="/free-tool">Watch AI do your task</a> tool — Claude runs the actual product on a real example (or your own situation) and streams the result, before you spend anything. Browse saved runs on the <a href="/proof">live proofs</a> page. Need something that doesn't exist in the catalog yet? <a href="/custom">Get a custom deliverable</a> built for your exact need.</p></details>
       <details><summary>Can I build a custom bundle?</summary><p>Yes — use the <a href="#concierge">AI concierge</a> to get a tailored set of tools, or choose any three or more different products from the catalog. The 15% savings are automatic and every purchase is a one-time payment.</p></details>
-      <details><summary>Is MULTINICHE AI the same as Multiverse AI?</summary><p>No. <strong>MULTINICHE AI</strong> (spelled M-U-L-T-I-N-I-C-H-E, here at jblessd.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for “Multi-Niche AI,” “Multiniche AI,” or “Multi Niche AI,” you’re in the right place.</p></details>
+      <details><summary>Is MULTINICHE AI the same as Multiverse AI?</summary><p>No. <strong>MULTINICHE AI</strong> (spelled M-U-L-T-I-N-I-C-H-E, here at multinicheai.com) is a separate brand and is not affiliated with Multiverse AI or any similarly named product. MULTINICHE AI is a storefront for ready-to-use AI prompt packs, automation blueprints, doc templates, and agent configs. If you searched for “Multi-Niche AI,” “Multiniche AI,” or “Multi Niche AI,” you’re in the right place.</p></details>
     </section>
   </div>
 
@@ -1159,7 +1283,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <section class="brand-about" aria-labelledby="about-heading">
       <h2 id="about-heading">About MULTINICHE AI</h2>
       <p><strong>MULTINICHE AI</strong> — “multi” + “niche,” one storefront covering every corner where AI does real work — is a digital storefront for AI productivity instruments: prompt packs, automation blueprints, doc templates, and agent configs. Load any tool you need, watch it run on your own task, then buy the ones that earn their place. Everything is a digital download that works with Claude, ChatGPT, and Gemini.</p>
-      <p class="brand-about-note">Also written Multi-Niche AI, Multiniche AI, or Multi Niche AI. MULTINICHE AI is an independent brand at jblessd.com and is not affiliated with Multiverse AI or any similarly named service.</p>
+      <p class="brand-about-note">Also written Multi-Niche AI, Multiniche AI, or Multi Niche AI. MULTINICHE AI is an independent brand at multinicheai.com and is not affiliated with Multiverse AI or any similarly named service.</p>
     </section>
   </div>
 </main>
@@ -1170,9 +1294,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <nav class="foot-links" aria-label="Footer">
       <a href="#catalog">Catalog</a>
       <a href="/agent">Agent studio</a>
+      <a href="/nicheads">NicheAds</a>
       <a href="/use-cases">Use cases</a>
       <a href="/proof">Live proofs</a>
       <a href="/updates">Updates</a>
+      <a href="/compare/">Prompt packs vs. ChatGPT</a>
       <a href="#contact">Contact</a>
       <a href="/privacy-policy/">Privacy</a>
       <a href="/terms/">Terms</a>
@@ -1212,28 +1338,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span class="sku" id="pm-sku"></span>
     <h2 id="pm-name"></h2>
     <p class="desc" id="pm-desc"></p>
-    <div class="spec-table">
-      <div class="spec-row"><span>BUILT FOR</span><span id="pm-niche"></span></div>
-      <div class="spec-row"><span>CATEGORY</span><span id="pm-cat"></span></div>
-      <div class="spec-row"><span>FORMAT</span><span id="pm-format"></span></div>
-      <div class="spec-row"><span>SPEC</span><span id="pm-spec"></span></div>
-    </div>
-    <div class="modal-bottom">
-      <span class="price-lg" id="pm-price"></span>
-      <button class="btn btn-solid" id="pm-add">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Add to cart
-      </button>
-    </div>
 
-    <!-- Live Proof: watch the product actually work before you buy it -->
+    <!-- Live Proof: moved to directly under the title/desc so it's the very
+         first thing an unlogged visitor interacts with, ahead of the spec
+         sheet, price, and Add to cart — the "will this work for me?" answer
+         comes before the "is it worth the money?" one. -->
     <div class="pm-proof" id="pm-proof">
       <div class="proof-head">
         <span class="proof-badge"><span class="proof-dot" aria-hidden="true"></span>Live proof</span>
         <span class="proof-sub">Don't take our word for it — watch it run.</span>
       </div>
-      <div class="proof-scenario">
+      <div class="proof-scenario" id="pm-proof-dropzone">
         <input class="field" id="pm-proof-scenario" maxlength="600" placeholder="Optional: try it on your own situation…" aria-label="Describe your own situation for a tailored demo" />
+        <p class="proof-file-hint">
+          or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) —
+          <button type="button" class="proof-file-browse" id="pm-proof-browse">browse</button>
+          <input type="file" id="pm-proof-file" accept=".txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf" hidden />
+        </p>
       </div>
       <div class="proof-terminal" id="pm-proof-terminal" data-empty="true" aria-live="polite">
         <div class="proof-topbar"><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tdot"></span><span class="proof-tlabel" id="pm-proof-label">demo · idle</span></div>
@@ -1248,6 +1369,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="proof-share-link" id="pm-proof-share-link" hidden></div>
       </div>
       <p class="pm-app-note">This is a free preview. Own it and you can run it as a full app — fill in a short form and it does the work on your own input, right on your download page, as many times as you like.</p>
+    </div>
+
+    <div class="spec-table">
+      <div class="spec-row"><span>BUILT FOR</span><span id="pm-niche"></span></div>
+      <div class="spec-row"><span>CATEGORY</span><span id="pm-cat"></span></div>
+      <div class="spec-row"><span>FORMAT</span><span id="pm-format"></span></div>
+      <div class="spec-row"><span>SPEC</span><span id="pm-spec"></span></div>
+      <!-- Only rendered when the product has a timeSaved value (see openProductModal). -->
+      <div class="spec-row" id="pm-timesaved-row" hidden><span>TIME SAVED</span><span id="pm-timesaved"></span></div>
+    </div>
+    <div class="modal-bottom">
+      <span class="price-lg" id="pm-price"></span>
+      <button class="btn btn-solid" id="pm-add">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add to cart
+      </button>
     </div>
 
     <div class="pm-reviews" id="pm-reviews">
@@ -1281,6 +1418,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <option value="automations">Automation Blueprints</option>
       <option value="templates">Doc Templates</option>
       <option value="agents">Agent Configs</option>
+      <option value="connectors">Connectors</option>
+          <option value="host">Host Packs</option>
     </select>
     <select class="field" id="f-niche">
       <option value="founders">Founders &amp; Ops</option>
@@ -1516,12 +1655,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }
 
   var catalog = document.getElementById('catalog');
+  var showcase = document.getElementById('showcase');
+  var catalogCount = document.getElementById('catalog-count');
   var emptyState = document.getElementById('empty-state');
   var search = document.getElementById('search');
   var activeCat = 'all', activeNiche = 'all';
 
-  var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs'};
-  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin', finance:'Finance & Investing'};
+  var CAT_LABEL = {prompts:'Prompt Packs', automations:'Automation Blueprints', templates:'Doc Templates', agents:'Agent Configs', connectors:'Connectors', host:'Host Packs'};
+  var NICHE_LABEL = {founders:'Founders & Ops', sales:'Sales & CS', marketers:'Marketers', developers:'Developers', writers:'Writers', students:'Students & Researchers', architects:'Architects', engineers:'Engineers', office:'Office & Admin', finance:'Finance & Investing', stores:'Store & Site Owners'};
 
   function toast(msg){
     var t = document.getElementById('toast');
@@ -1586,13 +1727,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.getElementById('pm-cat').textContent = data.catLabel;
     document.getElementById('pm-format').textContent = data.format;
     document.getElementById('pm-spec').textContent = data.spec;
+    var timeSavedRow = document.getElementById('pm-timesaved-row');
+    if(data.timeSaved){
+      document.getElementById('pm-timesaved').textContent = data.timeSaved;
+      timeSavedRow.hidden = false;
+    } else {
+      timeSavedRow.hidden = true;
+    }
     document.getElementById('pm-price').textContent = '$' + parseFloat(data.price).toFixed(2);
     // Set the modal's cover art to match the product's category. Fall back to
     // inferring it from the SKU prefix so shared/deep-linked opens still show art.
     var cat = data.category;
     if(!cat && data.id){
-      var pfx = { PP:'prompts', AB:'automations', TP:'templates', AG:'agents' };
-      var m = String(data.id).match(/-(PP|AB|TP|AG)-/);
+      var pfx = { PP:'prompts', AB:'automations', TP:'templates', AG:'agents', CN:'connectors' };
+      var m = String(data.id).match(/-(PP|AB|TP|AG|CN)-/);
       cat = m ? pfx[m[1]] : '';
     }
     document.getElementById('pm-media').dataset.cat = cat || '';
@@ -1620,27 +1768,61 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return true;
   }
+  // Featured kit: "Add kit to cart" adds a fixed set of SKUs in one click.
+  // The 15% bundle discount is not applied here — it's the existing
+  // cart-level "3+ unique tools" logic in renderCart() that does that
+  // automatically, so this just needs to get the right items into the cart.
+  function addKitToCart(skus){
+    var added = 0;
+    skus.forEach(function(sku){
+      if(cart.some(function(item){ return item.id === sku; })) return; // already in cart
+      var card = catalog.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]')
+        || (showcase && showcase.querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sku) : sku) + '"]'));
+      if(card){ addToCart(cardToData(card)); added++; }
+    });
+    if(added){ openCart(); }
+    else { toast('Those tools are already in your cart.'); }
+  }
+  var kitSolopreneurBtn = document.getElementById('kit-solopreneur-add');
+  if(kitSolopreneurBtn){
+    kitSolopreneurBtn.addEventListener('click', function(){
+      addKitToCart(['AI-PP-001', 'AI-AG-003', 'AI-TP-009']);
+    });
+  }
+
   document.getElementById('pm-close').addEventListener('click', closeProductModal);
   productOverlay.addEventListener('click', function(e){ if(e.target === productOverlay) closeProductModal(); });
   document.getElementById('pm-add').addEventListener('click', function(){
     if(pendingProduct){ addToCart(pendingProduct); closeProductModal(); }
   });
 
-  catalog.addEventListener('click', function(e){
+  function handleCardClick(e){
     var addBtn = e.target.closest('.add-btn');
+    var tryBtn = e.target.closest('.try-btn');
     var card = e.target.closest('.card');
     if(!card) return;
     var data = cardToData(card);
     if(addBtn){ addToCart(data); }
+    else if(tryBtn){
+      openProductModal(data);
+      var proofHead = document.querySelector('.proof-head');
+      if(proofHead) proofHead.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     else{ openProductModal(data); }
-  });
+  }
+  catalog.addEventListener('click', handleCardClick);
+  // Showcase cards are a separate strip outside #catalog, so they need the
+  // same delegated handler — otherwise Try free/+ Add silently do nothing
+  // for anything shown in the showcase.
+  if(showcase) showcase.addEventListener('click', handleCardClick);
 
   function cardToData(card){
     return {
       id: card.dataset.id, name: card.dataset.name, price: card.dataset.price,
       format: card.dataset.format, spec: card.dataset.spec, blurb: card.querySelector('p').textContent,
       catLabel: card.dataset.catlabel, nicheLabel: card.dataset.nichelabel,
-      category: card.dataset.cat, niche: card.dataset.niche
+      category: card.dataset.cat, niche: card.dataset.niche,
+      timeSaved: card.dataset.timesaved || ''
     };
   }
 
@@ -1826,6 +2008,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             transaction_id: order.transactionId,
             value: order.value,
             currency: order.currency
+          });
+        }
+        // X Ads pixel purchase conversion. Same reasoning and same placement
+        // as the Taboola call above — the X pixel's own account/event id is
+        // fixed in x-pixel.js, nothing here depends on the Google env config
+        // fetch below. Email is included (plain, lowercased — x-pixel.js does
+        // the same normalization buildUserData() below does for Google) since
+        // X's own conversion-event snippet offers it for better match rates.
+        if(window.trackXEvent){
+          window.trackXEvent('purchase', {
+            transaction_id: order.transactionId,
+            value: order.value,
+            currency: order.currency,
+            email: order.email
           });
         }
         // Everything is reported inside analyticsReady: the GA4 measurement ID is
@@ -2031,13 +2227,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       'body{margin:0;background:#f6f3f3;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f0b0b;line-height:1.6}' +
       '.wrap{max-width:760px;margin:0 auto;padding:0 0 48px}' +
       'header{background:#0a0400;padding:18px 28px}' +
-      'header b{color:#FF2A2A;font-weight:700;letter-spacing:.04em}' +
+      'header b{color:#FFB020;font-weight:700;letter-spacing:.04em}' +
       'main{background:#fff;border:1px solid #e8e2e2;border-top:none;padding:28px}' +
       'h1{font-size:1.5rem;margin:0 0 4px}' +
       'h2{font-size:1.05rem;margin:28px 0 8px}' +
       'h3{font-size:1rem;margin:22px 0 6px}' +
       'pre{white-space:pre-wrap;word-wrap:break-word;background:#faf7f7;border:1px solid #f0eaea;border-radius:8px;padding:14px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}' +
-      '.cta{display:inline-block;margin:8px 0 4px;background:#FF2A2A;color:#080000;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px}' +
+      '.cta{display:inline-block;margin:8px 0 4px;background:#FFB020;color:#0A0E16;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px}' +
       '.note{background:#fdf2f2;border:1px solid #f5cfcf;border-radius:8px;padding:14px 16px;font-size:14px;margin:18px 0}' +
       '.muted{color:#7d6b6b;font-size:12px;margin-top:28px;border-top:1px solid #f0eaea;padding-top:14px}' +
       'ul{margin:6px 0;padding-left:20px}' +
@@ -2060,6 +2256,165 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '</main></div></body></html>';
   }
 
+  // Reusable "or drop a file" behavior for any textarea-type field in the
+  // "run it as an app" panel — attached generically wherever product-app.mts
+  // marks a field type:'textarea' (the substantial-content fields: "your raw
+  // material", "context it needs", "one real input to react to"), never to
+  // the short type:'text' fields (a name, a platform, a one-line audience) —
+  // those don't benefit from file upload and the drop UI would just be
+  // clutter next to them.
+  //
+  // Unlike the free demo's 600-character cap, this paid "run it as an app"
+  // flow already allows up to 4000 characters per field (see run-product.mts
+  // and the input.maxLength=4000 set on every field a few lines below) — no
+  // need to apologize for a tight cap here, just be honest if a file is
+  // bigger than even that.
+  var PA_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+  var PA_FILE_MAX_BYTES = 5 * 1024 * 1024;
+
+  function paIsTextFile(name){
+    name = (name || '').toLowerCase();
+    for(var i=0;i<PA_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PA_TEXT_EXTENSIONS[i].length) === PA_TEXT_EXTENSIONS[i]) return true;
+    }
+    return name.indexOf('.') === -1;
+  }
+
+  // Dictation — attached to every textarea field in the "run it as an app"
+  // panel, catalog-wide, the same way attachFileDrop already is: a low-risk
+  // convenience, since the transcript always lands in the box for the buyer
+  // to glance at and fix before submitting, never sent straight through.
+  // Deliberately NOT auto-submitted on a clean recognition result, for
+  // exactly that reason — a misheard number in a financial field should be
+  // visibly wrong and correctable, not silently sent. Web Speech API
+  // recognition has real gaps — solid in Chrome/Edge, unsupported in
+  // Firefox, spotty in Safari — so the mic control simply doesn't render
+  // where the browser doesn't expose it, rather than showing a control
+  // that silently fails. onUsed fires once per successful transcription,
+  // for callers that want to know a field was filled by voice (used to
+  // decide whether to read the response back aloud, on the specific
+  // products where that fits — see VOICE_OUTPUT_SKUS below).
+  function attachDictation(wrapEl, textareaEl, onUsed){
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRec) return;
+
+    var micRow = document.createElement('div');
+    micRow.className = 'pa-voice-row';
+    var micBtn = document.createElement('button');
+    micBtn.type = 'button';
+    micBtn.className = 'pa-mic';
+    micBtn.textContent = '🎤 Dictate instead';
+    var micStatus = document.createElement('span');
+    micStatus.className = 'pa-voice-status';
+    micRow.appendChild(micBtn);
+    micRow.appendChild(micStatus);
+    wrapEl.appendChild(micRow);
+
+    var recognizing = false;
+    var recognition = null;
+    micBtn.addEventListener('click', function(){
+      if(recognizing){ if(recognition) recognition.stop(); return; }
+      if(window.speechSynthesis) window.speechSynthesis.cancel(); // don't listen over something still being read aloud
+      recognition = new SpeechRec();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognizing = true;
+      micBtn.textContent = '● Listening… (tap to stop)';
+      micStatus.textContent = '';
+      recognition.addEventListener('result', function(e){
+        var transcript = e.results[0][0].transcript;
+        textareaEl.value = transcript;
+        micStatus.textContent = 'Heard: "' + transcript + '" — check it over, then run.';
+        if(onUsed) onUsed();
+      });
+      recognition.addEventListener('error', function(e){
+        micStatus.textContent = e.error === 'not-allowed'
+          ? 'Microphone access was blocked — allow it in your browser to dictate.'
+          : 'Didn\'t catch that — try again, or just type it.';
+      });
+      recognition.addEventListener('end', function(){
+        recognizing = false;
+        micBtn.textContent = '🎤 Dictate instead';
+      });
+      try{ recognition.start(); }catch(_){}
+    });
+  }
+
+  function attachFileDrop(wrapEl, textareaEl, maxChars){
+    var hint = document.createElement('p');
+    hint.className = 'pa-filehint';
+    var browseBtn = document.createElement('button');
+    browseBtn.type = 'button';
+    browseBtn.className = 'pa-filebrowse';
+    browseBtn.textContent = 'browse';
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.hidden = true;
+    fileInput.accept = '.txt,.csv,.md,.markdown,.json,.log,.pdf,.docx,.xlsx,text/plain,text/csv,text/markdown,application/json,application/pdf';
+    hint.appendChild(document.createTextNode('or drop a file (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx) — '));
+    hint.appendChild(browseBtn);
+    hint.appendChild(fileInput);
+    wrapEl.appendChild(hint);
+
+    function handleFile(file){
+      if(!file) return;
+      var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+      if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+        toast('Reading "' + file.name + '"…');
+        window.extractFileText(file).then(function(result){
+          if(result.warning){ toast(result.warning); return; }
+          var truncated = result.text.length > maxChars;
+          textareaEl.value = result.text.slice(0, maxChars);
+          toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + maxChars + ' characters.' : '.'));
+        }).catch(function(err){
+          toast('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+        });
+        return;
+      }
+      if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+        toast('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
+        return;
+      }
+      if(!paIsTextFile(file.name)){
+        toast('"' + file.name + '" isn\'t a type this reads. Try .txt, .csv, .md, .json, .log, .pdf, .docx, or .xlsx.');
+        return;
+      }
+      if(file.size > PA_FILE_MAX_BYTES){
+        toast('"' + file.name + '" is too large — trim it down or paste the relevant part.');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var text = String(reader.result || '');
+        var truncated = text.length > maxChars;
+        textareaEl.value = text.slice(0, maxChars);
+        toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + maxChars + ' characters.' : '.'));
+      };
+      reader.onerror = function(){
+        toast('Couldn\'t read "' + file.name + '" — try pasting the text directly.');
+      };
+      reader.readAsText(file);
+    }
+
+    browseBtn.addEventListener('click', function(){ fileInput.click(); });
+    fileInput.addEventListener('change', function(){
+      var file = fileInput.files && fileInput.files[0];
+      if(file) handleFile(file);
+      fileInput.value = '';
+    });
+    ['dragenter','dragover'].forEach(function(evt){
+      wrapEl.addEventListener(evt, function(e){ e.preventDefault(); wrapEl.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      wrapEl.addEventListener(evt, function(e){ e.preventDefault(); wrapEl.classList.remove('dragover'); });
+    });
+    wrapEl.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) handleFile(file);
+    });
+  }
+
   // Build the interactive "use it as an app" panel: a short form the buyer fills
   // in, a run button, and a live-streamed result from /api/run-product. This is
   // the payoff — the product runs on their own input right here.
@@ -2080,6 +2435,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     var form = document.createElement('form');
     var controls = {};
+    var usedVoiceInput = false;
     app.fields.forEach(function(f){
       var fw = document.createElement('div');
       fw.className = 'pa-field';
@@ -2096,6 +2452,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(f.required){ input.required = true; }
       input.maxLength = 4000;
       fw.appendChild(input);
+      if(f.type === 'textarea'){
+        fw.classList.add('pa-dropwrap');
+        attachFileDrop(fw, input, 4000);
+        attachDictation(fw, input, function(){ usedVoiceInput = true; });
+      }
       if(f.help){
         var help = document.createElement('span');
         help.className = 'pa-help';
@@ -2112,6 +2473,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     btn.textContent = app.cta || 'Run';
     form.appendChild(btn);
     panel.appendChild(form);
+
+    // Reading the answer aloud only fits products that are genuinely a
+    // conversation — Closed Chair's office-hours exchange, for now. Dictation
+    // above is available on every product's textarea fields; this list only
+    // controls whether a response gets read back afterward, not whether
+    // someone can dictate their input. Add a SKU here only once it has its
+    // own real reason for a spoken reply, the same bar Closed Chair's
+    // buildRunPrompt voiceMode was written to meet — not by default just
+    // because dictation was used to fill the box.
+    var VOICE_OUTPUT_SKUS = ['AI-AG-111'];
 
     var outWrap = document.createElement('div');
     outWrap.className = 'pa-out-wrap';
@@ -2131,13 +2502,50 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if(v) anyValue = true;
       });
       if(!anyValue){ toast('Fill in at least one field so it has something to work with.'); return; }
-      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; });
+      var speakResult = usedVoiceInput && VOICE_OUTPUT_SKUS.indexOf(item.sku) !== -1;
+      usedVoiceInput = false; // each submission's voice-ness is its own — typing the next question shouldn't inherit it
+      runProductApp(item, inputs, outWrap, btn, function(v){ busy = v; }, speakResult);
     });
 
     return panel;
   }
 
-  function runProductApp(item, inputs, outWrap, btn, setBusy){
+  // The Web Speech API has no real "gender" field on a voice — that's not
+  // part of the standard. What every major OS's built-in voice set does
+  // have is names, and common female-voice names repeat across them
+  // (Samantha on macOS/iOS, Zira on Windows, "Google UK English Female" on
+  // Chrome/Android, etc.) — matching on those is the closest thing to a
+  // real lever here. Falls back to the browser's own default voice on a
+  // system where nothing matches, rather than forcing a choice that isn't
+  // there. Voices often load asynchronously after the page starts, so this
+  // re-checks once the browser actually reports its voice list.
+  var preferredVoice = null;
+  function refreshPreferredVoice(){
+    if(!window.speechSynthesis) return;
+    var voices = window.speechSynthesis.getVoices();
+    if(!voices.length) return;
+    var patterns = [/female/i, /samantha/i, /zira/i, /karen/i, /victoria/i, /susan/i, /moira/i, /tessa/i, /fiona/i, /google.*female/i];
+    for(var p=0; p<patterns.length; p++){
+      for(var i=0; i<voices.length; i++){
+        if(patterns[p].test(voices[i].name)){ preferredVoice = voices[i]; return; }
+      }
+    }
+  }
+  if(window.speechSynthesis){
+    refreshPreferredVoice();
+    window.speechSynthesis.addEventListener('voiceschanged', refreshPreferredVoice);
+  }
+
+  function speakAloud(text){
+    if(!window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.0;
+    if(preferredVoice) utter.voice = preferredVoice;
+    window.speechSynthesis.speak(utter);
+  }
+
+  function runProductApp(item, inputs, outWrap, btn, setBusy, voice){
     setBusy(true);
     btn.disabled = true;
     outWrap.hidden = false;
@@ -2157,7 +2565,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     fetch('/api/run-product', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs })
+      body: JSON.stringify({ session_id: orderSessionId, sku: item.sku, inputs: inputs, voice: !!voice })
     }).then(function(res){
       if(!res.ok || !res.body){ throw new Error('unavailable'); }
       var reader = res.body.getReader();
@@ -2192,6 +2600,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(gotText){
         outEl.textContent = answer; // drop the cursor
         statusEl.textContent = 'done';
+        if(voice) speakAloud(answer);
         var actions = document.createElement('div');
         actions.className = 'pa-out-actions';
         var copyBtn = document.createElement('button');
@@ -2212,6 +2621,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         });
         actions.appendChild(copyBtn);
         actions.appendChild(dlBtn);
+        if(voice && window.speechSynthesis){
+          var stopBtn = document.createElement('button');
+          stopBtn.type = 'button';
+          stopBtn.textContent = 'Stop speaking';
+          stopBtn.addEventListener('click', function(){ window.speechSynthesis.cancel(); });
+          actions.appendChild(stopBtn);
+        }
         outWrap.appendChild(actions);
       }else if(!answer){
         outEl.textContent = 'The live engine is warming up (it activates after the first production deploy). Your full item is in the Markdown download below.';
@@ -2304,6 +2720,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
   }
 
+  // Bump this whenever a photo under icons/ changes (a new crop, a swapped
+  // source image) and you want it live immediately instead of waiting out
+  // Netlify's 24h edge cache on the old URL — see the matching comment in
+  // netlify/edge-functions/Product-image.mts for why a query string isn't
+  // used for this. The number itself is meaningless; only "did it change
+  // since the last deploy" matters, so every card's image URL changes at
+  // once and none of them can still be pointing at a stale cached response.
+  var PRODUCT_IMAGE_ASSET_VERSION = 7;
+
   function buildCard(p){
     var id = p.id || p.sku;
     var catLabel = p.catlabel || p.catLabel || CAT_LABEL[p.category] || p.category;
@@ -2313,15 +2738,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     card.dataset.cat = p.category; card.dataset.niche = p.niche; card.dataset.id = id;
     card.dataset.name = p.name; card.dataset.price = p.price; card.dataset.format = p.format;
     card.dataset.spec = p.spec; card.dataset.catlabel = catLabel; card.dataset.nichelabel = nicheLabel;
+    if(p.timeSaved) card.dataset.timesaved = p.timeSaved;
+    // Every catalog category now has real photography (see
+    // CATEGORY_PHOTO_STYLE in netlify/edge-functions/Product-image.mts) —
+    // a SKU-specific photo where one exists, the category's fallback photo
+    // otherwise. That server-side function is the actual source of truth;
+    // this flag only controls whether the CARD requests that image at all
+    // instead of using the old procedural CSS pattern (.card::before).
+    // Since every category is covered, every card now requests it.
+    var hasPhotoArt = true;
+    var thumbHtml = hasPhotoArt
+      ? '<img class="card-thumb" src="/product-image/v'+PRODUCT_IMAGE_ASSET_VERSION+'/thumb/'+encodeURIComponent(id)+'.png" alt="'+esc(p.name)+'" loading="lazy">'
+      : '';
+    if (hasPhotoArt) card.classList.add('has-thumb');
     card.innerHTML =
       '<span class="corner c-tl"></span><span class="corner c-tr"></span><span class="corner c-bl"></span><span class="corner c-br"></span>'+
+      thumbHtml+
       '<div class="card-top"><span class="sku">'+esc(id)+'</span></div>'+
       '<span class="trend-badge" hidden>Trending</span>'+
       '<span class="niche-tag">'+esc(nicheLabel)+'</span>'+
-      '<h3>'+esc(p.name)+'</h3><p>'+esc(p.blurb)+'</p>'+
+      '<h3>'+esc(p.name)+'</h3><p class="card-blurb">'+esc(p.blurb)+'</p>'+
       '<p class="card-format">'+esc(p.format)+'</p>'+
       '<div class="card-rating" data-rating-for="'+esc(id)+'" hidden></div>'+
-      '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><button class="add-btn">+ Add</button></div>';
+      '<div class="card-bottom"><span class="price">$'+parseFloat(p.price).toFixed(2)+'</span><div class="card-actions"><button class="try-btn" type="button">Try free</button><button class="add-btn">+ Add</button></div></div>';
     return card;
   }
 
@@ -2330,6 +2769,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     catalog.prepend(card);
     if(animate){ card.style.opacity = '0'; requestAnimationFrame(function(){ card.style.transition = '.3s ease'; card.style.opacity = '1'; }); }
     return card;
+  }
+
+  // Picks a spread of products for the showcase strip — one per category
+  // first (so the strip reads as "look how much this store covers" rather
+  // than eight prompt packs in a row), then fills any remaining slots.
+  // Best-effort and silent: an empty or malformed catalog just leaves the
+  // showcase empty rather than breaking the page.
+  function pickShowcase(products, max){
+    if(!Array.isArray(products) || !products.length) return [];
+    var seen = {}, picks = [];
+    for(var i=0;i<products.length && picks.length<max;i++){
+      var p = products[i];
+      if(p && p.category && !seen[p.category]){ seen[p.category]=true; picks.push(p); }
+    }
+    for(var j=0;j<products.length && picks.length<max;j++){
+      if(picks.indexOf(products[j])===-1) picks.push(products[j]);
+    }
+    return picks;
+  }
+
+  function renderShowcase(products){
+    if(!showcase) return;
+    showcase.innerHTML = '';
+    pickShowcase(products, 8).forEach(function(p){ showcase.appendChild(buildCard(p)); });
   }
 
   // Replace the statically-rendered catalog with the live one from the database.
@@ -2344,6 +2807,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         catalog.innerHTML = '';
         data.products.forEach(function(p){ catalog.appendChild(buildCard(p)); });
         applyFilters();
+        if(catalogCount) catalogCount.textContent = data.products.length + (data.products.length===1?' product':' products');
+        renderShowcase(data.products);
       }
     }catch(e){ /* keep the static cards */ }
     reconcileCartWithCatalog();
@@ -2418,7 +2883,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if(!res.ok) return;
       var data = await res.json().catch(function(){ return {}; });
       var aggs = (data && data.aggregates) || {};
-      catalog.querySelectorAll('.card-rating').forEach(function(el){
+      var cards = catalog.querySelectorAll('.card-rating');
+      if(showcase) cards = Array.prototype.slice.call(cards).concat(Array.prototype.slice.call(showcase.querySelectorAll('.card-rating')));
+      cards.forEach(function(el){
         var sku = el.getAttribute('data-rating-for');
         var agg = aggs[sku];
         if(agg && agg.count > 0){
@@ -2742,6 +3209,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var proofOutput = document.getElementById('pm-proof-output');
   var proofLabel = document.getElementById('pm-proof-label');
   var proofScenario = document.getElementById('pm-proof-scenario');
+  var proofDropzone = document.getElementById('pm-proof-dropzone');
+  var proofFileInput = document.getElementById('pm-proof-file');
+  var proofBrowseBtn = document.getElementById('pm-proof-browse');
   var proofRun = document.getElementById('pm-proof-run');
   var proofRunLabel = document.getElementById('pm-proof-run-label');
   var proofShare = document.getElementById('pm-proof-share');
@@ -2776,6 +3246,100 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     // Render streamed text with a blinking terminal cursor at the end.
     proofOutput.innerHTML = esc(text) + '<span class="proof-cursor"></span>';
     proofOutput.scrollTop = proofOutput.scrollHeight;
+  }
+
+  // ---- drop a real file in instead of typing a scenario ----
+  // The server (netlify/functions/demo.mts) truncates scenario to 600 chars
+  // regardless of what's sent — a deliberate cost control, not something to
+  // route around. A dropped file's content is truncated to the same 600
+  // here, client-side, so what's shown in the field is honestly what the
+  // demo will actually see — not a silent mismatch between "looks like the
+  // whole file" and "only the first 600 characters were used."
+  var PROOF_FILE_MAX_BYTES = 2 * 1024 * 1024; // read cap; only the first 600 chars ever matter, this just avoids hanging on a huge file
+  var PROOF_SCENARIO_MAX = 600;
+  var PROOF_TEXT_EXTENSIONS = ['.txt', '.csv', '.md', '.markdown', '.json', '.log'];
+
+  function isProbablyTextFile(file){
+    var name = (file.name || '').toLowerCase();
+    for(var i=0;i<PROOF_TEXT_EXTENSIONS.length;i++){
+      if(name.slice(-1 * PROOF_TEXT_EXTENSIONS[i].length) === PROOF_TEXT_EXTENSIONS[i]) return true;
+    }
+    // No extension at all (some exported transcripts have none) — allow it
+    // and let FileReader's content speak for itself rather than blocking on
+    // a missing extension alone.
+    return name.indexOf('.') === -1;
+  }
+
+  function proofFileStatus(msg){
+    proofOutput.innerHTML = '<span class="proof-hint">' + esc(msg) + '</span>';
+  }
+
+  function loadProofFile(file){
+    if(!file) return;
+    var ext = ('.' + (file.name || '').split('.').pop()).toLowerCase();
+    if(window.FILE_EXTRACT_SUPPORTED && window.FILE_EXTRACT_SUPPORTED.indexOf(ext) !== -1){
+      proofFileStatus('Reading "' + file.name + '"…');
+      window.extractFileText(file).then(function(result){
+        if(result.warning){ proofFileStatus(result.warning); return; }
+        var truncated = result.text.length > PROOF_SCENARIO_MAX;
+        proofScenario.value = result.text.slice(0, PROOF_SCENARIO_MAX);
+        toast('Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters.' : '.') + ' Press Run live demo.');
+      }).catch(function(err){
+        proofFileStatus('Couldn\'t read "' + file.name + '" (' + (err && err.message ? err.message : 'unknown error') + '). Try pasting the text directly.');
+      });
+      return;
+    }
+    if(/\.(docx?|xlsx?|pptx?)$/i.test(file.name || '')){
+      proofFileStatus('"' + file.name + '" is a ' + (file.name.split('.').pop() || '').toUpperCase() + ' file — that format isn\'t supported here yet. Try .txt/.csv, or paste the relevant part.');
+      return;
+    }
+    if(!isProbablyTextFile(file)){
+      proofFileStatus('"' + file.name + '" isn\'t a type this box can read (.txt, .csv, .md, .json, .log, .pdf, .docx, .xlsx). Paste the relevant text directly instead.');
+      return;
+    }
+    if(file.size > PROOF_FILE_MAX_BYTES){
+      proofFileStatus('"' + file.name + '" is larger than this needs — only the first ' + PROOF_SCENARIO_MAX + ' characters are ever used for a demo anyway. Trim it down and try again, or just paste the relevant part.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      var truncated = text.length > PROOF_SCENARIO_MAX;
+      proofScenario.value = text.slice(0, PROOF_SCENARIO_MAX);
+      var note = 'Loaded "' + file.name + '"' + (truncated ? ' — using the first ' + PROOF_SCENARIO_MAX + ' characters (that\'s what the demo will see).' : '.') + ' Press Run live demo.';
+      toast(note);
+    };
+    reader.onerror = function(){
+      proofFileStatus('Couldn\'t read "' + file.name + '" — try pasting the text directly instead.');
+    };
+    reader.readAsText(file);
+  }
+
+  if(proofDropzone){
+    ['dragenter','dragover'].forEach(function(evt){
+      proofDropzone.addEventListener(evt, function(e){
+        e.preventDefault();
+        proofDropzone.classList.add('dragover');
+      });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+      proofDropzone.addEventListener(evt, function(e){
+        e.preventDefault();
+        proofDropzone.classList.remove('dragover');
+      });
+    });
+    proofDropzone.addEventListener('drop', function(e){
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) loadProofFile(file);
+    });
+  }
+  if(proofBrowseBtn && proofFileInput){
+    proofBrowseBtn.addEventListener('click', function(){ proofFileInput.click(); });
+    proofFileInput.addEventListener('change', function(){
+      var file = proofFileInput.files && proofFileInput.files[0];
+      if(file) loadProofFile(file);
+      proofFileInput.value = ''; // allow dropping/selecting the same file again later
+    });
   }
 
   async function runProof(){
@@ -3112,53 +3676,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 })();
 </script>
 
-<script>
-/* Matrix digital rain — respects prefers-reduced-motion */
-(function(){
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var canvas = document.getElementById('matrix-rain');
-  if (!canvas || !canvas.getContext) return;
-  var ctx = canvas.getContext('2d');
-  var glyphs = 'アカサタナハマヤラワ0123456789ABCDEFｦｱｳｴｵｶｷｸｹｺ<>=/*+-{}[]$#'.split('');
-  var fontSize = 15, cols = 0, drops = [];
-
-  function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    cols = Math.floor(canvas.width / fontSize);
-    drops = [];
-    for (var i = 0; i < cols; i++){ drops[i] = Math.floor(Math.random() * -50); }
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  var last = 0;
-  function draw(now){
-    if (now - last > 55){
-      last = now;
-      ctx.fillStyle = 'rgba(8, 0, 0, 0.10)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = fontSize + 'px "JetBrains Mono", monospace';
-      for (var i = 0; i < drops.length; i++){
-        var ch = glyphs[Math.floor(Math.random() * glyphs.length)];
-        var x = i * fontSize, y = drops[i] * fontSize;
-        ctx.fillStyle = Math.random() > 0.975 ? '#FFD4D4' : '#FF2A2A';
-        ctx.fillText(ch, x, y);
-        if (y > canvas.height && Math.random() > 0.975){ drops[i] = 0; }
-        drops[i]++;
-      }
-    }
-    requestAnimationFrame(draw);
-  }
-  requestAnimationFrame(draw);
-})();
-</script>
-
 <!-- Install + offline: registers the service worker so the site installs as an app
      on a phone or a computer and works offline, and reveals the header's "Install
      app" button once the browser reports it is installable. Shared with agent.html
      so the two pages cannot drift — see install-app.js. -->
+<script src="/mn-ads.js" defer></script>
 <script src="/install-app.js" defer></script>
 
 </body>
-  </html>
+                                                                     </html>

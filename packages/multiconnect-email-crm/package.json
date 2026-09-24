@@ -1,0 +1,33 @@
+{
+  "name": "multiconnect-email-crm",
+  "version": "1.0.0",
+  "description": "Let your agent handle email and contacts — safely. Draft, send, and follow up on leads with full approval control.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "multiconnect-email": "./bin/email-connect.mjs"
+  },
+  "main": "./lib/server.mjs",
+  "exports": {
+    ".": "./lib/server.mjs",
+    "./config": "./lib/config.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "start": "node bin/email-connect.mjs start",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

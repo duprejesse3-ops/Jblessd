@@ -15,6 +15,15 @@
 
 import type { Product } from './catalog.mjs'
 import { SITE_AUDIT_SOURCE } from './site-audit-source.mjs'
+import { MULTICONNECT_WEBHOOK_BRIDGE_SOURCE } from './multiconnect-webhook-bridge-source.mjs'
+import { MULTICONNECT_SHOPIFY_SOURCE } from './multiconnect-shopify-source.mjs'
+import { MULTICONNECT_SHEETS_AIRTABLE_SOURCE } from './multiconnect-sheets-airtable-source.mjs'
+import { MULTICONNECT_EMAIL_CRM_SOURCE } from './multiconnect-email-crm-source.mjs'
+import { MULTICONNECT_SLACK_DISCORD_SOURCE } from './multiconnect-slack-discord-source.mjs'
+import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
+import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
+import { MULTIVAULT_SOURCE } from './multivault-source.mjs'
+import { MULTICONNECT_GOOGLE_DOCS_SOURCE } from './multiconnect-google-docs-source.mjs'
 
 export interface DeliverableSection {
   title: string
@@ -307,6 +316,453 @@ function siteAuditSections(product: Product): DeliverableSection[] {
   return sections
 }
 
+function webhookBridgeSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiconnect-webhook-bridge.zip\n` +
+        `    cd multiconnect-webhook-bridge\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts the bridge and ` +
+        `prints a dashboard URL and a local auth token — open the URL, paste the token, and ` +
+        `you're in. Nothing is downloaded, compiled, or fetched from a registry — the whole ` +
+        `tool is the files in the archive.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-webhook-bridge\` and save each block to the path in ` +
+        `its heading, keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, and no account — just Node 18 or ` +
+        `newer (\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/bridge.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to anything real:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it covers connecting Zapier or Make, mapping fields both ` +
+        `directions, and running it in the background with \`adapters/windows-task.ps1\` or ` +
+        `\`adapters/systemd.service\` instead of a foreground terminal.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_WEBHOOK_BRIDGE_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_WEBHOOK_BRIDGE_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function shopifySections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiconnect-shopify.zip\n` +
+        `    cd multiconnect-shopify\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts the connector ` +
+        `and prints a dashboard URL and a local auth token — open the URL, paste the token, ` +
+        `and connect your store. It starts in read-only safe mode by default; nothing can ` +
+        `write to your store until you deliberately switch that in the dashboard.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-shopify\` and save each block to the path in its ` +
+        `heading, keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, and no account beyond your own ` +
+        `Shopify store — just Node 18 or newer (\`node --version\` to check). Skipping the ` +
+        `installer is fine too:\n\n` +
+        `    node bin/shopify-connect.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to anything real:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it walks through creating your Shopify Admin API app, the ` +
+        `exact scopes to grant, and wiring up the order/inventory webhooks.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_SHOPIFY_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_SHOPIFY_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function sheetsAirtableSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiconnect-sheets-airtable.zip\n` +
+        `    cd multiconnect-sheets-airtable\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts the connector ` +
+        `and prints a dashboard URL and a local auth token — open the URL, paste the token, ` +
+        `and connect Google Sheets and/or Airtable. It starts in read-only safe mode by ` +
+        `default; nothing can write to your sheet or base until you deliberately switch ` +
+        `that in the dashboard.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-sheets-airtable\` and save each block to the path in ` +
+        `its heading, keeping the folder structure. Nothing is missing and nothing is ` +
+        `minified.\n\n` +
+        `Either way there is no npm install, no build step — just Node 18 or newer ` +
+        `(\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/sheets-connect.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to anything real:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it walks through creating a Google service account and ` +
+        `sharing your sheet with it, and generating an Airtable personal access token.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_SHEETS_AIRTABLE_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_SHEETS_AIRTABLE_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function emailCrmSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiconnect-email-crm.zip\n` +
+        `    cd multiconnect-email-crm\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts the connector ` +
+        `and prints a dashboard URL, a local auth token, and your inbound webhook URL. It ` +
+        `starts in read-only safe mode by default: your agent can draft emails, but nothing ` +
+        `sends until you personally click "Approve & send" in the dashboard with safe mode ` +
+        `switched to read/write.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-email-crm\` and save each block to the path in its ` +
+        `heading, keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step — just Node 18 or newer ` +
+        `(\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/email-connect.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to a real mailbox:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it walks through getting an SMTP app password from Gmail ` +
+        `or your provider, and how the approval queue and send limit work.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_EMAIL_CRM_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_EMAIL_CRM_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function slackDiscordSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiconnect-slack-discord.zip\n` +
+        `    cd multiconnect-slack-discord\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts the connector ` +
+        `and prints a dashboard URL, a local auth token, and both the Slack request URL and ` +
+        `the Discord interactions URL. It starts in read-only safe mode by default: slash ` +
+        `commands are received and logged, but nothing posts to a real channel until you ` +
+        `switch to read/write in the dashboard.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-slack-discord\` and save each block to the path in ` +
+        `its heading, keeping the folder structure. Nothing is missing and nothing is ` +
+        `minified.\n\n` +
+        `Either way there is no npm install, no build step — just Node 18 or newer ` +
+        `(\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/messaging-connect.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to a real workspace or ` +
+        `server:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it walks through creating a Slack app and a Discord ` +
+        `application, and wiring up your first route.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_SLACK_DISCORD_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_SLACK_DISCORD_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function witnessSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiwitness.zip\n` +
+        `    cd multiwitness\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts MultiWitness ` +
+        `and prints a dashboard token (for you) and a separate ingest token (to give to any ` +
+        `other tool you want logging events here). The ingest token can only ever append a ` +
+        `new event — there is no update or delete route for it to misuse even if it leaks.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiwitness\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, no database — the log is a ` +
+        `plain JSON Lines file. Just Node 18 or newer (\`node --version\` to check). ` +
+        `Skipping the installer is fine too:\n\n` +
+        `    node bin/witness.mjs start\n\n` +
+        `Verify it works on your machine, including the standalone verify command that ` +
+        `needs no server running:\n\n` +
+        `    npm test\n` +
+        `    node bin/witness.mjs verify\n\n` +
+        `Start with README.md — it covers logging your first event and what the hash chain ` +
+        `actually protects against.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIWITNESS_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIWITNESS_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function multiconnectGoogleDocsSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to use it',
+      body:
+        `${product.blurb}\n\n` +
+        `Unzip the archive on your order page, then:\n\n` +
+        `    unzip multiconnect-google-docs.zip\n` +
+        `    cd multiconnect-google-docs\n` +
+        `    npm test\n\n` +
+        `That last step is optional but recommended — it runs the real test suite (20 tests) ` +
+        `against a real temp directory and a real local HTTP server, so you know the software ` +
+        `works on your machine before you rely on it. Only Google's own servers are mocked, ` +
+        `since those obviously aren't reachable in a test run.\n\n` +
+        `**One-time setup (about ten minutes):** this needs a Google Cloud OAuth client — ` +
+        `unavoidable for any real Drive integration, not a design choice made here. Full ` +
+        `walkthrough is in README.md's "One-time setup" section: create a Google Cloud ` +
+        `project, enable the Drive API, create an OAuth Client ID (type: Desktop app). Then:\n\n` +
+        `    node bin/docs-bridge.mjs auth --client-id <id> --client-secret <secret>\n\n` +
+        `This prints a URL — open it, sign in, approve. The refresh token it saves is what ` +
+        `lets scheduled runs proceed unattended afterward; see README's "Security model" for ` +
+        `exactly how that's stored and protected.\n\n` +
+        `Then export:\n\n` +
+        `    node bin/docs-bridge.mjs sync --dest ~/Documents/ClientVault\n\n` +
+        `That's it — your Google Docs are now real, readable .md files at that path. If you ` +
+        `also own MultiVault, point its watched folder at the same destination (or a ` +
+        `subfolder) and its own watcher picks up what this tool exports, automatically. ` +
+        `Re-running \`sync\` only re-exports what actually changed, so it's cheap to run on a ` +
+        `schedule — three adapters (cron, launchd, Windows Task Scheduler) are included in ` +
+        `adapters/ for exactly that; see each file's header comment for setup.\n\n` +
+        `Want to limit this to one folder in Drive instead of your whole account? README's ` +
+        `"Scoping to one Drive folder" section covers the \`--folder-id\` flag.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiconnect-google-docs\` and save each block to the path in its ` +
+        `heading, keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Start with README.md — it covers exactly what this does and does not do, in plain ` +
+        `terms, including why Drive Desktop sync alone doesn't solve this.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTICONNECT_GOOGLE_DOCS_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTICONNECT_GOOGLE_DOCS_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function multivaultSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to use it',
+      body:
+        `${product.blurb}\n\n` +
+        `Unzip the archive on your order page, then:\n\n` +
+        `    unzip multivault.zip\n` +
+        `    cd multivault\n` +
+        `    npm test\n\n` +
+        `That last step is optional but recommended — it runs the real test suite against ` +
+        `a real temp directory (encryption round-trip, .ics parsing, folder scanning) so ` +
+        `you know the software works on your machine before you rely on it.\n\n` +
+        `Create your first vault:\n\n` +
+        `    node bin/vault.mjs init --folder ~/Documents/ClientNotes --ics ~/Calendar.ics\n\n` +
+        `This prints a passphrase — save it now (a password manager is recommended). ` +
+        `There is no recovery if you lose it; it is never stored anywhere by this software. ` +
+        `Then:\n\n` +
+        `    node bin/vault.mjs sync\n` +
+        `    node bin/vault.mjs context\n\n` +
+        `\`context\` prints a pasteable brief of your folder and calendar — drop it into any ` +
+        `AI chat, or pipe it into your own script (see README's "Piping into the Claude ` +
+        `API"). Three scheduling adapters (cron, launchd, Windows Task Scheduler) are ` +
+        `included in adapters/ to keep it synced automatically — see each file's header ` +
+        `comment for setup.\n\n` +
+        `**Got a large folder?** Whole-folder mode hands over everything, which stops being ` +
+        `useful past a few dozen files. Search mode instead:\n\n` +
+        `    node bin/vault.mjs context --query "invoice overdue"\n\n` +
+        `No passphrase needed — this builds a local BM25-ranked search index automatically ` +
+        `on first use and returns only relevant chunks, not the whole folder. Run ` +
+        `\`node bin/vault.mjs watch\` to keep that index continuously updated in the ` +
+        `background instead of paying the update cost on each query. See README's "Search ` +
+        `mode: large folders" for how the ranking actually works.\n\n` +
+        `**Want it automatic instead?** That's MCP mode — no sync, no paste. Point your MCP ` +
+        `client (Claude Desktop, Claude Code) at \`bin/vault-mcp.mjs\` and it calls your vault ` +
+        `directly, live, whenever relevant — including search: its \`get_context\` tool takes ` +
+        `the same optional \`query\` argument. For Claude Desktop, add to ` +
+        `\`claude_desktop_config.json\`:\n\n` +
+        `    {\n` +
+        `      "mcpServers": {\n` +
+        `        "multivault": {\n` +
+        `          "command": "node",\n` +
+        `          "args": ["/absolute/path/to/multivault/bin/vault-mcp.mjs", "--dest", "/absolute/path/to/.multivault"]\n` +
+        `        }\n` +
+        `      }\n` +
+        `    }\n\n` +
+        `Restart your client — it can now call \`get_context\` and \`vault_status\` on its own. ` +
+        `See README's "MCP mode" section for the full walkthrough, and "Provable logging ` +
+        `with MultiWitness" if you also own MultiWitness and want every context call logged ` +
+        `to its hash chain.\n\n` +
+        `Want a double-clickable executable instead of running through Node? Run ` +
+        `\`npm run build:binary\` on each OS you want one for (README's "Standalone ` +
+        `binaries" section covers the unsigned-binary warnings you'll see on first run).\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multivault\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Start with README.md — it covers exactly what this does and does not watch, in ` +
+        `plain terms.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIVAULT_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIVAULT_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
+function guardSections(product: Product): DeliverableSection[] {
+  const sections: DeliverableSection[] = [
+    {
+      title: 'What you bought, and how to install it',
+      body:
+        `${product.blurb}\n\n` +
+        `The fastest way in is the .zip on your order page — download it, then:\n\n` +
+        `    unzip multiguard.zip\n` +
+        `    cd multiguard\n` +
+        `    ./install.sh\n\n` +
+        `(On Windows, run \`install.ps1\` in PowerShell instead.) That starts MultiGuard ` +
+        `and prints a dashboard URL and a token. From the dashboard's "Register a ` +
+        `connector" section, add each other MultiConnect tool you run by its own base URL ` +
+        `and its own dashboard token — MultiGuard reads that from you once and stores it ` +
+        `locally, so read the security note in README.md before you use this on anything ` +
+        `you don't fully control.\n\n` +
+        `This document is your permanent fallback copy. Every file is reproduced in full ` +
+        `below, so if you ever lose the archive you can rebuild the package by hand: create ` +
+        `a folder called \`multiguard\` and save each block to the path in its heading, ` +
+        `keeping the folder structure. Nothing is missing and nothing is minified.\n\n` +
+        `Either way there is no npm install, no build step, no database. Just Node 18 or ` +
+        `newer (\`node --version\` to check). Skipping the installer is fine too:\n\n` +
+        `    node bin/guard.mjs start\n\n` +
+        `Verify it works on your machine before you connect it to anything real:\n\n` +
+        `    npm test\n\n` +
+        `Start with README.md — it covers registering your first connector and exactly ` +
+        `what the kill switch does and doesn't do.`,
+    },
+    {
+      title: 'Files in this package',
+      body: MULTIGUARD_SOURCE.map((file) => `- \`${file.path}\``).join('\n'),
+    },
+  ]
+
+  for (const file of MULTIGUARD_SOURCE) {
+    const fence = fenceFor(file.contents)
+    sections.push({
+      title: file.path,
+      body: `${fence}${fenceLanguage(file.path)}\n${file.contents}\n${fence}`,
+    })
+  }
+
+  return sections
+}
+
 const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
   'AI-AG-065': (product) => ({
     sku: product.sku,
@@ -318,6 +774,129 @@ const SKU_DELIVERABLES: Record<string, (p: Product) => Deliverable> = {
       'schedulers, zero dependencies. Yours to run on unlimited sites you own, forever. ' +
       'See LICENSE.md at the end for the terms.',
     sections: siteAuditSections(product),
+  }),
+  'AI-CN-001': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local Zapier/Make webhook bridge — a dashboard for ' +
+      'connecting, mapping fields, and watching traffic live, zero dependencies. Yours to ' +
+      'run on unlimited machines and agents you own, forever. See LICENSE.md at the end for ' +
+      'the terms.',
+    sections: webhookBridgeSections(product),
+  }),
+  'AI-CN-002': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local Shopify connector — a dashboard for connecting your ' +
+      'store, watching orders and inventory live, and a safe-mode switch that keeps writes ' +
+      'off until you turn them on, zero dependencies. Yours to run on unlimited stores you ' +
+      'own, forever. See LICENSE.md at the end for the terms.',
+    sections: shopifySections(product),
+  }),
+  'AI-CN-003': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local Sheets/Airtable connector — a dashboard for ' +
+      'connecting both platforms, mapping fields both directions, and a safe-mode switch ' +
+      'that keeps writes off until you turn them on, zero dependencies. Yours to run on ' +
+      'unlimited sheets and bases you own, forever. See LICENSE.md at the end for the terms.',
+    sections: sheetsAirtableSections(product),
+  }),
+  'AI-CN-004': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local Email/CRM connector — an approval queue so nothing ' +
+      'sends without you, SMTP implemented directly with zero dependencies, and a built-in ' +
+      'contact list. Yours to run on unlimited mailboxes you own, forever. See LICENSE.md ' +
+      'at the end for the terms.',
+    sections: emailCrmSections(product),
+  }),
+  'AI-CN-005': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local Slack/Discord connector — named routes to any ' +
+      'channel, HMAC and Ed25519 signature verification implemented directly, and a ' +
+      'safe-mode switch that keeps posts off until you turn them on, zero dependencies. ' +
+      'Yours to run on unlimited workspaces and servers you own, forever. See LICENSE.md ' +
+      'at the end for the terms.',
+    sections: slackDiscordSections(product),
+  }),
+  'AI-CN-006': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a tamper-evident, hash-chained action log — a SHA-256 ' +
+      'chain any of your tools can log into, verifiable offline with no server required, ' +
+      'zero dependencies. Yours to run on unlimited machines, forever. See LICENSE.md at ' +
+      'the end for the terms.',
+    sections: witnessSections(product),
+  }),
+  'AI-CN-007': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a unified control plane over every MultiConnect tool you ' +
+      'run — one dashboard, one status view, and one kill switch that works generically ' +
+      'with any connector, zero dependencies. Yours to run on unlimited machines, forever. ' +
+      'See LICENSE.md at the end for the terms.',
+    sections: guardSections(product),
+  }),
+  'AI-CN-008': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a local, AES-256-GCM encrypted context snapshot of a folder and ' +
+      'calendar file — with three ways to use it. CLI mode (sync + context) is zero-dependency ' +
+      'and works exactly like v1. Search mode indexes your folder with BM25 ranking (the same ' +
+      'approach real search engines use) so large folders return only relevant content instead ' +
+      'of everything — also zero-dependency, no embeddings, no AI model involved. MCP mode runs ' +
+      'a built-in server so Claude Desktop, Claude Code, and other MCP-aware tools pull in your ' +
+      'current context automatically, live, with no copy-paste — that mode is the one part of ' +
+      'this package with real dependencies (the official @modelcontextprotocol/sdk and zod), ' +
+      'documented plainly in README.md rather than hidden. Nothing phones home in any mode: ' +
+      'search and MCP mode both talk only to your local disk/client, and the only network call ' +
+      'anywhere in this package is an optional, content-free log line to MultiWitness (sold ' +
+      'separately) if you choose to enable it. Yours to run on unlimited machines, forever. See ' +
+      'LICENSE.md at the end for the terms.',
+    sections: multivaultSections(product),
+  }),
+  'AI-CN-009': (product) => ({
+    sku: product.sku,
+    name: product.name,
+    format: product.format,
+    spec: product.spec,
+    intro:
+      'The complete source for a one-way, read-only Google Docs export tool: it converts each ' +
+      'Doc to plain markdown server-side (via Google\'s own Drive API) and writes the result as ' +
+      'a real local file, on a schedule. Zero npm dependencies — the OAuth flow and Drive API ' +
+      'calls are plain fetch against documented REST endpoints, not the large googleapis SDK. ' +
+      'Requires a one-time Google Cloud OAuth setup (about ten minutes, walked through in ' +
+      'README.md) — unavoidable for any real Drive integration, not a design choice made here. ' +
+      'Read-only by construction (the requested scope cannot create, modify, or delete anything ' +
+      'in Drive) and revocable anytime from your Google account settings. Yours to run on ' +
+      'unlimited machines, forever. See LICENSE.md at the end for the terms.',
+    sections: multiconnectGoogleDocsSections(product),
   }),
 }
 

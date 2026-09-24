@@ -1,7 +1,7 @@
 import type { Config } from '@netlify/functions'
 import { loadCatalog } from '../lib/db.mjs'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 
 function xml(value: unknown): string {
   return String(value ?? '').replace(/[<>&"']/g, (character) => ({

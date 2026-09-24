@@ -30,8 +30,8 @@
 // with 'self'.
 //
 // Verifying a change here (from Google's setup guide, both must return "ok"):
-//   https://jblessd.com/metrics/healthy                  — routing
-//   https://jblessd.com/metrics/?validate_geo=healthy    — geo headers
+//   https://multinicheai.com/metrics/healthy                  — routing
+//   https://multinicheai.com/metrics/?validate_geo=healthy    — geo headers
 // Then in Tag Assistant: Summary > Output > Hits Sent should show /metrics.
 
 import type { Context } from '@netlify/edge-functions'

@@ -59,10 +59,10 @@ ARG IMAGE_VERSION=dev
 ARG IMAGE_REVISION=unknown
 ARG IMAGE_CREATED=1970-01-01T00:00:00Z
 
-LABEL org.opencontainers.image.title="jblessd.com storefront" \
-      org.opencontainers.image.description="The jblessd.com storefront running on plain Node, without Netlify" \
-      org.opencontainers.image.url="https://jblessd.com" \
-      org.opencontainers.image.vendor="jblessd.com" \
+LABEL org.opencontainers.image.title="multinicheai.com storefront" \
+      org.opencontainers.image.description="The multinicheai.com storefront running on plain Node, without Netlify" \
+      org.opencontainers.image.url="https://multinicheai.com" \
+      org.opencontainers.image.vendor="multinicheai.com" \
       org.opencontainers.image.licenses="UNLICENSED" \
       org.opencontainers.image.version="${IMAGE_VERSION}" \
       org.opencontainers.image.revision="${IMAGE_REVISION}" \

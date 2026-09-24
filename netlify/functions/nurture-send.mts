@@ -15,7 +15,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { sendEmail } from '../lib/email.mjs'
 import { buildNurtureEmail, DELAY_DAYS, TOTAL_STEPS } from '../lib/nurture-sequence.mjs'
 
-const SITE_URL = process.env.SITE_URL || 'https://jblessd.com'
+const SITE_URL = process.env.SITE_URL || 'https://multinicheai.com'
 const BATCH_SIZE = 30
 
 // Best-effort review aggregates for step 2's social-proof email. A failure

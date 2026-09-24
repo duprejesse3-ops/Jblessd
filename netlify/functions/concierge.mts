@@ -15,7 +15,7 @@ import { loadCatalog } from '../lib/db.mjs'
 import { CATEGORY_LABEL, NICHE_LABEL, type Product } from '../lib/catalog.mjs'
 import { checkRateLimit, tooManyRequests } from '../lib/rate-limit.mjs'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-5'
 const MAX_PICKS = 4
 
 interface Pick {
@@ -108,7 +108,7 @@ async function aiPicks(query: string, products: Product[]): Promise<{ summary: s
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 1330,
     tools: [tool],
     tool_choice: { type: 'tool', name: 'recommend_bundle' },
     messages: [

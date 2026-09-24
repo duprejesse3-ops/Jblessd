@@ -1,0 +1,14 @@
+MULTINICHE AI · Meridian Host · technical steps
+Copyright 2026 MultiNicheAI. All rights reserved.
+SKU AI-HOST-001
+
+You bring your GitHub, your Stripe, your machine.
+Not a copy of the MultiNicheAI catalog.
+
+0. chmod +x multinicheai *.sh
+1. ./multinicheai from-github https://github.com/YOU/YOUR-SHOP.git
+2. Keys in container.env — never Git.
+3. sudo ./multinicheai bootstrap shop.yourname.com
+4. Pi: 64-bit Pi OS, Pi 4 4GB or Pi 5.
+5. sudo ./multinicheai forward shop.yourname.com  (or ./multinicheai share)
+6. Stripe webhook https://shop.yourname.com/api/webhook — test 4242 before moving the main name.

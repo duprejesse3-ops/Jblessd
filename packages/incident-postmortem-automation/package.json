@@ -1,0 +1,32 @@
+{
+  "name": "incident-postmortem-automation",
+  "version": "1.0.0",
+  "description": "Turns an incident timeline into a blameless postmortem draft with owned action items, automatically — a PagerDuty webhook, not a prompt you paste.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "postmortem": "./bin/postmortem.mjs"
+  },
+  "main": "./lib/postmortem.mjs",
+  "exports": {
+    ".": "./lib/postmortem.mjs",
+    "./slack": "./lib/slack.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "adapters",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "postmortem": "node bin/postmortem.mjs",
+    "webhook": "node adapters/pagerduty-webhook.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

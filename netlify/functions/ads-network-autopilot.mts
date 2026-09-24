@@ -1,13 +1,13 @@
 // Scheduled function: MultiNiche Ads network autopilot.
 //
-// Makes jblessd.com's own participation in the ad network fully automatic:
+// Makes multinicheai.com's own participation in the ad network fully automatic:
 // no admin panel, no manual "create a slot" or "create a campaign" step.
 // This function IS the self-tenant's admin — it runs first-party against the
 // database directly (tenantById, not a bearer key) since it's acting as this
 // store's own account, not verifying an external caller.
 //
 // Two things it keeps in sync, both idempotent (safe to run repeatedly):
-//   1. A single, deterministic slot representing ad space ON jblessd.com
+//   1. A single, deterministic slot representing ad space ON multinicheai.com
 //      itself (SELF_SLOT_KEY below) — offered to the network so other
 //      tenants' campaigns can appear on this site once they exist.
 //   2. One active campaign per catalog product, running INTO other tenants'
@@ -16,9 +16,9 @@
 //
 // Honest limitation worth knowing: with zero other tenants in the network
 // yet, neither side does anything visible — the serve endpoint deliberately
-// excludes a slot's own tenant's campaigns (no self-serving), so jblessd.com's
+// excludes a slot's own tenant's campaigns (no self-serving), so multinicheai.com's
 // own slot will show nothing until a second tenant joins with a campaign, and
-// jblessd.com's campaigns won't appear anywhere until a second tenant offers
+// multinicheai.com's campaigns won't appear anywhere until a second tenant offers
 // a slot. This function is the bootstrap: the inventory is ready and waiting
 // the moment a second tenant connects.
 //
@@ -37,7 +37,7 @@ const ENABLED = process.env.ADS_NETWORK_ENABLED !== 'false'
 const STALE_DAYS = Number(process.env.ADS_NETWORK_STALE_DAYS || 45)
 const BATCH_SIZE = Number(process.env.ADS_NETWORK_BATCH_SIZE || 4)
 const MODEL = 'claude-sonnet-5'
-const SELF_TENANT_EMAIL = 'store@jblessd.com'
+const SELF_TENANT_EMAIL = 'store@multinicheai.com'
 const SELF_SLOT_KEY = 'slot_self_jblessd'
 const MODEL_MAX_TOKENS = 200
 
@@ -77,7 +77,7 @@ async function ensureSelfSlot(tenantId: number): Promise<void> {
   const db = getDatabase()
   await db.sql`
     INSERT INTO ads_network_slots (tenant_id, slot_key, site_url, label, niche)
-    VALUES (${tenantId}, ${SELF_SLOT_KEY}, 'https://jblessd.com', 'Product page sidebar', NULL)
+    VALUES (${tenantId}, ${SELF_SLOT_KEY}, 'https://multinicheai.com', 'Product page sidebar', NULL)
     ON CONFLICT (slot_key) DO NOTHING
   `
 }
@@ -85,7 +85,7 @@ async function ensureSelfSlot(tenantId: number): Promise<void> {
 async function getLastCampaignBySku(tenantId: number): Promise<Map<string, Date | null>> {
   const db = getDatabase()
   // click_url encodes the sku as the last path segment
-  // (https://jblessd.com/product/<SKU>), so it doubles as the campaign's key
+  // (https://multinicheai.com/product/<SKU>), so it doubles as the campaign's key
   // without needing a separate sku column on a table shared across tenants.
   const rows = (await db.sql`
     SELECT click_url, created_at FROM ads_network_campaigns WHERE tenant_id = ${tenantId}
@@ -150,7 +150,7 @@ export default async () => {
         console.error(`[ads-network-autopilot] AI creative failed for ${p.sku}, using fallback —`, (err as Error).message)
         creative = fallbackCreative(p.name, p.blurb)
       }
-      const clickUrl = `https://jblessd.com/product/${encodeURIComponent(p.sku)}`
+      const clickUrl = `https://multinicheai.com/product/${encodeURIComponent(p.sku)}`
       await db.sql`
         INSERT INTO ads_network_campaigns (tenant_id, headline, body, click_url, niche)
         VALUES (${tenant.id}, ${creative.headline}, ${creative.body}, ${clickUrl}, ${p.niche})

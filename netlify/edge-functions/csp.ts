@@ -51,6 +51,9 @@
 //     needs naming one domain at a time (see GOOGLE_COUNTRY_HOSTS below).
 //   - Taboola pixel -> cdn.taboola.com for the library and trc.taboola.com for its
 //     event and cookie-sync endpoints (see TABOOLA_HOSTS below).
+//   - X (Twitter) Ads pixel -> static.ads-twitter.com for the library and
+//     analytics.twitter.com / t.co for its event endpoints (see X_PIXEL_HOSTS
+//     below).
 // See netlify.toml for why X-Frame-Options and COOP are deliberately left unset.
 //
 // One deliberate omission: 'unsafe-eval' is NOT granted. GTM needs it only for
@@ -119,6 +122,18 @@ const TABOOLA_HOSTS = [
   'https://cdn.taboola.com',
   'https://trc.taboola.com',
   'https://*.taboola.com',
+].join(' ')
+
+// X (Twitter) Ads pixel (see x-pixel.js). uwt.js is served from
+// static.ads-twitter.com and reports events to analytics.twitter.com — the
+// script's own domain wasn't renamed when Twitter became X, so ads-twitter.com
+// and twitter.com hosts are what's actually in play, not x.com. Same failure
+// mode as Google/Taboola above: a missing host doesn't error, the pixel just
+// reports nothing.
+const X_PIXEL_HOSTS = [
+  'https://static.ads-twitter.com',
+  'https://analytics.twitter.com',
+  'https://t.co',
 ].join(' ')
 
 const CONNECT_HOSTS = [
@@ -209,10 +224,10 @@ function policy(nonce: string): string {
       'https://ssl.gstatic.com https://www.gstatic.com https://trc.taboola.com',
     // Inline <script> blocks must carry the nonce. Kept in sync with script-src
     // below for browsers that don't implement this directive.
-    `script-src-elem 'nonce-${nonce}' 'self' ${GOOGLE_SCRIPT_HOSTS} ${TABOOLA_HOSTS}`,
+    `script-src-elem 'nonce-${nonce}' 'self' ${GOOGLE_SCRIPT_HOSTS} ${TABOOLA_HOSTS} ${X_PIXEL_HOSTS}`,
     // Fallback for script-src-elem, and the directive that governs inline event
     // handler attributes — hence 'unsafe-inline' stays here.
-    `script-src 'self' 'unsafe-inline' ${GOOGLE_SCRIPT_HOSTS} ${TABOOLA_HOSTS}`,
+    `script-src 'self' 'unsafe-inline' ${GOOGLE_SCRIPT_HOSTS} ${TABOOLA_HOSTS} ${X_PIXEL_HOSTS}`,
     // tagmanager.google.com / googletagmanager.com serve the stylesheet for GTM's
     // Preview & Debug overlay; without them the debugger renders unstyled and
     // unusable even though the container itself is working.
@@ -220,7 +235,7 @@ function policy(nonce: string): string {
       'https://www.googletagmanager.com https://tagmanager.google.com',
     // data: is required by the Preview & Debug overlay, which inlines its icon font.
     "font-src 'self' data: https://fonts.gstatic.com https://*.gstatic.com",
-    `connect-src 'self' ${CONNECT_HOSTS} ${TABOOLA_HOSTS}`,
+    `connect-src 'self' ${CONNECT_HOSTS} ${TABOOLA_HOSTS} ${X_PIXEL_HOSTS}`,
     "form-action 'self'",
     `frame-src ${FRAME_HOSTS} ${TABOOLA_HOSTS}`,
     'upgrade-insecure-requests',

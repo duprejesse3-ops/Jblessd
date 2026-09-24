@@ -47,9 +47,9 @@ f.parentNode.insertBefore(j,f);
     --edge-soft: #101823;
     --fg: #cdd9e5;
     --dim: #5c6b7a;
-    --phos: #e34f4f;      /* primary phosphor green */
-    --phos-dim: #8f3f3f;
-    --amber: #ffb454;
+    --phos: #FFB020;      /* primary accent (was mislabeled "phosphor green" while set to red) */
+    --phos-dim: #8f6a2f;
+    --amber: #FFB020;
     --red: #ff5f6b;
     --cyan: #58c7f3;
     --mono: ui-monospace, "SF Mono", "SFMono-Regular", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
@@ -146,7 +146,7 @@ f.parentNode.insertBefore(j,f);
   .amber { color: var(--amber); }
   .cyan { color: var(--cyan); }
   .tools { color: var(--phos-dim); font-size: 12.5px; margin: 2px 0 6px; letter-spacing: .03em; }
-  .banner { color: var(--phos); text-shadow: 0 0 12px rgba(227,79,79,.25); margin-bottom: 4px; }
+  .banner { color: var(--phos); text-shadow: 0 0 12px rgba(255,176,32,.25); margin-bottom: 4px; }
   a { color: var(--cyan); }
 
   /* ---- input prompt ---- */
@@ -171,20 +171,20 @@ f.parentNode.insertBefore(j,f);
 
   /* ---- login gate ---- */
   .gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 40px 18px; text-align: center; }
-  .gate h1 { font-size: 15px; letter-spacing: .3em; color: var(--phos); margin: 0; text-shadow: 0 0 16px rgba(227,79,79,.3); }
+  .gate h1 { font-size: 15px; letter-spacing: .3em; color: var(--phos); margin: 0; text-shadow: 0 0 16px rgba(255,176,32,.3); }
   .gate p { color: var(--dim); margin: 0; max-width: 420px; font-size: 13px; }
-  .lock { font-size: 30px; filter: drop-shadow(0 0 12px rgba(227,79,79,.4)); }
+  .lock { font-size: 30px; filter: drop-shadow(0 0 12px rgba(255,176,32,.4)); }
   .gate form { display: flex; gap: 8px; width: 100%; max-width: 380px; }
   .gate input {
     flex: 1; background: #060a0f; border: 1px solid var(--edge); color: var(--fg);
     font-family: var(--mono); font-size: 14px; padding: 11px 13px; border-radius: 6px; outline: none;
   }
-  .gate input:focus { border-color: var(--phos-dim); box-shadow: 0 0 0 2px rgba(227,79,79,.12); }
+  .gate input:focus { border-color: var(--phos-dim); box-shadow: 0 0 0 2px rgba(255,176,32,.12); }
   .gate button {
     background: var(--phos); color: #110404; border: none; font-family: var(--mono); font-weight: 600;
     padding: 0 18px; border-radius: 6px; cursor: pointer; letter-spacing: .06em; transition: .15s;
   }
-  .gate button:hover { box-shadow: 0 0 18px rgba(227,79,79,.4); }
+  .gate button:hover { box-shadow: 0 0 18px rgba(255,176,32,.4); }
   .gate button:disabled { opacity: .5; cursor: default; box-shadow: none; }
   .gate .msg { min-height: 18px; font-size: 12.5px; }
   .gate .msg.err { color: var(--red); }
@@ -246,6 +246,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var ADS = "/api/google-ads-builder";
   var CAMPAIGNS = "/api/marketing-agent";
   var ADIMG = "/api/ad-image";
+  var ARCHIVE = "/api/admin-download";
   var PRODUCTS = "/api/products";
 
   var el = function (id) { return document.getElementById(id); };
@@ -301,6 +302,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  creatives [sku]   generate Google Ads product images (PNG, all 3 sizes)",
     "  creatives all     one Google Ads image file per product (whole catalog)",
     "  code            list the apps in the browser code workspace, and open it",
+  "  download [sku]  get the real product .zip directly — no Stripe, no test cards",
+    "  edit <sku> <field> <value>   edit a live product (name, price, format, blurb, spec, category, niche)",
     "  clear           clear the screen",
     "  logout          end this session",
     "",
@@ -326,6 +329,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     "  creatives                    ad images for the whole store",
     "  creatives AI-AG-058          ad images for one product",
     "  creatives all                one ad image per product, catalog-wide",
+  "  download                     list every product with a real .zip to grab",
+  "  download AI-AG-058           download that product's .zip directly",
     ""
   ].join("\n");
 
@@ -447,6 +452,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (lower.indexOf("creatives ") === 0) { showCreatives(raw.slice(10).trim()); return; }
     if (lower.indexOf("adimages ") === 0) { showCreatives(raw.slice(9).trim()); return; }
     if (lower === "code" || lower === "workspace" || lower === "apps") { listWorkspace(); return; }
+    if (lower === "download" || lower === "downloads") { listDownloads(""); return; }
+    if (lower.indexOf("download ") === 0) { listDownloads(raw.slice(9).trim()); return; }
+    if (lower === "edit" || lower === "edit ") {
+      print("sys", "usage: edit <sku> <field> <new value>   fields: name, price, format, blurb, spec, category, niche\n" +
+        "example: edit AI-PP-001 price 24");
+      return;
+    }
+    if (lower.indexOf("edit ") === 0) { editProduct(raw.slice(5).trim()); return; }
     ask(raw);
   }
 
@@ -936,7 +949,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var ctx = canvas.getContext("2d");
     // Paint the brand backdrop first: PNG defaults to transparent, and Google
     // Ads composites unknown transparency onto white.
-    ctx.fillStyle = "#080000";
+    ctx.fillStyle = "#0A0E16";
     ctx.fillRect(0, 0, s.w, s.h);
     ctx.drawImage(img, 0, 0, s.w, s.h);
     return await new Promise(function (resolve, reject) {
@@ -1044,7 +1057,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         "<div style='display:inline-block;vertical-align:top;margin:0 18px 18px 0;text-align:center;'>" +
           "<a href='#' " + attrs + " title='Download " + s.w + "×" + s.h + " PNG'>" +
             "<img src='" + svg + "' width='" + s.prev + "' height='" + ph + "' alt='" + escapeHtml(label) + " " + s.key + " ad creative' " +
-              "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
+              "style='display:block;border:1px solid var(--line);border-radius:4px;background:#0A0E16;'/>" +
           "</a>" +
           "<div class='sys' style='margin-top:6px;font-size:12px;'>" + s.label + "</div>" +
           "<div class='sys' style='font-size:11px;'>" + s.w + "×" + s.h + " px</div>" +
@@ -1059,7 +1072,121 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       "run <b>creatives &lt;sku&gt;</b> for a specific product.");
   }
 
-  // ---------- bulk ad creatives: one image file per product ----------
+  // Every archive download link carries the SKU as a data attribute, same
+  // delegated-click pattern as the creatives links above — one handler
+  // covers `download` and `download <sku>` output alike.
+  document.addEventListener("click", function (e) {
+    var archiveLink = e.target.closest("[data-archive-sku]");
+    if (archiveLink) {
+      e.preventDefault();
+      archiveLink.style.opacity = "0.5";
+      downloadArchive(archiveLink.dataset.archiveSku)
+        .catch(function (err) {
+          print("reply err", archiveLink.dataset.archiveSku + " — " + err.message);
+        })
+        .finally(function () { archiveLink.style.opacity = ""; });
+      return;
+    }
+  });
+
+  async function downloadArchive(sku) {
+    var r = await fetch(ARCHIVE + "?sku=" + encodeURIComponent(sku), { headers: { accept: "application/json, application/zip" } });
+    if (!r.ok) {
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      throw new Error((j && j.error) || ("error " + r.status));
+    }
+    var blob = await r.blob();
+    var cd = r.headers.get("content-disposition") || "";
+    var m = /filename="([^"]+)"/.exec(cd);
+    saveBlob(blob, m ? m[1] : (sku + ".zip"));
+  }
+
+  // `edit <sku> <field> <value>` — owner-only product edits (price, blurb,
+  // spec, format, name, category, niche). Calls the PATCH handler added to
+  // /api/products, which is also what stamps updated_at — the field the
+  // storefront's Product.dateModified and the sitemap's <lastmod> read from.
+  // Without ever calling this, those freshness signals never move.
+  var EDITABLE_FIELDS = ["name", "price", "format", "blurb", "spec", "category", "niche"];
+  async function editProduct(arg) {
+    if (busy) return;
+    var parts = (arg || "").trim().split(/\s+/);
+    var sku = (parts.shift() || "").toUpperCase();
+    var field = (parts.shift() || "").toLowerCase();
+    var value = parts.join(" ");
+    if (!sku || !field || !value) {
+      print("sys", "usage: edit <sku> <field> <new value>   fields: " + EDITABLE_FIELDS.join(", "));
+      return;
+    }
+    if (EDITABLE_FIELDS.indexOf(field) === -1) {
+      print("reply err", "unknown field \"" + field + "\" — fields: " + EDITABLE_FIELDS.join(", "));
+      return;
+    }
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "saving " + sku);
+    try {
+      var body = { sku: sku };
+      body[field] = field === "price" ? Number(value) : value;
+      var r = await fetch(PRODUCTS, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", (j && j.error) || ("error " + r.status)); return; }
+      var p = j.product || {};
+      print("reply", "saved — " + sku + " " + field + " is now " + (p[field] !== undefined ? p[field] : value) +
+        (p.updatedAt ? " (updated_at: " + p.updatedAt + ")" : ""));
+    } catch (err) {
+      thinking.remove();
+      print("reply err", "could not save the edit — " + err.message);
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // `download` (no Stripe, no test cards) — the owner already has a session,
+  // so this is buildProductArchive() straight from the catalog. A product
+  // with no .zip archive (docs-only delivery, e.g. Meridian Host) 404s
+  // honestly when clicked rather than pretending to have one.
+  async function listDownloads(arg) {
+    if (busy) return;
+    var sku = (arg || "").trim().toUpperCase();
+    if (sku) {
+      printHTML("reply", "<a href='#' data-archive-sku='" + escapeHtml(sku) + "' class='cyan'>download " +
+        escapeHtml(sku) + ".zip ↓</a>");
+      return;
+    }
+    busy = true; input.disabled = true;
+    var thinking = print("thinking", "loading catalog");
+    try {
+      var r = await fetch(PRODUCTS, { headers: { accept: "application/json" } });
+      var j = {}; try { j = await r.json(); } catch (_) {}
+      thinking.remove();
+      if (!r.ok) { print("reply err", (j && j.error) || ("error " + r.status)); return; }
+      var products = (j && j.products) || [];
+      if (!products.length) {
+        printHTML("sys", "no products in the catalog yet.");
+        return;
+      }
+      print("sys", "every catalog product — click one to pull its real .zip directly, no Stripe involved. " +
+        "docs-only products (no zip) will say so when clicked.");
+      var rows = products.map(function (p) {
+        return "<div style='margin:2px 0;'>" +
+          "<a href='#' data-archive-sku='" + escapeHtml(p.sku) + "' class='cyan'>" + escapeHtml(p.sku) + "</a>" +
+          " · " + escapeHtml(p.name || "") + " · $" + escapeHtml(String(p.price || "")) +
+          "</div>";
+      }).join("");
+      printHTML("reply", "<div style='margin-top:6px'>" + rows + "</div>");
+    } catch (err) {
+      thinking.remove();
+      print("reply err", "could not load the catalog — " + err.message);
+    } finally {
+      busy = false; input.disabled = false; input.focus();
+    }
+  }
+
+
   // Renders a Google Ads image for EVERY product in the live catalog at once,
   // so the owner can grab a ready-to-upload PNG for each listing instead of
   // running `creatives <sku>` sixty-odd times. Each card previews the crisp SVG
@@ -1103,7 +1230,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               "title='Download " + landscape.w + "×" + landscape.h + " PNG'>" +
               "<img src='" + svg + "' width='" + prevW + "' height='" + ph + "' loading='lazy' " +
                 "alt='" + escapeHtml(name) + " Google Ads creative' " +
-                "style='display:block;border:1px solid var(--line);border-radius:4px;background:#080000;'/>" +
+                "style='display:block;border:1px solid var(--line);border-radius:4px;background:#0A0E16;'/>" +
             "</a>" +
             "<div class='sys' style='margin-top:6px;font-size:12px;'>" + escapeHtml(name) + "</div>" +
             "<div class='sys' style='font-size:11px;'>" + escapeHtml(sku) + "</div>" +

@@ -1,64 +1,195 @@
 /* MULTINICHE AI — install + offline wiring.
  *
- * Shared by the storefront (index.html) and the agent studio (agent.html) so both
- * are installable app windows in their own right. Two jobs:
+ * Shared by the storefront, agent studio, and SWARM operator.
  *
- *   1. Register the service worker. That is what turns the live site into
- *      something you open rather than something you visit: sw.js precaches both
- *      documents, so a launched window paints from cache and keeps working when
- *      the network is slow or gone.
- *   2. Reveal an "Install app" button — but only once the browser has confirmed
- *      the app is installable, so the control is never dead. A page opts in by
- *      including an element with id="install-app" and the `hidden` attribute.
- *
- * Loaded from a file rather than inlined on each page so the two cannot drift, and
- * because it is identical on every route and therefore worth caching once.
- *
- * Browsers with no install API (Safari, Firefox) simply never fire the event and
- * never show the button — installing there is the browser's own "Add to Home
- * Screen" / "Add to Dock" menu item, which needs nothing from the page. The
- * apple-mobile-web-app-* meta tags on both documents are what make that path
- * produce a standalone window instead of a bookmark.
+ *   1. Register the service worker immediately (do not wait for window.load).
+ *   2. Always show #install-app. Hidden-until-beforeinstallprompt meant the
+ *      button never appeared in X, Grok, or a first Chrome visit.
+ *   3. In Chrome/Edge: the tap calls the native install sheet in this window.
+ *   4. In an in-app browser (X, Grok, Instagram): the tap hands the same URL
+ *      to Chrome via an Android intent so install still happens without a
+ *      scavenger hunt through menus.
  */
 (function () {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/sw.js').catch(function (err) {
-        console.warn('Service worker registration failed:', err);
-      });
+  var LIVE = 'https://multinicheai.com/swarm?install=1';
+  var FALLBACK_MS = 4000;
+  var deferred = null;
+  var btn = document.getElementById('install-app');
+  var statusEl = document.getElementById('install-status');
+  var steps = document.getElementById('android-steps');
+  var installedNote = document.getElementById('installed-note');
+
+  function standalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: window-controls-overlay)').matches
+      || window.navigator.standalone === true;
+  }
+
+  function ua() { return navigator.userAgent || ''; }
+  function isAndroid() { return /Android/i.test(ua()); }
+  function isIOS() { return /iPad|iPhone|iPod/.test(ua()) && !window.MSStream; }
+  function isEmbedded() {
+    try { return window.self !== window.top; } catch (e) { return true; }
+  }
+  function isPreviewHost() {
+    return /grok-sandbox|grok\.com|localhost|127\.0\.0\.1/i.test(location.hostname);
+  }
+  function isIAB() {
+    var s = ua();
+    if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|Twitter|TikTok|Snapchat|LinkedInApp|Grok\/|; wv\)/i.test(s)) return true;
+    if (/Android/i.test(s) && /\bwv\b/.test(s)) return true;
+    if (isIOS() && /AppleWebKit/i.test(s) && !/Safari/i.test(s)) return true;
+    return false;
+  }
+
+  function targetUrl() {
+    if (isPreviewHost()) return LIVE;
+    var u = new URL(location.href);
+    u.searchParams.set('install', '1');
+    return u.toString();
+  }
+
+  function chromeIntent(url) {
+    var u = new URL(url);
+    var path = u.host + u.pathname + u.search + u.hash;
+    return 'intent://' + path + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(u.toString()) + ';end';
+  }
+
+  function setStatus(msg) {
+    if (statusEl) {
+      statusEl.hidden = !msg;
+      statusEl.textContent = msg || '';
+      return;
+    }
+    if (msg && typeof window.toast === 'function') window.toast(msg);
+  }
+
+  function registerSW() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(function (err) {
+      console.warn('Service worker registration failed:', err);
     });
   }
 
-  var btn = document.getElementById('install-app');
-  if (!btn) return;
+  function markInstalled() {
+    deferred = null;
+    if (btn) {
+      btn.hidden = true;
+      btn.disabled = false;
+    }
+    if (steps) steps.hidden = true;
+    if (installedNote) installedNote.hidden = false;
+    setStatus('');
+  }
 
-  var deferred = null;
+  function openChrome() {
+    var url = targetUrl();
+    setStatus('Opening Chrome to install…');
+    if (isAndroid()) {
+      window.location.href = chromeIntent(url);
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
+  registerSW();
+
+  if (standalone()) {
+    markInstalled();
+    return;
+  }
+
+  if (btn) {
+    btn.hidden = false;
+    btn.disabled = false;
+  }
+  if (steps) steps.hidden = true;
 
   window.addEventListener('beforeinstallprompt', function (e) {
-    // Suppress Chrome's mini-infobar; the button is the entry point instead, so
-    // the invitation to install sits in the page's own chrome.
     e.preventDefault();
     deferred = e;
-    btn.hidden = false;
+    if (btn) {
+      btn.hidden = false;
+      btn.disabled = false;
+    }
+    if (new URLSearchParams(location.search).has('install')) {
+      setStatus('Tap Download — Chrome will install in this window.');
+    }
   });
+
+  window.addEventListener('appinstalled', markInstalled);
+
+  if (!btn) return;
 
   btn.addEventListener('click', function () {
-    if (!deferred) return;
+    if (standalone()) { markInstalled(); return; }
+
+    if (!deferred) {
+      if (isIOS()) {
+        setStatus('On iPhone: Share → Add to Home Screen.');
+        if (steps) steps.hidden = false;
+        return;
+      }
+      if (isAndroid() && (isIAB() || isEmbedded() || isPreviewHost())) {
+        openChrome();
+        return;
+      }
+      if (isEmbedded() || isPreviewHost()) {
+        openChrome();
+        return;
+      }
+      setStatus('Tap Download again. Chrome is preparing the install sheet.');
+      if (steps) steps.hidden = false;
+      return;
+    }
+
     btn.disabled = true;
-    deferred.prompt();
-    // A dismissal is a normal outcome, not an error: either way the saved event
-    // is spent and cannot be prompted with again, so the button goes away.
+    var settled = false;
+    var fallbackTimer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      btn.disabled = false;
+      if (isAndroid()) {
+        openChrome();
+        return;
+      }
+      setStatus('Open Chrome menu (⋮) → Install app.');
+      if (steps) steps.hidden = false;
+    }, FALLBACK_MS);
+
+    try {
+      var promptResult = deferred.prompt();
+      if (promptResult && typeof promptResult.catch === 'function') {
+        promptResult.catch(function () {});
+      }
+    } catch (err) {
+      console.warn('Install prompt failed:', err);
+      clearTimeout(fallbackTimer);
+      settled = true;
+      btn.disabled = false;
+      if (isAndroid()) openChrome();
+      else {
+        setStatus('Open Chrome menu (⋮) → Install app.');
+        if (steps) steps.hidden = false;
+      }
+      return;
+    }
+
     deferred.userChoice
       .catch(function () {})
-      .then(function () {
+      .then(function (choice) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(fallbackTimer);
+        var outcome = choice && choice.outcome;
         deferred = null;
-        btn.hidden = true;
         btn.disabled = false;
+        if (outcome === 'accepted') {
+          markInstalled();
+          return;
+        }
+        btn.hidden = false;
+        setStatus('Install cancelled. Tap Download to try again.');
       });
-  });
-
-  window.addEventListener('appinstalled', function () {
-    deferred = null;
-    btn.hidden = true;
   });
 })();

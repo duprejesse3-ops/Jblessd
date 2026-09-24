@@ -14,7 +14,7 @@
 
 import type { Context, Config } from '@netlify/edge-functions'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 // Stable node id for the store, defined in index.html's static graph. Emitting
 // it as the offer's seller ties every product back to the one brand entity
 // instead of leaving the offers seller-less.
@@ -46,6 +46,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   automations: 'Automation Blueprints',
   templates: 'Doc Templates',
   agents: 'Agent Configs',
+  connectors: 'Connectors',
+  host: 'Host Packs',
 }
 
 interface ApiProduct {
@@ -59,6 +61,10 @@ interface ApiProduct {
   nicheLabel?: string
   format?: string
   spec?: string
+  // ISO date (YYYY-MM-DD), already returned by /api/products — see
+  // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
+  // crawlers get a real freshness signal instead of none at all.
+  updatedAt?: string
 }
 
 // JSON embedded in HTML must not contain a literal "</script>" or a raw "<".
@@ -115,6 +121,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
       brand: { '@type': 'Brand', name: 'MULTINICHE AI' },
       image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
       url,
+      ...(p.updatedAt ? { dateModified: p.updatedAt } : {}),
       offers: {
         '@type': 'Offer',
         price: Number(p.price).toFixed(2),
@@ -138,6 +145,11 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
     const properties: Array<Record<string, string>> = []
     if (p.format) properties.push({ '@type': 'PropertyValue', name: 'Format', value: p.format })
     if (p.spec && p.spec !== '—') properties.push({ '@type': 'PropertyValue', name: 'Spec', value: p.spec })
+    properties.push({
+      '@type': 'PropertyValue',
+      name: 'Live proof',
+      value: 'A real, unedited run of this tool on a sample or visitor-submitted task, streamed live on its product page before purchase.',
+    })
     if (properties.length) item.additionalProperty = properties
     const agg = aggregates[p.sku]
     if (agg && agg.count > 0) {
@@ -200,6 +212,7 @@ export default async (req: Request, context: Context) => {
   if (!contentType.includes('text/html')) return res
 
   let html = await res.text()
+  let liveCatalogApplied = false
 
   try {
     const apiUrl = internalUrl('/api/products', req)
@@ -222,6 +235,7 @@ export default async (req: Request, context: Context) => {
           html.slice(0, startIdx) +
           buildItemList(products, aggregates) +
           html.slice(endIdx + END.length)
+        liveCatalogApplied = true
       }
     }
   } catch (err) {
@@ -231,9 +245,29 @@ export default async (req: Request, context: Context) => {
 
   const headers = new Headers(res.headers)
   headers.delete('content-length')
+  // Same fix as pages.ts's page(): without Netlify-CDN-Cache-Control this
+  // function's response is never shared-cached, so every visitor and every
+  // crawler hit re-ran this render plus its /api/products and /api/reviews
+  // subrequests (and the Postgres connections behind them) from scratch. Only
+  // cache when the live catalog was actually applied — the static-fallback
+  // path means the DB was unreachable, and caching that in front of the real
+  // homepage would pin a stale/degraded page for the whole window.
+  headers.set(
+    'Netlify-CDN-Cache-Control',
+    liveCatalogApplied ? 'public, s-maxage=300, stale-while-revalidate=86400, durable' : 'no-store',
+  )
   return new Response(html, { status: res.status, statusText: res.statusText, headers })
 }
 
 export const config: Config = {
   path: ['/', '/index.html'],
+  // Opt this function's responses into the CDN cache — see the comment above
+  // and pages.ts's identical config, which this mirrors. Without `cache:
+  // 'manual'` the Netlify-CDN-Cache-Control header above is inert and this
+  // function re-runs, live subrequests and all, on every single request.
+  //
+  // Ordering is unaffected: non-cached edge functions run ahead of cached
+  // ones, so csp.ts (declared in netlify.toml on /*) still wraps this one and
+  // still nonces every response on its way to the visitor.
+  cache: 'manual',
 }

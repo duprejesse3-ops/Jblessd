@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NicheAds — Tenant Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0E16; --panel:#121826; --panel-2:#0D111C; --line:#232B3D; --line-soft:#161C29;
+    --paper:#EEF1F7; --muted:#9AA4BC; --muted-2:#5C6580; --brass:#FFB020; --brass-soft:#FFC966;
+    --placeholder:#6B7590; --radius:6px; --good:#4ADE80; --bad:#F87171;
+    --serif:'Fraunces', Georgia, serif; --sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--sans);line-height:1.5;padding-bottom:60px}
+  h1,h2,h3{font-family:var(--serif);font-weight:500;margin:0 0 6px}
+  h1{font-size:26px} h2{font-size:19px;margin-top:0} h3{font-size:15px;color:var(--muted)}
+  a{color:var(--brass-soft)}
+  header{padding:28px 20px 18px;border-bottom:1px solid var(--line)}
+  header p{color:var(--muted);margin:0;font-size:14px}
+  main{max-width:760px;margin:0 auto;padding:20px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:20px}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px}
+  input,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--paper);border-radius:var(--radius);padding:9px 10px;font-family:var(--sans);font-size:14px}
+  input:focus,textarea:focus{outline:1px solid var(--brass)}
+  button{background:var(--brass);color:var(--ink);border:none;border-radius:var(--radius);padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;margin-top:12px}
+  button.secondary{background:transparent;border:1px solid var(--line);color:var(--paper);font-weight:500}
+  button.small{padding:6px 10px;font-size:12.5px;margin-top:0;margin-left:6px}
+  button:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted);font-size:13px}
+  .mono{font-family:var(--mono);font-size:13px;word-break:break-all}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 16px;border-radius:var(--radius);font-size:13.5px;display:none;max-width:90%}
+  .card{border:1px solid var(--line-soft);border-radius:var(--radius);padding:12px 14px;margin-top:10px;background:var(--panel-2)}
+  .card .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .badge{font-size:11px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .badge.active{color:var(--good);border-color:#1f4a34}
+  .badge.paused{color:var(--muted)}
+  .badge.exhausted{color:var(--bad);border-color:#4a2222}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--muted)}
+  .stats b{color:var(--paper)}
+  .hidden{display:none}
+  .key-box{background:var(--panel-2);border:1px solid var(--brass);border-radius:var(--radius);padding:12px;margin-top:10px}
+  .snippet{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin-top:8px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NicheAds</h1>
+  <p>A first-party, Claude-priced CPC ad network for independent stores. No password — your access key is your account.</p>
+</header>
+
+<main>
+
+  <!-- AUTH -->
+  <section id="auth-panel" class="panel">
+    <h2>Sign in</h2>
+    <label for="key-input">Access key (mnads_…)</label>
+    <input id="key-input" placeholder="mnads_..." autocomplete="off">
+    <div class="row">
+      <button id="load-btn">Load my account</button>
+      <button id="show-signup-btn" class="secondary">I don't have a key yet</button>
+    </div>
+
+    <div id="signup-form" class="hidden" style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+      <h3>Create a tenant account</h3>
+      <label for="su-name">Store / business name</label>
+      <input id="su-name" placeholder="e.g. Your Store Name">
+      <label for="su-email">Email</label>
+      <input id="su-email" type="email" placeholder="you@yourstore.com">
+      <label for="su-site">Site URL</label>
+      <input id="su-site" placeholder="https://yourstore.com">
+      <button id="signup-btn">Create account</button>
+      <p class="muted" style="margin-top:8px">Your key is shown once. Save it — there's no password recovery, only a new key.</p>
+    </div>
+
+    <div id="key-result" class="hidden key-box">
+      <p style="margin:0 0 6px"><strong>Your access key</strong> — save this now:</p>
+      <p id="new-key" class="mono"></p>
+      <button id="copy-key-btn" class="secondary small">Copy</button>
+    </div>
+  </section>
+
+  <!-- DASHBOARD (hidden until a key loads) -->
+  <div id="dashboard" class="hidden">
+
+    <section class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="account-name" style="margin:0">Account</h2>
+        <button id="logout-btn" class="secondary small">Log out</button>
+      </div>
+      <p id="account-line" class="muted"></p>
+    </section>
+
+    <!-- CAMPAIGNS -->
+    <section class="panel">
+      <h2>Campaigns</h2>
+      <p class="muted">What runs INTO other tenants' slots. Claude writes the copy and proposes an opening bid.</p>
+
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;color:var(--brass-soft);font-size:14px">+ New campaign</summary>
+        <div style="margin-top:10px">
+          <label for="c-product">Product / offer name</label>
+          <input id="c-product" placeholder="What are you advertising?">
+          <label for="c-brief">What it does (brief)</label>
+          <textarea id="c-brief" rows="2" placeholder="Grounds the ad copy — Claude won't invent claims beyond this"></textarea>
+          <label for="c-goal">Campaign goal</label>
+          <input id="c-goal" placeholder="e.g. drive signups, general awareness">
+          <label for="c-url">Click-through URL</label>
+          <input id="c-url" placeholder="https://yourstore.com/product/...">
+          <label for="c-niche">Niche (optional — for targeting)</label>
+          <input id="c-niche" placeholder="e.g. founders, developers, students">
+          <label for="c-budget">Planned budget in USD (optional — informs Claude's suggested bid, doesn't charge anything yet)</label>
+          <input id="c-budget" type="number" min="0" step="1" placeholder="e.g. 20">
+          <button id="create-campaign-btn">Generate & create</button>
+          <p id="create-campaign-note" class="muted hidden" style="margin-top:8px"></p>
+        </div>
+      </details>
+
+      <div id="campaigns-list"></div>
+      <p id="campaigns-empty" class="muted hidden">No campaigns yet.</p>
+    </section>
+
+    <!-- SLOTS -->
+    <section class="panel">
+      <h2>Ad slots</h2>
+      <p class="muted">Space you offer on YOUR site for other tenants' campaigns to appear in.</p>
+
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;color:var(--brass-soft);font-size:14px">+ New slot</summary>
+        <div style="margin-top:10px">
+          <label for="s-url">Page URL</label>
+          <input id="s-url" placeholder="https://yourstore.com/some-page">
+          <label for="s-label">Label</label>
+          <input id="s-label" placeholder="e.g. Sidebar, Footer banner">
+          <label for="s-niche">Niche (optional — only matched ads targeting this niche, or untargeted ones, will show)</label>
+          <input id="s-niche" placeholder="e.g. developers">
+          <button id="create-slot-btn">Create slot</button>
+        </div>
+      </details>
+
+      <div id="slots-list"></div>
+      <p id="slots-empty" class="muted hidden">No slots yet.</p>
+    </section>
+
+  </div>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  var KEY_STORAGE = 'nicheads_key';
+  var $ = function(id){ return document.getElementById(id); };
+  var toastTimer;
+  function toast(msg){
+    var el = $('toast'); el.textContent = msg; el.style.display = 'block';
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.style.display = 'none'; }, 3200);
+  }
+  function money(cents){ return '$' + ((cents||0)/100).toFixed(2); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function authHeaders(extra){
+    return Object.assign({ 'x-ads-key': getKey() }, extra || {});
+  }
+  function getKey(){ return (localStorage.getItem(KEY_STORAGE) || '').trim(); }
+  function setKey(k){ localStorage.setItem(KEY_STORAGE, k); }
+  function clearKey(){ localStorage.removeItem(KEY_STORAGE); }
+
+  // ---------- Sign up ----------
+  $('show-signup-btn').addEventListener('click', function(){
+    $('signup-form').classList.toggle('hidden');
+  });
+
+  $('signup-btn').addEventListener('click', async function(){
+    var name = $('su-name').value.trim();
+    var email = $('su-email').value.trim();
+    var siteUrl = $('su-site').value.trim();
+    if (!name || !email || !siteUrl) { toast('Fill in name, email, and site URL.'); return; }
+    this.disabled = true;
+    try{
+      var res = await fetch('/api/ads/network/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email, siteUrl: siteUrl })
+      });
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || 'Could not create account.'); return; }
+      $('new-key').textContent = data.key;
+      $('key-result').classList.remove('hidden');
+      $('signup-form').classList.add('hidden');
+      $('key-input').value = data.key;
+      setKey(data.key);
+    } catch(e){ toast('Network error — please try again.'); }
+    finally { this.disabled = false; }
+  });
+
+  $('copy-key-btn').addEventListener('click', function(){
+    navigator.clipboard.writeText($('new-key').textContent).then(function(){ toast('Key copied.'); });
+  });
+
+  // ---------- Load / log in ----------
+  $('load-btn').addEventListener('click', function(){
+    var k = $('key-input').value.trim();
+    if (!k) { toast('Paste your access key first.'); return; }
+    setKey(k);
+    loadAccount();
+  });
+
+  $('logout-btn').addEventListener('click', function(){
+    clearKey();
+    $('key-input').value = '';
+    $('dashboard').classList.add('hidden');
+    $('auth-panel').classList.remove('hidden');
+  });
+
+  async function loadAccount(){
+    try{
+      var res = await fetch('/api/ads/network/campaigns', { headers: authHeaders() });
+      if (res.status === 401) { toast('That key was not accepted.'); return; }
+      $('auth-panel').classList.add('hidden');
+      $('dashboard').classList.remove('hidden');
+      $('account-line').textContent = 'Signed in with your NicheAds access key.';
+      renderCampaigns(await res.json());
+      loadSlots();
+    } catch(e){ toast('Network error — please try again.'); }
+  }
+
+  // ---------- Campaigns ----------
+  function statusBadge(status){
+    return '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>';
+  }
+
+  function renderCampaigns(data){
+    var list = $('campaigns-list');
+    var campaigns = (data && data.campaigns) || [];
+    $('campaigns-empty').classList.toggle('hidden', campaigns.length > 0);
+    list.innerHTML = campaigns.map(function(c){
+      var ctr = c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(1) + '%' : '—';
+      var isPaid = c.budget_cents > 0;
+      return '<div class="card" data-id="' + c.id + '">' +
+        '<div class="top"><strong>' + esc(c.headline) + '</strong>' + statusBadge(c.status) + '</div>' +
+        '<p class="muted" style="margin:4px 0">' + esc(c.body) + '</p>' +
+        '<div class="stats">' +
+          '<span><b>' + c.impressions + '</b> impressions</span>' +
+          '<span><b>' + c.clicks + '</b> clicks (' + ctr + ')</span>' +
+          '<span><b>' + money(c.price_cpc_cents) + '</b> / click</span>' +
+          '<span>' + (isPaid ? '<b>' + money(c.spent_cents) + '</b> / ' + money(c.budget_cents) + ' spent' : '<b>reciprocal</b> (unfunded)') + '</span>' +
+        '</div>' +
+        '<div class="row" style="margin-top:10px">' +
+          '<button class="secondary small toggle-status-btn" data-id="' + c.id + '" data-next="' + (c.status === 'paused' ? 'active' : 'paused') + '">' +
+            (c.status === 'paused' ? 'Resume' : 'Pause') + '</button>' +
+          '<button class="secondary small fund-btn" data-id="' + c.id + '">Fund budget</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    list.querySelectorAll('.toggle-status-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ toggleStatus(btn.dataset.id, btn.dataset.next); });
+    });
+    list.querySelectorAll('.fund-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ fundCampaign(btn.dataset.id); });
+    });
+  }
+
+  async function refreshCampaigns(){
+    var res = await fetch('/api/ads/network/campaigns', { headers: authHeaders() });
+    renderCampaigns(await res.json());
+  }
+
+  $('create-campaign-btn').addEventListener('click', async function(){
+    var productName = $('c-product').value.trim();
+    var clickUrl = $('c-url').value.trim();
+    if (!productName || !clickUrl) { toast('Product name and click-through URL are required.'); return; }
+    var budgetUsd = Number($('c-budget').value || 0);
+    this.disabled = true;
+    try{
+      var res = await fetch('/api/ads/network/campaigns', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          productName: productName,
+          brief: $('c-brief').value.trim(),
+          goal: $('c-goal').value.trim(),
+          clickUrl: clickUrl,
+          niche: $('c-niche').value.trim(),
+          targetBudgetCents: Math.round(budgetUsd * 100)
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || 'Could not create campaign.'); return; }
+      toast('Campaign created — Claude wrote the copy.' + (data.source === 'fallback' ? ' (used fallback copy)' : ''));
+      if (data.note) {
+        var noteEl = $('create-campaign-note');
+        noteEl.textContent = data.note;
+        noteEl.classList.remove('hidden');
+      }
+      $('c-product').value=''; $('c-brief').value=''; $('c-goal').value=''; $('c-url').value=''; $('c-niche').value=''; $('c-budget').value='';
+      refreshCampaigns();
+    } catch(e){ toast('Network error — please try again.'); }
+    finally { this.disabled = false; }
+  });
+
+  async function toggleStatus(id, next){
+    try{
+      var res = await fetch('/api/ads/network/campaigns', {
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id: Number(id), status: next })
+      });
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || 'Could not update campaign.'); return; }
+      refreshCampaigns();
+    } catch(e){ toast('Network error — please try again.'); }
+  }
+
+  async function fundCampaign(id){
+    var usd = prompt('Fund this campaign with how much (USD, minimum $5)?', '10');
+    if (!usd) return;
+    var amountCents = Math.round(Number(usd) * 100);
+    if (!amountCents || amountCents < 500) { toast('Minimum funding is $5.'); return; }
+    try{
+      var res = await fetch('/api/ads/network/fund', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ campaignId: Number(id), amountCents: amountCents, returnUrl: window.location.href })
+      });
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || 'Could not start checkout.'); return; }
+      window.location.href = data.url;
+    } catch(e){ toast('Network error — please try again.'); }
+  }
+
+  // ---------- Slots ----------
+  function renderSlots(data){
+    var list = $('slots-list');
+    var slots = (data && data.slots) || [];
+    $('slots-empty').classList.toggle('hidden', slots.length > 0);
+    list.innerHTML = slots.map(function(s){
+      var snippet = '<script src="https://multinicheai.com/ads-network-embed.js" data-slot="' + s.slot_key + '" data-container-id="mnads-' + s.slot_key + '"><' + '/script>\n<div id="mnads-' + s.slot_key + '"></div>';
+      return '<div class="card">' +
+        '<div class="top"><strong>' + esc(s.label || s.site_url) + '</strong>' + statusBadge(s.status) + '</div>' +
+        '<p class="muted" style="margin:4px 0">' + esc(s.site_url) + (s.niche ? ' · ' + esc(s.niche) : '') + '</p>' +
+        '<div class="snippet">' + esc(snippet) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function loadSlots(){
+    try{
+      var res = await fetch('/api/ads/network/slots', { headers: authHeaders() });
+      renderSlots(await res.json());
+    } catch(e){ /* non-fatal */ }
+  }
+
+  $('create-slot-btn').addEventListener('click', async function(){
+    var siteUrl = $('s-url').value.trim();
+    if (!siteUrl) { toast('Page URL is required.'); return; }
+    this.disabled = true;
+    try{
+      var res = await fetch('/api/ads/network/slots', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ siteUrl: siteUrl, label: $('s-label').value.trim(), niche: $('s-niche').value.trim() })
+      });
+      var data = await res.json();
+      if (!res.ok) { toast(data.error || 'Could not create slot.'); return; }
+      toast('Slot created — embed snippet below.');
+      $('s-url').value=''; $('s-label').value=''; $('s-niche').value='';
+      loadSlots();
+    } catch(e){ toast('Network error — please try again.'); }
+    finally { this.disabled = false; }
+  });
+
+  // ---------- Boot ----------
+  var savedKey = getKey();
+  if (savedKey) { $('key-input').value = savedKey; loadAccount(); }
+})();
+</script>
+
+</body>
+</html>

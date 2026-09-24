@@ -22,9 +22,9 @@
 
 import type { Context, Config } from '@netlify/edge-functions'
 
-const SITE = 'https://jblessd.com'
+const SITE = 'https://multinicheai.com'
 const STORE = 'MULTINICHE AI'
-const FETCH_TIMEOUT_MS = 3500
+const FETCH_TIMEOUT_MS = 1500
 const OFFER_VALID_FROM = '2025-01-01'
 
 const SHIPPING_DETAILS = {
@@ -50,6 +50,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   automations: 'Automation Blueprints',
   templates: 'Doc Templates',
   agents: 'Agent Configs',
+  connectors: 'Connectors',
+  host: 'Host Packs',
 }
 const NICHE_LABEL: Record<string, string> = {
   founders: 'Founders & Ops',
@@ -110,7 +112,188 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
       a: 'A Prompt Pack is a set of ready-to-paste prompts for a specific job. An Agent Config goes a step further: a configured agent that runs a workflow rather than answering one prompt at a time.',
     },
   ],
+  founders: [
+    {
+      q: 'Do I need to set anything up, or hire someone to configure this?',
+      a: 'No. Prompt Packs and Doc Templates are ready to paste or duplicate as-is. Automation Blueprints and Agent Configs include setup steps in plain language — most take under 15 minutes to connect.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. Describe your own situation on the free tool page and watch a tool run on it live, no signup required.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — you own it outright, with no recurring fee to keep using what you bought.',
+    },
+    {
+      q: 'Which tool should a small team start with?',
+      a: 'Most founders start with whichever recurring task costs them the most weekly time — usually meeting notes, OKR tracking, or inbox triage. The AI concierge on the homepage will name a specific starting tool if you describe your week.',
+    },
+  ],
+  sales: [
+    {
+      q: 'Will these work with the CRM I already use?',
+      a: "Most automations are built on Make.com or Zapier, which connect to the major CRMs and inbox tools directly. Each product page's spec line lists exactly what it's compatible with before you buy.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. You can also describe your own situation on the free tool page and watch a tool run on it live.',
+    },
+    {
+      q: "What's the difference between an Automation Blueprint and a Doc Template here?",
+      a: 'A Blueprint runs on its own once connected — it triages, sorts, or follows up automatically. A Template is something you fill in yourself, like an onboarding kit or intake form, with no automation behind it.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright — no recurring fee.',
+    },
+  ],
+  marketers: [
+    {
+      q: 'Do I need design skills to use these?',
+      a: 'No — Prompt Packs and Automation Blueprints produce copy and content drafts, not finished visuals. You review and ship the output yourself, in whatever tools you already use.',
+    },
+    {
+      q: 'Will the output sound like generic AI copy?',
+      a: "That's what the live proof is for — every listing runs on a real or your own brief before you buy, so you can judge the actual voice and quality rather than trust a description.",
+    },
+    {
+      q: 'Can these match my existing brand voice?',
+      a: "Prompt Packs are editable — most include a tone-setting section you fill in once. If a tool doesn't fit your voice after testing it, don't buy it; that's the point of the live proof.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — you own it outright.',
+    },
+  ],
+  writers: [
+    {
+      q: 'Will this make my writing sound like generic AI output?',
+      a: "These are prompts and templates that lock in your own tone and structure — not a tool that writes for you from scratch. Run the live proof on your own sample first if you're unsure it'll hold your voice.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Use the free tool page to try one on your own draft, no signup required.',
+    },
+    {
+      q: "What's included in a Prompt Pack?",
+      a: 'A set of ready-to-paste prompts for a specific kind of writing task, usually with a few worked examples showing the expected input and output.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you keep — no recurring fee.',
+    },
+  ],
+  students: [
+    {
+      q: 'Do these tools cite sources, or just summarize?',
+      a: "The Research Assistant prompts are built for citation-aware output — comparing and tracing sources rather than paraphrasing without attribution. Each listing's spec line says whether citation formatting is included.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Try one on your own topic from the free tool page first.',
+    },
+    {
+      q: 'Which tool is for ongoing study habits vs. a specific paper?',
+      a: 'The Weekly Planning Template is for an ongoing study rhythm — plan Monday, review Friday. The Research Assistant Prompts are for a specific literature scan or source comparison task.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase — no recurring fee.',
+    },
+  ],
+  architects: [
+    {
+      q: 'Do these require a specific stack or toolchain?',
+      a: "No — Doc Templates and Agent Configs here produce decision records, design reviews, and trade-off write-ups in plain formats you can drop into whatever docs system your team already uses.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Describe your own system on the free tool page and watch a tool run on it.',
+    },
+    {
+      q: "What's the difference between an Agent Config and a Doc Template here?",
+      a: 'A Doc Template is a format you fill in yourself, like an architecture decision record. An Agent Config is a configured agent that helps produce the trade-off analysis or design review from your own inputs.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright.',
+    },
+  ],
+  engineers: [
+    {
+      q: 'Do these require an API key or account setup?',
+      a: 'No signup for prompt packs and doc templates. Automation Blueprints and Agent Configs include their own setup instructions where a key, token, or webhook is needed — usually a few minutes of work.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run of the tool on a sample task. You can also try one on your own situation from the free tool page.',
+    },
+    {
+      q: 'Are these one-time purchases or subscriptions?',
+      a: 'One-time purchase per tool — you get the blueprint, config, or template outright, with no recurring fee.',
+    },
+    {
+      q: 'What kinds of infrastructure and incident work do these cover?',
+      a: 'Runbooks, incident write-ups, pipeline automations, and monitoring alerts — the recurring operational work around shipping and keeping systems running, not one-off coding tasks.',
+    },
+  ],
+  office: [
+    {
+      q: 'Do I need any technical setup to use these?',
+      a: 'No. Prompt Packs and Doc Templates work as-is in whatever tool you already have open. Automation Blueprints include plain-language setup steps, usually done in under 15 minutes.',
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Describe your own task on the free tool page and watch a tool run on it live.',
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright — no recurring fee.',
+    },
+    {
+      q: 'What kind of admin work do these actually handle?',
+      a: 'The recurring tasks that eat an afternoon: inbox triage, meeting notes, expense categorizing, and scheduling follow-ups — not one-off requests.',
+    },
+  ],
+  finance: [
+    {
+      q: 'Do these tools connect to my bank or brokerage?',
+      a: "No — these run on numbers you provide (a CSV export, a statement, your own figures), in the browser or a spreadsheet. Nothing here requires linking a live account.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Run one on your own numbers from the free tool page before you pay anything.',
+    },
+    {
+      q: 'Are these financial advice?',
+      a: "No. These are modeling and organization tools — valuation templates, categorizers, cashflow trackers — not personalized financial advice. You review and apply the output yourself.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool is a one-time purchase you own outright.',
+    },
+  ],
+  stores: [
+    {
+      q: 'Do these run on my own infrastructure, or on MULTINICHE AI\'s servers?',
+      a: "On yours. This niche is built around owning the pieces outright — a host pack you run on your own hardware, monitoring and SEO tools you control — rather than renting monthly access to someone else's platform.",
+    },
+    {
+      q: 'Can I see a tool run before buying it?',
+      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task, before you spend anything.',
+    },
+    {
+      q: 'Do I need to be technical to set these up?',
+      a: "Some, like the host packs, assume basic comfort with a terminal and your own hosting. Each listing's spec line states exactly what's required before you buy.",
+    },
+    {
+      q: 'Is this a subscription?',
+      a: 'No. Every tool here is a one-time license — you own it outright, with no recurring platform fee.',
+    },
+  ],
 }
+
 // Outcome-based landing pages (/use-cases/:slug). These sit orthogonal to the
 // role pages: instead of "who are you", they answer "what do you want to get
 // done". Each matches products by keyword against name/blurb/spec so it tracks
@@ -198,6 +381,10 @@ interface ApiProduct {
   spec: string
   catLabel?: string
   nicheLabel?: string
+  // ISO date (YYYY-MM-DD), already returned by /api/products — see
+  // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
+  // crawlers get a real freshness signal instead of none at all.
+  updatedAt?: string
 }
 
 interface Aggregate {
@@ -343,6 +530,8 @@ function page(opts: {
   robots?: string
   ogType?: string
   extraMeta?: string
+  image?: string
+  adTags?: string
 }): Response {
   const head =
     `<!DOCTYPE html><html lang="en"><head>` +
@@ -374,7 +563,7 @@ function page(opts: {
     `<meta charset="UTF-8"/>` +
     `<meta name="viewport" content="width=device-width, initial-scale=1.0"/>` +
     `<meta http-equiv="content-language" content="en-US"/>` +
-    `<meta name="theme-color" content="#080000"/>` +
+    `<meta name="theme-color" content="#0A0E16"/>` +
     `<title>${esc(opts.title)}</title>` +
     `<meta name="description" content="${esc(opts.description)}"/>` +
     `<link rel="canonical" href="${esc(opts.canonical)}"/>` +
@@ -384,14 +573,24 @@ function page(opts: {
     `<meta property="og:title" content="${esc(opts.title)}"/>` +
     `<meta property="og:description" content="${esc(opts.description)}"/>` +
     `<meta property="og:url" content="${esc(opts.canonical)}"/>` +
-    `<meta property="og:image" content="${SITE}/multiniche-ai-og.png"/>` +
+    `<meta property="og:image" content="${esc(opts.image ?? `${SITE}/multiniche-ai-og.png`)}"/>` +
+    // Twitter's card validator reads twitter:* tags first and only falls
+    // back to og:* when a twitter:* tag is absent — a fallback that has
+    // worked in practice but isn't guaranteed by the spec. title/description
+    // were missing here entirely (only card and image were set), so a
+    // product or scorecard link posted to X was one crawler quirk away from
+    // rendering with no title/description text, same class of "silently
+    // broken preview" as the missing image fallback below.
     `<meta name="twitter:card" content="summary_large_image"/>` +
-    `<meta name="twitter:image" content="${SITE}/multiniche-ai-og.png"/>` +
+    `<meta name="twitter:title" content="${esc(opts.title)}"/>` +
+    `<meta name="twitter:description" content="${esc(opts.description)}"/>` +
+    `<meta name="twitter:image" content="${esc(opts.image ?? `${SITE}/multiniche-ai-og.png`)}"/>` +
+    `<meta name="twitter:image:alt" content="${esc(opts.title)}"/>` +
     (opts.extraMeta ?? '') +
     `<link rel="icon" type="image/svg+xml" href="/icons/logo.svg"/>` +
     opts.jsonld.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join('') +
     `<style>` +
-    `:root{--ink:#080000;--panel:#110807;--line:#4A1212;--line-soft:#2A0A0A;--paper:#FFD4D4;--muted:#E86A6A;--muted-2:#9A3C3C;--brass:#FF2A2A;}` +
+    `:root{--ink:#0A0E16;--panel:#121826;--line:#232B3D;--line-soft:#161C29;--paper:#EEF1F7;--muted:#9AA4BC;--muted-2:#5C6580;--brass:#FFB020;--danger:#FF2A2A;}` +
     `*{box-sizing:border-box}` +
     `body{margin:0;background:var(--ink);color:var(--paper);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}` +
     `a{color:var(--brass);text-decoration:none}a:hover{text-decoration:underline}` +
@@ -402,6 +601,7 @@ function page(opts: {
     `h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.12;letter-spacing:-.02em;margin:.2em 0}` +
     `.sku{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase}` +
     `.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:var(--brass);padding:3px 9px;border-radius:2px}` +
+    `.badge-new{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);background:transparent;border:1px solid var(--brass);padding:2px 8px;border-radius:2px}` +
     `.lede{font-size:17px;color:var(--paper);margin:18px 0}` +
     `.specs{border:1px solid var(--line);border-radius:4px;padding:6px 18px;margin:22px 0}` +
     `.specs .row{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px dashed var(--line-soft);font-size:14px}` +
@@ -413,8 +613,8 @@ function page(opts: {
     `h2{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:22px;margin:40px 0 14px}` +
     `.stars{color:var(--brass);letter-spacing:2px;font-size:17px}` +
     `.rev{border-top:1px solid var(--line-soft);padding:14px 0}` +
-    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#0c0404}` +
-    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#110807}` +
+    `.proof{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:22px 0;background:#0D111C}` +
+    `.proof-bar{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--muted-2);padding:9px 14px;border-bottom:1px solid var(--line-soft);background:#121826}` +
     `.proof-out{font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.7;color:var(--paper);padding:16px 18px;white-space:normal;word-break:break-word}` +
     `.rev .who{font-size:13px;color:var(--muted);font-weight:600}` +
     `.rev .txt{font-size:14.5px;color:var(--paper);margin:6px 0 0}` +
@@ -438,11 +638,16 @@ function page(opts: {
     `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M746RK4R"` +
     ` height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>` +
     `<div class="wrap">` +
-    `<header><a class="brand" href="/">${STORE}</a></header>`
+    `<header style="display:flex;align-items:center;justify-content:space-between;gap:16px"><a class="brand" href="/">${STORE}</a>` +
+    `<a href="/ads" aria-label="MultiNicheADS" style="display:inline-flex;align-items:center;gap:8px;color:var(--paper);font-size:13px;min-height:44px">` +
+    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" fill="currentColor" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" stroke="currentColor" stroke-width="1.6" opacity=".45"/><rect x="13.5" y="13.5" width="7" height="7" stroke="currentColor" stroke-width="1.6"/></svg>` +
+    `<span>MultiNicheADS</span></a></header>`
+  const adTags = opts.adTags ? ` data-tags="${esc(opts.adTags)}"` : ''
   const foot =
     `<footer>${STORE} — ready-to-use AI productivity tools. ` +
-    `<a href="/">Catalog</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/guides">Guides</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
-    `</div><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
+    `<a href="/">Catalog</a> · <a href="/ads">MultiNicheADS</a> · <a href="/nicheads">NicheAds</a> · <a href="/agent">Agent studio</a> · <a href="/use-cases">Use cases</a> · <a href="/proof">Live proofs</a> · <a href="/updates">Updates</a> · <a href="/guides">Guides</a> · <a href="/compare/">Prompt packs vs. ChatGPT</a> · <a href="/privacy-policy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refund-policy/">Refund policy</a></footer>` +
+    `<div data-mn-ad data-site="multinicheai.com" data-slot="s_store_page" data-format="display"${adTags} style="margin-top:28px"></div>` +
+    `</div><script src="/mn-ads.js" defer></script><script>(function(){var q=new URLSearchParams(location.search),keys=['gclid','gbraid','wbraid'],clickId='',clickSource='';for(var i=0;i<keys.length;i++){if(q.get(keys[i])){clickId=q.get(keys[i]).slice(0,200);clickSource=keys[i];break;}}var utmKeys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content'],hasUtm=utmKeys.some(function(k){return q.get(k);});if(clickId){try{localStorage.setItem('osc:adclick',JSON.stringify({id:clickId,source:clickSource,ts:Date.now()}));}catch(e){}}if(hasUtm){try{var attrib={ts:Date.now()};utmKeys.forEach(function(k){if(q.get(k))attrib[k]=q.get(k).slice(0,200);});localStorage.setItem('osc:attrib',JSON.stringify(attrib));}catch(e){}}if(!clickId&&!hasUtm)return;var body=JSON.stringify({clickId:clickId||undefined,clickSource:clickSource||undefined,utmSource:q.get('utm_source')||undefined,utmMedium:q.get('utm_medium')||undefined,utmCampaign:q.get('utm_campaign')||undefined,utmTerm:q.get('utm_term')||undefined,utmContent:q.get('utm_content')||undefined,landingPath:location.pathname.slice(0,512),referrerHost:(function(){try{return document.referrer?new URL(document.referrer).hostname:undefined}catch(e){return undefined}})()});if(navigator.sendBeacon)navigator.sendBeacon('/api/track-landing',new Blob([body],{type:'application/json'}));else fetch('/api/track-landing',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});})();</script></body></html>`
 
   return new Response(head + opts.body + foot, {
     status: opts.status ?? 200,
@@ -542,11 +747,17 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
     url,
     mainEntityOfPage: url,
+    ...(p.updatedAt ? { dateModified: p.updatedAt } : {}),
     audience: { '@type': 'Audience', audienceType: nl },
     additionalProperty: [
       { '@type': 'PropertyValue', name: 'Built for', value: nl },
       { '@type': 'PropertyValue', name: 'Format', value: p.format },
       ...(p.spec && p.spec !== '—' ? [{ '@type': 'PropertyValue', name: 'Spec', value: p.spec }] : []),
+      {
+        '@type': 'PropertyValue',
+        name: 'Live proof',
+        value: 'A real, unedited run of this tool on a sample or visitor-submitted task, streamed live on this page before purchase.',
+      },
     ],
     offers: {
       '@type': 'Offer',
@@ -618,9 +829,10 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       `</div>`
     : ''
 
+  const newBadge = agg && agg.count > 0 ? '' : ` <span class="badge-new">New</span>`
   const body =
     `<nav class="crumbs"><a href="/">Home</a> / <a href="/tools/${esc(p.niche)}">Tools for ${esc(nl)}</a> / ${esc(p.name)}</nav>` +
-    `<span class="tag">${esc(cat)}</span> <span class="sku">${esc(p.sku)}</span>` +
+    `<span class="tag">${esc(cat)}</span> <span class="sku">${esc(p.sku)}</span>${newBadge}` +
     `<h1>${esc(p.name)}</h1>` +
     `<p class="lede">${esc(p.blurb)}</p>` +
     `<div class="specs">` +
@@ -652,12 +864,14 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     canonical: url,
     jsonld: [productLd, breadcrumb],
     ogType: 'product',
+    image: `${SITE}/product-image/${encodeURIComponent(p.sku)}.png`,
     extraMeta:
       `<meta property="product:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
       `<meta property="product:price:currency" content="USD"/>` +
       `<meta property="product:availability" content="in stock"/>` +
       `<meta property="og:price:amount" content="${Number(p.price).toFixed(2)}"/>` +
       `<meta property="og:price:currency" content="USD"/>`,
+    adTags: `${p.niche},${p.category}`,
     body: body + `<script>window.trackMarketingEvent&&window.trackMarketingEvent('view_item',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});document.querySelector('[data-product-cta]')?.addEventListener('click',function(){window.trackMarketingEvent&&window.trackMarketingEvent('add_to_cart',{currency:'USD',value:${Number(p.price)},items:[{item_id:${safeJson(p.sku)},item_name:${safeJson(p.name)},price:${Number(p.price)},quantity:1}],ecomm_prodid:${safeJson(p.sku)},ecomm_pagetype:'product',ecomm_totalvalue:${Number(p.price)}});});</script>`,
   })
 }
@@ -700,7 +914,10 @@ function renderNiche(niche: string, all: ApiProduct[], aggs: Record<string, Aggr
   const cards = items
     .map((p) => {
       const agg = aggs[p.sku]
-      const rating = agg && agg.count > 0 ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>` : ''
+      const rating =
+        agg && agg.count > 0
+          ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>`
+          : `<div style="margin-top:6px"><span class="badge-new">New</span></div>`
       return (
         `<a class="pcard" href="/product/${encodeURIComponent(p.sku)}">` +
         `<div class="n">${esc(p.name)}</div>` +
@@ -745,6 +962,7 @@ const faqLd = faqs
     description: intro,
     canonical: url,
     jsonld: [itemListLd, breadcrumb, ...(faqLd ? [faqLd] : [])],
+    adTags: niche,
     body,
   })
 }
@@ -788,6 +1006,7 @@ function renderGuide(g: Guide): Response {
     headline: g.title.slice(0, 110),
     url,
     ...(g.publishedAt ? { datePublished: g.publishedAt } : {}),
+    ...(g.generatedAt ? { dateModified: g.generatedAt.slice(0, 10) } : {}),
     publisher: { '@type': 'Organization', name: STORE, url: SITE },
     about: { '@type': 'Thing', name: `${cl} for ${nl}` },
   }
@@ -949,7 +1168,7 @@ interface Scorecard {
 }
 
 function outcomeTag(o: string): string {
-  const color = o === 'success' ? 'var(--brass)' : o === 'partial' ? 'var(--muted)' : '#ff786e'
+  const color = o === 'success' ? 'var(--brass)' : o === 'partial' ? 'var(--muted)' : 'var(--danger)'
   return `<span style="color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${esc(o)}</span>`
 }
 
@@ -1001,6 +1220,7 @@ function renderScorecard(sc: Scorecard, product: ApiProduct | undefined): Respon
     description: `Success rate, run history, and failures for ${name} — a dated benchmark run on a fixed scenario.`,
     canonical: url,
     jsonld: [jsonld],
+    image: `${SITE}/product-image/${encodeURIComponent(sc.sku)}.png`,
     body,
   })
 }
@@ -1035,6 +1255,66 @@ function renderMethodology(): Response {
   })
 }
 
+// ---- /status ----  public health indicator for the site's own infrastructure,
+// not just its products. /api/site-status already exists and is populated by
+// site-health-agent.mts's scheduled runs — this just gives it a page. In
+// keeping with the "we publish failures too" position the scorecard pages
+// take on products, the site's own reliability gets the same treatment
+// instead of only being visible to the owner via the raw API.
+interface HealthRun {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  summary: string
+  recommendation: string
+  durationMs: number
+  checkedAt: string
+}
+function healthTag(s: HealthRun['status']): string {
+  const color = s === 'healthy' ? 'var(--brass)' : s === 'degraded' ? 'var(--muted)' : 'var(--danger)'
+  return `<span style="color:${color};font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${esc(s)}</span>`
+}
+
+function renderStatus(current: HealthRun | null, history: HealthRun[]): Response {
+  const url = `${SITE}/status`
+  const intro = 'A running record of automated checks against this site itself, published the same way a product benchmark scorecard is.'
+
+  const currentBlock = current
+    ? `<div class="specs">` +
+      `<div class="row"><span>Current status</span><span>${healthTag(current.status)}</span></div>` +
+      `<div class="row"><span>Summary</span><span>${esc(current.summary)}</span></div>` +
+      (current.recommendation
+        ? `<div class="row"><span>Recommendation</span><span>${esc(current.recommendation)}</span></div>`
+        : '') +
+      `<div class="row"><span>Checked</span><span>${esc(new Date(current.checkedAt).toISOString())} (${current.durationMs}ms)</span></div>` +
+      `</div>`
+    : `<p class="lede">No check has completed yet. History becomes available after the first scheduled run.</p>`
+
+  const historyHtml = history.length
+    ? history
+        .map(
+          (h) =>
+            `<div class="rev"><div class="who">${esc(new Date(h.checkedAt).toISOString().slice(0, 16).replace('T', ' '))} · ${healthTag(h.status)}</div><div>${esc(h.summary)}</div></div>`,
+        )
+        .join('')
+    : ''
+
+  const body =
+    `<nav class="crumbs"><a href="/">Home</a> / Status</nav>` +
+    `<h1>Site status</h1>` +
+    `<p class="lede">${esc(intro)}</p>` +
+    currentBlock +
+    (historyHtml ? `<h2>Recent checks</h2>${historyHtml}` : '') +
+    `<div class="buy"><a class="btn ghost" href="/methodology">How scorecards are scored →</a></div>`
+
+  return page({
+    title: `Site status | ${STORE}`,
+    description: intro,
+    canonical: url,
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'WebPage', name: 'Site status', url, description: intro }],
+    body,
+    robots: 'noindex, follow',
+  })
+}
+
 // ---- /use-cases/:slug and /use-cases ----
 function matchUseCase(uc: UseCase, all: ApiProduct[]): ApiProduct[] {
   // Word-boundary match (not naive substring) so short tokens like "rag" or
@@ -1053,7 +1333,7 @@ function useCaseCards(items: ApiProduct[], aggs: Record<string, Aggregate>): str
       const rating =
         agg && agg.count > 0
           ? `<div style="margin-top:6px" class="stars">${stars(agg.average)} <span style="color:var(--muted-2);font-size:12px">(${agg.count})</span></div>`
-          : ''
+          : `<div style="margin-top:6px"><span class="badge-new">New</span></div>`
       return (
         `<a class="pcard" href="/product/${encodeURIComponent(p.sku)}">` +
         `<div class="n">${esc(p.name)}</div><div class="b">${esc(p.blurb)}</div>` +
@@ -1274,7 +1554,7 @@ function renderFreeTool(): Response {
     `<p class="lede">${esc(intro)}</p>` +
     `<form id="ft-form" style="margin:18px 0">` +
     `<textarea id="ft-input" rows="3" maxlength="600" placeholder="e.g. Turn my messy meeting notes into decisions, owners, and deadlines" ` +
-    `style="width:100%;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical">${esc(EXAMPLE_TASK)}</textarea>` +
+    `style="width:100%;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical">${esc(EXAMPLE_TASK)}</textarea>` +
     `<button class="btn" id="ft-run" type="submit" style="margin-top:10px">▶ Run it on my task</button>` +
     `<button class="btn ghost" id="ft-clear" type="button" style="margin-top:10px;margin-left:8px">Clear and write my own</button></form>` +
     `<div class="proof" id="ft-term" hidden><div class="proof-bar" id="ft-lab">demo · idle</div><div class="proof-out" id="ft-out"></div></div>` +
@@ -1369,7 +1649,7 @@ function renderCustom(): Response {
     `<div id="co-intake">` +
     `<form id="co-form" style="margin:18px 0">` +
     `<label style="display:block;margin-bottom:12px">Category` +
-    `<select id="co-category" style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
+    `<select id="co-category" style="width:100%;margin-top:6px;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
     `<option value="">Choose one…</option>` +
     `<option value="prompts">Prompt Pack</option>` +
     `<option value="automations">Automation Blueprint</option>` +
@@ -1378,11 +1658,11 @@ function renderCustom(): Response {
     `</select></label>` +
     `<label style="display:block;margin-bottom:12px">What do you need?` +
     `<textarea id="co-need" rows="5" maxlength="4000" placeholder="Describe your situation in detail — the more specific, the better the result." ` +
-    `style="width:100%;margin-top:6px;background:#0c0404;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea></label>` +
+    `style="width:100%;margin-top:6px;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical"></textarea></label>` +
     `<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px">` +
     `<input type="checkbox" id="co-policy" style="margin-top:3px">` +
     `<span>I understand this is a custom digital product delivered instantly upon generation, and I acknowledge the <a href="/refund-policy">refund policy</a>.</span></label>` +
-    `<p id="co-err" hidden style="color:#ff786e;font-size:13.5px;margin-bottom:12px"></p>` +
+    `<p id="co-err" hidden style="color:var(--danger);font-size:13.5px;margin-bottom:12px"></p>` +
     `<button class="btn" id="co-submit" type="submit">Get my custom deliverable — $49</button></form>` +
     `</div>` +
     `<div class="proof" id="co-generating" hidden><div class="proof-bar">generating · building your deliverable, this takes about 20 seconds</div><div class="proof-out"><span class="co-cursor"></span></div></div>` +
@@ -1456,6 +1736,15 @@ export default async (req: Request, _context: Context) => {
   // ---- /methodology ----  static, no data dependency.
   if (parts[0] === 'methodology') {
     return renderMethodology()
+  }
+
+  // ---- /status ----  reads the same data /api/site-status already exposes.
+  if (parts[0] === 'status') {
+    const res = await getJsonOrFail<{ current: HealthRun | null; history: HealthRun[] }>(
+      new URL('/api/site-status', req.url),
+    )
+    if (!res.ok) return unavailable()
+    return renderStatus(res.data.current ?? null, res.data.history ?? [])
   }
 
   // ---- /scorecard/:sku ----  catalog-independent for the scorecard data
@@ -1545,7 +1834,7 @@ export default async (req: Request, _context: Context) => {
 }
 
 export const config: Config = {
-  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/custom', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology'],
+  path: ['/product/*', '/tools/*', '/proof', '/proof/*', '/use-cases', '/use-cases/*', '/updates', '/updates/*', '/free-tool', '/custom', '/blog', '/guides', '/guides/*', '/scorecard/*', '/methodology', '/status'],
   // Opt this function's responses into the CDN cache. Without it the
   // Netlify-CDN-Cache-Control header page() sets is inert, because an edge
   // function's response is never cached by default — it re-runs, and re-fetches
@@ -1558,4 +1847,4 @@ export const config: Config = {
   // Safe against the "cached edge responses shadow static files" caveat — none of
   // the paths above have a static file behind them.
   cache: 'manual',
-        }
+  }

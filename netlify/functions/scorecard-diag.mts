@@ -24,11 +24,8 @@ export default async (_req: Request) => {
 
   console.log(`[scorecard-diag] total scenarios: ${scenarioSkus.length}`)
   console.log(`[scorecard-diag] total live products: ${products.length}`)
-  console.log(`[scorecard-diag] matched: ${matched.length} -> ${JSON.stringify(matched.slice(0, 20))}`)
+  console.log(`[scorecard-diag] matched: ${matched.length} → ${JSON.stringify(matched.slice(0, 20))}`)
   console.log(`[scorecard-diag] unmatched (first 20): ${JSON.stringify(unmatched.slice(0, 20))}`)
-
-  // Also show a few sample product SKUs directly from the catalog, so we can
-  // eyeball casing/whitespace/format differences against the unmatched list.
   console.log(`[scorecard-diag] sample live product SKUs: ${JSON.stringify(Array.from(productSkus).slice(0, 20))}`)
 
   return Response.json({
