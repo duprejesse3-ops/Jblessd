@@ -75,7 +75,7 @@ const SKU_MAX_TOKENS_SCENARIO: Record<string, number> = {
 const CUSTOM_DEMO_LIMIT = 30
 const CUSTOM_DEMO_WINDOW_MS = 60 * 60 * 1000
 const STORE_NAME = 'MULTINICHE AI'
-const CACHE_VERSION = 'v1' // bump to invalidate all cached demos at once
+const CACHE_VERSION = 'v2' // bumped 2026-09-24: fixes the demo prompt inventing specific business names/reviewer names/ratings for AI-AB-071's GBP review-response section (and the same generic-vs-SKU-brief conflict for every other strict SKU_RUN_BRIEF product) — old cached demos must not keep serving the fabricated output
 
 // Per-category direction so the demo reflects what the product actually *is*.
 // Each entry frames the run and gives Claude a concrete opening move.
@@ -153,10 +153,16 @@ function buildPrompt(
     `- ${SKU_RUN_BRIEF[p.sku] ?? play.brief}\n` +
     liveContextRule +
     fixPackRule +
-    `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
-    `feels like a real run, but never claim capabilities beyond what the product is` +
-    (liveContext ? ', and never invent details about a real page covered by the Live scan section below — use what it actually found' : '') +
-    `.\n` +
+    (SKU_RUN_BRIEF[p.sku]
+      ? `- The rule above is this product's own brief and already states exactly what may and ` +
+        `may not be invented for it (a live scan's real page facts, specific business names, ` +
+        `review counts, ratings, quoted reviewer text, etc.). That governs completely — where it ` +
+        `restricts or forbids inventing a specific detail, that restriction wins over any general ` +
+        `instinct to "make it feel real." Never claim capabilities beyond what the product is.\n`
+      : `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
+        `feels like a real run, but never claim capabilities beyond what the product is` +
+        (liveContext ? ', and never invent details about a real page covered by the Live scan section below — use what it actually found' : '') +
+        `.\n`) +
     `- If the shopper's own task is genuinely a stretch for what this specific product format ` +
     `can do, say so plainly and specifically — name the exact limitation — rather than papering ` +
     `over the gap with generic filler. Give your best real attempt first, then the honest ` +
