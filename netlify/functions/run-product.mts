@@ -102,6 +102,14 @@ export default async (req: Request, _context: Context) => {
       console.error('odds live context fetch failed:', (err as Error).message)
       liveContext = 'Live price/news lookup failed this run — reason from general knowledge and what the buyer provided.'
     }
+  } else if (product.sku === 'AI-AB-071') {
+    try {
+      const { fetchSeoLiveContext } = await import('../lib/seo-live-context.mjs')
+      liveContext = await fetchSeoLiveContext(inputs.url ?? '')
+    } catch (err) {
+      console.error('seo live context fetch failed:', (err as Error).message)
+      liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
+    }
   }
 
   const prompt = buildRunPrompt(product, app, inputs, voice, liveContext)

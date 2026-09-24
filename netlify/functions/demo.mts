@@ -123,19 +123,29 @@ function fallbackDemo(p: Product, scenario: string): string {
 }
 
 // Build the system + user prompt that makes Claude *demonstrate* the product.
-function buildPrompt(p: Product, scenario: string): { system: string; user: string } {
+// liveContext, when present, is real fetched-and-parsed data (currently only
+// for AI-AB-071 — see fetchSeoLiveContext) that grounds the demo in an
+// actual scan instead of an invented one. When present, the system prompt
+// gets an extra rule forbidding invented specifics about the scanned page.
+function buildPrompt(p: Product, scenario: string, liveContext?: string): { system: string; user: string } {
   const play = PLAYBOOK[p.category]
   const lengthRule = scenario
     ? 'Give this real, submitted task room to breathe: roughly 250–450 words — enough to actually work through it, not just gesture at it.'
     : 'Keep it tight: roughly 150–260 words. This renders in a small terminal panel.'
+  const liveContextRule = liveContext
+    ? `- A "Live scan" section is provided below, fetched and parsed from a real page moments before this ran. Treat it as ground truth for anything about that specific page — title, meta description, schema, headings, images, etc. Never invent, guess, or contradict a specific fact about that page beyond what the live scan states; if the live scan says something is missing, say it's missing, and if it says something is present, quote or describe what was actually found. For anything the live scan explicitly says was NOT checked (e.g. Google Business Profile, competitor listings), explain that part of the product conceptually without inventing specific numbers or findings for it.\n`
+    : ''
   const system =
     `You are the live demonstration engine for ${STORE_NAME}, a store of ready-to-use ` +
     `AI productivity tools. Your job is to PROVE a specific product works by showing it ` +
     `in action — a working demo, not a sales pitch and not a description of features.\n\n` +
     `Rules:\n` +
     `- ${SKU_RUN_BRIEF[p.sku] ?? play.brief}\n` +
+    liveContextRule +
     `- Be concrete and specific. Invent realistic details (names, numbers, content) so it ` +
-    `feels like a real run, but never claim capabilities beyond what the product is.\n` +
+    `feels like a real run, but never claim capabilities beyond what the product is` +
+    (liveContext ? ', and never invent details about a real page covered by the Live scan section below — use what it actually found' : '') +
+    `.\n` +
     `- If the shopper's own task is genuinely a stretch for what this specific product format ` +
     `can do, say so plainly and specifically — name the exact limitation — rather than papering ` +
     `over the gap with generic filler. Give your best real attempt first, then the honest ` +
@@ -161,6 +171,7 @@ function buildPrompt(p: Product, scenario: string): { system: string; user: stri
     `- Format: ${p.format}\n` +
     `- Spec: ${p.spec}\n` +
     `- What it does: ${p.blurb}\n` +
+    (liveContext ? `\nLive scan (real, fetched just now):\n"""${liveContext}"""\n` : '') +
     (scenario
       ? `\nTailor the demonstration to this shopper's own situation:\n"""${scenario}"""\n`
       : `\nUse a realistic scenario a typical ${NICHE_LABEL[p.niche]} shopper would relate to.\n`)
@@ -258,10 +269,27 @@ export default async (req: Request, context: Context) => {
 
       send({ type: 'meta', verb: PLAYBOOK[product.category].verb, cached: false })
 
+      // Local SEO Agency Blueprint only: when the shopper gave their own
+      // situation (which is the only case that can name a real page — the
+      // no-scenario default demo below has nothing to scan), fetch and
+      // parse that page for real before building the prompt, so the demo
+      // reports what's actually on it instead of a plausible guess. See
+      // seo-live-context.mts for what's checked and its stated scope.
+      let liveContext: string | undefined
+      if (product.sku === 'AI-AB-071' && scenario) {
+        try {
+          const { fetchSeoLiveContext } = await import('../lib/seo-live-context.mjs')
+          liveContext = await fetchSeoLiveContext(scenario)
+        } catch (err) {
+          console.error('seo live context fetch failed:', (err as Error).message)
+          liveContext = 'Live page scan failed to run this time — explain the blueprint conceptually without inventing specific findings for the buyer\'s page.'
+        }
+      }
+
       let full = ''
       try {
         const anthropic = new Anthropic()
-        const { system, user } = buildPrompt(product, scenario)
+        const { system, user } = buildPrompt(product, scenario, liveContext)
         const modelStream = anthropic.messages.stream({
           model: MODEL,
           max_tokens: scenario ? (SKU_MAX_TOKENS_SCENARIO[product.sku] ?? MAX_TOKENS_SCENARIO_DEFAULT) : MAX_TOKENS_PREVIEW,

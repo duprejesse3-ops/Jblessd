@@ -47,8 +47,8 @@ INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, ti
     'marketers',
     '5 Make.com blueprints + Notion report template · one-time license',
     75,
-    'Everything to run a local-SEO service on, not just run once on your own store: the Maps/competitor audit, a Google Business Profile checklist, automated review-response drafts, a white-label monthly report your clients actually read, and the outreach script to land the first one. One license, unlimited clients — you are the agency.',
-    'GBP audit + review-response automation + white-label report + outreach script · unlimited clients',
+    'Before you buy: try it on a real client site and watch it actually fetch and parse that page live — title, meta, schema, alt text, robots/sitemap — not a script reading out a canned script. Then the full system to run a local-SEO service on: that real audit, a Google Business Profile checklist, automated review-response drafts, a white-label monthly report, and the outreach script to land the first client. One license, unlimited clients — you are the agency.',
+    'Live on-page scan (title/meta/schema/alt/robots, fetched for real) + GBP checklist + review-response automation + white-label report + outreach script · unlimited clients',
     '~6 hrs saved per client per month'
   ),
   (
