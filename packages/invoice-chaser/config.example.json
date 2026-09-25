@@ -1,0 +1,5 @@
+[
+  { "days": 3, "label": "Friendly reminder", "tone": "friendly" },
+  { "days": 7, "label": "Firmer reminder", "tone": "firm" },
+  { "days": 14, "label": "Final notice", "tone": "final" }
+]

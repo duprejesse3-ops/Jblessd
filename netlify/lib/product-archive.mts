@@ -26,6 +26,10 @@ import { MULTIWITNESS_SOURCE } from './multiwitness-source.mjs'
 import { MULTIGUARD_SOURCE } from './multiguard-source.mjs'
 import { MULTIBOT_SOURCE } from './multibot-source.mjs'
 import { FIELDHAND_SOURCE } from './fieldhand-source.mjs'
+import { SUPPLIER_PO_SYNC_SOURCE } from './supplier-po-sync-source.mjs'
+import { FILE_ORGANIZER_SOURCE } from './file-organizer-source.mjs'
+import { INVOICE_CHASER_SOURCE } from './invoice-chaser-source.mjs'
+import { LINK_WATCHDOG_SOURCE } from './link-watchdog-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -39,6 +43,10 @@ export interface ProductArchive {
 const EXECUTABLE = new Set(['bin/audit.mjs', 'adapters/cron.sh', 'install.sh'])
 const POSTMORTEM_EXECUTABLE = new Set(['bin/postmortem.mjs', 'adapters/pagerduty-webhook.mjs', 'install.sh'])
 const DIGEST_EXECUTABLE = new Set(['bin/digest.mjs'])
+const PO_SYNC_EXECUTABLE = new Set(['bin/sync.mjs'])
+const FILE_ORGANIZER_EXECUTABLE = new Set(['bin/organize.mjs', 'adapters/cron.sh'])
+const INVOICE_CHASER_EXECUTABLE = new Set(['bin/chase.mjs'])
+const LINK_WATCHDOG_EXECUTABLE = new Set(['bin/watchdog.mjs'])
 const RELEASE_NOTES_EXECUTABLE = new Set(['bin/release-notes.mjs'])
 const DIAGRAM_SYNC_EXECUTABLE = new Set(['bin/diagram-sync.mjs'])
 const MERIDIAN_HOST_EXECUTABLE = new Set([
@@ -84,6 +92,10 @@ const POSTMORTEM_ROOT = 'incident-postmortem-automation'
 const DIGEST_ROOT = 'code-review-digest'
 const RELEASE_NOTES_ROOT = 'release-notes-bot'
 const DIAGRAM_SYNC_ROOT = 'architecture-diagram-sync'
+const PO_SYNC_ROOT = 'supplier-po-sync'
+const FILE_ORGANIZER_ROOT = 'file-organizer-agent'
+const INVOICE_CHASER_ROOT = 'invoice-chaser'
+const LINK_WATCHDOG_ROOT = 'link-watchdog'
 const MERIDIAN_HOST_ROOT = 'meridian-host'
 const MERIDIAN_GATE_ROOT = 'meridian-gate'
 // Fieldhand ships as a single self-contained HTML file plus a README — no
@@ -210,6 +222,38 @@ function multibotFiles(): ArchiveFile[] {
   }))
 }
 
+function poSyncFiles(): ArchiveFile[] {
+  return SUPPLIER_PO_SYNC_SOURCE.map((file) => ({
+    path: `${PO_SYNC_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: PO_SYNC_EXECUTABLE.has(file.path),
+  }))
+}
+
+function fileOrganizerFiles(): ArchiveFile[] {
+  return FILE_ORGANIZER_SOURCE.map((file) => ({
+    path: `${FILE_ORGANIZER_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: FILE_ORGANIZER_EXECUTABLE.has(file.path),
+  }))
+}
+
+function invoiceChaserFiles(): ArchiveFile[] {
+  return INVOICE_CHASER_SOURCE.map((file) => ({
+    path: `${INVOICE_CHASER_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: INVOICE_CHASER_EXECUTABLE.has(file.path),
+  }))
+}
+
+function linkWatchdogFiles(): ArchiveFile[] {
+  return LINK_WATCHDOG_SOURCE.map((file) => ({
+    path: `${LINK_WATCHDOG_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: LINK_WATCHDOG_EXECUTABLE.has(file.path),
+  }))
+}
+
 function fieldhandFiles(): ArchiveFile[] {
   return FIELDHAND_SOURCE.map((file) => ({
     path: `${FIELDHAND_ROOT}/${file.path}`,
@@ -235,6 +279,10 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-CN-007': { filename: 'multiguard.zip', files: guardFiles },
   'AI-AG-067': { filename: 'multibot.zip', files: multibotFiles },
   'AI-AG-118': { filename: 'fieldhand.zip', files: fieldhandFiles },
+  'AI-AB-119': { filename: 'supplier-po-sync.zip', files: poSyncFiles },
+  'AI-AG-120': { filename: 'file-organizer-agent.zip', files: fileOrganizerFiles },
+  'AI-AB-121': { filename: 'invoice-chaser.zip', files: invoiceChaserFiles },
+  'AI-AB-122': { filename: 'link-watchdog.zip', files: linkWatchdogFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */

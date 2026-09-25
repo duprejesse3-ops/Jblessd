@@ -1,136 +1,170 @@
-#!/usr/bin/env node
 // Copyright (c) 2026 [SELLER]. All rights reserved.
 // Licensed to a single purchaser under the terms in LICENSE.md.
 // Redistribution or resale of this source, in whole or in part, is not permitted.
 
-// Command-line runner.
+// The engine: scan a folder, classify every file into a category, and produce
+// a *plan* (never a direct mutation) that the caller applies explicitly. This
+// split — plan, then apply — is what makes --dry-run (the default) genuinely
+// safe: planFolder() never touches the filesystem, so a buyer can see exactly
+// what would happen before a single file moves.
 //
-// The "no third party" answer for a messy folder: a Node script that sorts
-// files into categorized folders. No account, no API key required, nothing
-// phoning home by default — runs on a laptop, a scheduled task, a cron job,
-// or launchd. See ../adapters for hands-off scheduling.
-//
-// Safety: --dry-run is the DEFAULT. Nothing moves until you pass --apply.
-// This mirrors the audit agent's exit-code discipline, adapted to a tool that
-// mutates the filesystem rather than just reporting on one.
-//
-// Exit codes:
-//   0  ran successfully (dry-run showed a plan, or --apply moved files)
-//   1  ran, but one or more files failed to move (permissions, etc.)
-//   2  could not run at all (bad usage, folder not found)
+// Classification is rule-based by default: extension plus a handful of
+// filename-keyword patterns (invoices, receipts, screenshots). No network
+// call, no account, no API key, nothing phoning home — same promise as the
+// Site Audit Agent. An optional AI fallback (classifyWithAI in ./ai.mjs) only
+// ever runs for files the rules genuinely can't place, and only if the buyer
+// has set ANTHROPIC_API_KEY — the product works completely without it.
 
-import process from 'node:process'
-import { existsSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
-import { planFolder, applyPlan, summarizePlan, DEFAULTS } from '../lib/organize.mjs'
-import { classifyWithAI } from '../lib/ai.mjs'
+import { readdirSync, statSync, existsSync, renameSync, mkdirSync } from 'node:fs'
+import { join, extname, basename } from 'node:path'
 
-const USAGE = `file-organizer-agent — sort a messy folder into categorized subfolders
-
-Usage
-  organize [folder] [options]
-
-  If [folder] is omitted, defaults to your Downloads folder.
-
-Options
-  --apply                 Actually move files (default: dry-run, plan only)
-  --dest <folder>         Where organized files go (default: <folder>/Organized)
-  --min-age <minutes>     Skip files newer than this, in case something's still
-                           downloading (default: ${DEFAULTS.minAgeMinutes})
-  --ai                    Use AI to classify files the rules can't place
-                           (requires ANTHROPIC_API_KEY; sends filenames only,
-                           never file contents)
-  --format <text|json>    Output format (default: text)
-  -h, --help               Show this message
-  -v, --version            Show the engine version
-
-Examples
-  organize                          # plan for ~/Downloads, dry-run
-  organize ~/Desktop --apply        # actually sort the Desktop
-  organize ~/Downloads --ai --apply # use AI for anything the rules miss
-  organize . --dest ~/Sorted --apply
-`
-
-class UsageError extends Error {}
-
-function parseArgs(argv) {
-  const opts = { apply: false, dest: null, minAgeMinutes: DEFAULTS.minAgeMinutes, ai: false, format: 'text', folder: null }
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '-h' || arg === '--help') { process.stdout.write(USAGE); process.exit(0) }
-    if (arg === '-v' || arg === '--version') { process.stdout.write('file-organizer-agent 1.0.0\n'); process.exit(0) }
-    if (arg === '--apply') { opts.apply = true; continue }
-    if (arg === '--ai') { opts.ai = true; continue }
-    if (arg === '--dest') { opts.dest = argv[++i]; continue }
-    if (arg === '--min-age') { opts.minAgeMinutes = Number(argv[++i]); continue }
-    if (arg === '--format') { opts.format = argv[++i]; continue }
-    if (arg.startsWith('--')) throw new UsageError(`Unknown option: ${arg}`)
-    if (!opts.folder) { opts.folder = arg; continue }
-    throw new UsageError(`Unexpected argument: ${arg}`)
-  }
-  return opts
+export const DEFAULTS = {
+  // Files newer than this are left alone — something still mid-download or
+  // just saved shouldn't get yanked out from under an open app.
+  minAgeMinutes: 2,
+  destRoot: null, // null = create "Organized" inside the watched folder
 }
 
-function defaultDownloadsFolder() {
-  // Downloads lives at ~/Downloads on macOS, Linux, and Windows alike.
-  return join(homedir(), 'Downloads')
+// ---- category rules ------------------------------------------------------
+//
+// Order matters: filename-keyword rules are checked before pure-extension
+// rules, so "invoice-march.pdf" lands in Invoices & Receipts rather than the
+// generic Documents bucket a bare .pdf would get.
+
+const EXT_CATEGORY = {
+  // Documents
+  '.pdf': 'Documents', '.doc': 'Documents', '.docx': 'Documents',
+  '.txt': 'Documents', '.rtf': 'Documents', '.odt': 'Documents',
+  // Spreadsheets
+  '.xls': 'Spreadsheets', '.xlsx': 'Spreadsheets', '.csv': 'Spreadsheets', '.ods': 'Spreadsheets',
+  // Presentations
+  '.ppt': 'Presentations', '.pptx': 'Presentations', '.key': 'Presentations',
+  // Images
+  '.jpg': 'Images', '.jpeg': 'Images', '.png': 'Images', '.gif': 'Images',
+  '.webp': 'Images', '.heic': 'Images', '.svg': 'Images', '.bmp': 'Images', '.tiff': 'Images',
+  // Audio
+  '.mp3': 'Audio', '.wav': 'Audio', '.m4a': 'Audio', '.flac': 'Audio', '.aac': 'Audio',
+  // Video
+  '.mp4': 'Video', '.mov': 'Video', '.mkv': 'Video', '.avi': 'Video', '.webm': 'Video',
+  // Archives
+  '.zip': 'Archives', '.rar': 'Archives', '.7z': 'Archives', '.tar': 'Archives', '.gz': 'Archives',
+  // Installers
+  '.dmg': 'Installers', '.pkg': 'Installers', '.exe': 'Installers', '.msi': 'Installers', '.appimage': 'Installers',
+  // Code
+  '.js': 'Code', '.ts': 'Code', '.py': 'Code', '.json': 'Code', '.html': 'Code', '.css': 'Code',
 }
 
-function printTextSummary(plan, applied) {
-  if (!plan.length) {
-    process.stdout.write('Nothing to organize — folder is empty or every file is too new.\n')
-    return
+// Filename-keyword rules, checked before the extension table above. Matched
+// case-insensitively against the base filename (without extension).
+const KEYWORD_RULES = [
+  { category: 'Invoices & Receipts', patterns: [/invoice/i, /receipt/i, /\breceipt[-_ ]?\d/i, /order[-_ ]?confirmation/i] },
+  { category: 'Screenshots', patterns: [/^screenshot/i, /^screen[-_ ]?shot/i, /^capture[-_ ]?\d/i] },
+  { category: 'Statements', patterns: [/statement/i, /^stmt/i] },
+  { category: 'Contracts', patterns: [/contract/i, /agreement/i, /\bnda\b/i] },
+]
+
+export function classifyByRules(filename) {
+  const base = basename(filename, extname(filename))
+  for (const rule of KEYWORD_RULES) {
+    if (rule.patterns.some((p) => p.test(base))) return rule.category
   }
-  const groups = summarizePlan(plan)
-  for (const [category, files] of groups) {
-    process.stdout.write(`\n${category} (${files.length})\n`)
-    for (const f of files) process.stdout.write(`  ${f}\n`)
-  }
-  const aiCount = plan.filter((p) => p.source === 'ai').length
-  process.stdout.write(`\n${plan.length} file(s) planned`)
-  if (aiCount) process.stdout.write(`, ${aiCount} classified by AI`)
-  process.stdout.write(applied ? ' — moved.\n' : ' — dry run, nothing moved. Pass --apply to move them.\n')
+  const ext = extname(filename).toLowerCase()
+  return EXT_CATEGORY[ext] ?? null // null = rules couldn't place it
 }
 
-async function main() {
-  const opts = parseArgs(process.argv.slice(2))
-  const folder = resolve(opts.folder ?? defaultDownloadsFolder())
+// ---- scanning --------------------------------------------------------------
 
-  if (!existsSync(folder) || !statSync(folder).isDirectory()) {
-    process.stderr.write(`Folder not found: ${folder}\n`)
-    process.exit(2)
+/** List files directly in `dir` (not recursive) old enough to be safe to move. */
+export function scanFolder(dir, opts = {}) {
+  const minAgeMs = (opts.minAgeMinutes ?? DEFAULTS.minAgeMinutes) * 60_000
+  const now = Date.now()
+  const entries = readdirSync(dir, { withFileTypes: true })
+  const files = []
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    if (entry.name.startsWith('.')) continue // dotfiles: leave alone
+    const full = join(dir, entry.name)
+    const stat = statSync(full)
+    // Clamp to zero: filesystem mtime precision or clock skew can make a
+    // file written a moment ago appear to be timestamped fractionally after
+    // `now`, producing a negative delta here. A negative age is never "too
+    // fresh" in any meaningful sense, so without the clamp that quirk could
+    // spuriously skip a file that's actually well past minAgeMinutes.
+    const ageMs = Math.max(0, now - stat.mtimeMs)
+    if (ageMs < minAgeMs) continue // too fresh, possibly still writing
+    files.push({ name: entry.name, path: full, size: stat.size, mtime: stat.mtime })
   }
+  return files
+}
 
-  const planOpts = {
-    minAgeMinutes: opts.minAgeMinutes,
-    destRoot: opts.dest ? resolve(opts.dest) : undefined,
-    classifyUnplaced: opts.ai ? classifyWithAI : undefined,
+// ---- planning ---------------------------------------------------------------
+
+/**
+ * Build a move plan for every file in `dir`. Never touches the filesystem —
+ * see applyPlan() for the step that actually does. `classifyUnplaced`, if
+ * given, is called for any file the rules can't place (e.g. the optional AI
+ * fallback); it receives the filename and must return a category string or
+ * null.
+ */
+export async function planFolder(dir, opts = {}) {
+  const destRoot = opts.destRoot ?? join(dir, 'Organized')
+  const files = scanFolder(dir, opts)
+  const plan = []
+
+  for (const file of files) {
+    let category = classifyByRules(file.name)
+    let source = 'rules'
+    if (!category && opts.classifyUnplaced) {
+      category = await opts.classifyUnplaced(file.name)
+      source = category ? 'ai' : null
+    }
+    if (!category) {
+      category = 'Other'
+      source = 'fallback'
+    }
+    const destDir = join(destRoot, category)
+    const destPath = uniqueDestPath(destDir, file.name)
+    plan.push({ file: file.name, from: file.path, to: destPath, category, source })
   }
+  return plan
+}
 
-  const plan = await planFolder(folder, planOpts)
-  const results = opts.apply ? applyPlan(plan) : plan.map((p) => ({ ...p, ok: true }))
-  const failed = results.filter((r) => !r.ok)
+/** Pick a non-colliding destination path, appending " (2)", " (3)", etc. */
+function uniqueDestPath(destDir, filename) {
+  const ext = extname(filename)
+  const base = basename(filename, ext)
+  let candidate = join(destDir, filename)
+  let n = 2
+  while (existsSync(candidate)) {
+    candidate = join(destDir, `${base} (${n})${ext}`)
+    n++
+  }
+  return candidate
+}
 
-  if (opts.format === 'json') {
-    process.stdout.write(JSON.stringify({ folder, applied: opts.apply, results }, null, 2) + '\n')
-  } else {
-    printTextSummary(plan, opts.apply)
-    if (failed.length) {
-      process.stdout.write(`\n${failed.length} file(s) failed to move:\n`)
-      for (const f of failed) process.stdout.write(`  ${f.file}: ${f.error}\n`)
+// ---- applying ---------------------------------------------------------------
+
+/** Execute a plan from planFolder(). Creates destination folders as needed. */
+export function applyPlan(plan) {
+  const results = []
+  for (const item of plan) {
+    try {
+      mkdirSync(join(item.to, '..'), { recursive: true })
+      renameSync(item.from, item.to)
+      results.push({ ...item, ok: true })
+    } catch (err) {
+      results.push({ ...item, ok: false, error: err.message })
     }
   }
-
-  process.exit(failed.length ? 1 : 0)
+  return results
 }
 
-main().catch((err) => {
-  if (err instanceof UsageError) {
-    process.stderr.write(`${err.message}\n\n${USAGE}`)
-    process.exit(2)
+/** Group a plan by category, for a readable summary before/after applying. */
+export function summarizePlan(plan) {
+  const byCategory = new Map()
+  for (const item of plan) {
+    if (!byCategory.has(item.category)) byCategory.set(item.category, [])
+    byCategory.get(item.category).push(item.file)
   }
-  process.stderr.write(`Unexpected error: ${err.message}\n`)
-  process.exit(2)
-})
+  return byCategory
+}

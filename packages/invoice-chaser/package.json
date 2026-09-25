@@ -1,0 +1,28 @@
+{
+  "name": "invoice-chaser",
+  "version": "1.0.0",
+  "description": "Pulls your real open Stripe invoices, computes how overdue each one is, and emails escalating reminders at the thresholds you set — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "invoice-chaser": "./bin/chase.mjs"
+  },
+  "main": "./lib/config.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "config.example.json",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "chase": "node bin/chase.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
