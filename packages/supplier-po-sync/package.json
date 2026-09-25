@@ -1,0 +1,28 @@
+{
+  "name": "supplier-po-sync",
+  "version": "1.0.0",
+  "description": "Checks your Shopify stock against configured reorder thresholds and emails real purchase orders to your suppliers automatically — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "supplier-po-sync": "./bin/sync.mjs"
+  },
+  "main": "./lib/config.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "config.example.json",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "sync": "node bin/sync.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "sku": "WIDGET-BLUE-M",
+    "name": "Widget, Blue, Medium",
+    "threshold": 20,
+    "reorderQty": 100,
+    "unitCost": 4.25,
+    "supplierName": "Acme Supply Co.",
+    "supplierEmail": "orders@acmesupply.example.com"
+  },
+  {
+    "sku": "WIDGET-RED-L",
+    "name": "Widget, Red, Large",
+    "threshold": 15,
+    "reorderQty": 75,
+    "unitCost": 4.5,
+    "supplierName": "Acme Supply Co.",
+    "supplierEmail": "orders@acmesupply.example.com"
+  },
+  {
+    "sku": "GADGET-STD",
+    "name": "Gadget, Standard",
+    "threshold": 10,
+    "reorderQty": 50,
+    "supplierName": "Northline Parts",
+    "supplierEmail": "purchasing@northlineparts.example.com"
+  }
+]
