@@ -165,6 +165,23 @@ async function pickSource(db: ReturnType<typeof getDatabase>): Promise<
   return null
 }
 
+// A Live Proof scenario is raw, unvalidated text a shopper (or a tester)
+// typed into a free-text box — it can contain a mistyped domain, a URL that
+// doesn't resolve, or something that just looks like a link but isn't one.
+// The ONLY link this pipeline should ever put in front of a reader is the
+// verified, code-constructed Public/checkable URL built above. Strip
+// anything URL- or domain-shaped out of the raw scenario before it reaches
+// the model, so a typo a tester made while demoing on their own site (e.g.
+// "https://multinicheal.com" instead of "multinicheai.com") can't end up
+// quoted into a public post as a second, broken link.
+function redactUrls(text: string): string {
+  return text
+    // http(s):// links, in full
+    .replace(/https?:\/\/\S+/gi, '[a URL]')
+    // bare domain-looking tokens (example.com, sub.example.co.uk, ...)
+    .replace(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b/gi, '[a URL]')
+}
+
 function buildFactSheet(
   source: NonNullable<Awaited<ReturnType<typeof pickSource>>>,
   trend: TrendSignalRow | null
@@ -191,7 +208,7 @@ function buildFactSheet(
           return (
             `Real, verifiable event: a shopper ran a live product demo and it was saved publicly.\n` +
             `Product: ${source.productName} (${source.sku})\n` +
-            `Scenario it ran on: ${source.scenario || '(default demo)'}\n` +
+            `Scenario it ran on: ${source.scenario ? redactUrls(source.scenario) : '(default demo)'}\n` +
             `Output excerpt: ${source.output.slice(0, 400)}\n` +
             `Timestamp: ${source.createdAt}\n` +
             `Public, checkable URL: ${url}`
@@ -235,7 +252,12 @@ const PREAMBLE =
   `mode to avoid: a link with no verb next to it gets scrolled past. Pair the URL with a direct action phrase ` +
   `("See the run:", "Check it yourself:", "Full log here:") suited to the fact being shared — never a vague ` +
   `sign-off like "check it out" or "link in bio" with no visible URL. This still has to read as evidence, not ` +
-  `a sales pitch — the CTA is "go verify this," not "buy now."\n\n`
+  `a sales pitch — the CTA is "go verify this," not "buy now."\n\n` +
+  `The ONLY link that belongs anywhere in the post is the exact "Public, checkable URL" given below. The fact ` +
+  `sheet may contain other text redacted as "[a URL]" (e.g. inside a scenario a shopper typed) — that marks a ` +
+  `link this pipeline could not verify, possibly mistyped. Never reconstruct, guess, or repeat it, and never ` +
+  `invent a link of your own. If you'd naturally reference what "[a URL]" pointed to, describe it in words ` +
+  `instead (e.g. "their own site" or "the domain they gave it") without writing out any URL for it.\n\n`
 
 const PLATFORM_INSTRUCTIONS: Record<Platform, string> = {
   x:
