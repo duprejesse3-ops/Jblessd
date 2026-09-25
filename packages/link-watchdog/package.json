@@ -1,0 +1,28 @@
+{
+  "name": "link-watchdog",
+  "version": "1.0.0",
+  "description": "Crawls your site's sitemap, checks every URL (and optionally the outbound links off each page) for broken links and downtime, and emails you a real digest — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "link-watchdog": "./bin/watchdog.mjs"
+  },
+  "main": "./lib/config.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "config.example.json",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "watchdog": "node bin/watchdog.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

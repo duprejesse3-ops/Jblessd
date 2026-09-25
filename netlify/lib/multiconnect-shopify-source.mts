@@ -617,7 +617,7 @@ export function createServer(opts = {}) {
   })
 
   return { server, config }
-}
+        }
 `,
   },
   {

@@ -1,0 +1,8 @@
+{
+  "sitemapUrl": "https://www.yoursite.com/sitemap.xml",
+  "toEmail": "you@yourdomain.com",
+  "concurrency": 5,
+  "checkExternalLinks": true,
+  "externalLinkLimit": 25,
+  "requestTimeoutMs": 8000
+}
