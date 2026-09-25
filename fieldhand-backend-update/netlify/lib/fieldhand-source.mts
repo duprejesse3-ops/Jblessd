@@ -634,15 +634,34 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     return { text: t, report: report };
   }
 
-  // ---------- drafting backend ----------
-  // Drafting used to go through the Claude artifact's own window.claude.use('sample')
-  // API, which only exists inside the claude.ai viewer — a saved copy of this file has
-  // nothing to call. Instead this hits our own endpoint (Netlify function, holds the
-  // Claude API key server-side), so drafting works from any browser — the live page or
-  // this file downloaded to your phone — as long as there's an internet connection.
+  // ---------- drafting: native artifact API, with a backend fallback ----------
+  // Inside the claude.ai viewer, window.claude.use('sample') already works — use it
+  // directly there, same as always. A downloaded copy of this file has no such API
+  // (it only exists inside the claude.ai iframe), so when it's missing this falls back
+  // to our own endpoint (Netlify function, holds the Claude API key server-side).
+  // That makes drafting work from any browser — the live page or this file on your
+  // phone — as long as there's an internet connection, without changing behavior for
+  // anyone already using the live page.
   var API_BASE = 'https://multinicheai.com';
-  var downloadsFn = null; // no artifact "save file" capability outside the viewer; saveFile() below falls back to a plain browser download
+  var nativeSample = null;
+  var downloadsFn = null;
   var imageLimits = { maxCount: 5 };
+
+  (async function(){
+    try {
+      if (window.claude && window.claude.use) {
+        nativeSample = await window.claude.use('sample');
+        downloadsFn = await window.claude.use('downloads');
+        if (nativeSample && nativeSample.limits) {
+          try {
+            var lims = await nativeSample.limits();
+            if (lims && lims.images) imageLimits = lims.images;
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
+    renderFileList();
+  })();
 
   function apiError(code, message){
     var e = new Error(message || code);
@@ -688,7 +707,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     return res;
   }
 
-  async function sampleFn(prompt, opts){
+  async function backendDraft(prompt, opts){
     opts = opts || {};
     var res = await callBackend('draft', prompt, opts);
     if (!res.body) {
@@ -723,7 +742,19 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     return { text: full };
   }
 
+  // The single entry point the rest of the page calls. Prefers the native artifact
+  // API (already works today on the live page); falls back to the backend endpoint
+  // when that API isn't present, i.e. a downloaded copy opened outside claude.ai.
+  async function sampleFn(prompt, opts){
+    if (nativeSample) return nativeSample(prompt, opts);
+    return backendDraft(prompt, opts);
+  }
+
   sampleFn.json = async function(prompt, opts){
+    if (nativeSample && nativeSample.json) {
+      try { return await nativeSample.json(prompt, opts); }
+      catch (e) { return null; }
+    }
     try {
       var res = await callBackend('extract', prompt, opts);
       var data = await res.json();
@@ -732,8 +763,6 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
       return null;
     }
   };
-
-  renderFileList();
 
   // ---------- attachments ----------
   var attachments = []; // { file, kind }
