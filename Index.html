@@ -1835,10 +1835,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     else{ openProductModal(data); }
   }
   catalog.addEventListener('click', handleCardClick);
-  // Showcase cards are a separate strip outside #catalog, so they need the
-  // same delegated handler — otherwise Try free/+ Add silently do nothing
-  // for anything shown in the showcase.
+  // Showcase and Just Added cards are separate strips outside #catalog, so
+  // they need the same delegated handler — otherwise Try free/+ Add and the
+  // card itself silently do nothing for anything shown in those strips.
   if(showcase) showcase.addEventListener('click', handleCardClick);
+  if(justAdded) justAdded.addEventListener('click', handleCardClick);
 
   function cardToData(card){
     return {
