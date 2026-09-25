@@ -434,7 +434,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
       <p style="font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 14px;">Any format — daily reports, photos, RFIs, contracts, spreadsheets, emails. Drop one here, pick a letter type on the Draft tab, and hit Generate — it reads what's readable and fills in who it's to, the project, the facts it can find, all still editable before you send.</p>
       <div class="dropzone" id="dropzone" tabindex="0">
         <strong>Drop files here</strong> or click to browse — any format, any size.<br>
-        Photos and scans are handed to the draft as images. Text-based files (.txt, .csv, .md, .json, .rtf, .log) are read in as reference text. Other formats (.pdf, .docx, .xlsx, .zip, etc.) attach for your own record but aren't read into the draft — pull the key facts into the Facts list on the Draft tab.
+        Photos and scans are handed to the draft as images. Text files (.txt, .csv, .md, .json, .rtf, .log), PDFs, Word docs (.docx), and Excel files (.xlsx, .xls) are all read in as reference text. Other formats (.zip, etc.) attach for your own record but aren't read into the draft — pull the key facts into the Facts list on the Draft tab.
       </div>
       <input type="file" id="fileinput" multiple accept="*/*" hidden>
       <div class="filelist" id="filelist"></div>
@@ -767,9 +767,16 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   // ---------- attachments ----------
   var attachments = []; // { file, kind }
   var TEXT_EXT = /\\.(txt|csv|tsv|md|markdown|json|rtf|log|xml|yaml|yml)$/i;
+  var PDF_EXT = /\\.pdf$/i;
+  var DOCX_EXT = /\\.docx$/i;
+  var XLSX_EXT = /\\.(xlsx|xls)$/i;
 
   function classify(file){
     if (file.type.indexOf('image/') === 0) return 'image';
+    if (file.type === 'application/pdf' || PDF_EXT.test(file.name)) return 'pdf';
+    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || DOCX_EXT.test(file.name)) return 'docx';
+    if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.type === 'application/vnd.ms-excel' || XLSX_EXT.test(file.name)) return 'xlsx';
     if (file.type.indexOf('text/') === 0 || file.type === 'application/json' ||
         file.type === 'application/xml' || TEXT_EXT.test(file.name)) return 'text';
     return 'binary';
@@ -781,8 +788,96 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   }
   function badgeLabel(kind, idx, imageIdxAllowed){
     if (kind === 'text') return 'text → draft';
+    if (kind === 'pdf') return 'pdf → draft';
+    if (kind === 'docx') return 'doc → draft';
+    if (kind === 'xlsx') return 'sheet → draft';
     if (kind === 'image') return imageIdxAllowed ? 'image → draft' : 'image — not sent';
     return 'attached only';
+  }
+  // Reused for the filechip's meta color — pdf/docx/xlsx read in just like text does.
+  function cssKind(kind){
+    return (kind === 'pdf' || kind === 'docx' || kind === 'xlsx') ? 'text' : kind;
+  }
+
+  // ---------- lazy-loaded readers for pdf/docx/xlsx ----------
+  // These libraries only load if the user actually attaches that file type, so the
+  // page itself stays light. All parsing happens right in the browser — no upload
+  // to any server — so it works the same whether drafting goes through the live
+  // artifact's native API or the backend fallback.
+  var PDFJS_VERSION = '3.4.120';
+  var libPromises = {};
+  function loadScript(url){
+    if (libPromises[url]) return libPromises[url];
+    libPromises[url] = new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function(){ resolve(); };
+      s.onerror = function(){ reject(new Error('Could not load ' + url)); };
+      document.head.appendChild(s);
+    });
+    return libPromises[url];
+  }
+  function ensurePdfJs(){
+    return loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.js').then(function(){
+      if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.js';
+      }
+    });
+  }
+  function ensureMammoth(){
+    return loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+  }
+  function ensureXlsx(){
+    return loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  }
+
+  function readPdfFile(file){
+    return ensurePdfJs().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      return window.pdfjsLib.getDocument({ data: buf }).promise;
+    }).then(function(pdf){
+      var maxPages = Math.min(pdf.numPages, 25);
+      var pages = [];
+      var chain = Promise.resolve();
+      var _loop = function(pageNum){
+        chain = chain.then(function(){
+          return pdf.getPage(pageNum).then(function(page){ return page.getTextContent(); })
+            .then(function(tc){ pages.push(tc.items.map(function(it){ return it.str; }).join(' ')); });
+        });
+      };
+      for (var i = 1; i <= maxPages; i++) _loop(i);
+      return chain.then(function(){
+        var out = pages.join('\\n\\n');
+        if (pdf.numPages > maxPages) out += '\\n\\n[...' + (pdf.numPages - maxPages) + ' more page(s) not read...]';
+        return out;
+      });
+    }).catch(function(e){ return ''; });
+  }
+
+  function readDocxFile(file){
+    return ensureMammoth().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      return window.mammoth.extractRawText({ arrayBuffer: buf });
+    }).then(function(result){
+      return (result && result.value) || '';
+    }).catch(function(e){ return ''; });
+  }
+
+  function readXlsxFile(file){
+    return ensureXlsx().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      var wb = window.XLSX.read(buf, { type: 'array' });
+      var parts = [];
+      wb.SheetNames.forEach(function(name){
+        var csv = window.XLSX.utils.sheet_to_csv(wb.Sheets[name]);
+        if (csv && csv.trim()) parts.push('[Sheet: ' + name + ']\\n' + csv);
+      });
+      return parts.join('\\n\\n');
+    }).catch(function(e){ return ''; });
   }
 
   var dropzone = document.getElementById('dropzone');
@@ -828,7 +923,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
       name.className = 'fname';
       name.textContent = item.file.name;
       var meta = document.createElement('span');
-      meta.className = 'fmeta ' + item.kind;
+      meta.className = 'fmeta ' + cssKind(item.kind);
       meta.textContent = badgeLabel(item.kind, idx, allowedAsImage) + ' · ' + fmtSize(item.file.size);
       var rm = document.createElement('button');
       rm.type = 'button';
@@ -1049,12 +1144,28 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     scrubreportEl.classList.remove('show');
 
     try {
-      var textItems = attachments.filter(function(a){ return a.kind === 'text'; });
+      var readableItems = attachments.filter(function(a){
+        return a.kind === 'text' || a.kind === 'pdf' || a.kind === 'docx' || a.kind === 'xlsx';
+      });
       var textExcerpts = [];
-      for (var i = 0; i < textItems.length; i++) {
-        var content = await readTextFile(textItems[i].file);
-        textExcerpts.push({ name: textItems[i].file.name, content: content.slice(0, 4000) });
+      for (var i = 0; i < readableItems.length; i++) {
+        var ritem = readableItems[i];
+        var content = '';
+        if (ritem.kind === 'text') {
+          content = await readTextFile(ritem.file);
+        } else if (ritem.kind === 'pdf') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (PDF)…';
+          content = await readPdfFile(ritem.file);
+        } else if (ritem.kind === 'docx') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (Word doc)…';
+          content = await readDocxFile(ritem.file);
+        } else if (ritem.kind === 'xlsx') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (spreadsheet)…';
+          content = await readXlsxFile(ritem.file);
+        }
+        if (content) textExcerpts.push({ name: ritem.file.name, content: content.slice(0, 6000) });
       }
+      statusEl.textContent = 'Reading attachments…';
 
       var imageBudget = imageLimits ? imageLimits.maxCount : 0;
       var imageFiles = attachments
