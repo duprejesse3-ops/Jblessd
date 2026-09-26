@@ -26,11 +26,14 @@ const COMPARE_LASTMOD = '2026-09-26'
 const BRAND_IMAGE = `${SITE}/multiniche-ai-og.png`
 const IMAGE_TITLE = 'MULTINICHE AI'
 const IMAGE_CAPTION =
-  'MULTINICHE AI — AI prompt packs, automation blueprints, doc templates, and agent configs.'
+  'MULTINICHE AI — AI automations, agent configs, doc templates, and downloadable software.'
 
 // Role landing pages served by the pages edge function (/tools/:niche). Kept in
 // sync with NICHE_LABEL there so every audience page is discoverable to crawlers.
-const NICHES = ['founders', 'sales', 'marketers', 'developers', 'writers', 'students', 'architects', 'engineers', 'office', 'finance', 'stores', 'contractors']
+// "writers" was dropped from NICHE_LABEL on 2026-09-26 (its only 3 products were
+// prompt packs, all discontinued) -- keep this list in sync or the sitemap
+// submits a URL that now 404s.
+const NICHES = ['founders', 'sales', 'marketers', 'developers', 'students', 'architects', 'engineers', 'office', 'finance', 'stores', 'contractors']
 
 // Outcome-based landing pages (/use-cases/:slug), kept in sync with the slugs
 // the pages edge function knows how to render.

@@ -6,7 +6,9 @@
 // of what MULTINICHE AI is, what it sells, and the canonical URLs — so that when
 // someone asks an assistant "best prompt pack for founders" the model has a
 // structured, quotable source that names this store and links straight to the
-// right page.
+// right page. (The store no longer sells prompt packs as a category -- see the
+// 2026-09-26 catalog cleanup -- so the description below leads with automations
+// and agent configs instead.)
 //
 // Generated from the live catalog so it never drifts. Served as text/markdown at
 // the well-known /llms.txt path. Falls back to the bundled catalog on DB error.
@@ -31,8 +33,8 @@ export default async () => {
   const lines: string[] = [
     '# MULTINICHE AI',
     '',
-    '> Ready-to-use AI productivity tools — prompt packs, automation blueprints, doc',
-    '> templates, and agent configs — sold as instruments, not pitches. Every tool can',
+    '> Ready-to-use AI automations and software — automation blueprints, agent',
+    '> configs, doc templates, and connectors — sold as instruments, not pitches. Every tool can',
     '> be run live on your own task before you buy it, and every purchase is an instant',
     '> digital download.',
     '',
