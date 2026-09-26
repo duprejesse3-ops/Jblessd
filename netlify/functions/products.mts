@@ -98,6 +98,9 @@ export default async (req: Request, _context: Context) => {
       blurb: String(body.blurb ?? '').trim().slice(0, 400) || 'No description yet.',
       spec: String(body.spec ?? '').trim().slice(0, 200) || '—',
       timeSaved: String(body.timeSaved ?? '').trim().slice(0, 80) || null,
+      // Left null unless the lister actually states one — a Product's LLM
+      // compatibility is a factual claim, not something to default to "any".
+      llmCompatibility: String(body.llmCompatibility ?? '').trim().slice(0, 80) || null,
     }
 
     try {
@@ -110,9 +113,9 @@ export default async (req: Request, _context: Context) => {
       const sku = `AI-${SKU_PREFIX[category]}-${String(next).padStart(3, '0')}`
 
       const [row] = (await db.sql`
-        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved)
-        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved})
-        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved
+        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility)
+        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved}, ${record.llmCompatibility})
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility
       `) as Array<any>
 
       // Drop the cached catalog so the new product shows up on the next read
@@ -130,6 +133,7 @@ export default async (req: Request, _context: Context) => {
             ...(row as Product),
             price: Number(row.price),
             ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
+            ...(row.llm_compatibility ? { llmCompatibility: row.llm_compatibility } : {}),
           }),
         },
         { status: 201 },
@@ -163,12 +167,13 @@ export default async (req: Request, _context: Context) => {
 
     // Only touch fields the caller actually sent, so a single-field edit
     // (e.g. just a price change) can't accidentally blank out the rest.
-    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved', unknown>> = {}
+    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved' | 'llmCompatibility', unknown>> = {}
     if (body.name !== undefined) fields.name = String(body.name).trim().slice(0, 120)
     if (body.format !== undefined) fields.format = String(body.format).trim().slice(0, 120)
     if (body.blurb !== undefined) fields.blurb = String(body.blurb).trim().slice(0, 400)
     if (body.spec !== undefined) fields.spec = String(body.spec).trim().slice(0, 200)
     if (body.timeSaved !== undefined) fields.timeSaved = String(body.timeSaved).trim().slice(0, 80)
+    if (body.llmCompatibility !== undefined) fields.llmCompatibility = String(body.llmCompatibility).trim().slice(0, 80)
     if (body.price !== undefined) {
       const price = Number(body.price)
       if (!Number.isFinite(price) || price <= 0 || price > 100000) {
@@ -205,9 +210,10 @@ export default async (req: Request, _context: Context) => {
           category = COALESCE(${(fields.category as string) ?? null}, category),
           niche = COALESCE(${(fields.niche as string) ?? null}, niche),
           time_saved = COALESCE(${(fields.timeSaved as string) ?? null}, time_saved),
+          llm_compatibility = COALESCE(${(fields.llmCompatibility as string) ?? null}, llm_compatibility),
           updated_at = now()
         WHERE sku = ${sku}
-        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, updated_at
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, updated_at
       `) as Array<any>
 
       if (!row) return Response.json({ error: `No product with sku ${sku}` }, { status: 404, headers: NO_STORE })
@@ -224,6 +230,7 @@ export default async (req: Request, _context: Context) => {
             ...(row as Product),
             price: Number(row.price),
             ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
+            ...(row.llm_compatibility ? { llmCompatibility: row.llm_compatibility } : {}),
             updatedAt: row.updated_at ? new Date(row.updated_at).toISOString().slice(0, 10) : undefined,
           }),
         },
@@ -235,7 +242,37 @@ export default async (req: Request, _context: Context) => {
     }
   }
 
-  return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST, PATCH' } })
+  if (req.method === 'DELETE') {
+    if (!isConfigured()) {
+      return Response.json({ error: 'Editing is not configured (ADMIN_PASSWORD unset).' }, { status: 503, headers: NO_STORE })
+    }
+    if (!isAuthed(req, Date.now())) {
+      return Response.json({ error: 'Not authorized. Sign in first.' }, { status: 401, headers: NO_STORE })
+    }
+
+    const url = new URL(req.url)
+    const sku = String(url.searchParams.get('sku') ?? '').trim().toUpperCase()
+    if (!sku) return Response.json({ error: 'A sku query param is required' }, { status: 400, headers: NO_STORE })
+
+    try {
+      const db = getDatabase()
+      const [row] = (await db.sql`DELETE FROM products WHERE sku = ${sku} RETURNING sku`) as Array<any>
+      if (!row) return Response.json({ error: `No product with sku ${sku}` }, { status: 404, headers: NO_STORE })
+
+      try {
+        await purgeCache({ tags: [CATALOG_CACHE_TAG] })
+      } catch (err) {
+        console.error('Catalog cache purge failed:', (err as Error).message)
+      }
+
+      return Response.json({ deleted: sku }, { headers: NO_STORE })
+    } catch (err) {
+      console.error('Delete product error:', (err as Error).message)
+      return Response.json({ error: 'Could not delete the product right now. Please try again.' }, { status: 503, headers: NO_STORE })
+    }
+  }
+
+  return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, POST, PATCH, DELETE' } })
 }
 
 export const config: Config = {

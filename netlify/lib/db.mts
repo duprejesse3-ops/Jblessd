@@ -10,7 +10,7 @@ export async function loadCatalog(): Promise<{ products: Product[]; source: 'db'
   try {
     const db = getDatabase()
     const rows = await db.sql`
-      SELECT sku, name, category, niche, format, price, blurb, spec, time_saved
+      SELECT sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility
       FROM products
       ORDER BY id
     `
@@ -25,6 +25,7 @@ export async function loadCatalog(): Promise<{ products: Product[]; source: 'db'
         blurb: r.blurb,
         spec: r.spec,
         ...(r.time_saved ? { timeSaved: r.time_saved } : {}),
+        ...(r.llm_compatibility ? { llmCompatibility: r.llm_compatibility } : {}),
       })) as Product[]
       return { products, source: 'db' }
     }

@@ -387,6 +387,10 @@ interface ApiProduct {
   // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
   // crawlers get a real freshness signal instead of none at all.
   updatedAt?: string
+  // Which AI model(s) this product actually runs on — set per-SKU in the DB
+  // (see netlify/database/migrations/20260926110000_add_llm_compatibility),
+  // never defaulted here. Absent for products that aren't LLM-driven.
+  llmCompatibility?: string
 }
 
 interface Aggregate {
@@ -755,6 +759,7 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
       { '@type': 'PropertyValue', name: 'Built for', value: nl },
       { '@type': 'PropertyValue', name: 'Format', value: p.format },
       ...(p.spec && p.spec !== '—' ? [{ '@type': 'PropertyValue', name: 'Spec', value: p.spec }] : []),
+      ...(p.llmCompatibility ? [{ '@type': 'PropertyValue', name: 'Compatible LLM', value: p.llmCompatibility }] : []),
       {
         '@type': 'PropertyValue',
         name: 'Live proof',

@@ -65,6 +65,10 @@ interface ApiProduct {
   // netlify/lib/db.mts. Feeds Product.dateModified below so AI/search
   // crawlers get a real freshness signal instead of none at all.
   updatedAt?: string
+  // Which AI model(s) this product actually runs on — set per-SKU in the DB
+  // (see netlify/database/migrations/20260926110000_add_llm_compatibility),
+  // never defaulted here. Absent for products that aren't LLM-driven.
+  llmCompatibility?: string
 }
 
 // JSON embedded in HTML must not contain a literal "</script>" or a raw "<".
@@ -145,6 +149,7 @@ function buildItemList(products: ApiProduct[], aggregates: Record<string, Aggreg
     const properties: Array<Record<string, string>> = []
     if (p.format) properties.push({ '@type': 'PropertyValue', name: 'Format', value: p.format })
     if (p.spec && p.spec !== '—') properties.push({ '@type': 'PropertyValue', name: 'Spec', value: p.spec })
+    if (p.llmCompatibility) properties.push({ '@type': 'PropertyValue', name: 'Compatible LLM', value: p.llmCompatibility })
     properties.push({
       '@type': 'PropertyValue',
       name: 'Live proof',
