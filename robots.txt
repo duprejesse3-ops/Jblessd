@@ -11,6 +11,13 @@ Disallow: /admin.html
 Disallow: /code
 Disallow: /code.html
 Disallow: /p/
+# Every backend endpoint (checkout, webhooks, admin actions, credits, the AI
+# concierge, and the rest of netlify/functions) is proxied through this single
+# prefix (see the /api/* redirect in netlify.toml). None of it is a page meant
+# to be indexed — it's JSON and side effects, not content — and nothing links
+# to it from crawlable HTML, so this is pure crawl-budget hygiene rather than a
+# fix for a real leak.
+Disallow: /api/
 
 User-agent: Bingbot
 Allow: /

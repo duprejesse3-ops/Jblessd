@@ -24,6 +24,16 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Backend endpoints, not pages — checkout, webhooks, admin actions, credits, the
+# concierge. robots.txt's Disallow: /api/ only stops a well-behaved crawler from
+# requesting these; this header is the same belt-and-suspenders pairing used
+# below for /admin, /code, and /p/* so a URL that somehow gets fetched anyway
+# (a stray inbound link, a misbehaving bot) still can't end up indexed.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
 # Refuse the site's own source. publish = "." above means the repository root is
 # the published directory, so every one of these paths is a real file sitting in
 # it: Netlify strips the functions tree on its way to the CDN but nothing else,
