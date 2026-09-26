@@ -32,7 +32,12 @@ const MODEL = 'claude-sonnet-5'
 const STORE_NAME = 'MULTINICHE AI'
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
-const CATEGORIES = Object.keys(CATEGORY_LABEL) as Product['category'][]
+// The storefront no longer sells prompt packs as a product category (see the
+// 2026-09-26 catalog cleanup) — excluded here, not from the shared
+// Product['category'] type, so this generator (and the fallback below) can
+// never manufacture a new one, without touching the handful of other files
+// that still exhaustively switch on every category value for existing rows.
+const CATEGORIES = (Object.keys(CATEGORY_LABEL) as Product['category'][]).filter((c) => c !== 'prompts')
 const NICHES = Object.keys(NICHE_LABEL) as Product['niche'][]
 
 // Each category maps to the SKU prefix used throughout the catalog
@@ -94,7 +99,7 @@ function clampPrice(n: number): number {
 
 // ---- template fallback: design a serviceable product without the model ----
 function heuristicDesign(brief: string, hints: Partial<Design>): Design {
-  const category = hints.category ?? 'prompts'
+  const category = hints.category ?? 'automations'
   const niche = hints.niche ?? 'founders'
   const audience = NICHE_LABEL[niche]
   const kind = CATEGORY_LABEL[category]
@@ -106,6 +111,7 @@ function heuristicDesign(brief: string, hints: Partial<Design>): Design {
     templates: 'Notion + Markdown template',
     agents: 'Agent config + guardrails',
     connectors: 'Downloadable app · one-time license',
+    host: '.zip · self-hosted install pack · one-time license',
   }
 
   return {
@@ -166,7 +172,8 @@ async function aiDesign(brief: string, hints: Partial<Design>, catalog: Product[
         role: 'user',
         content:
           `You are the in-house product builder for ${STORE_NAME}, a store of ready-to-use AI ` +
-          `productivity tools (prompt packs, automation blueprints, doc templates, and agent configs). ` +
+          `automations and software (automation blueprints, agent configs, doc templates, and real downloadable ` +
+          `source-code tools). ` +
           `The brand voice is confident, technical, and no-nonsense — every listing is "a spec sheet, not a pitch." ` +
           `Avoid hype words and exclamation points.\n\n` +
           `Design ONE new product from the owner's brief below. It must fill a real gap: do not duplicate or ` +
@@ -182,7 +189,7 @@ async function aiDesign(brief: string, hints: Partial<Design>, catalog: Product[
   if (!block) throw new Error('Model did not return a product design')
 
   const out = block.input as Partial<Design>
-  const category = CATEGORIES.includes(out.category as Product['category']) ? (out.category as Product['category']) : null
+  const category = (CATEGORIES as string[]).includes(out.category as string) ? (out.category as Product['category']) : null
   const niche = NICHES.includes(out.niche as Product['niche']) ? (out.niche as Product['niche']) : null
 
   if (!out.name || !category || !niche || !out.format || !out.blurb || !out.spec) {
@@ -256,7 +263,7 @@ export default async (req: Request) => {
     const cat = String(body?.category ?? '').trim()
     const nic = String(body?.niche ?? '').trim()
     const price = Number(body?.targetPrice)
-    if (CATEGORIES.includes(cat as Product['category'])) hints.category = cat as Product['category']
+    if ((CATEGORIES as string[]).includes(cat)) hints.category = cat as Product['category']
     if (NICHES.includes(nic as Product['niche'])) hints.niche = nic as Product['niche']
     if (Number.isFinite(price) && price > 0) hints.price = clampPrice(price)
   } catch {

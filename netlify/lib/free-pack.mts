@@ -2,9 +2,10 @@
 //
 // Kept as data (not prose buried in the endpoint) so the pack is easy to edit
 // and so both the JSON response and the Markdown download are built from one
-// source of truth. These are real, ready-to-use prompts in the spirit of the
-// storefront's flagship "Deep Work Prompt Pack" (AI-PP-001) — the free taste
-// that the lead magnet promises.
+// source of truth. These are real, ready-to-use sample prompts — the free
+// taste that the lead magnet promises, upselling into the real automations
+// and agent configs in the catalog (the storefront no longer sells prompt
+// packs as a product category; see the 2026-09-26 catalog cleanup).
 
 export interface PromptEntry {
   title: string
@@ -22,7 +23,7 @@ export const FREE_PACK: FreePack = {
   slug: 'deep-work-starter-pack',
   title: 'Deep Work Starter Pack',
   intro:
-    'Five prompts to run your day like an operator. Paste any one into Claude, ChatGPT, or Gemini and fill in the brackets. Want the full 120-prompt set? That is the Deep Work Prompt Pack in the catalog.',
+    'Five prompts to run your day like an operator. Paste any one into Claude, ChatGPT, or Gemini and fill in the brackets. Want it to run itself instead of you pasting a prompt every morning? Browse the real automations and agent configs in the catalog.',
   prompts: [
     {
       title: 'Prioritize the day',

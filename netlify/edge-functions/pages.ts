@@ -46,7 +46,6 @@ const RETURN_POLICY = {
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
-  prompts: 'Prompt Packs',
   automations: 'Automation Blueprints',
   templates: 'Doc Templates',
   agents: 'Agent Configs',
@@ -58,7 +57,6 @@ const NICHE_LABEL: Record<string, string> = {
   sales: 'Sales & CS',
   marketers: 'Marketers',
   developers: 'Developers',
-  writers: 'Writers',
   students: 'Students & Researchers',
   architects: 'Architects',
   engineers: 'Engineers',
@@ -72,7 +70,6 @@ const NICHE_INTRO: Record<string, string> = {
   sales: 'Close the loop faster: triage inbound, keep relationships warm, and turn conversations into next steps.',
   marketers: 'From first draft to on-brand output — copy, calendars, and creative that ship without the fiddly parts.',
   developers: 'Agents and automations that fit your workflow: PRs, standups, knowledge bases, and grounded answers.',
-  writers: 'Keep your voice, lose the blank page — prompts and templates tuned for tone, structure, and speed.',
   students: 'Research and study, organized — literature scans, source comparison, and a weekly operating rhythm.',
   architects: 'Own the shape of the system — decision records, design reviews, and trade-off analysis that outlast the whiteboard.',
   engineers: 'Ship and operate with confidence — infrastructure, incidents, pipelines, and the runbooks that hold it all together.',
@@ -89,7 +86,7 @@ interface NicheFaqItem { q: string; a: string }
 const NICHE_DEEP_DIVE: Record<string, string> = {
   developers:
     `<p>Every tool here runs the way your team already works: no dashboards to learn, no new accounts — just a prompt, an automation, or an agent config that plugs into what you're already doing.</p>` +
-    `<p><strong>PR &amp; code review</strong> — prompt packs and agent configs that read a diff and return the review a senior engineer would leave: what's risky, what's missing tests, what to rename before merge.</p>` +
+    `<p><strong>PR &amp; code review</strong> — agent configs and real automations that read a diff and return the review a senior engineer would leave: what's risky, what's missing tests, what to rename before merge.</p>` +
     `<p><strong>Standups &amp; release notes</strong> — automation blueprints that turn a raw commit log or async check-in into a one-paragraph digest, so the meeting is optional instead of mandatory.</p>` +
     `<p><strong>Grounded Q&amp;A over your own docs</strong> — agent configs built for retrieval: point one at a knowledge base or a repo's docs folder and get answers that cite where they came from, not guesses.</p>` +
     `<p><strong>Incident &amp; postmortem write-ups</strong> — doc templates that turn a timeline of what happened into a clean, blameless postmortem in the format your team already uses.</p>`,
@@ -99,7 +96,7 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
   developers: [
     {
       q: 'Do these tools require an API key or account setup?',
-      a: 'No signup for the prompt packs and doc templates — download and use them in whatever model you already have access to. Agent Configs and Automation Blueprints include their own setup instructions where a key or webhook is needed.',
+      a: 'No signup for the doc templates — download and use them in whatever model you already have access to. Agent Configs and Automation Blueprints include their own setup instructions where a key or webhook is needed.',
     },
     {
       q: 'Can I see a tool run before buying it?',
@@ -107,17 +104,17 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
     },
     {
       q: 'Are these one-time purchases or subscriptions?',
-      a: 'One-time purchase per tool. You get the prompt pack, blueprint, template, or agent config outright — no recurring fee to keep using what you bought.',
+      a: 'One-time purchase per tool. You get the automation, template, or agent config outright — no recurring fee to keep using what you bought.',
     },
     {
-      q: "What's the difference between a Prompt Pack and an Agent Config?",
-      a: 'A Prompt Pack is a set of ready-to-paste prompts for a specific job. An Agent Config goes a step further: a configured agent that runs a workflow rather than answering one prompt at a time.',
+      q: "What's the difference between an Automation Blueprint and an Agent Config?",
+      a: 'An Automation Blueprint runs on a schedule or trigger once connected — it sorts, syncs, or follows up automatically. An Agent Config is a configured agent you run yourself, on demand, for a task with more judgment involved.',
     },
   ],
   founders: [
     {
       q: 'Do I need to set anything up, or hire someone to configure this?',
-      a: 'No. Prompt Packs and Doc Templates are ready to paste or duplicate as-is. Automation Blueprints and Agent Configs include setup steps in plain language — most take under 15 minutes to connect.',
+      a: 'No. Doc Templates are ready to paste or duplicate as-is. Automation Blueprints and Agent Configs include setup steps in plain language — most take under 15 minutes to connect.',
     },
     {
       q: 'Can I see a tool run before buying it?',
@@ -153,7 +150,7 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
   marketers: [
     {
       q: 'Do I need design skills to use these?',
-      a: 'No — Prompt Packs and Automation Blueprints produce copy and content drafts, not finished visuals. You review and ship the output yourself, in whatever tools you already use.',
+      a: 'No — Automation Blueprints and Agent Configs produce copy and content drafts, not finished visuals. You review and ship the output yourself, in whatever tools you already use.',
     },
     {
       q: 'Will the output sound like generic AI copy?',
@@ -161,35 +158,17 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
     },
     {
       q: 'Can these match my existing brand voice?',
-      a: "Prompt Packs are editable — most include a tone-setting section you fill in once. If a tool doesn't fit your voice after testing it, don't buy it; that's the point of the live proof.",
+      a: "The Brand Voice Memory Block and the Global Content Localizer are both configured to your own voice profile before the first run. If a tool doesn't fit your voice after testing it, don't buy it; that's the point of the live proof.",
     },
     {
       q: 'Is this a subscription?',
       a: 'No. Every tool is a one-time purchase — you own it outright.',
     },
   ],
-  writers: [
-    {
-      q: 'Will this make my writing sound like generic AI output?',
-      a: "These are prompts and templates that lock in your own tone and structure — not a tool that writes for you from scratch. Run the live proof on your own sample first if you're unsure it'll hold your voice.",
-    },
-    {
-      q: 'Can I see a tool run before buying it?',
-      a: 'Yes — every product page has a live proof: a real, unedited run on a sample task. Use the free tool page to try one on your own draft, no signup required.',
-    },
-    {
-      q: "What's included in a Prompt Pack?",
-      a: 'A set of ready-to-paste prompts for a specific kind of writing task, usually with a few worked examples showing the expected input and output.',
-    },
-    {
-      q: 'Is this a subscription?',
-      a: 'No. Every tool is a one-time purchase you keep — no recurring fee.',
-    },
-  ],
   students: [
     {
       q: 'Do these tools cite sources, or just summarize?',
-      a: "The Research Assistant prompts are built for citation-aware output — comparing and tracing sources rather than paraphrasing without attribution. Each listing's spec line says whether citation formatting is included.",
+      a: "The DOI-to-Citation Formatter and the Multi-Agent Research Swarm are built for citation-aware output — comparing and tracing sources rather than paraphrasing without attribution. Each listing's spec line says whether citation formatting is included.",
     },
     {
       q: 'Can I see a tool run before buying it?',
@@ -197,7 +176,7 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
     },
     {
       q: 'Which tool is for ongoing study habits vs. a specific paper?',
-      a: 'The Weekly Planning Template is for an ongoing study rhythm — plan Monday, review Friday. The Research Assistant Prompts are for a specific literature scan or source comparison task.',
+      a: 'The Weekly Planning Template is for an ongoing study rhythm — plan Monday, review Friday. The Multi-Agent Research Swarm is for a specific literature scan or source comparison task.',
     },
     {
       q: 'Is this a subscription?',
@@ -225,7 +204,7 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
   engineers: [
     {
       q: 'Do these require an API key or account setup?',
-      a: 'No signup for prompt packs and doc templates. Automation Blueprints and Agent Configs include their own setup instructions where a key, token, or webhook is needed — usually a few minutes of work.',
+      a: 'No signup for doc templates. Automation Blueprints and Agent Configs include their own setup instructions where a key, token, or webhook is needed — usually a few minutes of work.',
     },
     {
       q: 'Can I see a tool run before buying it?',
@@ -243,7 +222,7 @@ const NICHE_FAQ: Record<string, NicheFaqItem[]> = {
   office: [
     {
       q: 'Do I need any technical setup to use these?',
-      a: 'No. Prompt Packs and Doc Templates work as-is in whatever tool you already have open. Automation Blueprints include plain-language setup steps, usually done in under 15 minutes.',
+      a: 'No. Doc Templates work as-is in whatever tool you already have open. Automation Blueprints include plain-language setup steps, usually done in under 15 minutes.',
     },
     {
       q: 'Can I see a tool run before buying it?',
@@ -982,7 +961,7 @@ const faqLd = faqs
   faqHtml +
   `<h2>Browse by role</h2><div class="roles">${otherRoles}</div>`
   return page({
-    title: `AI tools for ${nl} — prompt packs, automations & agents | ${STORE}`,
+    title: `AI tools for ${nl} — automations, agent configs & real software | ${STORE}`,
     description: intro,
     canonical: url,
     jsonld: [itemListLd, breadcrumb, ...(faqLd ? [faqLd] : [])],
@@ -1675,7 +1654,6 @@ function renderCustom(): Response {
     `<label style="display:block;margin-bottom:12px">Category` +
     `<select id="co-category" style="width:100%;margin-top:6px;background:#0D111C;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:15px">` +
     `<option value="">Choose one…</option>` +
-    `<option value="prompts">Prompt Pack</option>` +
     `<option value="automations">Automation Blueprint</option>` +
     `<option value="templates">Doc Template</option>` +
     `<option value="agents">Agent Config</option>` +
