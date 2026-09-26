@@ -282,7 +282,15 @@ f.parentNode.insertBefore(j,f);
   body{
     margin:0; background:var(--ink); color:var(--paper);
     font-family:var(--sans); -webkit-font-smoothing:antialiased;
-    position:relative; overflow-x:hidden; max-width:100vw;
+    position:relative; max-width:100vw;
+    /* No overflow-x here on top of html's — per the CSS overflow spec, an
+       element with overflow-x set but overflow-y unset gets overflow-y
+       force-computed to `auto`, turning body into its own scroll
+       container. That breaks every position:sticky descendant (header,
+       and now the filter bar), because they stick relative to body's
+       box instead of the real viewport once you scroll far enough.
+       html{overflow-x:hidden} above already stops horizontal scroll for
+       the whole page, so body doesn't need its own copy. */
   }
   body::before{
     content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
@@ -379,10 +387,24 @@ f.parentNode.insertBefore(j,f);
   .trust-item{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted-2); display:flex; align-items:center; gap:8px;}
   .trust-item svg{color:var(--brass); flex-shrink:0;}
 
-  /* filters */
-  .filters{margin-bottom:44px;}
-  .filter-label{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--muted-2); margin:0 0 10px; text-transform:uppercase;}
-  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
+  /* filters — sticky under the header so the catalog stays filterable no
+     matter how far down the (now 120+ item) grid a visitor has scrolled.
+     .is-stuck is toggled by an IntersectionObserver watching a sentinel
+     placed just above .filters, and compacts the bar (smaller labels,
+     tighter gaps) once it's pinned, so it doesn't eat a full screen's
+     worth of space on mobile while scrolling a long catalog. */
+  .filters{
+    margin-bottom:44px; position:sticky; top:var(--header-h, 67px); z-index:30;
+    background:rgba(6,9,15,.92); backdrop-filter:blur(10px);
+    padding:16px 0 2px;
+    border-bottom:1px solid transparent; transition:padding .18s ease, border-color .18s ease;
+  }
+  .filters.is-stuck{padding-top:10px; padding-bottom:0; border-bottom-color:var(--line-soft);}
+  .filter-label{font-family:var(--mono); font-size:10px; letter-spacing:.22em; color:var(--muted-2); margin:0 0 10px; text-transform:uppercase; transition:font-size .18s ease, margin .18s ease, max-height .18s ease, opacity .18s ease; overflow:hidden;}
+  .filters.is-stuck .filter-label{max-height:0; margin:0; opacity:0;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; transition:margin .18s ease;}
+  .filters.is-stuck .chip-row{margin-bottom:10px;}
+  .filters.is-stuck .chip-row:last-child{margin-bottom:10px;}
   .chip{
     font-family:var(--sans); font-size:12.5px; font-weight:500; padding:7px 14px;
     border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; border-radius:var(--radius);
@@ -1024,7 +1046,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
-  <div class="wrap filters">
+  <div id="filters-sentinel" aria-hidden="true"></div>
+  <div class="wrap filters" id="filters-bar">
     <p class="filter-label">Format</p>
     <div class="chip-row" id="category-chips" role="group" aria-label="Filter by format">
       <button class="chip active" data-cat="all" aria-pressed="true">All</button>
@@ -1737,6 +1760,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     applyFilters();
   });
   search.addEventListener('input', applyFilters);
+
+  // ---- sticky filter bar ----
+  // Keeps Format/Built-for filterable the whole way down the catalog grid,
+  // not just above the fold — the grid is 120+ cards now and only grows.
+  // --header-h is measured (not hardcoded) so it stays correct if the
+  // header's height ever changes (wrapping nav on a narrow viewport, etc).
+  (function(){
+    var headerEl = document.querySelector('header');
+    var filtersBar = document.getElementById('filters-bar');
+    var sentinel = document.getElementById('filters-sentinel');
+    if(!headerEl || !filtersBar || !sentinel) return;
+
+    function syncHeaderHeight(){
+      document.documentElement.style.setProperty('--header-h', headerEl.offsetHeight + 'px');
+    }
+    syncHeaderHeight();
+    window.addEventListener('resize', syncHeaderHeight);
+
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        // Sentinel scrolls out of view (above the viewport) exactly when
+        // the filter bar has hit its sticky position, i.e. is now pinned.
+        filtersBar.classList.toggle('is-stuck', !entries[0].isIntersecting);
+      }, { rootMargin: '-' + (headerEl.offsetHeight + 1) + 'px 0px 0px 0px', threshold: 0 });
+      io.observe(sentinel);
+    }
+  })();
 
   // ---- product detail modal ----
   var productOverlay = document.getElementById('product-overlay');
