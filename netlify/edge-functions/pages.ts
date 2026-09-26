@@ -351,6 +351,13 @@ const USE_CASES: UseCase[] = [
     intro: 'Literature scans, source comparison, and grounded answers that cite where they came from.',
     keywords: ['research', 'citation', 'literature', 'retrieval', 'knowledge', 'source', 'swarm'],
   },
+  {
+    slug: 'equity-research',
+    title: 'Do equity research with AI',
+    h1: 'Turn filings and calls into an investment thesis with AI',
+    intro: 'Read a 10-K, model the valuation, and walk into the call with a real thesis — not just a summary.',
+    keywords: ['equity', 'thesis', '10-k', 'earnings', 'valuation', 'dcf', 'financial model'],
+  },
 ]
 
 interface CampaignAssets {

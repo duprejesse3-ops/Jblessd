@@ -41,6 +41,7 @@ const USE_CASE_SLUGS = [
   'ship-content-faster',
   'run-better-standups',
   'research-with-citations',
+  'equity-research',
 ]
 
 function xmlEscape(s: string): string {
