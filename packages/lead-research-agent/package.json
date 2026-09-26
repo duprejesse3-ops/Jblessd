@@ -1,0 +1,28 @@
+{
+  "name": "lead-research-agent",
+  "version": "1.0.0",
+  "description": "Reads a CSV of company domains, fetches each real homepage, and hands it to Claude for a four-field enrichment — industry, size signal, value prop, contact page guess. Not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "lead-research-agent": "./bin/research.mjs"
+  },
+  "main": "./lib/enrichment.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "leads.example.csv",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "research": "node bin/research.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

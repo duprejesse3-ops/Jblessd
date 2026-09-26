@@ -1,0 +1,8 @@
+{
+  "icpDescription": "Series A-C B2B SaaS companies, 20-200 employees, VP or Director of Sales/RevOps as the buyer, evaluating tools in the $2k-$20k/year range.",
+  "tiers": [
+    { "name": "Hot", "minScore": 80, "webhookUrl": "" },
+    { "name": "Warm", "minScore": 50, "webhookUrl": "" },
+    { "name": "Nurture", "minScore": 0, "webhookUrl": "" }
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dana@acme.com",
+    "name": "Dana Ortiz",
+    "email": "dana@acme.com",
+    "company": "Acme Inc",
+    "title": "VP Sales",
+    "message": "Looking for a way to automate our lead scoring, we get 200 form fills a week and reps are drowning.",
+    "source": "Website contact form"
+  },
+  {
+    "id": "jordan@example.com",
+    "name": "Jordan Lee",
+    "email": "jordan@example.com",
+    "company": "Example LLC",
+    "title": "Student",
+    "message": "Just curious how this works, doing research for a class project.",
+    "source": "Website contact form"
+  }
+]

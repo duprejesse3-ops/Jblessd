@@ -1,0 +1,29 @@
+{
+  "name": "lead-score-router",
+  "version": "1.0.0",
+  "description": "Scores inbound leads against your ICP with Claude and routes each one to the right Slack channel by tier — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "lead-score-router": "./bin/route.mjs"
+  },
+  "main": "./lib/scorer.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "config.example.json",
+    "leads.example.json",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "route": "node bin/route.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

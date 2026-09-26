@@ -1,0 +1,28 @@
+{
+  "name": "content-repurposing-engine",
+  "version": "1.0.0",
+  "description": "Turns a podcast/video transcript into a blog post draft, a newsletter blurb, and a batch of social clips with Claude — not a blueprint you wire yourself.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "content-repurposing-engine": "./bin/repurpose.mjs"
+  },
+  "main": "./lib/prompts.mjs",
+  "files": [
+    "bin",
+    "lib",
+    ".github-workflow-template",
+    "transcript.example.txt",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "repurpose": "node bin/repurpose.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

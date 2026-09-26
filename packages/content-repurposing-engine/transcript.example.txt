@@ -1,0 +1,21 @@
+Host: Welcome back to the show. Today we're talking with Priya about how her
+team cut new-hire onboarding from six weeks down to four days, just by
+rewriting their internal docs.
+
+Priya: Yeah, so the big insight was that nobody was reading the docs because
+they were written for the person who wrote them, not the person who needed
+them. We rebuilt everything around "what do you need to do right now" instead
+of "here is everything about this system."
+
+Host: Did you use any tools for that, or was it all just rewriting?
+
+Priya: Honestly ninety percent of it was just rewriting. We did add a search
+bar, but the actual unlock was ruthlessly cutting anything that wasn't a step
+someone needed to take today. If it was background info, we moved it to an
+appendix nobody has to read on day one.
+
+Host: What was the reaction internally when you shipped it?
+
+Priya: A little skepticism at first — people had spent years on the old docs.
+But the first new hire who went through it finished setup in a day and a
+half, and after that nobody argued.

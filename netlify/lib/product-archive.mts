@@ -30,6 +30,9 @@ import { SUPPLIER_PO_SYNC_SOURCE } from './supplier-po-sync-source.mjs'
 import { FILE_ORGANIZER_SOURCE } from './file-organizer-source.mjs'
 import { INVOICE_CHASER_SOURCE } from './invoice-chaser-source.mjs'
 import { LINK_WATCHDOG_SOURCE } from './link-watchdog-source.mjs'
+import { LEAD_RESEARCH_AGENT_SOURCE } from './lead-research-agent-source.mjs'
+import { LEAD_SCORE_ROUTER_SOURCE } from './lead-score-router-source.mjs'
+import { CONTENT_REPURPOSING_ENGINE_SOURCE } from './content-repurposing-engine-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -47,6 +50,9 @@ const PO_SYNC_EXECUTABLE = new Set(['bin/sync.mjs'])
 const FILE_ORGANIZER_EXECUTABLE = new Set(['bin/organize.mjs', 'adapters/cron.sh'])
 const INVOICE_CHASER_EXECUTABLE = new Set(['bin/chase.mjs'])
 const LINK_WATCHDOG_EXECUTABLE = new Set(['bin/watchdog.mjs'])
+const LEAD_RESEARCH_AGENT_EXECUTABLE = new Set(['bin/research.mjs'])
+const LEAD_SCORE_ROUTER_EXECUTABLE = new Set(['bin/route.mjs'])
+const CONTENT_REPURPOSING_ENGINE_EXECUTABLE = new Set(['bin/repurpose.mjs'])
 const RELEASE_NOTES_EXECUTABLE = new Set(['bin/release-notes.mjs'])
 const DIAGRAM_SYNC_EXECUTABLE = new Set(['bin/diagram-sync.mjs'])
 const MERIDIAN_HOST_EXECUTABLE = new Set([
@@ -96,6 +102,9 @@ const PO_SYNC_ROOT = 'supplier-po-sync'
 const FILE_ORGANIZER_ROOT = 'file-organizer-agent'
 const INVOICE_CHASER_ROOT = 'invoice-chaser'
 const LINK_WATCHDOG_ROOT = 'link-watchdog'
+const LEAD_RESEARCH_AGENT_ROOT = 'lead-research-agent'
+const LEAD_SCORE_ROUTER_ROOT = 'lead-score-router'
+const CONTENT_REPURPOSING_ENGINE_ROOT = 'content-repurposing-engine'
 const MERIDIAN_HOST_ROOT = 'meridian-host'
 const MERIDIAN_GATE_ROOT = 'meridian-gate'
 // Fieldhand ships as a single self-contained HTML file plus a README — no
@@ -254,6 +263,30 @@ function linkWatchdogFiles(): ArchiveFile[] {
   }))
 }
 
+function leadResearchAgentFiles(): ArchiveFile[] {
+  return LEAD_RESEARCH_AGENT_SOURCE.map((file) => ({
+    path: `${LEAD_RESEARCH_AGENT_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: LEAD_RESEARCH_AGENT_EXECUTABLE.has(file.path),
+  }))
+}
+
+function leadScoreRouterFiles(): ArchiveFile[] {
+  return LEAD_SCORE_ROUTER_SOURCE.map((file) => ({
+    path: `${LEAD_SCORE_ROUTER_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: LEAD_SCORE_ROUTER_EXECUTABLE.has(file.path),
+  }))
+}
+
+function contentRepurposingEngineFiles(): ArchiveFile[] {
+  return CONTENT_REPURPOSING_ENGINE_SOURCE.map((file) => ({
+    path: `${CONTENT_REPURPOSING_ENGINE_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: CONTENT_REPURPOSING_ENGINE_EXECUTABLE.has(file.path),
+  }))
+}
+
 function fieldhandFiles(): ArchiveFile[] {
   return FIELDHAND_SOURCE.map((file) => ({
     path: `${FIELDHAND_ROOT}/${file.path}`,
@@ -283,6 +316,9 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-AG-120': { filename: 'file-organizer-agent.zip', files: fileOrganizerFiles },
   'AI-AB-121': { filename: 'invoice-chaser.zip', files: invoiceChaserFiles },
   'AI-AB-122': { filename: 'link-watchdog.zip', files: linkWatchdogFiles },
+  'AI-AG-127': { filename: 'lead-research-agent.zip', files: leadResearchAgentFiles },
+  'AI-AB-128': { filename: 'lead-score-router.zip', files: leadScoreRouterFiles },
+  'AI-AB-129': { filename: 'content-repurposing-engine.zip', files: contentRepurposingEngineFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */
