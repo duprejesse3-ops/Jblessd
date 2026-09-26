@@ -33,6 +33,13 @@ export interface Product {
    *  netlify/edge-functions/pages.ts), so only set this for a product whose
    *  blurb runs long. */
   metaDescription?: string
+  /** Optional. ISO date (YYYY-MM-DD) this product was last edited — populated
+   *  from the products table's `updated_at` (see
+   *  netlify/database/migrations/20260926180000_add_products_updated_at).
+   *  Feeds Product.dateModified in the storefront's JSON-LD and the
+   *  sitemap's <lastmod>. Absent for a fallback-catalog entry (there's no DB
+   *  row to date), which is fine — both of those are additive fields. */
+  updatedAt?: string
 }
 
 export const CATEGORY_LABEL: Record<Product['category'], string> = {

@@ -55,9 +55,27 @@ function shortId(): string {
 export default async (req: Request, context: Context) => {
   // ---- GET: read one proof, or list recent ----
   if (req.method === 'GET') {
-    const id = new URL(req.url).searchParams.get('id')?.trim()
+    const url = new URL(req.url)
+    const id = url.searchParams.get('id')?.trim()
+    // Lightweight mode: just the ids, newest first, no `output` payload. Used
+    // by sitemap.mts, which only needs to enumerate /proof/:id URLs and was
+    // previously fetching the full list (each row up to MAX_OUTPUT=8000 chars
+    // of run output) inside a tight 1.5s timeout — with dozens of real proofs
+    // saved, that request was silently timing out and the sitemap listed zero
+    // proof pages. This mode is a fraction of the payload and has its own,
+    // higher limit so growth here doesn't quietly cap what's discoverable.
+    const idsOnly = url.searchParams.get('ids') === '1'
     try {
       const db = getDatabase()
+      if (idsOnly) {
+        const rows = (await db.sql`
+          SELECT id FROM proofs ORDER BY created_at DESC, id DESC LIMIT 500
+        `) as Array<{ id: string }>
+        return Response.json(
+          { ids: (rows ?? []).map((r) => r.id) },
+          { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' } },
+        )
+      }
       if (id) {
         const [row] = (await db.sql`
           SELECT id, sku, product_name, scenario, output, created_at
@@ -78,7 +96,7 @@ export default async (req: Request, context: Context) => {
       )
     } catch (err) {
       console.error('proof GET error:', (err as Error).message)
-      return Response.json(id ? { proof: null } : { proofs: [] })
+      return Response.json(idsOnly ? { ids: [] } : id ? { proof: null } : { proofs: [] })
     }
   }
 

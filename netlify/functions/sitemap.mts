@@ -12,6 +12,11 @@ import { loadCatalog } from '../lib/db.mjs'
 
 const SITE = 'https://multinicheai.com'
 
+// Last real edit date of compare/index.html (a static file, so this can't be
+// read from a `updated_at` column the way products can) — update this to
+// match whenever that file's content actually changes.
+const COMPARE_LASTMOD = '2026-09-26'
+
 // The brand share image, declared per-URL via the Google image-sitemap
 // extension so crawlers (and Google Images in particular) pick up the current
 // MULTINICHE AI artwork instead of a stale, previously-cached version. The URL
@@ -63,13 +68,19 @@ function imageBlock(): string {
 
 async function recentProofIds(req: Request): Promise<string[]> {
   try {
-    const res = await fetch(new URL('/api/proof', req.url), {
+    // Use the ids-only mode (see netlify/functions/proof.mts) rather than the
+    // full list: the full list includes each proof's `output` text (up to
+    // 8000 chars each), and with dozens of real saved proofs that response was
+    // routinely blowing past the old 1.5s timeout, so every poll silently
+    // returned zero proof pages. This is a fraction of the payload, so the
+    // timeout is now a real safety margin rather than the expected outcome.
+    const res = await fetch(new URL('/api/proof?ids=1', req.url), {
       headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(1500),
+      signal: AbortSignal.timeout(4000),
     })
     if (!res.ok) return []
-    const data = (await res.json()) as { proofs?: Array<{ id: string }> }
-    return (data.proofs ?? []).map((p) => p.id).filter(Boolean)
+    const data = (await res.json()) as { ids?: string[] }
+    return (data.ids ?? []).filter(Boolean)
   } catch {
     return []
   }
@@ -83,7 +94,7 @@ async function recentUpdateIds(req: Request): Promise<number[]> {
   try {
     const res = await fetch(new URL('/api/marketing-agent', req.url), {
       headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(1500),
+      signal: AbortSignal.timeout(4000),
     })
     if (!res.ok) return []
     const data = (await res.json()) as { campaigns?: Array<{ id: number }> }
@@ -99,13 +110,18 @@ async function recentUpdateIds(req: Request): Promise<number[]> {
 // discover them.
 async function recentGuideSlugs(req: Request): Promise<string[]> {
   try {
-    const res = await fetch(new URL('/api/guides', req.url), {
+    // Ids-only mode (see /api/guides) — the full list includes each guide's
+    // generated body_html, and /api/guides was unreachable at all until this
+    // same pass fixed its misplaced file, so there was no real traffic here to
+    // reveal the same timeout risk that hit /api/proof. Using the light mode
+    // up front avoids hitting it once guides actually start being requested.
+    const res = await fetch(new URL('/api/guides?slugs=1', req.url), {
       headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(1500),
+      signal: AbortSignal.timeout(4000),
     })
     if (!res.ok) return []
-    const data = (await res.json()) as { guides?: Array<{ slug: string }> }
-    return (data.guides ?? []).map((g) => g.slug).filter(Boolean)
+    const data = (await res.json()) as { slugs?: string[] }
+    return (data.slugs ?? []).filter(Boolean)
   } catch {
     return []
   }
@@ -128,7 +144,10 @@ export default async (req: Request) => {
     `  <url>\n    <loc>${SITE}/use-cases</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/updates</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE}/free-tool</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE}/compare/</loc>\n    <lastmod>2026-09-20</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+    // /compare/ is a static file with no DB row behind it, so unlike products
+    // this <lastmod> can't be derived automatically — bump COMPARE_LASTMOD
+    // by hand whenever compare/index.html actually changes.
+    `  <url>\n    <loc>${SITE}/compare/</loc>\n    <lastmod>${COMPARE_LASTMOD}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
     // The Claude Agent Studio is the second revenue line (prepaid credits), so it
     // ranks alongside the catalog rather than below the landing pages.
     `  <url>\n    <loc>${SITE}/agent</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,

@@ -119,7 +119,7 @@ export default async (req: Request, _context: Context) => {
       const [row] = (await db.sql`
         INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description)
         VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved}, ${record.llmCompatibility}, ${record.metaDescription})
-        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description, updated_at
       `) as Array<any>
 
       // Drop the cached catalog so the new product shows up on the next read
@@ -139,6 +139,7 @@ export default async (req: Request, _context: Context) => {
             ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
             ...(row.llm_compatibility ? { llmCompatibility: row.llm_compatibility } : {}),
             ...(row.meta_description ? { metaDescription: row.meta_description } : {}),
+            ...(row.updated_at ? { updatedAt: new Date(row.updated_at).toISOString().slice(0, 10) } : {}),
           }),
         },
         { status: 201 },
