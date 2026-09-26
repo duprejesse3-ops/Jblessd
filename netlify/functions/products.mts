@@ -101,6 +101,10 @@ export default async (req: Request, _context: Context) => {
       // Left null unless the lister actually states one — a Product's LLM
       // compatibility is a factual claim, not something to default to "any".
       llmCompatibility: String(body.llmCompatibility ?? '').trim().slice(0, 80) || null,
+      // Short crawler-facing summary, separate from the (often much longer)
+      // sales-copy `blurb`. Left null unless the lister states one — pages.ts
+      // falls back to blurb for <meta name="description">/og/twitter when absent.
+      metaDescription: String(body.metaDescription ?? '').trim().slice(0, 160) || null,
     }
 
     try {
@@ -113,9 +117,9 @@ export default async (req: Request, _context: Context) => {
       const sku = `AI-${SKU_PREFIX[category]}-${String(next).padStart(3, '0')}`
 
       const [row] = (await db.sql`
-        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility)
-        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved}, ${record.llmCompatibility})
-        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility
+        INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description)
+        VALUES (${sku}, ${record.name}, ${record.category}, ${record.niche}, ${record.format}, ${record.price}, ${record.blurb}, ${record.spec}, ${record.timeSaved}, ${record.llmCompatibility}, ${record.metaDescription})
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description
       `) as Array<any>
 
       // Drop the cached catalog so the new product shows up on the next read
@@ -134,6 +138,7 @@ export default async (req: Request, _context: Context) => {
             price: Number(row.price),
             ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
             ...(row.llm_compatibility ? { llmCompatibility: row.llm_compatibility } : {}),
+            ...(row.meta_description ? { metaDescription: row.meta_description } : {}),
           }),
         },
         { status: 201 },
@@ -167,13 +172,14 @@ export default async (req: Request, _context: Context) => {
 
     // Only touch fields the caller actually sent, so a single-field edit
     // (e.g. just a price change) can't accidentally blank out the rest.
-    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved' | 'llmCompatibility', unknown>> = {}
+    const fields: Partial<Record<'name' | 'price' | 'format' | 'blurb' | 'spec' | 'category' | 'niche' | 'timeSaved' | 'llmCompatibility' | 'metaDescription', unknown>> = {}
     if (body.name !== undefined) fields.name = String(body.name).trim().slice(0, 120)
     if (body.format !== undefined) fields.format = String(body.format).trim().slice(0, 120)
     if (body.blurb !== undefined) fields.blurb = String(body.blurb).trim().slice(0, 400)
     if (body.spec !== undefined) fields.spec = String(body.spec).trim().slice(0, 200)
     if (body.timeSaved !== undefined) fields.timeSaved = String(body.timeSaved).trim().slice(0, 80)
     if (body.llmCompatibility !== undefined) fields.llmCompatibility = String(body.llmCompatibility).trim().slice(0, 80)
+    if (body.metaDescription !== undefined) fields.metaDescription = String(body.metaDescription).trim().slice(0, 160)
     if (body.price !== undefined) {
       const price = Number(body.price)
       if (!Number.isFinite(price) || price <= 0 || price > 100000) {
@@ -211,9 +217,10 @@ export default async (req: Request, _context: Context) => {
           niche = COALESCE(${(fields.niche as string) ?? null}, niche),
           time_saved = COALESCE(${(fields.timeSaved as string) ?? null}, time_saved),
           llm_compatibility = COALESCE(${(fields.llmCompatibility as string) ?? null}, llm_compatibility),
+          meta_description = COALESCE(${(fields.metaDescription as string) ?? null}, meta_description),
           updated_at = now()
         WHERE sku = ${sku}
-        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, updated_at
+        RETURNING sku, name, category, niche, format, price, blurb, spec, time_saved, llm_compatibility, meta_description, updated_at
       `) as Array<any>
 
       if (!row) return Response.json({ error: `No product with sku ${sku}` }, { status: 404, headers: NO_STORE })
@@ -231,6 +238,7 @@ export default async (req: Request, _context: Context) => {
             price: Number(row.price),
             ...(row.time_saved ? { timeSaved: row.time_saved } : {}),
             ...(row.llm_compatibility ? { llmCompatibility: row.llm_compatibility } : {}),
+            ...(row.meta_description ? { metaDescription: row.meta_description } : {}),
             updatedAt: row.updated_at ? new Date(row.updated_at).toISOString().slice(0, 10) : undefined,
           }),
         },

@@ -391,6 +391,12 @@ interface ApiProduct {
   // (see netlify/database/migrations/20260926110000_add_llm_compatibility),
   // never defaulted here. Absent for products that aren't LLM-driven.
   llmCompatibility?: string
+  // Short crawler-facing summary, separate from `blurb` (which is long,
+  // on-page sales copy). Set only for products whose blurb runs past what a
+  // search/social crawler will display before truncating — see
+  // netlify/database/migrations/20260926170000_add_meta_description. Falls
+  // back to blurb when absent.
+  metaDescription?: string
 }
 
 interface Aggregate {
@@ -867,7 +873,11 @@ function renderProduct(p: ApiProduct, all: ApiProduct[], agg: Aggregate | null, 
     `<script src="/ads-network-embed.js" data-slot="slot_self_jblessd" data-container-id="mnads-slot_self_jblessd"></script>`
   return page({
     title: `${p.name} — ${cat} | ${STORE}`,
-    description: p.blurb,
+    // <meta name="description">/og:description/twitter:description get the
+    // short crawler-facing summary when one exists — blurb is on-page sales
+    // copy and several run 300-600+ chars, which search/social just truncate
+    // mid-sentence. See netlify/database/migrations/20260926170000_add_meta_description.
+    description: p.metaDescription ?? p.blurb,
     canonical: url,
     jsonld: [productLd, breadcrumb],
     ogType: 'product',
