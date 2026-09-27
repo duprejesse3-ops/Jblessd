@@ -33,6 +33,7 @@ import { LINK_WATCHDOG_SOURCE } from './link-watchdog-source.mjs'
 import { LEAD_RESEARCH_AGENT_SOURCE } from './lead-research-agent-source.mjs'
 import { LEAD_SCORE_ROUTER_SOURCE } from './lead-score-router-source.mjs'
 import { CONTENT_REPURPOSING_ENGINE_SOURCE } from './content-repurposing-engine-source.mjs'
+import { HEY_TERM_SOURCE } from './hey-term-source.mjs'
 import { buildZip, type ArchiveFile } from './zip.mjs'
 
 export interface ProductArchive {
@@ -81,6 +82,9 @@ const GUARD_EXECUTABLE = new Set(['bin/guard.mjs', 'install.sh'])
 // the shell/batch build scripts need the executable bit — the .py files
 // are run via `python3 file.py`, never executed directly.
 const MULTIBOT_EXECUTABLE = new Set(['build_linux.sh', 'build_mac.sh', 'build_windows.bat'])
+// Hey Term ships as Python invoked via `python main.py`/`python3 main.py`,
+// plus install.sh and scripts/setup-linux.sh which the buyer runs directly.
+const HEY_TERM_EXECUTABLE = new Set(['install.sh', 'scripts/setup-linux.sh'])
 
 // Unzipping into a single top-level directory rather than spraying thirteen
 // files into whatever the buyer's cwd happens to be. Standard courtesy, and it
@@ -110,6 +114,7 @@ const MERIDIAN_GATE_ROOT = 'meridian-gate'
 // Fieldhand ships as a single self-contained HTML file plus a README — no
 // scripts to mark executable.
 const FIELDHAND_ROOT = 'fieldhand'
+const HEY_TERM_ROOT = 'hey-term'
 
 function siteAuditFiles(): ArchiveFile[] {
   return SITE_AUDIT_SOURCE.map((file) => ({
@@ -295,6 +300,14 @@ function fieldhandFiles(): ArchiveFile[] {
   }))
 }
 
+function heyTermFiles(): ArchiveFile[] {
+  return HEY_TERM_SOURCE.map((file) => ({
+    path: `${HEY_TERM_ROOT}/${file.path}`,
+    contents: file.contents,
+    executable: HEY_TERM_EXECUTABLE.has(file.path),
+  }))
+}
+
 const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }> = {
   'AI-AG-065': { filename: 'site-audit-agent.zip', files: siteAuditFiles },
   'AI-AB-037': { filename: 'incident-postmortem-automation.zip', files: postmortemFiles },
@@ -319,6 +332,7 @@ const ARCHIVES: Record<string, { filename: string; files: () => ArchiveFile[] }>
   'AI-AG-127': { filename: 'lead-research-agent.zip', files: leadResearchAgentFiles },
   'AI-AB-128': { filename: 'lead-score-router.zip', files: leadScoreRouterFiles },
   'AI-AB-129': { filename: 'content-repurposing-engine.zip', files: contentRepurposingEngineFiles },
+  'AI-AG-130': { filename: 'hey-term.zip', files: heyTermFiles },
 }
 
 /** Whether this SKU ships a downloadable archive in addition to its document. */

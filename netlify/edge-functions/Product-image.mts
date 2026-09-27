@@ -146,6 +146,11 @@ function photoStyleFor(p: ApiProduct): { banner: string; full: string } | undefi
   // (prompts/automations/templates/agents never had per-SKU art at all,
   // just a generic procedural pattern), so it only steps aside here.
   if (p.category === 'connectors' && SOFTWARE_STYLE[p.sku]) return undefined
+  // Same reasoning, one non-connector exception: Hey Term (AI-AG-130) has
+  // its own mic mark in SOFTWARE_STYLE and would otherwise be swapped for
+  // the generic "agents" category stock photo, indistinguishable from
+  // every other agent-config product on the card grid.
+  if (p.sku === 'AI-AG-130' && SOFTWARE_STYLE[p.sku]) return undefined
   return CATEGORY_PHOTO_STYLE[p.category]
 }
 
@@ -282,6 +287,21 @@ const SOFTWARE_STYLE: Record<string, { gradient: [string, string]; mark: (color:
     </g>
     <path d="M28 52 H48 M40 42 L50 52 L40 62" stroke="#0C7ABF" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
+  // Hey Term — a microphone with sound-wave arcs, for "say it, it runs it."
+  // Cyan-to-near-black "terminal glow" pairing (not yet used elsewhere in
+  // this palette) — reads as a dark terminal window lighting up, on-theme
+  // for a product whose whole pitch is "runs real bash/PowerShell."
+  'AI-AG-130': {
+    gradient: ['#22E6FF', '#071824'],
+    mark: (c) => `<g fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round">
+      <rect x="-18" y="-70" width="36" height="70" rx="18" fill="${c}" stroke="none"/>
+      <path d="M-46 -10 C-46 24 -26 46 0 46 C26 46 46 24 46 -10"/>
+      <line x1="0" y1="46" x2="0" y2="76"/>
+      <line x1="-24" y1="76" x2="24" y2="76"/>
+      <path d="M-70 -30 C-78 -10 -78 10 -70 30" stroke-width="8"/>
+      <path d="M70 -30 C78 -10 78 10 70 30" stroke-width="8"/>
+    </g>`,
+  },
 }
 
 // A generic fallback for any future "Multi"-prefixed product not yet mapped
@@ -301,7 +321,10 @@ function isSoftwareProduct(p: ApiProduct): boolean {
   // Multi-brand names smoosh the prefix directly into a capitalized word
   // with no space ("MultiAgents", "MultiVault", "MultiConnect: …") — /^Multi[A-Z]/
   // matches those and correctly excludes "Multilingual" (lowercase 'l').
-  return p.category === 'connectors' || /^Multi[A-Z]/.test(p.name)
+  // Hey Term doesn't carry the Multi- prefix, so it needs an explicit
+  // exception to get the logo/wordmark treatment (its mic mark in
+  // SOFTWARE_STYLE) instead of the generic agents-category photo.
+  return p.category === 'connectors' || /^Multi[A-Z]/.test(p.name) || p.sku === 'AI-AG-130'
 }
 
 // thumbOnly is rendered as its own short, wide banner (1200x160) rather than

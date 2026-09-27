@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hey-term"
+version = "1.0.0"
+description = "Hey Term -- a voice-activated terminal. Say what you want, it plans and confirms before it runs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE.md" }
+authors = [{ name = "MultiNiche AI" }]
+dependencies = [
+    "sounddevice>=0.4.6",
+    "numpy>=1.24",
+    "faster-whisper>=1.0.0",
+    "pyttsx3>=2.90",
+    "requests>=2.31",
+]
+
+[project.scripts]
+hey-term = "main:main"
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["lib*"]
