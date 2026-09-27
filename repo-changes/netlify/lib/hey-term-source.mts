@@ -77,30 +77,79 @@ missing one fails the test suite instead of failing silently at runtime).
 
 ## Speech-to-text engine
 
-By default (\`SPEECH_BACKEND=auto\`), Hey Term uses **Windows' own built-in
-speech recognizer** -- the same engine behind Win+H voice typing -- whenever
-it's running on Windows, since it's typically more accurate on ordinary
-speech than the offline Whisper model, especially at the default \`base\` size.
-It falls back to Whisper automatically: on Linux/macOS (where the Windows
-engine doesn't exist), if the Windows engine can't be reached for some
-reason (mic busy, engine missing for the current Windows install), and for
-any explicitly requested non-English \`--lang\` (the Windows engine listens in
-the system's default recognition language, not per-request, so translated
-non-English requests still go through Whisper, which does support them
-directly).
+By default (\`SPEECH_BACKEND=auto\`), Hey Term uses the **platform's own
+speech recognizer** whenever one is available, since it's typically more
+accurate on ordinary speech than the offline Whisper model, especially at
+the default \`base\` size:
+
+- **Windows' own built-in speech recognizer** -- the same engine behind
+  Win+H voice typing -- when running on Windows.
+- **Android's speech recognizer, via Termux:API** -- when running inside
+  Termux (see "Android / Termux" below).
+
+It falls back to Whisper automatically: on plain Linux/macOS (where neither
+platform engine exists), if the platform engine can't be reached for some
+reason (mic busy, engine/companion app missing), and for any explicitly
+requested non-English \`--lang\` (neither engine listens in a per-request
+language the way Whisper does, so translated non-English requests still go
+through Whisper, which does support them directly). Whisper isn't a
+meaningful fallback on Android specifically -- see "Android / Termux" below.
 
 \`\`\`
-python main.py                          # default: Windows engine on Windows, Whisper elsewhere
-python main.py --speech-backend whisper  # always use offline Whisper, even on Windows
+python main.py                          # default: platform engine when available, Whisper elsewhere
+python main.py --speech-backend whisper  # always use offline Whisper
 python main.py --speech-backend windows  # force the Windows engine; errors if unavailable
+python main.py --speech-backend termux   # force the Android engine; errors if unavailable
 \`\`\`
 
 For best accuracy from the Windows engine, check Settings > Privacy &
 security > Speech > "Online speech recognition" is turned on -- that's the
 same toggle Win+H itself depends on for its more accurate cloud-assisted
 mode; it still works offline, just with the smaller on-device model. See
-\`lib/speech_windows.py\` for how this is wired up, and \`.env.example\` for the
-\`SPEECH_BACKEND\` setting.
+\`lib/speech_windows.py\` / \`lib/speech_termux.py\` for how this is wired up,
+and \`.env.example\` for the \`SPEECH_BACKEND\` setting.
+
+## Android / Termux
+
+Hey Term runs on Android too, inside [Termux](https://termux.dev) -- install
+Termux from **F-Droid**, not the Play Store (that build is outdated and
+widely reported broken), plus the separate **Termux:API** app (same
+publisher, also on F-Droid). Termux:API is what actually gives Hey Term
+access to the microphone, speech recognition, and text-to-speech; nothing
+audio-related works without it installed alongside Termux itself.
+
+\`\`\`
+pkg install git         # if you don't already have it, to get the source onto the device
+# (or: unzip your hey-term.zip purchase download inside Termux's storage)
+cd hey-term
+chmod +x install-termux.sh
+./install-termux.sh
+nano .env                # set ANTHROPIC_API_KEY
+python main.py --lang en
+\`\`\`
+
+Two real differences from the Windows/Linux desktop version, both because
+Termux is a sandboxed, no-root Android environment rather than a full OS:
+
+- **Speech-to-text always goes through Android's own recognizer**
+  (\`termux-speech-to-text\`, via Termux:API), never Whisper.
+  \`faster-whisper\`'s \`ctranslate2\` dependency generally has no prebuilt
+  wheel for Android's architecture and fails to build from source there, so
+  \`install-termux.sh\` installs a shorter \`requirements-termux.txt\` that
+  skips it entirely (along with \`sounddevice\`/\`numpy\`/\`pyttsx3\`, none of
+  which are needed on this platform either -- see that file). This also
+  means each listen/request briefly shows Android's own speech-recognition
+  indicator rather than listening silently in the background the way the
+  desktop version's rolling-audio-chunk approach does.
+- **Commands run inside Termux's own sandboxed filesystem** (its \`$HOME\`,
+  not the rest of the Android filesystem), same as any other Termux shell
+  command -- run \`termux-setup-storage\` yourself first if you want Hey Term
+  able to reach shared device storage (Downloads, Pictures, etc.) too.
+
+Everything else -- wake word, Claude-powered planning, spoken/typed
+confirmation, the dangerous-command blocklist, the audit log -- works the
+same as the desktop version. See \`scripts/setup-termux.sh\` for exactly what
+setup does.
 
 ## Linux / bash and Windows / PowerShell
 
@@ -358,7 +407,7 @@ from lib.executor import run_commands
 from lib.i18n import get as get_strings, is_translated, list_languages
 from lib.safety import dangerous_commands
 from lib.speak import speak
-from lib import speech_windows
+from lib import speech_termux, speech_windows
 from lib.transcribe import transcribe, transcribe_wake
 from lib.wake import heard_wake_word
 
@@ -383,42 +432,55 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--mic-device", default=None, metavar="INDEX_OR_NAME",
                     help="Force a specific input device (index or name substring from --list-devices) "
                          "instead of the system default. Same as setting MIC_DEVICE in .env.")
-    p.add_argument("--speech-backend", default=config.SPEECH_BACKEND, choices=["auto", "windows", "whisper"],
-                    metavar="BACKEND",
+    p.add_argument("--speech-backend", default=config.SPEECH_BACKEND,
+                    choices=["auto", "windows", "termux", "whisper"], metavar="BACKEND",
                     help="Speech-to-text engine: \\"auto\\" (default) uses Windows' own speech recognizer "
-                         "when available (usually more accurate than offline Whisper), else Whisper; "
-                         "\\"windows\\" forces it and errors if unavailable; \\"whisper\\" always uses "
-                         "offline Whisper. Same as setting SPEECH_BACKEND in .env.")
+                         "or Android's (via Termux:API) when available -- usually more accurate than "
+                         "offline Whisper -- else Whisper; \\"windows\\"/\\"termux\\" force one of those and "
+                         "error if unavailable; \\"whisper\\" always uses offline Whisper (not a real "
+                         "option on Android -- see scripts/setup-termux.sh). Same as SPEECH_BACKEND in .env.")
     p.add_argument("--version", action="version", version=f"{config.PRODUCT_NAME} {config.VERSION}")
     return p.parse_args(argv)
 
 
+_NATIVE_BACKENDS = {"windows": speech_windows, "termux": speech_termux}
+
+
 def resolve_speech_backend(requested: str) -> str:
-    """Turns config/--speech-backend's "auto"/"windows"/"whisper" into the
-    engine actually used this run: "windows" or "whisper". Resolved once at
-    startup (not per wake-loop chunk) since it touches the Windows Runtime.
-    Raises ValueError (caught in main(), printed, causes a clean exit) if
-    "windows" was forced but isn't actually available.
+    """Turns config/--speech-backend's "auto"/"windows"/"termux"/"whisper"
+    into the engine actually used this run. Resolved once at startup (not
+    per wake-loop chunk) since checking availability touches the Windows
+    Runtime or shells out to \`which\`. Raises ValueError (caught in main(),
+    printed, causes a clean exit) if a specific native backend was forced
+    but isn't actually available.
     """
     if requested == "whisper":
         return "whisper"
-    if requested == "windows":
-        if speech_windows.is_available():
-            return "windows"
+    if requested in _NATIVE_BACKENDS:
+        module = _NATIVE_BACKENDS[requested]
+        if module.is_available():
+            return requested
         raise ValueError(
-            f"--speech-backend windows (or SPEECH_BACKEND=windows) was requested, but it isn't "
-            f"available: {speech_windows.unavailable_reason()}"
+            f"--speech-backend {requested} (or SPEECH_BACKEND={requested}) was requested, but it "
+            f"isn't available: {module.unavailable_reason()}"
         )
-    return "windows" if speech_windows.is_available() else "whisper"
+    if requested != "auto":
+        raise ValueError(f"Unknown SPEECH_BACKEND {requested!r}; expected auto, windows, termux, or whisper.")
+    for name, module in _NATIVE_BACKENDS.items():
+        if module.is_available():
+            return name
+    return "whisper"
 
 
 def _backend_for_language(backend: str, language: str) -> str:
-    """The Windows speech recognizer, constructed with no arguments, listens
-    in the system's default recognition language -- it isn't switched per
-    Hey Term's --lang the way Whisper is. So it's only used for English/auto
-    requests; any other explicitly requested language still goes through
-    Whisper, which does support it directly."""
-    if backend == "windows" and language not in ("en", "auto"):
+    """Windows' and Android's speech recognizers, invoked with no per-call
+    language override, listen in the system's default recognition language
+    -- neither is switched per Hey Term's --lang the way Whisper is. So a
+    native backend is only used for English/auto requests; any other
+    explicitly requested language still goes through Whisper, which does
+    support it directly (on platforms where Whisper itself is viable --
+    see scripts/setup-termux.sh's note for why that excludes Android)."""
+    if backend in _NATIVE_BACKENDS and language not in ("en", "auto"):
         return "whisper"
     return backend
 
@@ -429,11 +491,14 @@ def listen_for_wake_word(wake_word: str, backend: str) -> bool:
     lost turn. Always decoded as English -- see lib/transcribe.py's
     transcribe_wake() docstring for why that's true regardless of --lang.
 
-    With backend="windows", Windows' own speech recognizer does its own
-    microphone capture and voice-activity detection in one call (see
-    lib/speech_windows.py); on any failure (mic busy, engine not installed,
-    etc.) this falls back to the Whisper path for that one attempt rather
-    than crashing the loop.
+    With backend="windows" or "termux", the platform's own speech recognizer
+    does its own microphone capture and voice-activity detection in one call
+    (see lib/speech_windows.py / lib/speech_termux.py); on any failure (mic
+    busy, engine not installed, etc.) this falls back to the Whisper path
+    for that one attempt rather than crashing the loop -- except that on
+    Termux, Whisper isn't actually a viable fallback (see
+    scripts/setup-termux.sh), so a Termux failure here just means no wake
+    word was heard this round rather than a working fallback.
 
     With backend="whisper" (or as that fallback), near-silent chunks skip
     transcription entirely rather than being sent to Whisper -- on silence
@@ -442,9 +507,10 @@ def listen_for_wake_word(wake_word: str, backend: str) -> bool:
     energy first is what actually stops those from showing up as [heard]
     lines and (rarely) fuzzy-matching the wake word.
     """
-    if backend == "windows":
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
         try:
-            text = speech_windows.recognize_once(timeout_seconds=config.WAKE_CHUNK_SECONDS)
+            text = module.recognize_once(timeout_seconds=config.WAKE_CHUNK_SECONDS)
         except RuntimeError as err:
             print(f"[warn] {err} -- falling back to Whisper for this listen")
         else:
@@ -466,9 +532,10 @@ def take_command(language: str, backend: str) -> str:
     speak(strings["listening_prompt"], language=language)
 
     backend = _backend_for_language(backend, language)
-    if backend == "windows":
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
         try:
-            return speech_windows.recognize_once().strip()
+            return module.recognize_once().strip()
         except RuntimeError as err:
             print(f"[warn] {err} -- falling back to Whisper for this command")
 
@@ -480,9 +547,10 @@ def take_command(language: str, backend: str) -> str:
 def get_confirmation(language: str, backend: str) -> str:
     """Returns "confirm", "cancel", or "unclear" from a spoken reply."""
     backend = _backend_for_language(backend, language)
-    if backend == "windows":
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
         try:
-            text = speech_windows.recognize_once(timeout_seconds=5)
+            text = module.recognize_once(timeout_seconds=5)
         except RuntimeError as err:
             print(f"[warn] {err} -- falling back to Whisper for this confirmation")
         else:
@@ -591,9 +659,10 @@ def print_banner(language: str, work_dir: str, backend: str) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
     print(f"Language: {language}" + ("" if is_translated(language) or language == "auto" else " (untranslated -- using English prompts)"))
-    if backend == "windows":
+    if backend in _NATIVE_BACKENDS:
+        label = "Windows' built-in speech recognizer" if backend == "windows" else "Android's speech recognizer (via Termux:API)"
         note = "" if language in ("en", "auto") else " (falls back to Whisper for this non-English language)"
-        print(f"Speech-to-text: Windows' built-in speech recognizer{note}")
+        print(f"Speech-to-text: {label}{note}")
     else:
         print(f"Speech-to-text: offline Whisper ({config.WHISPER_MODEL_SIZE})")
     print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
@@ -728,17 +797,19 @@ ANTHROPIC_API_KEY=
 # WHISPER_MODEL_SIZE=base
 # WHISPER_DEVICE=cpu
 
-# Which engine turns speech into text. "auto" (default) uses Windows' own
-# built-in speech recognizer -- the same engine behind Win+H voice typing --
-# when running on Windows, since it's usually more accurate on ordinary
-# speech than offline Whisper, and falls back to Whisper everywhere else
-# (Linux/macOS) or if the Windows engine can't be reached. "windows" forces
-# it and errors out if unavailable; "whisper" always uses offline Whisper
-# even on Windows. Only applies to English/auto -- an explicit non-English
-# LANGUAGE always uses Whisper, since the Windows engine isn't switched
-# per-request the way Whisper is. See lib/speech_windows.py, and Settings >
-# Privacy & security > Speech > "Online speech recognition" on Windows for
-# the toggle that affects its accuracy.
+# Which engine turns speech into text. "auto" (default) uses the platform's
+# own speech recognizer when available: Windows' built-in one (the same
+# engine behind Win+H voice typing) on Windows, or Android's via Termux:API
+# inside Termux -- both usually more accurate on ordinary speech than
+# offline Whisper -- falling back to Whisper anywhere neither applies.
+# "windows"/"termux" force one of those and error out if unavailable;
+# "whisper" always uses offline Whisper (not a real option on Android --
+# see scripts/setup-termux.sh). Only applies to English/auto -- an explicit
+# non-English LANGUAGE always uses Whisper, since neither native engine is
+# switched per-request the way Whisper is. See lib/speech_windows.py /
+# lib/speech_termux.py, and (Windows only) Settings > Privacy & security >
+# Speech > "Online speech recognition" for the toggle that affects its
+# accuracy.
 # SPEECH_BACKEND=auto
 
 # Forces a specific microphone instead of the system default. Run
@@ -808,6 +879,38 @@ $setupArgs = @{ Langs = $Langs }
 if ($SkipCapabilities) { $setupArgs.SkipCapabilities = $true }
 if ($Yes) { $setupArgs.Yes = $true }
 & (Join-Path $PSScriptRoot "scripts\\setup-windows.ps1") @setupArgs
+`,
+  },
+  {
+    path: "install-termux.sh",
+    contents: `#!/usr/bin/env bash
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+# Licensed to a single purchaser under the terms in LICENSE.md.
+# Redistribution or resale of this source, in whole or in part, is not permitted.
+#
+# Entry point for Android setup (inside Termux -- see scripts/setup-termux.sh
+# for what it does and requirements-termux.txt for why the Termux dependency
+# list differs from install.sh's). Anything you pass here is forwarded as-is:
+#
+#   ./install-termux.sh --yes
+set -euo pipefail
+DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+exec "$DIR/scripts/setup-termux.sh" "$@"
+`,
+  },
+  {
+    path: "requirements-termux.txt",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Slimmed-down dependency list for Termux (Android). Deliberately NOT the
+# same as requirements.txt: sounddevice/numpy/faster-whisper/pyttsx3 either
+# don't work in Termux's sandbox (sounddevice/PortAudio has no real
+# microphone access there) or generally fail to build for Android's
+# architecture (faster-whisper's ctranslate2 dependency). None of them are
+# needed anyway -- lib/speech_termux.py and lib/speak.py's Termux path use
+# Termux:API's own commands (termux-speech-to-text, termux-tts-speak)
+# instead. See scripts/setup-termux.sh.
+requests>=2.31
 `,
   },
   {
@@ -1216,15 +1319,17 @@ LANGUAGE = os.environ.get("LANGUAGE", "en").lower().strip()
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 
-# Which engine turns speech into text. "auto" (default) uses Windows' own
-# built-in speech recognizer -- the same on-device/cloud-assisted engine
-# behind Win+H voice typing -- when running on Windows, since it's typically
-# more accurate on ordinary speech than the offline Whisper "base"/"small"
-# models, and falls back to Whisper anywhere else (Linux/macOS, or if the
-# Windows engine can't be reached for some reason). "windows" forces the
-# Windows engine and errors out if it's unavailable; "whisper" always uses
-# offline Whisper regardless of platform, e.g. if you'd rather nothing touch
-# Windows' cloud-assisted recognition. See lib/speech_windows.py.
+# Which engine turns speech into text. "auto" (default) uses the platform's
+# own speech recognizer when available -- Windows' built-in one (the same
+# on-device/cloud-assisted engine behind Win+H voice typing) on Windows, or
+# Android's (via Termux:API's termux-speech-to-text) inside Termux -- since
+# both are typically more accurate on ordinary speech than the offline
+# Whisper "base"/"small" models, and falls back to Whisper anywhere neither
+# is available (plain Linux/macOS, or if the platform engine can't be
+# reached). "windows"/"termux" force one of those and error out if it's
+# unavailable; "whisper" always uses offline Whisper regardless of platform
+# -- not a real option on Android, see scripts/setup-termux.sh. See
+# lib/speech_windows.py and lib/speech_termux.py.
 SPEECH_BACKEND = os.environ.get("SPEECH_BACKEND", "auto").lower().strip()
 
 # Optional: force a specific input device instead of relying on the OS
@@ -1683,16 +1788,27 @@ def dangerous_commands(commands: list) -> list:
     path: "lib/speak.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 """Text-to-speech via pyttsx3 (offline, cross-platform: SAPI5 on Windows,
-espeak on Linux, NSSpeechSynthesizer on macOS). Also prints everything it
-says, so the terminal itself is a full transcript even with sound off.
+espeak on Linux, NSSpeechSynthesizer on macOS) -- or, inside Termux on
+Android, via \`termux-tts-speak\` (Termux:API), which uses Android's own
+text-to-speech engine instead; pyttsx3 has no real backend to drive there.
+Also prints everything it says, so the terminal itself is a full transcript
+even with sound off.
 
 Which languages actually get a real spoken voice (rather than an English
 voice reading foreign text with an accent) depends entirely on which voices
-are installed on the OS -- Windows Narrator languages, or \`espeak-ng\` on
-Linux with the right language packs. This picks a matching installed voice
-when one exists and falls back to whatever the default voice is otherwise;
-it never fails the whole request over a missing voice.
+are installed on the OS -- Windows Narrator languages, \`espeak-ng\` on Linux
+with the right language packs, or Android's installed TTS languages on
+Termux. This picks a matching installed voice when one exists (pyttsx3 path
+only -- termux-tts-speak has no equivalent voice-selection API from the
+command line, so it always speaks in the device's default TTS voice) and
+falls back to whatever the default voice is otherwise; it never fails the
+whole request over a missing voice.
 """
+import shutil
+import subprocess
+
+from . import speech_termux
+
 _engine = None
 _voice_set_for_language = None
 
@@ -1725,8 +1841,20 @@ def _select_voice(language: str) -> None:
     _voice_set_for_language = language
 
 
+def _termux_tts_available() -> bool:
+    return speech_termux.running_in_termux() and shutil.which("termux-tts-speak") is not None
+
+
 def speak(text: str, language: str = "en") -> None:
     print(f"[Hey Term] {text}")
+
+    if _termux_tts_available():
+        try:
+            subprocess.run(["termux-tts-speak", text], check=True, timeout=30)
+            return
+        except Exception as err:  # pragma: no cover - depends on local Termux:API setup
+            print(f"[Hey Term] (Termux speech output unavailable: {err}; trying pyttsx3)")
+
     try:
         _select_voice(language)
         engine = _get_engine()
@@ -1734,6 +1862,129 @@ def speak(text: str, language: str = "en") -> None:
         engine.runAndWait()
     except Exception as err:  # pragma: no cover - depends on local audio setup
         print(f"[Hey Term] (speech output unavailable: {err})")
+`,
+  },
+  {
+    path: "lib/speech_termux.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Speech-to-text on Android via Termux:API's \`termux-speech-to-text\` --
+which hands off to Android's own speech recognizer (the same class of
+engine behind Google's voice typing), the same idea as lib/speech_windows.py
+does for Windows' own recognizer.
+
+Requires both the Termux app and the separate Termux:API app (they're
+companion apps -- Termux:API does nothing without the other one installed
+too), plus the \`termux-api\` package inside Termux (\`pkg install termux-api\`).
+See scripts/setup-termux.sh and install-termux.sh.
+
+This is not just the preferred backend on Android, it's effectively the
+*only* one: sounddevice/PortAudio (what lib/audio.py's Whisper path relies
+on) doesn't have working access to the microphone inside Termux's sandbox,
+so SPEECH_BACKEND="whisper" is not a meaningful fallback on this platform
+the way it is on Windows/Linux desktop -- see the Whisper note in
+scripts/setup-termux.sh. Every call here is still defensive and raises
+RuntimeError rather than crashing, mainly so a genuinely missing
+Termux:API setup fails with a clear message instead of a stack trace.
+"""
+import os
+import shutil
+import subprocess
+
+_availability_checked = False
+_available = False
+_unavailable_reason = ""
+
+
+def running_in_termux() -> bool:
+    """True if this process is running inside Termux at all (regardless of
+    whether termux-api is installed). Termux sets $PREFIX to something like
+    /data/data/com.termux/files/usr. Shared with lib/speak.py, which also
+    needs to know whether to route through termux-tts-speak."""
+    return "com.termux" in os.environ.get("PREFIX", "")
+
+
+def is_available() -> bool:
+    """True if termux-speech-to-text can plausibly be called: running inside
+    Termux, with the termux-api package's binaries on PATH. Doesn't (can't,
+    without actually calling it) confirm the separate Termux:API app is
+    installed or has been granted microphone permission -- that surfaces as
+    a RuntimeError from recognize_once() instead. Cached after the first
+    call, same reasoning as lib/speech_windows.py's is_available()."""
+    global _availability_checked, _available, _unavailable_reason
+    if _availability_checked:
+        return _available
+    _availability_checked = True
+
+    if not running_in_termux():
+        _unavailable_reason = "not running inside Termux"
+        _available = False
+        return False
+
+    if shutil.which("termux-speech-to-text") is None:
+        _unavailable_reason = (
+            "the 'termux-api' package isn't installed (pkg install termux-api) "
+            "-- see install-termux.sh / scripts/setup-termux.sh"
+        )
+        _available = False
+        return False
+
+    _available = True
+    return True
+
+
+def unavailable_reason() -> str:
+    """Human-readable reason is_available() returned False, for the one-time
+    startup message. Empty string if is_available() hasn't been called yet
+    or returned True."""
+    return _unavailable_reason
+
+
+def recognize_once(timeout_seconds: float = None) -> str:
+    """Runs one recognition via Android's speech recognizer (through
+    Termux:API) and returns the recognized text -- "" if nothing was
+    understood or the call times out. Raises RuntimeError on any failure
+    (Termux:API app not installed, microphone permission never granted,
+    etc.) so callers (main.py) can fall back for that turn rather than
+    crashing the app.
+
+    \`timeout_seconds\` is only a safety-net timeout on the subprocess call,
+    not a control over how long Android listens -- unlike
+    lib/speech_windows.py's WinRT timeouts, termux-speech-to-text exposes no
+    knob for that; Android's own recognizer decides when speech has ended.
+    A short value (like the wake-loop's ~2.5s chunk size) would false-timeout
+    on legitimate speech, so this floors it well above that.
+
+    Each call briefly surfaces Android's own speech-recognition indicator --
+    there's no silent background-listening mode the way the desktop's
+    rolling-audio-chunk approach has, since this hands off to the OS's own
+    recognizer instead of reading the microphone directly.
+    """
+    if not is_available():
+        raise RuntimeError(
+            f"Termux speech recognizer unavailable: {unavailable_reason() or 'unknown reason'}"
+        )
+
+    safety_timeout = max(timeout_seconds, 8.0) if timeout_seconds is not None else 20.0
+
+    try:
+        result = subprocess.run(
+            ["termux-speech-to-text"],
+            capture_output=True,
+            text=True,
+            timeout=safety_timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return ""
+    except Exception as err:  # noqa: BLE001 -- deliberately broad: any failure
+        # here (Termux:API app missing, mic permission denied, etc.) should
+        # read as "this backend failed for this turn," not crash the app.
+        raise RuntimeError(f"Termux speech recognition failed: {err}") from err
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"termux-speech-to-text exited {result.returncode}: {(result.stderr or '').strip()}"
+        )
+    return (result.stdout or "").strip()
 `,
   },
   {
@@ -2466,9 +2717,10 @@ speech_windows.recognize_once() -- that talks to the real Windows Runtime
 and a live microphone, so it has no meaningful behavior to unit-test on a
 machine that isn't Windows (or, for that matter, on one that is -- it's
 exercised by hand per README.md, same as the rest of the audio path)."""
+import os
 import unittest
 
-from lib import speech_windows
+from lib import speech_termux, speech_windows
 from main import _backend_for_language, resolve_speech_backend
 
 
@@ -2484,6 +2736,15 @@ class TestIsAvailable(unittest.TestCase):
         self.assertFalse(speech_windows.is_available())
         self.assertIn("Windows", speech_windows.unavailable_reason())
 
+    def test_not_available_outside_termux(self):
+        # Same reasoning as above, for the other native backend: this suite
+        # never actually runs inside Termux, so this just asserts the
+        # $PREFIX-based platform check itself works.
+        if "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful outside Termux")
+        self.assertFalse(speech_termux.is_available())
+        self.assertIn("Termux", speech_termux.unavailable_reason())
+
 
 class TestResolveSpeechBackend(unittest.TestCase):
     def test_whisper_requested_stays_whisper_even_if_windows_available(self):
@@ -2497,11 +2758,21 @@ class TestResolveSpeechBackend(unittest.TestCase):
         with self.assertRaises(ValueError):
             resolve_speech_backend("windows")
 
-    def test_auto_falls_back_to_whisper_when_windows_unavailable(self):
+    def test_termux_requested_raises_when_unavailable(self):
+        if "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful outside Termux")
+        with self.assertRaises(ValueError):
+            resolve_speech_backend("termux")
+
+    def test_unknown_backend_raises(self):
+        with self.assertRaises(ValueError):
+            resolve_speech_backend("carrier-pigeon")
+
+    def test_auto_falls_back_to_whisper_when_no_native_backend_available(self):
         import sys
 
-        if sys.platform == "win32":
-            self.skipTest("only meaningful off Windows")
+        if sys.platform == "win32" or "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful off Windows and outside Termux")
         self.assertEqual(resolve_speech_backend("auto"), "whisper")
 
 
@@ -2514,6 +2785,12 @@ class TestBackendForLanguage(unittest.TestCase):
 
     def test_windows_backend_falls_back_to_whisper_for_other_languages(self):
         self.assertEqual(_backend_for_language("windows", "es"), "whisper")
+
+    def test_termux_backend_kept_for_english(self):
+        self.assertEqual(_backend_for_language("termux", "en"), "termux")
+
+    def test_termux_backend_falls_back_to_whisper_for_other_languages(self):
+        self.assertEqual(_backend_for_language("termux", "es"), "whisper")
 
     def test_whisper_backend_is_unaffected_by_language(self):
         self.assertEqual(_backend_for_language("whisper", "es"), "whisper")
@@ -2729,6 +3006,101 @@ echo
 echo "Done. Next steps:"
 echo "  1. Edit .env and set ANTHROPIC_API_KEY."
 echo "  2. Run: python3 main.py --lang en   (or --lang es / fr / de / pt / it)"
+`,
+  },
+  {
+    path: "scripts/setup-termux.sh",
+    contents: `#!/usr/bin/env bash
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Automated setup for Hey Term on Android, inside Termux (https://termux.dev
+# -- install from F-Droid; the Google Play Store build is outdated and
+# widely reported broken). Installs Python + termux-api, Python deps, and
+# bootstraps .env.
+#
+# You also need the separate "Termux:API" app (same publisher, also on
+# F-Droid) installed alongside Termux -- the \`termux-api\` package below is
+# only the client side of that bridge and does nothing without it.
+#
+# Usage:
+#   ./install-termux.sh          # normal setup, asks before pkg installs
+#   ./install-termux.sh --yes    # don't prompt
+set -euo pipefail
+
+ASSUME_YES=0
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) ASSUME_YES=1 ;;
+    -h|--help)
+      echo "Usage: $0 [--yes]"
+      exit 0
+      ;;
+  esac
+done
+
+confirm_or_exit() {
+  if [ "$ASSUME_YES" = "1" ] || [ ! -t 0 ]; then
+    return 0
+  fi
+  read -r -p "$1 [y/N] " reply
+  case "$reply" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) echo "Skipped."; return 1 ;;
+  esac
+}
+
+if [ -z "\${PREFIX:-}" ] || [[ "$PREFIX" != *com.termux* ]]; then
+  echo "This doesn't look like Termux (\\$PREFIX=\${PREFIX:-<unset>}). Run this from inside the Termux app."
+  exit 1
+fi
+
+DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "== Hey Term Termux (Android) setup =="
+echo
+echo "IMPORTANT: install the separate \\"Termux:API\\" app too (F-Droid, same"
+echo "publisher as Termux) before continuing if you haven't already -- Hey"
+echo "Term's speech recognition and text-to-speech on Android both go"
+echo "through it, and neither works without it installed alongside Termux."
+echo
+
+if confirm_or_exit "Install/update core Termux packages (python, termux-api)?"; then
+  pkg update -y
+  pkg install -y python termux-api
+fi
+
+echo
+echo "Installing Python dependencies (requirements-termux.txt -- a shorter"
+echo "list than the desktop version; see that file for why)..."
+python -m pip install -q -r "$DIR/requirements-termux.txt"
+
+if [ ! -f "$DIR/.env" ]; then
+  cp "$DIR/.env.example" "$DIR/.env"
+  echo "Created .env -- edit it and add your ANTHROPIC_API_KEY before running Hey Term."
+else
+  echo ".env already exists -- leaving it alone."
+fi
+
+echo
+echo "NOTE on Whisper: faster-whisper's ctranslate2 dependency generally has"
+echo "no prebuilt wheel for Android/Termux and usually fails to build from"
+echo "source there -- that's why requirements-termux.txt skips it. This is"
+echo "fine: SPEECH_BACKEND defaults to \\"auto\\", which uses Android's own"
+echo "speech recognizer (via termux-speech-to-text) and never touches"
+echo "Whisper on this platform. Only set SPEECH_BACKEND=whisper if you've"
+echo "separately confirmed faster-whisper actually installs on your device."
+echo
+
+echo "One-time: grant Termux microphone access interactively before your"
+echo "first real run --"
+echo "  termux-microphone-record -h"
+echo "Android will prompt for the microphone permission the first time any"
+echo "termux-api audio command runs; accept it, then Ctrl+C out of that command."
+echo
+
+echo "Done. Next steps:"
+echo "  1. Edit .env and set ANTHROPIC_API_KEY (nano .env)."
+echo "  2. Run: python main.py --lang en"
 `,
   },
   {
