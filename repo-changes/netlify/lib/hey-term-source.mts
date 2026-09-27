@@ -128,28 +128,37 @@ nano .env                # set ANTHROPIC_API_KEY
 python main.py --lang en
 \`\`\`
 
-Two real differences from the Windows/Linux desktop version, both because
-Termux is a sandboxed, no-root Android environment rather than a full OS:
+Real differences from the Windows/Linux desktop version, all because Termux
+is a sandboxed, no-root Android environment rather than a full OS:
 
+- **No spoken "Hey Term" wake word -- press Enter instead.** Android's
+  speech recognizer is a discrete, one-shot call with real cold-start
+  latency each time it's invoked, which makes a short two-word phrase said
+  right at that cold start (exactly what "Hey Term" is) the hardest thing
+  to ask it to catch reliably in a repeating background-listening loop.
+  Rather than fight that, the Termux version skips the spoken wake word:
+  it prints a prompt, you press Enter, then say your request after the
+  beep -- pressing Enter *is* the wake word here. See
+  \`run_push_to_talk_loop()\` in \`main.py\`.
 - **Speech-to-text always goes through Android's own recognizer**
   (\`termux-speech-to-text\`, via Termux:API), never Whisper.
   \`faster-whisper\`'s \`ctranslate2\` dependency generally has no prebuilt
   wheel for Android's architecture and fails to build from source there, so
   \`install-termux.sh\` installs a shorter \`requirements-termux.txt\` that
   skips it entirely (along with \`sounddevice\`/\`numpy\`/\`pyttsx3\`, none of
-  which are needed on this platform either -- see that file). This also
-  means each listen/request briefly shows Android's own speech-recognition
-  indicator rather than listening silently in the background the way the
-  desktop version's rolling-audio-chunk approach does.
+  which are needed on this platform either -- see that file). Each listen
+  briefly shows Android's own speech-recognition indicator (and plays its
+  start/end tones) rather than listening silently in the background the way
+  the desktop version's rolling-audio-chunk approach does -- wait for the
+  beep, then speak.
 - **Commands run inside Termux's own sandboxed filesystem** (its \`$HOME\`,
   not the rest of the Android filesystem), same as any other Termux shell
   command -- run \`termux-setup-storage\` yourself first if you want Hey Term
   able to reach shared device storage (Downloads, Pictures, etc.) too.
 
-Everything else -- wake word, Claude-powered planning, spoken/typed
-confirmation, the dangerous-command blocklist, the audit log -- works the
-same as the desktop version. See \`scripts/setup-termux.sh\` for exactly what
-setup does.
+Everything else -- Claude-powered planning, spoken/typed confirmation, the
+dangerous-command blocklist, the audit log -- works the same as the desktop
+version. See \`scripts/setup-termux.sh\` for exactly what setup does.
 
 ## Linux / bash and Windows / PowerShell
 
@@ -655,6 +664,34 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
             print(f"[error] {r.error}")
 
 
+def run_push_to_talk_loop(language: str, work_dir: str, backend: str) -> None:
+    """Termux's stand-in for the wake-word loop: press Enter, then say your
+    request directly (no "Hey Term" needed) -- pressing Enter *is* the wake
+    word here.
+
+    Why not reuse listen_for_wake_word()'s repeated-short-recognition
+    approach: Android's speech recognizer is a discrete, one-shot call with
+    real cold-start latency each time (see lib/speech_termux.py's module
+    docstring), so a short two-word phrase said right at that cold start --
+    exactly what "Hey Term" is -- is the single hardest thing to ask it to
+    catch reliably, and testing this live is what surfaced that. Command and
+    confirmation capture don't have the same problem: both are already
+    preceded by a spoken TTS prompt that finishes right before listening
+    starts, which gives a natural, audible "listening starts now" cue the
+    bare wake-word loop never had. Enter does the same job for the first
+    step.
+    """
+    while True:
+        try:
+            input('\\n[Hey Term] Press Enter, then say your request after the beep (Ctrl+C to quit)...')
+        except EOFError:
+            return
+        request_text = take_command(language, backend)
+        if request_text:
+            print(f"[you] {request_text}")
+        handle_request(request_text, language, work_dir, backend)
+
+
 def print_banner(language: str, work_dir: str, backend: str) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
@@ -665,7 +702,10 @@ def print_banner(language: str, work_dir: str, backend: str) -> None:
         print(f"Speech-to-text: {label}{note}")
     else:
         print(f"Speech-to-text: offline Whisper ({config.WHISPER_MODEL_SIZE})")
-    print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
+    if backend == "termux":
+        print('Wake: press Enter, then speak (no reliable passive wake-word listening on Android -- see README). Ctrl+C to quit.')
+    else:
+        print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
     print(f"Audit log: {config.AUDIT_LOG_PATH}")
 
 
@@ -704,13 +744,16 @@ def main(argv=None) -> int:
     speak(get_strings(language)["ready"], language=language)
 
     try:
-        while True:
-            if listen_for_wake_word(wake_word, backend):
-                audit.log_event("wake")
-                request_text = take_command(language, backend)
-                if request_text:
-                    print(f"[you] {request_text}")
-                handle_request(request_text, language, work_dir, backend)
+        if backend == "termux":
+            run_push_to_talk_loop(language, work_dir, backend)
+        else:
+            while True:
+                if listen_for_wake_word(wake_word, backend):
+                    audit.log_event("wake")
+                    request_text = take_command(language, backend)
+                    if request_text:
+                        print(f"[you] {request_text}")
+                    handle_request(request_text, language, work_dir, backend)
     except KeyboardInterrupt:
         print("\\nStopped.")
         audit.log_event("shutdown", reason="keyboard_interrupt")
@@ -1984,7 +2027,23 @@ def recognize_once(timeout_seconds: float = None) -> str:
         raise RuntimeError(
             f"termux-speech-to-text exited {result.returncode}: {(result.stderr or '').strip()}"
         )
-    return (result.stdout or "").strip()
+
+    output = (result.stdout or "").strip()
+    if output.startswith("ERROR:"):
+        # Android's recognizer reports "didn't catch anything" as plain
+        # stdout text with a normal (0) exit code, not a nonzero exit or
+        # stderr -- ERROR_NO_MATCH (nothing recognized) and
+        # ERROR_SPEECH_TIMEOUT (recognition window closed before any speech
+        # started) both just mean "no speech heard this round," same as an
+        # empty transcript everywhere else in this codebase. Anything else
+        # (no mic permission, no network, recognizer service busy, etc.) is
+        # a real failure worth surfacing so the caller can react to it.
+        code = output.split(":", 1)[1].strip()
+        if code in ("ERROR_NO_MATCH", "ERROR_SPEECH_TIMEOUT"):
+            return ""
+        raise RuntimeError(f"termux-speech-to-text reported {code}")
+
+    return output
 `,
   },
   {
@@ -2718,10 +2777,12 @@ and a live microphone, so it has no meaningful behavior to unit-test on a
 machine that isn't Windows (or, for that matter, on one that is -- it's
 exercised by hand per README.md, same as the rest of the audio path)."""
 import os
+import subprocess
 import unittest
+from unittest.mock import patch
 
 from lib import speech_termux, speech_windows
-from main import _backend_for_language, resolve_speech_backend
+from main import _backend_for_language, resolve_speech_backend, run_push_to_talk_loop
 
 
 class TestIsAvailable(unittest.TestCase):
@@ -2794,6 +2855,62 @@ class TestBackendForLanguage(unittest.TestCase):
 
     def test_whisper_backend_is_unaffected_by_language(self):
         self.assertEqual(_backend_for_language("whisper", "es"), "whisper")
+
+
+class TestTermuxRecognizeOnceErrorHandling(unittest.TestCase):
+    """termux-speech-to-text reports "didn't catch anything" as plain stdout
+    text with a normal (0) exit code, not a nonzero exit -- these pin down
+    that recognize_once() tells that apart from a real failure. Regression
+    coverage for a bug caught live: ERROR_NO_MATCH was originally being
+    returned as if it were the recognized transcript itself.
+    """
+
+    def _run(self, stdout: str, returncode: int = 0):
+        fake_result = subprocess.CompletedProcess(
+            args=["termux-speech-to-text"], returncode=returncode, stdout=stdout, stderr=""
+        )
+        with patch.object(speech_termux, "is_available", return_value=True), \\
+                patch("subprocess.run", return_value=fake_result):
+            return speech_termux.recognize_once()
+
+    def test_no_match_returns_empty_string_not_the_error_text(self):
+        self.assertEqual(self._run("ERROR: ERROR_NO_MATCH\\n"), "")
+
+    def test_speech_timeout_returns_empty_string(self):
+        self.assertEqual(self._run("ERROR: ERROR_SPEECH_TIMEOUT\\n"), "")
+
+    def test_other_error_codes_raise(self):
+        with self.assertRaises(RuntimeError):
+            self._run("ERROR: ERROR_INSUFFICIENT_PERMISSIONS\\n")
+
+    def test_normal_transcript_passes_through(self):
+        self.assertEqual(self._run("list the files\\n"), "list the files")
+
+
+class TestPushToTalkLoop(unittest.TestCase):
+    """Termux's stand-in for the wake-word loop -- see run_push_to_talk_loop's
+    docstring for why Termux doesn't use listen_for_wake_word() at all. Only
+    the loop's own control flow is worth pinning down here; take_command()/
+    handle_request() are exercised elsewhere."""
+
+    def test_returns_on_eof_without_processing_a_request(self):
+        with patch("builtins.input", side_effect=EOFError), \\
+                patch("main.take_command") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        fake_take_command.assert_not_called()
+        fake_handle_request.assert_not_called()
+
+    def test_each_enter_press_captures_and_handles_one_request(self):
+        # Two Enter presses, then Ctrl+C (EOFError) to stop the loop -- each
+        # press should drive exactly one take_command()/handle_request() pair.
+        with patch("builtins.input", side_effect=["", "", EOFError]), \\
+                patch("main.take_command", return_value="list files") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        self.assertEqual(fake_take_command.call_count, 2)
+        self.assertEqual(fake_handle_request.call_count, 2)
+        fake_handle_request.assert_called_with("list files", "en", "/tmp", "termux")
 
 
 if __name__ == "__main__":
