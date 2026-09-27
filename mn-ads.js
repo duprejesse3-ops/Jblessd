@@ -16,6 +16,36 @@
 (() => {
   var ORIGIN = location.origin;
 
+  // Defense-in-depth: the server (netlify/lib/mn-ads.mts) is supposed to rewrite
+  // clickUrl/runUrl from a proxied exchange fill back onto this origin, but it
+  // only does that when the value happens to literally start with the exchange's
+  // configured origin string -- a real advertiser bid with its own URLs sails
+  // through untouched. runUrl is a POST target this script sends the *current
+  // page's title/url/excerpt* to (see pageTask()/bindRun() below), so an
+  // off-origin runUrl is a live data-exfiltration path, not just a bad link.
+  // Never wire up "Run it on this page" unless the target is this exact origin.
+  function isSameOrigin(u) {
+    if (typeof u !== "string" || !u) return false;
+    try {
+      return new URL(u, ORIGIN).origin === ORIGIN;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // clickUrl is allowed to point off-site -- that's the ad network's whole
+  // business model (a real tenant's ad leads to their own landing page) -- but
+  // it must still be an actual http(s) link, never javascript:/data:/etc.
+  function isClickableUrl(u) {
+    if (typeof u !== "string" || !u) return false;
+    try {
+      var p = new URL(u, ORIGIN);
+      return p.protocol === "https:" || p.protocol === "http:";
+    } catch (e) {
+      return false;
+    }
+  }
+
   function qs(el) {
     var p = new URLSearchParams();
     p.set("site", el.getAttribute("data-site") || location.hostname);
@@ -87,7 +117,7 @@
 
   function bindRun(el, ad) {
     var box = el.querySelector("[data-mn-run]");
-    if (!box || !ad.runUrl) return;
+    if (!box || !ad.runUrl || !isSameOrigin(ad.runUrl)) return;
     var btn = box.querySelector("button");
     if (!btn) return;
     btn.addEventListener("click", function (ev) {
@@ -135,6 +165,18 @@
       .then(function (ad) {
         el.setAttribute("data-mn-filled", ad && ad.fill ? "1" : "0");
         if (!ad || !ad.fill) { remnant(el); return; }
+        // A clickUrl that isn't even a real http(s) link (javascript:, data:, a
+        // blank string) can't be shown safely -- treat the slot as unsold rather
+        // than render a dead or hostile card.
+        if (!isClickableUrl(ad.clickUrl)) { remnant(el); return; }
+        // runUrl gets this page's title/url/excerpt POSTed to it (see pageTask()
+        // below) the moment someone taps "Run it on this page" -- that must never
+        // go to anywhere but this origin, whatever the exchange bid claims. Strip
+        // the run affordance rather than reject the whole ad: the click-through
+        // itself can still be a legitimate off-site advertiser link.
+        if (ad.runUrl && !isSameOrigin(ad.runUrl)) {
+          ad = Object.assign({}, ad, { runUrl: null, proof: null });
+        }
         el.innerHTML = unit(ad);
         bindRun(el, ad);
       })

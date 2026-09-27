@@ -96,9 +96,30 @@ export function parseHouseEvent(id: string): { sku: string } | null {
   return sku ? { sku } : null
 }
 
-function rewriteValue(value: string, fromOrigin: string, toOrigin: string): string {
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === 'https:' || u.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+// clickUrl/runUrl are meant to always be same-origin -- see the file header:
+// "the tag stays same-origin", with the actual off-domain hop happening
+// server-side in mn-ads-click.mts's own proxied redirect, never handed to the
+// browser as a raw URL. That only works when the exchange's own value happens
+// to be prefixed with its origin; anything else used to fall through
+// untouched. runUrl in particular is a POST target the browser sends the
+// visitor's current page (title/url/excerpt, see mn-ads.js pageTask()) to --
+// an unrewritten foreign runUrl is a live data-exfiltration path, not just a
+// bad link, so it must never reach the browser at all. clickUrl tolerates an
+// external destination (a real advertiser's own landing page is the point of
+// this network) but only if it's an actual navigable http(s) link.
+function rewriteValue(key: string, value: string, fromOrigin: string, toOrigin: string): string | undefined {
   if (value.startsWith(fromOrigin)) return toOrigin + value.slice(fromOrigin.length)
-  return value
+  if (key === 'runUrl') return undefined
+  return isHttpUrl(value) ? value : undefined
 }
 
 export function rewritePayload(payload: unknown, fromOrigin: string, toOrigin: string): unknown {
@@ -107,7 +128,8 @@ export function rewritePayload(payload: unknown, fromOrigin: string, toOrigin: s
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(payload as Record<string, unknown>)) {
     if ((k === 'clickUrl' || k === 'runUrl') && typeof v === 'string') {
-      out[k] = rewriteValue(v, fromOrigin, toOrigin)
+      const rewritten = rewriteValue(k, v, fromOrigin, toOrigin)
+      if (rewritten !== undefined) out[k] = rewritten
     } else if (v && typeof v === 'object') {
       out[k] = rewritePayload(v, fromOrigin, toOrigin)
     } else {
