@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Simple vector launcher icon (a ">_" terminal glyph) -- avoids needing a
+<!-- Simple vector launcher icon (a ">_" terminal glyph): avoids needing a
      set of pre-rendered PNGs per density; swap for a real adaptive icon
      later if you want one designed properly. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
