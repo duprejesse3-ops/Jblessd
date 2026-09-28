@@ -1,11 +1,11 @@
-# Termux (Android) dependencies. Same as requirements.txt but WITHOUT
-# sounddevice and pyttsx3: both are desktop-only audio backends, and pip has
-# no prebuilt wheel for either on Android -- attempting to build sounddevice
-# from source there needs PortAudio dev headers Termux doesn't ship, and it
-# would install for nothing anyway, since lib/audio.py and lib/speak.py
-# import both lazily and only take that code path when NOT running under
-# Termux (see lib/termux_audio.py, used instead on Android). Everything else
-# here is unchanged from requirements.txt.
+# Termux (Android) dependencies. No faster-whisper here (unlike
+# requirements.txt) -- its inference engine, ctranslate2, has no Android
+# build at all, wheel or source. Termux instead uses a real, self-built
+# whisper.cpp binary for transcription (see lib/termux_audio.py and
+# scripts/setup-termux.sh, which clones and compiles it) -- not a Python
+# package, so it isn't listed here. numpy is still needed on this side for
+# silence detection (RMS energy) and writing the WAV file whisper-cli reads;
+# it builds from source on Termux (no prebuilt wheel), which can take a
+# while the first time -- that's normal, not a hang.
 numpy>=1.24
-faster-whisper>=1.0.0
 requests>=2.31

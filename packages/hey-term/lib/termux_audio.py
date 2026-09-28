@@ -1,33 +1,52 @@
 # Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Microphone and speech output on Android, through the Termux:API app.
+"""Speech input and output on Android, through the Termux:API app plus a
+real, self-built offline speech recognizer -- not Android's own OS/cloud
+recognizer, and not a hosted API. Hey Term owns its transcription the same
+way on every platform; only how it reaches the microphone differs.
 
-sounddevice (lib/audio.py) and pyttsx3 (lib/speak.py) are desktop-only --
-PortAudio and SAPI5/espeak/NSSpeechSynthesizer have no real Android backend.
-Termux has no direct access to the phone's mic or speaker at all; the
-Termux:API companion app is the only bridge, exposing them as small CLI
-tools (termux-microphone-record, termux-tts-speak) that talk to the app over
-Android's own APIs. This module is that bridge for Hey Term:
+sounddevice (lib/audio.py) and faster-whisper (lib/transcribe.py) are the
+desktop pipeline -- record raw audio, transcribe it locally. Neither half of
+that works on Android: sounddevice has no PortAudio backend there at all,
+and less obviously, faster-whisper's inference engine, ctranslate2, has no
+build for Android whatsoever -- no wheel, no working source install -- so
+the desktop transcription path cannot run under Termux no matter how the
+audio gets captured.
+
+This module replaces both halves for Termux:
+  - Capture: termux-microphone-record (the Termux:API app's mic bridge) to a
+    compressed clip, decoded to float32 PCM with ffmpeg -- same idea as the
+    desktop capture, just reaching the mic through Android's API instead of
+    PortAudio.
+  - Transcription: a real Whisper model, run entirely on-device by
+    whisper.cpp (https://github.com/ggml-org/whisper.cpp, MIT licensed) --
+    a from-scratch C++ reimplementation of Whisper inference that, unlike
+    ctranslate2, compiles and runs fine on Android's ARM CPUs with nothing
+    more than Termux's own clang/cmake/make. scripts/setup-termux.sh clones
+    and builds it once, and downloads the same-sized ggml model that
+    WHISPER_MODEL_SIZE names for desktop, so the two platforms use
+    comparable models. Nothing is sent anywhere -- this is exactly as
+    offline as the desktop path, just a different implementation of the
+    same algorithm because the desktop one can't run here.
+
+`termux-tts-speak` (unrelated to any of the above; it was never a Whisper
+problem) still handles speech output the same way it always has.
 
 Setup (once): install the separate "Termux:API" app (F-Droid or Play Store,
-same publisher as Termux), then in Termux:
-
-    pkg install termux-api ffmpeg
-
-ffmpeg is required here too -- termux-microphone-record only writes
-compressed containers (aac/amr, not raw PCM), and this module decodes them
-to the float32 PCM arrays the rest of Hey Term (lib/transcribe.py) expects
-before it can pass them to faster-whisper.
-
-Everything here degrades honestly instead of pretending: is_termux() is the
-single detection point both lib/audio.py and lib/speak.py branch on, and a
-missing binary/timeout/decode failure raises or returns False rather than
-silently producing empty audio that would look like "you said nothing."
+same publisher as Termux), then run ./install.sh (or scripts/setup-termux.sh
+directly), which installs termux-api/ffmpeg/build tools, builds whisper.cpp,
+and downloads its model.
 """
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+import wave
+
+from . import config
+
+_RECORD_BIN = "termux-microphone-record"
+_TTS_BIN = "termux-tts-speak"
 
 # termux-microphone-record has no live block-by-block streaming mode (it
 # only starts/stops a recording to a file), so record_until_silence_termux
@@ -37,18 +56,62 @@ import time
 # possible through this CLI.
 CHUNK_SECONDS = 1.5
 
-_RECORD_BIN = "termux-microphone-record"
-_TTS_BIN = "termux-tts-speak"
+# whisper-cli's own timeout guard -- transcribing a short command clip on a
+# phone CPU is normally a couple of seconds; this is a ceiling against a
+# hung process, not a value expected to be hit in practice.
+_TRANSCRIBE_TIMEOUT_SECONDS = 60
+
+# Printed once, not on every wake-word chunk (every ~2.5s), if whisper.cpp
+# isn't built/the model isn't downloaded yet -- the setup step this needs.
+_setup_incomplete_warned = False
+
+# Hey Term's own language codes (lib/i18n.py's LANGUAGES keys) are plain
+# ISO 639-1 ("en", "es"...), which is also exactly what whisper.cpp's `-l`
+# expects (same convention as faster-whisper) -- no mapping needed for
+# transcription. Android's TTS, below, is the one place that needs a
+# different, BCP-47 tag ("en-US", "es-ES"...).
+ANDROID_TTS_LANGUAGE_TAGS = {
+    "en": "en-US",
+    "es": "es-ES",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "pt": "pt-BR",
+    "it": "it-IT",
+}
+
+
+def android_tts_language_tag(language: str):
+    """Maps a Hey Term language code to the BCP-47 tag Android's TTS
+    expects, or None for "auto" or anything unrecognized -- passing None to
+    speak_termux() just uses Android's own default voice instead of failing.
+    """
+    return ANDROID_TTS_LANGUAGE_TAGS.get(language)
 
 
 def is_termux() -> bool:
     """True when running under Termux with the termux-api package installed
-    (the Termux:API *app* also has to be installed and granted mic
+    (the Termux:API *app* also has to be installed and granted microphone
     permission on the phone itself -- this can only detect the CLI side).
     """
     if "com.termux" in os.environ.get("PREFIX", ""):
         return True
     return shutil.which(_RECORD_BIN) is not None
+
+
+def find_whisper_cli():
+    """Path to the whisper.cpp CLI binary scripts/setup-termux.sh built, or
+    None if setup hasn't been run (or hasn't finished) yet.
+    """
+    path = config.WHISPER_CPP_BIN
+    return path if os.path.isfile(path) and os.access(path, os.X_OK) else None
+
+
+def find_whisper_model():
+    """Path to the ggml model matching WHISPER_MODEL_SIZE, or None if it
+    hasn't been downloaded yet.
+    """
+    path = os.path.join(config.WHISPER_CPP_MODELS_DIR, f"ggml-{config.WHISPER_MODEL_SIZE}.bin")
+    return path if os.path.isfile(path) else None
 
 
 def _decode_to_float32(path: str, sample_rate: int):
@@ -154,19 +217,93 @@ def record_until_silence_termux(max_seconds: float, sample_rate: int, silence_ho
     return np.concatenate(blocks)
 
 
+def _write_wav(audio, sample_rate: int, path: str) -> None:
+    """Writes a 1-D float32 [-1, 1] array as 16-bit PCM mono WAV --
+    whisper-cli reads wav/flac/mp3/ogg directly, not raw arrays, so this is
+    the hand-off point between "audio as Python already has it" and "audio
+    as the external binary wants it." Uses the stdlib `wave` module --
+    no extra dependency for something this small.
+    """
+    import numpy as np
+
+    clipped = np.clip(audio, -1.0, 1.0)
+    pcm16 = (clipped * 32767.0).astype("<i2")
+    with wave.open(path, "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(sample_rate)
+        f.writeframes(pcm16.tobytes())
+
+
+def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
+    """Transcribes a captured clip with the on-device whisper.cpp build.
+    Returns "" if there's no audio, setup hasn't been completed yet (missing
+    binary or model -- printed once, not on every call), or the process
+    fails for any reason -- exactly the same "didn't catch that" contract
+    lib/transcribe.py's desktop functions already have, never a crash.
+
+    `language` is a plain Whisper code ("en", "es", ... or "auto") -- the
+    same convention lib/i18n.py and lib/transcribe.py already use, since
+    whisper.cpp's `-l` takes the identical codes faster-whisper does.
+    """
+    global _setup_incomplete_warned
+
+    if audio is None or len(audio) == 0:
+        return ""
+
+    binary = find_whisper_cli()
+    model = find_whisper_model()
+    if not binary or not model:
+        if not _setup_incomplete_warned:
+            print("[Hey Term] (speech recognition isn't set up yet -- run ./install.sh "
+                  "or scripts/setup-termux.sh to build whisper.cpp and download its model)")
+            _setup_incomplete_warned = True
+        return ""
+
+    fd, wav_path = tempfile.mkstemp(suffix=".wav", prefix="hey-term-stt-")
+    os.close(fd)
+    out_base = wav_path[:-4]  # whisper-cli appends ".txt" itself to -of's basename
+    txt_path = out_base + ".txt"
+    try:
+        _write_wav(audio, sample_rate, wav_path)
+        args = [
+            binary, "-m", model, "-f", wav_path,
+            "-l", language or "auto",
+            "-nt", "-np", "-otxt", "-of", out_base,
+        ]
+        proc = subprocess.run(args, capture_output=True, timeout=_TRANSCRIBE_TIMEOUT_SECONDS)
+        if proc.returncode != 0:
+            return ""
+        if not os.path.isfile(txt_path):
+            return ""
+        with open(txt_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+    finally:
+        for p in (wav_path, txt_path):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
 def speak_termux(text: str, language: str = "en") -> bool:
     """Speaks via Android's own system TTS, through termux-tts-speak.
     Returns True on success, False if the binary is missing, the Termux:API
     app isn't installed, or the call otherwise fails -- callers should print
     the text as a fallback either way, never treat this as fatal.
     """
-    try:
-        subprocess.run([_TTS_BIN, "-l", language, text], check=True, capture_output=True, timeout=30)
-        return True
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-        pass
-    # Not every termux-tts-speak build accepts -l for every locale code --
-    # retry once with the plain default voice before giving up entirely.
+    tag = android_tts_language_tag(language)
+    if tag:
+        try:
+            subprocess.run([_TTS_BIN, "-l", tag, text], check=True, capture_output=True, timeout=30)
+            return True
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+    # No mapped tag, or the tagged call failed (not every termux-tts-speak
+    # build accepts -l for every locale) -- retry with the plain default
+    # voice before giving up entirely.
     try:
         subprocess.run([_TTS_BIN, text], check=True, capture_output=True, timeout=30)
         return True

@@ -255,15 +255,20 @@ chmod +x install.sh
 ./install.sh --dry-run          # preview what it would do, changes nothing
 ```
 `install.sh` detects Termux (via `$PREFIX`) and runs `scripts/setup-termux.sh`
-instead of the Linux script -- it installs `termux-api` and `ffmpeg` via
-`pkg` rather than `portaudio19-dev`/`espeak-ng`, since voice on Android goes
-through a completely different path (see "Voice on Android (Termux)" below),
-then Python dependencies from `requirements-termux.txt`, `.env`, and the
-Whisper model, same as the other platforms.
+instead of the Linux script. Voice on Android is a genuinely different
+pipeline, not just different install commands (see "Voice on Android
+(Termux)" below) -- this step installs `termux-api`, `ffmpeg`, and a C++
+build toolchain (`clang`, `cmake`, `make`, `git`), Python dependencies from
+`requirements-termux.txt`, `.env`, and then **clones and compiles a
+real, on-device speech recognizer** and downloads its model. That build step
+is the one that takes real time -- expect several minutes and about 1GB of
+temporary disk during the build (the finished binary + model settle down to
+under 200MB); it only happens once. Pass `--skip-build` to skip it and do it
+later (voice won't work until it's done, but typing a request still will --
+see "Conversational memory" above).
 
-Either one leaves you with a ready `.env` (add your API key) and the
-Whisper model already downloaded. Skip straight to [step 4](#4-run-it)
-below.
+Either one leaves you with a ready `.env` (add your API key). Skip straight
+to [step 4](#4-run-it) below.
 
 `install.sh`/`install.ps1` are thin wrappers -- they just forward whatever
 you pass to `scripts/setup-linux.sh` / `scripts/setup-termux.sh` /
@@ -272,33 +277,48 @@ thing if you'd rather.
 
 ### Voice on Android (Termux)
 
-Termux itself has no access to the phone's microphone or speaker -- nothing
-running inside it can reach either one directly. The bridge is a separate
-app, **Termux:API** (same publisher as Termux, get it from the same store --
-F-Droid or Play Store, don't mix sources), plus its CLI package:
+Two separate problems, two separate fixes:
 
-```
-pkg install termux-api ffmpeg
-```
+**Reaching the microphone and speaker at all.** Termux itself has no access
+to either one -- nothing running inside it can reach real hardware directly.
+The bridge is a separate app, **Termux:API** (same publisher as Termux, get
+it from the same store -- F-Droid or Play Store, don't mix sources), plus
+its CLI package (`pkg install termux-api`, which `./install.sh` does for
+you). Once both the app and the CLI package are installed, grant microphone
+permission the first time Android prompts for it (or set it by hand under
+Android's App Info screen for Termux:API if the prompt never appears).
 
-(`./install.sh` does this for you.) Once both the app and the CLI package
-are installed, grant microphone permission the first time Android prompts
-for it (or set it by hand under Android's App Info screen for Termux:API if
-the prompt never appears). `ffmpeg` decodes what the mic-recording tool
-captures into the format the rest of Hey Term expects -- it's a real
-dependency, not optional.
+**Actually transcribing what it hears.** This is the less obvious one: the
+desktop pipeline's speech-to-text engine, `faster-whisper`, depends on
+`ctranslate2` for the actual inference -- and ctranslate2 has no Android
+build at all, not a wheel, not a working source install, nothing. No amount
+of `pip install` fixes that; it simply cannot run under Termux. So instead
+of using Android's own OS/cloud speech recognizer (borrowing someone else's
+engine) or giving up on offline transcription, Hey Term builds and runs its
+own copy of [whisper.cpp](https://github.com/ggml-org/whisper.cpp) --  a
+from-scratch, MIT-licensed C++ implementation of the same Whisper algorithm,
+compiled directly on your phone with Termux's own `clang`/`cmake`/`make`
+(`scripts/setup-termux.sh` does this once). Recorded audio still goes
+through `ffmpeg` (needed to decode what `termux-microphone-record` captures
+into a WAV file), and `lib/transcribe.py` hands that WAV to the compiled
+`whisper-cli` binary instead of the Python `faster-whisper` model it uses on
+desktop -- same algorithm, same offline guarantee, different binary because
+the usual one can't run on this platform.
 
-Recording works in short clips rather than one continuous stream (that's a
+Recording works in short clips rather than one continuous stream (a
 limitation of `termux-microphone-record` itself, which only starts/stops a
 recording to a file), so silence detection on Termux is coarser than on
 desktop -- it can include up to one extra clip's worth of trailing silence.
 Speech is still accurate; it just doesn't cut off the instant you stop
 talking, the same trade-off as pausing mid-sentence on desktop.
 
-If you see `(speech output unavailable: termux-tts-speak failed -- ...)` or
-a `termux-microphone-record failed` error, it almost always means the
-Termux:API **app** isn't installed, or the mic permission was denied -- the
-CLI package alone can't do either without it.
+If you see `(speech recognition isn't set up yet -- ...)`, the whisper.cpp
+build or model download didn't finish -- re-run `./install.sh` (or
+`bash scripts/setup-termux.sh`, or just the download line it prints if only
+the model failed). If you see `(speech output unavailable: termux-tts-speak
+failed -- ...)` or a `termux-microphone-record failed` error, it almost
+always means the Termux:API **app** isn't installed, or the mic permission
+was denied -- the CLI package alone can't do either without it.
 
 ### Option B: fully manual
 
@@ -333,9 +353,16 @@ br` for Portuguese, `mbrola-it` for Italian -- and `sudo apt-get install`
 whichever package names it finds. `scripts/setup-linux.sh --langs <codes>`
 does exactly this search-and-install automatically.
 
-**Android (Termux):** different dependencies entirely -- see "Voice on
-Android (Termux)" above. Install `termux-api` and `ffmpeg` via `pkg`, not
-`portaudio19-dev`/`espeak-ng`.
+**Android (Termux):** a different pipeline entirely -- see "Voice on Android
+(Termux)" above. `pkg install termux-api ffmpeg clang cmake make git`, then
+clone and build whisper.cpp and download its model yourself if you're not
+using `./install.sh`/`scripts/setup-termux.sh` for this step:
+```
+git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git ~/.hey-term/whisper-cpp
+cmake -B ~/.hey-term/whisper-cpp/build -S ~/.hey-term/whisper-cpp -DCMAKE_BUILD_TYPE=Release
+cmake --build ~/.hey-term/whisper-cpp/build --config Release -j$(nproc)
+cd ~/.hey-term/whisper-cpp && bash models/download-ggml-model.sh base
+```
 
 #### 2. Install
 
@@ -385,20 +412,22 @@ spoken sign-off.
 python test/run.py
 ```
 
-142 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+157 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
 safety blocklist, the audit log, the command executor -- including a
 regression test that bash-only syntax actually runs correctly -- the revert
 safety net, background jobs, cost tracking, the offline fallback, the typed-
 request reader thread/queue, conversational-memory bookkeeping (forwarding,
 remembering, capping, and resetting history -- both at the `plan()` level
-and the `handle_request()` level), and the Termux audio bridge's command-
-building/error-handling/decode logic) -- nothing here needs a real
-microphone, speaker, or a phone, so it runs identically in CI, on a machine
-with no audio hardware at all, or in this sandbox (the one exception,
-decoding a real audio file through the actual `ffmpeg` binary, is skipped
-automatically
-if `ffmpeg` isn't on the `PATH`).
+and the `handle_request()` level), and the Termux pipeline's mic-capture,
+WAV-writing, and whisper.cpp command-building/error-handling logic) --
+nothing here needs a real microphone, speaker, or a phone, so it runs
+identically in CI, on a machine with no audio hardware at all, or in this
+sandbox (one exception, decoding a real audio file through the actual
+`ffmpeg` binary, is skipped automatically if `ffmpeg` isn't on the `PATH`;
+actually running the compiled `whisper-cli` binary against a real model
+isn't exercised here at all -- that needs a real build + downloaded model,
+which is exactly what `scripts/setup-termux.sh` produces).
 
 ## Tuning
 

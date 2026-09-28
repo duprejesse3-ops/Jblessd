@@ -278,15 +278,20 @@ chmod +x install.sh
 ./install.sh --dry-run          # preview what it would do, changes nothing
 \`\`\`
 \`install.sh\` detects Termux (via \`$PREFIX\`) and runs \`scripts/setup-termux.sh\`
-instead of the Linux script -- it installs \`termux-api\` and \`ffmpeg\` via
-\`pkg\` rather than \`portaudio19-dev\`/\`espeak-ng\`, since voice on Android goes
-through a completely different path (see "Voice on Android (Termux)" below),
-then Python dependencies from \`requirements-termux.txt\`, \`.env\`, and the
-Whisper model, same as the other platforms.
+instead of the Linux script. Voice on Android is a genuinely different
+pipeline, not just different install commands (see "Voice on Android
+(Termux)" below) -- this step installs \`termux-api\`, \`ffmpeg\`, and a C++
+build toolchain (\`clang\`, \`cmake\`, \`make\`, \`git\`), Python dependencies from
+\`requirements-termux.txt\`, \`.env\`, and then **clones and compiles a
+real, on-device speech recognizer** and downloads its model. That build step
+is the one that takes real time -- expect several minutes and about 1GB of
+temporary disk during the build (the finished binary + model settle down to
+under 200MB); it only happens once. Pass \`--skip-build\` to skip it and do it
+later (voice won't work until it's done, but typing a request still will --
+see "Conversational memory" above).
 
-Either one leaves you with a ready \`.env\` (add your API key) and the
-Whisper model already downloaded. Skip straight to [step 4](#4-run-it)
-below.
+Either one leaves you with a ready \`.env\` (add your API key). Skip straight
+to [step 4](#4-run-it) below.
 
 \`install.sh\`/\`install.ps1\` are thin wrappers -- they just forward whatever
 you pass to \`scripts/setup-linux.sh\` / \`scripts/setup-termux.sh\` /
@@ -295,33 +300,48 @@ thing if you'd rather.
 
 ### Voice on Android (Termux)
 
-Termux itself has no access to the phone's microphone or speaker -- nothing
-running inside it can reach either one directly. The bridge is a separate
-app, **Termux:API** (same publisher as Termux, get it from the same store --
-F-Droid or Play Store, don't mix sources), plus its CLI package:
+Two separate problems, two separate fixes:
 
-\`\`\`
-pkg install termux-api ffmpeg
-\`\`\`
+**Reaching the microphone and speaker at all.** Termux itself has no access
+to either one -- nothing running inside it can reach real hardware directly.
+The bridge is a separate app, **Termux:API** (same publisher as Termux, get
+it from the same store -- F-Droid or Play Store, don't mix sources), plus
+its CLI package (\`pkg install termux-api\`, which \`./install.sh\` does for
+you). Once both the app and the CLI package are installed, grant microphone
+permission the first time Android prompts for it (or set it by hand under
+Android's App Info screen for Termux:API if the prompt never appears).
 
-(\`./install.sh\` does this for you.) Once both the app and the CLI package
-are installed, grant microphone permission the first time Android prompts
-for it (or set it by hand under Android's App Info screen for Termux:API if
-the prompt never appears). \`ffmpeg\` decodes what the mic-recording tool
-captures into the format the rest of Hey Term expects -- it's a real
-dependency, not optional.
+**Actually transcribing what it hears.** This is the less obvious one: the
+desktop pipeline's speech-to-text engine, \`faster-whisper\`, depends on
+\`ctranslate2\` for the actual inference -- and ctranslate2 has no Android
+build at all, not a wheel, not a working source install, nothing. No amount
+of \`pip install\` fixes that; it simply cannot run under Termux. So instead
+of using Android's own OS/cloud speech recognizer (borrowing someone else's
+engine) or giving up on offline transcription, Hey Term builds and runs its
+own copy of [whisper.cpp](https://github.com/ggml-org/whisper.cpp) --  a
+from-scratch, MIT-licensed C++ implementation of the same Whisper algorithm,
+compiled directly on your phone with Termux's own \`clang\`/\`cmake\`/\`make\`
+(\`scripts/setup-termux.sh\` does this once). Recorded audio still goes
+through \`ffmpeg\` (needed to decode what \`termux-microphone-record\` captures
+into a WAV file), and \`lib/transcribe.py\` hands that WAV to the compiled
+\`whisper-cli\` binary instead of the Python \`faster-whisper\` model it uses on
+desktop -- same algorithm, same offline guarantee, different binary because
+the usual one can't run on this platform.
 
-Recording works in short clips rather than one continuous stream (that's a
+Recording works in short clips rather than one continuous stream (a
 limitation of \`termux-microphone-record\` itself, which only starts/stops a
 recording to a file), so silence detection on Termux is coarser than on
 desktop -- it can include up to one extra clip's worth of trailing silence.
 Speech is still accurate; it just doesn't cut off the instant you stop
 talking, the same trade-off as pausing mid-sentence on desktop.
 
-If you see \`(speech output unavailable: termux-tts-speak failed -- ...)\` or
-a \`termux-microphone-record failed\` error, it almost always means the
-Termux:API **app** isn't installed, or the mic permission was denied -- the
-CLI package alone can't do either without it.
+If you see \`(speech recognition isn't set up yet -- ...)\`, the whisper.cpp
+build or model download didn't finish -- re-run \`./install.sh\` (or
+\`bash scripts/setup-termux.sh\`, or just the download line it prints if only
+the model failed). If you see \`(speech output unavailable: termux-tts-speak
+failed -- ...)\` or a \`termux-microphone-record failed\` error, it almost
+always means the Termux:API **app** isn't installed, or the mic permission
+was denied -- the CLI package alone can't do either without it.
 
 ### Option B: fully manual
 
@@ -356,9 +376,16 @@ br\` for Portuguese, \`mbrola-it\` for Italian -- and \`sudo apt-get install\`
 whichever package names it finds. \`scripts/setup-linux.sh --langs <codes>\`
 does exactly this search-and-install automatically.
 
-**Android (Termux):** different dependencies entirely -- see "Voice on
-Android (Termux)" above. Install \`termux-api\` and \`ffmpeg\` via \`pkg\`, not
-\`portaudio19-dev\`/\`espeak-ng\`.
+**Android (Termux):** a different pipeline entirely -- see "Voice on Android
+(Termux)" above. \`pkg install termux-api ffmpeg clang cmake make git\`, then
+clone and build whisper.cpp and download its model yourself if you're not
+using \`./install.sh\`/\`scripts/setup-termux.sh\` for this step:
+\`\`\`
+git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git ~/.hey-term/whisper-cpp
+cmake -B ~/.hey-term/whisper-cpp/build -S ~/.hey-term/whisper-cpp -DCMAKE_BUILD_TYPE=Release
+cmake --build ~/.hey-term/whisper-cpp/build --config Release -j$(nproc)
+cd ~/.hey-term/whisper-cpp && bash models/download-ggml-model.sh base
+\`\`\`
 
 #### 2. Install
 
@@ -408,20 +435,22 @@ spoken sign-off.
 python test/run.py
 \`\`\`
 
-142 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+157 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
 safety blocklist, the audit log, the command executor -- including a
 regression test that bash-only syntax actually runs correctly -- the revert
 safety net, background jobs, cost tracking, the offline fallback, the typed-
 request reader thread/queue, conversational-memory bookkeeping (forwarding,
 remembering, capping, and resetting history -- both at the \`plan()\` level
-and the \`handle_request()\` level), and the Termux audio bridge's command-
-building/error-handling/decode logic) -- nothing here needs a real
-microphone, speaker, or a phone, so it runs identically in CI, on a machine
-with no audio hardware at all, or in this sandbox (the one exception,
-decoding a real audio file through the actual \`ffmpeg\` binary, is skipped
-automatically
-if \`ffmpeg\` isn't on the \`PATH\`).
+and the \`handle_request()\` level), and the Termux pipeline's mic-capture,
+WAV-writing, and whisper.cpp command-building/error-handling logic) --
+nothing here needs a real microphone, speaker, or a phone, so it runs
+identically in CI, on a machine with no audio hardware at all, or in this
+sandbox (one exception, decoding a real audio file through the actual
+\`ffmpeg\` binary, is skipped automatically if \`ffmpeg\` isn't on the \`PATH\`;
+actually running the compiled \`whisper-cli\` binary against a real model
+isn't exercised here at all -- that needs a real build + downloaded model,
+which is exactly what \`scripts/setup-termux.sh\` produces).
 
 ## Tuning
 
@@ -987,16 +1016,16 @@ requests>=2.31
   },
   {
     path: "requirements-termux.txt",
-    contents: `# Termux (Android) dependencies. Same as requirements.txt but WITHOUT
-# sounddevice and pyttsx3: both are desktop-only audio backends, and pip has
-# no prebuilt wheel for either on Android -- attempting to build sounddevice
-# from source there needs PortAudio dev headers Termux doesn't ship, and it
-# would install for nothing anyway, since lib/audio.py and lib/speak.py
-# import both lazily and only take that code path when NOT running under
-# Termux (see lib/termux_audio.py, used instead on Android). Everything else
-# here is unchanged from requirements.txt.
+    contents: `# Termux (Android) dependencies. No faster-whisper here (unlike
+# requirements.txt) -- its inference engine, ctranslate2, has no Android
+# build at all, wheel or source. Termux instead uses a real, self-built
+# whisper.cpp binary for transcription (see lib/termux_audio.py and
+# scripts/setup-termux.sh, which clones and compiles it) -- not a Python
+# package, so it isn't listed here. numpy is still needed on this side for
+# silence detection (RMS energy) and writing the WAV file whisper-cli reads;
+# it builds from source on Termux (no prebuilt wheel), which can take a
+# while the first time -- that's normal, not a hang.
 numpy>=1.24
-faster-whisper>=1.0.0
 requests>=2.31
 `,
   },
@@ -1054,9 +1083,17 @@ ANTHROPIC_API_KEY=
 # See \`python main.py --list-languages\` for what's translated.
 # LANGUAGE=en
 
-# Offline speech-to-text model size/device (faster-whisper).
+# Offline speech-to-text model size/device (faster-whisper on Windows/
+# Linux/macOS; on Termux this instead selects which whisper.cpp model
+# scripts/setup-termux.sh downloads and lib/termux_audio.py looks for).
 # WHISPER_MODEL_SIZE=base
 # WHISPER_DEVICE=cpu
+
+# Termux only -- override if you built/placed whisper.cpp somewhere other
+# than the default ~/.hey-term/whisper-cpp (what scripts/setup-termux.sh
+# uses). WHISPER_CPP_MODELS_DIR is where it looks for ggml-<size>.bin.
+# WHISPER_CPP_BIN=
+# WHISPER_CPP_MODELS_DIR=
 
 # Audio tuning -- rarely needs changing.
 # SAMPLE_RATE=16000
@@ -1330,6 +1367,10 @@ On Android/Termux, sounddevice has nothing to talk to -- there is no
 PortAudio backend there -- so both functions below check lib.termux_audio's
 is_termux() first and delegate to its termux-microphone-record-based
 implementation instead. Desktop (Windows/Linux/macOS) behavior is unchanged.
+Transcription of whatever these functions return is a separate concern --
+see lib/transcribe.py, which does its own is_termux() branch to use a
+real, self-built whisper.cpp binary there instead of faster-whisper (whose
+inference engine has no Android build at all).
 """
 from . import termux_audio
 from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD
@@ -1464,7 +1505,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -1509,6 +1550,19 @@ LANGUAGE = os.environ.get("LANGUAGE", "en").lower().strip()
 
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
+
+# Android/Termux only (see lib/termux_audio.py) -- faster-whisper's inference
+# engine has no Android build at all, so Termux instead uses a real,
+# self-built whisper.cpp binary for the identical Whisper algorithm.
+# scripts/setup-termux.sh builds it at this path and downloads a
+# ggml-<WHISPER_MODEL_SIZE>.bin model into this directory; both are
+# overridable for a non-default install location.
+WHISPER_CPP_BIN = os.environ.get("WHISPER_CPP_BIN") or os.path.expanduser(
+    os.path.join("~", ".hey-term", "whisper-cpp", "build", "bin", "whisper-cli")
+)
+WHISPER_CPP_MODELS_DIR = os.environ.get("WHISPER_CPP_MODELS_DIR") or os.path.expanduser(
+    os.path.join("~", ".hey-term", "whisper-cpp", "models")
+)
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
@@ -2691,35 +2745,54 @@ def speak(text: str, language: str = "en") -> None:
   {
     path: "lib/termux_audio.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Microphone and speech output on Android, through the Termux:API app.
+"""Speech input and output on Android, through the Termux:API app plus a
+real, self-built offline speech recognizer -- not Android's own OS/cloud
+recognizer, and not a hosted API. Hey Term owns its transcription the same
+way on every platform; only how it reaches the microphone differs.
 
-sounddevice (lib/audio.py) and pyttsx3 (lib/speak.py) are desktop-only --
-PortAudio and SAPI5/espeak/NSSpeechSynthesizer have no real Android backend.
-Termux has no direct access to the phone's mic or speaker at all; the
-Termux:API companion app is the only bridge, exposing them as small CLI
-tools (termux-microphone-record, termux-tts-speak) that talk to the app over
-Android's own APIs. This module is that bridge for Hey Term:
+sounddevice (lib/audio.py) and faster-whisper (lib/transcribe.py) are the
+desktop pipeline -- record raw audio, transcribe it locally. Neither half of
+that works on Android: sounddevice has no PortAudio backend there at all,
+and less obviously, faster-whisper's inference engine, ctranslate2, has no
+build for Android whatsoever -- no wheel, no working source install -- so
+the desktop transcription path cannot run under Termux no matter how the
+audio gets captured.
+
+This module replaces both halves for Termux:
+  - Capture: termux-microphone-record (the Termux:API app's mic bridge) to a
+    compressed clip, decoded to float32 PCM with ffmpeg -- same idea as the
+    desktop capture, just reaching the mic through Android's API instead of
+    PortAudio.
+  - Transcription: a real Whisper model, run entirely on-device by
+    whisper.cpp (https://github.com/ggml-org/whisper.cpp, MIT licensed) --
+    a from-scratch C++ reimplementation of Whisper inference that, unlike
+    ctranslate2, compiles and runs fine on Android's ARM CPUs with nothing
+    more than Termux's own clang/cmake/make. scripts/setup-termux.sh clones
+    and builds it once, and downloads the same-sized ggml model that
+    WHISPER_MODEL_SIZE names for desktop, so the two platforms use
+    comparable models. Nothing is sent anywhere -- this is exactly as
+    offline as the desktop path, just a different implementation of the
+    same algorithm because the desktop one can't run here.
+
+\`termux-tts-speak\` (unrelated to any of the above; it was never a Whisper
+problem) still handles speech output the same way it always has.
 
 Setup (once): install the separate "Termux:API" app (F-Droid or Play Store,
-same publisher as Termux), then in Termux:
-
-    pkg install termux-api ffmpeg
-
-ffmpeg is required here too -- termux-microphone-record only writes
-compressed containers (aac/amr, not raw PCM), and this module decodes them
-to the float32 PCM arrays the rest of Hey Term (lib/transcribe.py) expects
-before it can pass them to faster-whisper.
-
-Everything here degrades honestly instead of pretending: is_termux() is the
-single detection point both lib/audio.py and lib/speak.py branch on, and a
-missing binary/timeout/decode failure raises or returns False rather than
-silently producing empty audio that would look like "you said nothing."
+same publisher as Termux), then run ./install.sh (or scripts/setup-termux.sh
+directly), which installs termux-api/ffmpeg/build tools, builds whisper.cpp,
+and downloads its model.
 """
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+import wave
+
+from . import config
+
+_RECORD_BIN = "termux-microphone-record"
+_TTS_BIN = "termux-tts-speak"
 
 # termux-microphone-record has no live block-by-block streaming mode (it
 # only starts/stops a recording to a file), so record_until_silence_termux
@@ -2729,18 +2802,62 @@ import time
 # possible through this CLI.
 CHUNK_SECONDS = 1.5
 
-_RECORD_BIN = "termux-microphone-record"
-_TTS_BIN = "termux-tts-speak"
+# whisper-cli's own timeout guard -- transcribing a short command clip on a
+# phone CPU is normally a couple of seconds; this is a ceiling against a
+# hung process, not a value expected to be hit in practice.
+_TRANSCRIBE_TIMEOUT_SECONDS = 60
+
+# Printed once, not on every wake-word chunk (every ~2.5s), if whisper.cpp
+# isn't built/the model isn't downloaded yet -- the setup step this needs.
+_setup_incomplete_warned = False
+
+# Hey Term's own language codes (lib/i18n.py's LANGUAGES keys) are plain
+# ISO 639-1 ("en", "es"...), which is also exactly what whisper.cpp's \`-l\`
+# expects (same convention as faster-whisper) -- no mapping needed for
+# transcription. Android's TTS, below, is the one place that needs a
+# different, BCP-47 tag ("en-US", "es-ES"...).
+ANDROID_TTS_LANGUAGE_TAGS = {
+    "en": "en-US",
+    "es": "es-ES",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "pt": "pt-BR",
+    "it": "it-IT",
+}
+
+
+def android_tts_language_tag(language: str):
+    """Maps a Hey Term language code to the BCP-47 tag Android's TTS
+    expects, or None for "auto" or anything unrecognized -- passing None to
+    speak_termux() just uses Android's own default voice instead of failing.
+    """
+    return ANDROID_TTS_LANGUAGE_TAGS.get(language)
 
 
 def is_termux() -> bool:
     """True when running under Termux with the termux-api package installed
-    (the Termux:API *app* also has to be installed and granted mic
+    (the Termux:API *app* also has to be installed and granted microphone
     permission on the phone itself -- this can only detect the CLI side).
     """
     if "com.termux" in os.environ.get("PREFIX", ""):
         return True
     return shutil.which(_RECORD_BIN) is not None
+
+
+def find_whisper_cli():
+    """Path to the whisper.cpp CLI binary scripts/setup-termux.sh built, or
+    None if setup hasn't been run (or hasn't finished) yet.
+    """
+    path = config.WHISPER_CPP_BIN
+    return path if os.path.isfile(path) and os.access(path, os.X_OK) else None
+
+
+def find_whisper_model():
+    """Path to the ggml model matching WHISPER_MODEL_SIZE, or None if it
+    hasn't been downloaded yet.
+    """
+    path = os.path.join(config.WHISPER_CPP_MODELS_DIR, f"ggml-{config.WHISPER_MODEL_SIZE}.bin")
+    return path if os.path.isfile(path) else None
 
 
 def _decode_to_float32(path: str, sample_rate: int):
@@ -2846,19 +2963,93 @@ def record_until_silence_termux(max_seconds: float, sample_rate: int, silence_ho
     return np.concatenate(blocks)
 
 
+def _write_wav(audio, sample_rate: int, path: str) -> None:
+    """Writes a 1-D float32 [-1, 1] array as 16-bit PCM mono WAV --
+    whisper-cli reads wav/flac/mp3/ogg directly, not raw arrays, so this is
+    the hand-off point between "audio as Python already has it" and "audio
+    as the external binary wants it." Uses the stdlib \`wave\` module --
+    no extra dependency for something this small.
+    """
+    import numpy as np
+
+    clipped = np.clip(audio, -1.0, 1.0)
+    pcm16 = (clipped * 32767.0).astype("<i2")
+    with wave.open(path, "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(sample_rate)
+        f.writeframes(pcm16.tobytes())
+
+
+def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
+    """Transcribes a captured clip with the on-device whisper.cpp build.
+    Returns "" if there's no audio, setup hasn't been completed yet (missing
+    binary or model -- printed once, not on every call), or the process
+    fails for any reason -- exactly the same "didn't catch that" contract
+    lib/transcribe.py's desktop functions already have, never a crash.
+
+    \`language\` is a plain Whisper code ("en", "es", ... or "auto") -- the
+    same convention lib/i18n.py and lib/transcribe.py already use, since
+    whisper.cpp's \`-l\` takes the identical codes faster-whisper does.
+    """
+    global _setup_incomplete_warned
+
+    if audio is None or len(audio) == 0:
+        return ""
+
+    binary = find_whisper_cli()
+    model = find_whisper_model()
+    if not binary or not model:
+        if not _setup_incomplete_warned:
+            print("[Hey Term] (speech recognition isn't set up yet -- run ./install.sh "
+                  "or scripts/setup-termux.sh to build whisper.cpp and download its model)")
+            _setup_incomplete_warned = True
+        return ""
+
+    fd, wav_path = tempfile.mkstemp(suffix=".wav", prefix="hey-term-stt-")
+    os.close(fd)
+    out_base = wav_path[:-4]  # whisper-cli appends ".txt" itself to -of's basename
+    txt_path = out_base + ".txt"
+    try:
+        _write_wav(audio, sample_rate, wav_path)
+        args = [
+            binary, "-m", model, "-f", wav_path,
+            "-l", language or "auto",
+            "-nt", "-np", "-otxt", "-of", out_base,
+        ]
+        proc = subprocess.run(args, capture_output=True, timeout=_TRANSCRIBE_TIMEOUT_SECONDS)
+        if proc.returncode != 0:
+            return ""
+        if not os.path.isfile(txt_path):
+            return ""
+        with open(txt_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+    finally:
+        for p in (wav_path, txt_path):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
 def speak_termux(text: str, language: str = "en") -> bool:
     """Speaks via Android's own system TTS, through termux-tts-speak.
     Returns True on success, False if the binary is missing, the Termux:API
     app isn't installed, or the call otherwise fails -- callers should print
     the text as a fallback either way, never treat this as fatal.
     """
-    try:
-        subprocess.run([_TTS_BIN, "-l", language, text], check=True, capture_output=True, timeout=30)
-        return True
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
-        pass
-    # Not every termux-tts-speak build accepts -l for every locale code --
-    # retry once with the plain default voice before giving up entirely.
+    tag = android_tts_language_tag(language)
+    if tag:
+        try:
+            subprocess.run([_TTS_BIN, "-l", tag, text], check=True, capture_output=True, timeout=30)
+            return True
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+    # No mapped tag, or the tagged call failed (not every termux-tts-speak
+    # build accepts -l for every locale) -- retry with the plain default
+    # voice before giving up entirely.
     try:
         subprocess.run([_TTS_BIN, text], check=True, capture_output=True, timeout=30)
         return True
@@ -2869,16 +3060,27 @@ def speak_termux(text: str, language: str = "en") -> bool:
   {
     path: "lib/transcribe.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Speech-to-text via faster-whisper, running fully local -- no audio ever
-leaves the machine for transcription, and no API key is needed for this part.
-The model loads once and is cached for the life of the process; the first
-call after startup pays the one-time model-load cost.
+"""Speech-to-text, running fully local -- no audio ever leaves the machine
+for transcription, and no API key is needed for this part.
 
-Uses the multilingual model (not an English-only "*.en" variant) so
-LANGUAGE can be set to anything Whisper supports, or to "auto" to let it
-detect the spoken language per utterance.
+On Windows/Linux/macOS this is faster-whisper; the model loads once and is
+cached for the life of the process, and the first call after startup pays
+the one-time model-load cost.
+
+On Android/Termux, faster-whisper can't run at all -- its inference engine,
+ctranslate2, has no Android build, wheel or working source install -- so
+this instead shells out to a real, self-built whisper.cpp binary doing the
+same Whisper algorithm natively on-device (see lib/termux_audio.py's module
+docstring for the full story). Same offline guarantee either way, just a
+different implementation of the same model because the usual one can't run
+on this platform.
+
+Uses the multilingual model (not an English-only "*.en" variant) on both
+platforms, so LANGUAGE can be set to anything Whisper supports, or to "auto"
+to let it detect the spoken language per utterance.
 """
-from .config import WHISPER_DEVICE, WHISPER_MODEL_SIZE
+from . import termux_audio
+from .config import SAMPLE_RATE, WHISPER_DEVICE, WHISPER_MODEL_SIZE
 
 _model = None
 
@@ -2893,10 +3095,17 @@ def _get_model():
 
 
 def _transcribe(audio, language):
-    import numpy as np
-
     if audio is None or len(audio) == 0:
         return ""
+
+    if termux_audio.is_termux():
+        # whisper.cpp's -l wants an explicit "auto" for auto-detect, unlike
+        # faster-whisper's language=None convention below -- normalize here
+        # so callers don't need to know the two engines differ on this.
+        return termux_audio.transcribe_termux(audio, SAMPLE_RATE, language or "auto")
+
+    import numpy as np
+
     model = _get_model()
     segments, _info = model.transcribe(np.asarray(audio, dtype="float32"), language=language, vad_filter=True)
     return " ".join(seg.text.strip() for seg in segments).strip()
@@ -3964,10 +4173,12 @@ if __name__ == "__main__":
   {
     path: "test/test_termux_audio.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import os
 import shutil
 import subprocess
 import tempfile
 import unittest
+import wave
 from unittest import mock
 
 import numpy as np
@@ -3989,6 +4200,154 @@ class TestIsTermux(unittest.TestCase):
         with mock.patch.dict("os.environ", {"PREFIX": "/usr"}, clear=False):
             with mock.patch("shutil.which", return_value=None):
                 self.assertFalse(termux_audio.is_termux())
+
+
+class TestAndroidTtsLanguageTag(unittest.TestCase):
+    def test_known_language_maps_to_a_bcp47_tag(self):
+        self.assertEqual(termux_audio.android_tts_language_tag("en"), "en-US")
+        self.assertEqual(termux_audio.android_tts_language_tag("es"), "es-ES")
+
+    def test_unknown_or_auto_returns_none(self):
+        self.assertIsNone(termux_audio.android_tts_language_tag("auto"))
+        self.assertIsNone(termux_audio.android_tts_language_tag("xx"))
+
+
+class TestFindWhisperCliAndModel(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_find_whisper_cli_none_when_path_does_not_exist(self):
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", os.path.join(self._tmp.name, "nope")):
+            self.assertIsNone(termux_audio.find_whisper_cli())
+
+    def test_find_whisper_cli_none_when_present_but_not_executable(self):
+        path = os.path.join(self._tmp.name, "whisper-cli")
+        with open(path, "w") as f:
+            f.write("not actually executable")
+        os.chmod(path, 0o644)
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", path):
+            self.assertIsNone(termux_audio.find_whisper_cli())
+
+    def test_find_whisper_cli_found_when_present_and_executable(self):
+        path = os.path.join(self._tmp.name, "whisper-cli")
+        with open(path, "w") as f:
+            f.write("#!/bin/sh\\n")
+        os.chmod(path, 0o755)
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", path):
+            self.assertEqual(termux_audio.find_whisper_cli(), path)
+
+    def test_find_whisper_model_none_when_missing(self):
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_MODELS_DIR", self._tmp.name), \\
+             mock.patch.object(termux_audio.config, "WHISPER_MODEL_SIZE", "base"):
+            self.assertIsNone(termux_audio.find_whisper_model())
+
+    def test_find_whisper_model_found_when_present(self):
+        model_path = os.path.join(self._tmp.name, "ggml-base.bin")
+        open(model_path, "w").close()
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_MODELS_DIR", self._tmp.name), \\
+             mock.patch.object(termux_audio.config, "WHISPER_MODEL_SIZE", "base"):
+            self.assertEqual(termux_audio.find_whisper_model(), model_path)
+
+
+class TestWriteWav(unittest.TestCase):
+    def test_round_trips_a_float32_clip_as_16_bit_pcm(self):
+        rate = 16000
+        tone = (0.5 * np.sin(2 * np.pi * 440 * np.arange(rate) / rate)).astype("float32")
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            path = f.name
+        try:
+            termux_audio._write_wav(tone, rate, path)
+            with wave.open(path, "rb") as wf:
+                self.assertEqual(wf.getnchannels(), 1)
+                self.assertEqual(wf.getsampwidth(), 2)
+                self.assertEqual(wf.getframerate(), rate)
+                frames = wf.readframes(wf.getnframes())
+            decoded = np.frombuffer(frames, dtype="<i2").astype("float32") / 32767.0
+            self.assertEqual(len(decoded), len(tone))
+            self.assertAlmostEqual(
+                float(np.sqrt(np.mean(np.square(decoded)))),
+                float(np.sqrt(np.mean(np.square(tone)))),
+                places=3,
+            )
+        finally:
+            os.remove(path)
+
+    def test_clips_out_of_range_samples_instead_of_wrapping(self):
+        rate = 8000
+        loud = np.array([2.0, -2.0, 0.0], dtype="float32")
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            path = f.name
+        try:
+            termux_audio._write_wav(loud, rate, path)
+            with wave.open(path, "rb") as wf:
+                frames = wf.readframes(wf.getnframes())
+            decoded = np.frombuffer(frames, dtype="<i2")
+            self.assertEqual(decoded[0], 32767)
+            self.assertEqual(decoded[1], -32767)
+        finally:
+            os.remove(path)
+
+
+class TestTranscribeTermux(unittest.TestCase):
+    def setUp(self):
+        termux_audio._setup_incomplete_warned = False
+
+    def test_empty_audio_returns_empty_string_without_touching_the_binary(self):
+        with mock.patch.object(termux_audio, "find_whisper_cli") as fake_find:
+            result = termux_audio.transcribe_termux(np.zeros(0, dtype="float32"), 16000)
+        fake_find.assert_not_called()
+        self.assertEqual(result, "")
+
+    def test_missing_setup_returns_empty_string_and_warns_once(self):
+        audio = np.ones(1000, dtype="float32") * 0.1
+        with mock.patch.object(termux_audio, "find_whisper_cli", return_value=None), \\
+             mock.patch.object(termux_audio, "find_whisper_model", return_value="/some/model.bin"), \\
+             mock.patch("builtins.print") as fake_print:
+            self.assertEqual(termux_audio.transcribe_termux(audio, 16000), "")
+            self.assertEqual(termux_audio.transcribe_termux(audio, 16000), "")
+        # Only the first call prints the setup-incomplete notice.
+        setup_notices = [c for c in fake_print.call_args_list if "isn't set up yet" in str(c)]
+        self.assertEqual(len(setup_notices), 1)
+
+    def test_successful_transcription_reads_the_output_text_file_and_cleans_up(self):
+        audio = np.ones(1000, dtype="float32") * 0.1
+
+        def fake_run(args, **kwargs):
+            # -of is followed by the output basename; whisper-cli itself
+            # would write <basename>.txt -- simulate that side effect here
+            # since we're not invoking the real binary in this test.
+            out_base = args[args.index("-of") + 1]
+            with open(out_base + ".txt", "w", encoding="utf-8") as f:
+                f.write("list the files\\n")
+            return subprocess.CompletedProcess(args, 0)
+
+        with mock.patch.object(termux_audio, "find_whisper_cli", return_value="/fake/whisper-cli"), \\
+             mock.patch.object(termux_audio, "find_whisper_model", return_value="/fake/model.bin"), \\
+             mock.patch("subprocess.run", side_effect=fake_run):
+            result = termux_audio.transcribe_termux(audio, 16000, language="en")
+
+        self.assertEqual(result, "list the files")
+        # No leftover temp files (the .wav or the .txt) after a successful call.
+        leftovers = [p for p in os.listdir(tempfile.gettempdir()) if p.startswith("hey-term-stt-")]
+        self.assertEqual(leftovers, [])
+
+    def test_nonzero_exit_returns_empty_string(self):
+        audio = np.ones(1000, dtype="float32") * 0.1
+        with mock.patch.object(termux_audio, "find_whisper_cli", return_value="/fake/whisper-cli"), \\
+             mock.patch.object(termux_audio, "find_whisper_model", return_value="/fake/model.bin"), \\
+             mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1)):
+            self.assertEqual(termux_audio.transcribe_termux(audio, 16000), "")
+
+    def test_timeout_returns_empty_string_instead_of_raising(self):
+        audio = np.ones(1000, dtype="float32") * 0.1
+        with mock.patch.object(termux_audio, "find_whisper_cli", return_value="/fake/whisper-cli"), \\
+             mock.patch.object(termux_audio, "find_whisper_model", return_value="/fake/model.bin"), \\
+             mock.patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="whisper-cli", timeout=60)):
+            self.assertEqual(termux_audio.transcribe_termux(audio, 16000), "")
 
 
 class TestDecodeToFloat32(unittest.TestCase):
@@ -4064,10 +4423,11 @@ class TestSpeakTermux(unittest.TestCase):
             self.assertTrue(termux_audio.speak_termux("hello", "en"))
         run.assert_called_once()
         self.assertIn("-l", run.call_args[0][0])
+        self.assertIn("en-US", run.call_args[0][0])
 
     def test_falls_back_to_default_voice_when_language_flag_is_rejected(self):
         calls = [
-            subprocess.CalledProcessError(1, ["termux-tts-speak", "-l", "xx", "hi"]),
+            subprocess.CalledProcessError(1, ["termux-tts-speak", "-l", "en-US", "hi"]),
             subprocess.CompletedProcess([], 0),
         ]
 
@@ -4078,8 +4438,14 @@ class TestSpeakTermux(unittest.TestCase):
             return result
 
         with mock.patch("subprocess.run", side_effect=fake_run) as run:
-            self.assertTrue(termux_audio.speak_termux("hi", "xx"))
+            self.assertTrue(termux_audio.speak_termux("hi", "en"))
         self.assertEqual(run.call_count, 2)
+
+    def test_unmapped_language_skips_straight_to_the_plain_call(self):
+        with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertTrue(termux_audio.speak_termux("hi", "xx"))
+        run.assert_called_once()
+        self.assertNotIn("-l", run.call_args[0][0])
 
     def test_returns_false_when_the_binary_is_missing_entirely(self):
         with mock.patch("subprocess.run", side_effect=FileNotFoundError()):
@@ -4399,30 +4765,41 @@ echo "  2. Run: python3 main.py --lang en   (or --lang es / fr / de / pt / it)"
 #
 # Automated setup for Hey Term on Android, inside Termux.
 #
-# This is a different script from scripts/setup-linux.sh (not just "Linux
-# with different package names") because voice I/O itself is different on
-# Termux: there is no PortAudio and no espeak-ng speech engine reaching real
-# hardware, so lib/audio.py and lib/speak.py both route through
-# lib/termux_audio.py instead, which drives the mic and speaker through the
-# separate Termux:API app's CLI tools (termux-microphone-record,
-# termux-tts-speak). Those tools -- and ffmpeg, needed to decode what
-# termux-microphone-record records -- are what this script installs;
-# sounddevice/pyttsx3's system dependencies (portaudio, espeak-ng) are not
-# needed here at all.
+# This is a different script from scripts/setup-linux.sh, not just "Linux
+# with different package names" -- voice I/O on Termux is a genuinely
+# different pipeline, not the desktop one with different install commands:
+#
+#   - Capture: no PortAudio on Android, so lib/audio.py routes through
+#     lib/termux_audio.py's termux-microphone-record/ffmpeg bridge (the
+#     Termux:API app's CLI tools) instead of sounddevice.
+#   - Transcription: faster-whisper's inference engine, ctranslate2, has NO
+#     Android build at all -- no wheel, no working source install -- so
+#     Termux instead runs a real, self-built whisper.cpp binary doing the
+#     same Whisper algorithm natively on-device. This script clones and
+#     compiles it (once) and downloads its model, which is the part that
+#     takes real time on a phone: expect the build to take several minutes
+#     and the model download to be ~150MB.
+#   - Speech output: termux-tts-speak (Android's own system TTS), unrelated
+#     to any of the above.
 #
 # Usage:
-#   ./scripts/setup-termux.sh              # installs termux-api, ffmpeg, Python deps, .env
-#   ./scripts/setup-termux.sh --yes        # don't prompt before pkg installs
+#   ./scripts/setup-termux.sh              # installs everything, asks before pkg/build steps
+#   ./scripts/setup-termux.sh --yes        # don't prompt before pkg installs or the build
 #   ./scripts/setup-termux.sh --dry-run    # print what it would do, change nothing
+#   ./scripts/setup-termux.sh --skip-build # install packages/deps only, skip whisper.cpp
+#                                           # build+model (e.g. to do that step separately,
+#                                           # or retry just that step later)
 set -euo pipefail
 
 ASSUME_YES=0
 DRY_RUN=0
+SKIP_BUILD=0
 
 usage() {
-  echo "Usage: $0 [--yes] [--dry-run]"
-  echo "  --yes     Don't prompt before running pkg install."
-  echo "  --dry-run Print what would happen; run nothing that changes the system."
+  echo "Usage: $0 [--yes] [--dry-run] [--skip-build]"
+  echo "  --yes        Don't prompt before running pkg install or the whisper.cpp build."
+  echo "  --dry-run    Print what would happen; run nothing that changes the system."
+  echo "  --skip-build Skip cloning/building whisper.cpp and downloading its model."
   exit "\${1:-0}"
 }
 
@@ -4430,6 +4807,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --yes|-y) ASSUME_YES=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --skip-build) SKIP_BUILD=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "Unknown argument: $1" >&2; usage 1 ;;
   esac
@@ -4460,18 +4838,24 @@ if [ -z "\${PREFIX:-}" ] || [ "\${PREFIX#*com.termux}" = "$PREFIX" ]; then
   exit 1
 fi
 
+WHISPER_DIR="$HOME/.hey-term/whisper-cpp"
+WHISPER_MODEL_SIZE="\${WHISPER_MODEL_SIZE:-base}"
+
 echo "== Hey Term Termux setup =="
 echo
 
-# --- 1. termux-api (the CLI side of the Termux:API bridge) + ffmpeg -----
-echo "Note: this installs the *CLI tools* (termux-api package). You still need"
-echo "the separate \\"Termux:API\\" app installed from the same store you got"
-echo "Termux from (F-Droid or Play Store, matching publisher) -- the CLI tools"
-echo "talk to that app, and can't reach the mic/speaker without it."
+# --- 1. termux-api + ffmpeg + build tools --------------------------------
+echo "Note: 'termux-api' is the *CLI tools* package. You still need the"
+echo "separate \\"Termux:API\\" app installed from the same store you got"
+echo "Termux from (F-Droid or Play Store, matching publisher) -- the CLI"
+echo "tools talk to that app, and can't reach the mic/speaker without it."
 echo
-if confirm_or_exit "Install termux-api and ffmpeg via pkg?"; then
+echo "clang/cmake/make/git build the on-device whisper.cpp speech recognizer"
+echo "(step 5 below) -- a real compiler toolchain, not just a package install."
+echo
+if confirm_or_exit "Install termux-api, ffmpeg, and build tools (clang, cmake, make, git) via pkg?"; then
   run pkg update -y
-  run pkg install -y termux-api ffmpeg
+  run pkg install -y termux-api ffmpeg clang cmake make git
 fi
 echo
 
@@ -4500,13 +4884,41 @@ else
   echo ".env already exists -- leaving it alone."
 fi
 
-# --- 5. Pre-download the Whisper model -----------------------------------
-if [ "$DRY_RUN" = "0" ]; then
-  echo "Pre-downloading the Whisper speech-to-text model (one-time, ~150MB)..."
-  python3 -c "from faster_whisper import WhisperModel; WhisperModel('base')" || \\
-    echo "Model pre-download failed or was skipped -- it will just download on first run instead."
+# --- 5. Build the on-device speech recognizer (whisper.cpp) --------------
+if [ "$SKIP_BUILD" = "1" ]; then
+  echo "Skipping the whisper.cpp build (--skip-build). Voice input won't work"
+  echo "until you run this script again without that flag."
+elif confirm_or_exit "Clone and build whisper.cpp for on-device speech recognition (several minutes, ~1GB temporary disk)?"; then
+  if [ -d "$WHISPER_DIR/.git" ]; then
+    echo "whisper.cpp already cloned at $WHISPER_DIR -- pulling latest instead of re-cloning."
+    run git -C "$WHISPER_DIR" pull --ff-only
+  else
+    run mkdir -p "$(dirname "$WHISPER_DIR")"
+    run git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git "$WHISPER_DIR"
+  fi
+
+  echo "Building (this compiles real C++ on your phone's CPU -- expect several minutes)..."
+  run cmake -B "$WHISPER_DIR/build" -S "$WHISPER_DIR" -DCMAKE_BUILD_TYPE=Release
+  run cmake --build "$WHISPER_DIR/build" --config Release -j"$(nproc 2>/dev/null || echo 2)"
+
+  if [ "$DRY_RUN" = "0" ] && [ ! -x "$WHISPER_DIR/build/bin/whisper-cli" ]; then
+    echo "Build finished but whisper-cli wasn't found at the expected path -- something" >&2
+    echo "went wrong. Voice input won't work until this is fixed; typing a request" >&2
+    echo "still works either way (see README.md)." >&2
+  fi
+
+  echo "Downloading the \${WHISPER_MODEL_SIZE} speech model (one-time, ~150MB for 'base')..."
+  if [ "$DRY_RUN" = "0" ]; then
+    ( cd "$WHISPER_DIR" && bash models/download-ggml-model.sh "$WHISPER_MODEL_SIZE" ) || \\
+      echo "Model download failed -- check your connection and re-run this script (or just" \\
+           "'cd $WHISPER_DIR && bash models/download-ggml-model.sh $WHISPER_MODEL_SIZE' again)." >&2
+  else
+    echo "[dry-run] would download the \${WHISPER_MODEL_SIZE} model"
+  fi
 else
-  echo "[dry-run] would pre-download the Whisper model"
+  echo "Skipped. Voice input won't work until whisper.cpp is built -- re-run this script"
+  echo "(or 'bash scripts/setup-termux.sh') when you're ready; typing a request still"
+  echo "works either way (see README.md)."
 fi
 
 echo

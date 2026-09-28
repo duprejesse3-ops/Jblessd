@@ -7,6 +7,10 @@ On Android/Termux, sounddevice has nothing to talk to -- there is no
 PortAudio backend there -- so both functions below check lib.termux_audio's
 is_termux() first and delegate to its termux-microphone-record-based
 implementation instead. Desktop (Windows/Linux/macOS) behavior is unchanged.
+Transcription of whatever these functions return is a separate concern --
+see lib/transcribe.py, which does its own is_termux() branch to use a
+real, self-built whisper.cpp binary there instead of faster-whisper (whose
+inference engine has no Android build at all).
 """
 from . import termux_audio
 from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD

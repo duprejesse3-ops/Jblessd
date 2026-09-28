@@ -4,7 +4,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -49,6 +49,19 @@ LANGUAGE = os.environ.get("LANGUAGE", "en").lower().strip()
 
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
+
+# Android/Termux only (see lib/termux_audio.py) -- faster-whisper's inference
+# engine has no Android build at all, so Termux instead uses a real,
+# self-built whisper.cpp binary for the identical Whisper algorithm.
+# scripts/setup-termux.sh builds it at this path and downloads a
+# ggml-<WHISPER_MODEL_SIZE>.bin model into this directory; both are
+# overridable for a non-default install location.
+WHISPER_CPP_BIN = os.environ.get("WHISPER_CPP_BIN") or os.path.expanduser(
+    os.path.join("~", ".hey-term", "whisper-cpp", "build", "bin", "whisper-cli")
+)
+WHISPER_CPP_MODELS_DIR = os.environ.get("WHISPER_CPP_MODELS_DIR") or os.path.expanduser(
+    os.path.join("~", ".hey-term", "whisper-cpp", "models")
+)
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
