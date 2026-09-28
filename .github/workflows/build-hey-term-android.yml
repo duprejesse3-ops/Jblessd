@@ -67,6 +67,19 @@ jobs:
             https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
           ls -la app/src/main/assets/models/
 
+      # The actual keystore is checked in base64-encoded (as
+      # hey-term-debug.keystore.b64), decoded here at build time -- GitHub's
+      # web upload UI (Add file -> Upload files) fails to process the raw
+      # binary .keystore file ("Something went really wrong"), but handles
+      # a plain text file fine. Decoding it the same way every build is what
+      # actually matters: every APK gets signed with this same key, so
+      # installing a new build over an old one behaves like a normal app
+      # update instead of failing with "App not installed" (see
+      # app/build.gradle.kts' signingConfigs.debug for why that was
+      # happening before this file existed).
+      - name: Decode debug keystore
+        run: base64 -d hey-term-debug.keystore.b64 > hey-term-debug.keystore
+
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
