@@ -27,7 +27,7 @@ INSERT INTO products (sku, name, category, niche, format, price, blurb, spec, ll
     'agents',
     'developers',
     '.zip · Python desktop app (mic + speech) + Claude API · one-time license',
-    69,
+    29,
     'Say "Hey Term," then say what you want done. It transcribes you offline, asks Claude to turn that into exact shell command(s) plus a one-sentence summary spoken back to you, and only runs anything after you confirm out loud -- a short list of genuinely destructive commands (wiping a disk, force-pushing over a branch, dropping a database) requires typing CONFIRM instead of just saying it. Runs real bash on Linux/macOS/WSL and real PowerShell on Windows, not a generic shell default. Works in 6 languages out of the box, and every wake, request, plan, confirmation, and run is appended to a plain-text audit log.',
     'Offline speech-to-text (faster-whisper, multilingual) · Claude-powered command planning · explicit bash/PowerShell invocation, not shell=True · spoken confirm required, typed CONFIRM for a dangerous-command blocklist · JSONL audit log · one-command setup scripts (install.sh / install.ps1) for system audio deps, best-effort voice packs, Python deps, and the Whisper model · 73 automated tests',
     'Claude (bring your own ANTHROPIC_API_KEY)',
