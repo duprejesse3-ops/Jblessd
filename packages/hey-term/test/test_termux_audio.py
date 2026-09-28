@@ -118,6 +118,99 @@ class TestWriteWav(unittest.TestCase):
             os.remove(path)
 
 
+class TestFindWhisperServer(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_none_when_not_present_next_to_whisper_cli(self):
+        cli_path = os.path.join(self._tmp.name, "whisper-cli")
+        open(cli_path, "w").close()
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", cli_path):
+            self.assertIsNone(termux_audio.find_whisper_server())
+
+    def test_found_when_present_and_executable_next_to_whisper_cli(self):
+        cli_path = os.path.join(self._tmp.name, "whisper-cli")
+        open(cli_path, "w").close()
+        server_path = os.path.join(self._tmp.name, "whisper-server")
+        with open(server_path, "w") as f:
+            f.write("#!/bin/sh\n")
+        os.chmod(server_path, 0o755)
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", cli_path):
+            self.assertEqual(termux_audio.find_whisper_server(), server_path)
+
+
+class TestEnsureServerRunning(unittest.TestCase):
+    def setUp(self):
+        termux_audio._server_proc = None
+        termux_audio._server_start_failed = False
+
+    def tearDown(self):
+        termux_audio._server_proc = None
+        termux_audio._server_start_failed = False
+
+    def test_returns_true_once_health_check_succeeds(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None  # still running
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \
+             mock.patch.object(termux_audio, "_server_is_up", return_value=True), \
+             mock.patch("atexit.register"):
+            self.assertTrue(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+
+    def test_reuses_an_already_running_server_without_spawning_again(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None
+        termux_audio._server_proc = fake_proc
+        with mock.patch("subprocess.Popen") as popen:
+            self.assertTrue(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+        popen.assert_not_called()
+
+    def test_returns_false_and_warns_once_when_process_exits_immediately(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = 3  # exited right away, e.g. bad model
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \
+             mock.patch("atexit.register"), \
+             mock.patch("builtins.print") as fake_print:
+            result = termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin")
+        self.assertFalse(result)
+        fake_print.assert_called_once()
+
+    def test_returns_false_when_health_check_never_succeeds_before_timeout(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \
+             mock.patch.object(termux_audio, "_server_is_up", return_value=False), \
+             mock.patch.object(termux_audio, "_SERVER_STARTUP_TIMEOUT_SECONDS", 0), \
+             mock.patch("atexit.register"):
+            self.assertFalse(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+
+
+class TestTranscribeViaServer(unittest.TestCase):
+    def test_returns_stripped_text_on_a_200_response(self):
+        fake_resp = mock.Mock(status_code=200, text="list the files\n")
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", return_value=fake_resp):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertEqual(result, "list the files")
+
+    def test_returns_none_on_a_non_200_response_so_caller_can_fall_back(self):
+        fake_resp = mock.Mock(status_code=500, text="")
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", return_value=fake_resp):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertIsNone(result)
+
+    def test_returns_none_when_the_server_is_unreachable(self):
+        import requests
+
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", side_effect=requests.exceptions.ConnectionError()):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertIsNone(result)
+
+
 class TestTranscribeTermux(unittest.TestCase):
     def setUp(self):
         termux_audio._setup_incomplete_warned = False
@@ -125,6 +218,18 @@ class TestTranscribeTermux(unittest.TestCase):
     def test_empty_audio_returns_empty_string_without_touching_the_binary(self):
         with mock.patch.object(termux_audio, "find_whisper_cli") as fake_find:
             result = termux_audio.transcribe_termux(np.zeros(0, dtype="float32"), 16000)
+        fake_find.assert_not_called()
+        self.assertEqual(result, "")
+
+    def test_near_silent_audio_returns_empty_string_without_touching_the_binary(self):
+        # Below config.SILENCE_RMS_THRESHOLD (0.012 default) -- e.g. a
+        # wake-word chunk that's just room noise. Must never reach
+        # whisper-cli: it has no VAD of its own and can hallucinate a short
+        # phrase out of near-silent audio, which can then false-trigger the
+        # wake word.
+        quiet = np.ones(1000, dtype="float32") * 0.001
+        with mock.patch.object(termux_audio, "find_whisper_cli") as fake_find:
+            result = termux_audio.transcribe_termux(quiet, 16000)
         fake_find.assert_not_called()
         self.assertEqual(result, "")
 

@@ -335,6 +335,27 @@ desktop -- it can include up to one extra clip's worth of trailing silence.
 Speech is still accurate; it just doesn't cut off the instant you stop
 talking, the same trade-off as pausing mid-sentence on desktop.
 
+Two more Termux-specific wrinkles, both fixed as of this version:
+
+- **Speed.** \`whisper-cli\` alone reloads the whole model from disk on every
+  single request, which on a phone CPU is real, repeated seconds of latency
+  -- felt as a slow response on every wake-word chunk and every command.
+  Hey Term now starts whisper.cpp's own bundled \`whisper-server\` in the
+  background instead (loopback-only, \`127.0.0.1\`, nothing reachable off the
+  phone) the first time it's needed, and keeps it warm for the life of the
+  run -- only the very first transcription pays the model-load cost. If
+  that fails to start for any reason (an older build without it, a port
+  conflict), Hey Term transparently falls back to the original per-call
+  \`whisper-cli\` path -- slower, but transcription still works.
+- **False wake-ups / hallucinated text.** Unlike \`faster-whisper\` on
+  desktop (which runs with voice-activity-detection filtering), plain
+  whisper.cpp has no built-in way to tell "silence" from "very quiet
+  audio," and can hallucinate a short phrase out of background noise on a
+  near-silent clip. Since most 2.5-second wake-word chunks *are* silence,
+  that occasionally fuzzy-matched "hey term" and woke Hey Term up on
+  nothing. Any chunk quieter than Hey Term's own silence threshold is now
+  skipped before it ever reaches whisper.cpp.
+
 If you see \`(speech recognition isn't set up yet -- ...)\`, the whisper.cpp
 build or model download didn't finish -- re-run \`./install.sh\` (or
 \`bash scripts/setup-termux.sh\`, or just the download line it prints if only
@@ -435,7 +456,7 @@ spoken sign-off.
 python test/run.py
 \`\`\`
 
-157 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+167 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
 safety blocklist, the audit log, the command executor -- including a
 regression test that bash-only syntax actually runs correctly -- the revert
@@ -443,7 +464,8 @@ safety net, background jobs, cost tracking, the offline fallback, the typed-
 request reader thread/queue, conversational-memory bookkeeping (forwarding,
 remembering, capping, and resetting history -- both at the \`plan()\` level
 and the \`handle_request()\` level), and the Termux pipeline's mic-capture,
-WAV-writing, and whisper.cpp command-building/error-handling logic) --
+WAV-writing, silence-gating, whisper-server lifecycle/fallback, and
+whisper.cpp command-building/error-handling logic) --
 nothing here needs a real microphone, speaker, or a phone, so it runs
 identically in CI, on a machine with no audio hardware at all, or in this
 sandbox (one exception, decoding a real audio file through the actual
@@ -1026,6 +1048,9 @@ requests>=2.31
 # it builds from source on Termux (no prebuilt wheel), which can take a
 # while the first time -- that's normal, not a hang.
 numpy>=1.24
+# requests was already needed here for the Claude API calls (lib/agent.py);
+# lib/termux_audio.py also uses it to talk to the local whisper-server
+# process over loopback HTTP -- no new dependency, same package.
 requests>=2.31
 `,
   },
@@ -1094,6 +1119,13 @@ ANTHROPIC_API_KEY=
 # uses). WHISPER_CPP_MODELS_DIR is where it looks for ggml-<size>.bin.
 # WHISPER_CPP_BIN=
 # WHISPER_CPP_MODELS_DIR=
+
+# Termux only -- loopback port for whisper-server, the persistent
+# speech-recognition process that keeps the model loaded in memory instead
+# of reloading it on every single request (much faster after the first
+# transcription). Only needs changing if something else on the phone is
+# already using this port.
+# WHISPER_SERVER_PORT=8090
 
 # Audio tuning -- rarely needs changing.
 # SAMPLE_RATE=16000
@@ -1505,7 +1537,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -1563,6 +1595,12 @@ WHISPER_CPP_BIN = os.environ.get("WHISPER_CPP_BIN") or os.path.expanduser(
 WHISPER_CPP_MODELS_DIR = os.environ.get("WHISPER_CPP_MODELS_DIR") or os.path.expanduser(
     os.path.join("~", ".hey-term", "whisper-cpp", "models")
 )
+
+# Android/Termux only -- port whisper-server (the persistent, keeps-the-
+# model-warm sibling of whisper-cli; see lib/termux_audio.py) listens on,
+# loopback-only. Only needs changing if something else on the phone is
+# already bound to this port.
+WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8090"))
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
@@ -2781,7 +2819,26 @@ Setup (once): install the separate "Termux:API" app (F-Droid or Play Store,
 same publisher as Termux), then run ./install.sh (or scripts/setup-termux.sh
 directly), which installs termux-api/ffmpeg/build tools, builds whisper.cpp,
 and downloads its model.
+
+Transcription runs through whisper.cpp's own bundled HTTP server
+(whisper-server), not the whisper-cli one-shot binary -- scripts/setup-
+termux.sh's plain \`cmake --build\` already compiles both from the same
+source tree, so nothing extra needs building for this. whisper-cli reloads
+the whole model from disk on every single invocation (there's no "keep it
+warm" option for a one-shot CLI), which on a phone CPU is real, repeated
+seconds of latency on top of the transcription itself -- felt as "slow to
+respond" on every wake-word chunk and every command. whisper-server loads
+the model once into memory and stays running for the life of the Hey Term
+process, so only the very first transcription after startup pays that
+cost; every call after that is just the actual inference time. It's
+started lazily (on first use), bound to 127.0.0.1 only -- still exactly as
+offline as before, this is loopback-only, nothing reachable off-device --
+and torn down when Hey Term exits. If the server binary is missing (an
+older build from before this existed) or it fails to start for any reason,
+this transparently falls back to the original per-call whisper-cli path
+instead of breaking transcription.
 """
+import atexit
 import os
 import shutil
 import subprocess
@@ -2806,6 +2863,113 @@ CHUNK_SECONDS = 1.5
 # phone CPU is normally a couple of seconds; this is a ceiling against a
 # hung process, not a value expected to be hit in practice.
 _TRANSCRIBE_TIMEOUT_SECONDS = 60
+
+# How long to wait for whisper-server to finish loading the model and start
+# answering requests, the first time it's started. Generous on purpose --
+# a phone CPU loading a multi-hundred-MB model from flash storage is slower
+# than a desktop, and this only happens once per Hey Term run, not per call.
+_SERVER_STARTUP_TIMEOUT_SECONDS = 45
+
+# Loopback-only -- see module docstring. Overridable in case something else
+# on the phone is already using this port.
+_server_proc = None
+_server_start_failed = False
+
+
+def _server_base_url() -> str:
+    return f"http://127.0.0.1:{config.WHISPER_SERVER_PORT}"
+
+
+def find_whisper_server():
+    """Path to the whisper.cpp server binary, next to whisper-cli in the
+    same build, or None if this build predates it / wasn't found."""
+    server_path = os.path.join(os.path.dirname(config.WHISPER_CPP_BIN), "whisper-server")
+    return server_path if os.path.isfile(server_path) and os.access(server_path, os.X_OK) else None
+
+
+def _server_is_up() -> bool:
+    import requests
+
+    try:
+        requests.get(_server_base_url() + "/", timeout=0.5)
+        return True
+    except requests.exceptions.RequestException:
+        return False
+
+
+def _stop_server() -> None:
+    """Registered with atexit so whisper-server doesn't outlive the Hey Term
+    process it was started for."""
+    global _server_proc
+    if _server_proc is not None and _server_proc.poll() is None:
+        _server_proc.terminate()
+        try:
+            _server_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _server_proc.kill()
+    _server_proc = None
+
+
+def _ensure_server_running(server_binary: str, model: str) -> bool:
+    """Starts whisper-server the first time this is called and waits for it
+    to be ready; a no-op check on every later call once it's already up.
+    Returns False (never raises) if it can't be started or doesn't become
+    ready in time, so callers can fall back to the per-call whisper-cli
+    path instead of failing transcription outright.
+    """
+    global _server_proc, _server_start_failed
+
+    if _server_proc is not None and _server_proc.poll() is None:
+        return True  # already running from an earlier call
+
+    _server_proc = subprocess.Popen(
+        [server_binary, "-m", model, "--host", "127.0.0.1", "--port", str(config.WHISPER_SERVER_PORT)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    atexit.register(_stop_server)
+
+    deadline = time.time() + _SERVER_STARTUP_TIMEOUT_SECONDS
+    while time.time() < deadline:
+        if _server_proc.poll() is not None:
+            break  # exited already -- e.g. bad model file -- won't come up
+        if _server_is_up():
+            return True
+        time.sleep(0.3)
+
+    if not _server_start_failed:
+        print("[Hey Term] (the fast local speech server didn't start in time -- "
+              "falling back to the slower per-request mode; still fully offline, just slower)")
+        _server_start_failed = True
+    return False
+
+
+def _transcribe_via_server(wav_path: str, language: str):
+    """Posts a clip to the already-running local whisper-server. Returns the
+    transcript (possibly ""), or None if the request itself failed -- the
+    None/"" distinction lets the caller tell "server unreachable, try the
+    fallback" apart from "server answered, there was just no speech."
+    """
+    import requests
+
+    try:
+        with open(wav_path, "rb") as f:
+            resp = requests.post(
+                _server_base_url() + "/inference",
+                files={"file": (os.path.basename(wav_path), f, "audio/wav")},
+                data={
+                    "language": language,
+                    "response_format": "text",
+                    "no_timestamps": "true",
+                    "suppress_nst": "true",  # suppress non-speech tokens -- extra guard against hallucinated text
+                },
+                timeout=_TRANSCRIBE_TIMEOUT_SECONDS,
+            )
+        if resp.status_code != 200:
+            return None
+        return resp.text.strip()
+    except requests.exceptions.RequestException:
+        return None
+
 
 # Printed once, not on every wake-word chunk (every ~2.5s), if whisper.cpp
 # isn't built/the model isn't downloaded yet -- the setup step this needs.
@@ -2997,6 +3161,23 @@ def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
     if audio is None or len(audio) == 0:
         return ""
 
+    # whisper.cpp does no voice-activity detection of its own (unlike
+    # faster-whisper's vad_filter=True on desktop, in lib/transcribe.py), so
+    # handing it a clip that's silence or faint background noise doesn't
+    # reliably come back empty -- it's a known whisper.cpp behavior to
+    # *hallucinate* a short phrase out of near-silent audio instead. On a
+    # wake-word chunk recorded every ~2.5s, most chunks ARE silence, so
+    # without this gate that hallucinated text sometimes fuzzy-matches the
+    # wake word and fires a false wake. Using the same RMS floor as
+    # record_until_silence_termux's own "has speech stopped" check --
+    # anything this quiet is silence by Hey Term's own definition, so it's
+    # never sent to whisper.cpp at all.
+    import numpy as np
+
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    if rms < config.SILENCE_RMS_THRESHOLD:
+        return ""
+
     binary = find_whisper_cli()
     model = find_whisper_model()
     if not binary or not model:
@@ -3012,10 +3193,25 @@ def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
     txt_path = out_base + ".txt"
     try:
         _write_wav(audio, sample_rate, wav_path)
+
+        # Prefer the persistent whisper-server (loads the model once, stays
+        # warm for the life of the process) over spawning whisper-cli fresh
+        # -- see the module docstring for why the CLI alone is noticeably
+        # slower here than the identical model is on desktop. Anything that
+        # keeps this from working (older build without the server binary,
+        # server fails to start, one request drops) transparently falls
+        # through to the original per-call whisper-cli path below instead
+        # of ever failing transcription outright.
+        server_binary = find_whisper_server()
+        if server_binary and _ensure_server_running(server_binary, model):
+            result = _transcribe_via_server(wav_path, language or "auto")
+            if result is not None:
+                return result
+
         args = [
             binary, "-m", model, "-f", wav_path,
             "-l", language or "auto",
-            "-nt", "-np", "-otxt", "-of", out_base,
+            "-nt", "-np", "-sns", "-otxt", "-of", out_base,
         ]
         proc = subprocess.run(args, capture_output=True, timeout=_TRANSCRIBE_TIMEOUT_SECONDS)
         if proc.returncode != 0:
@@ -4292,6 +4488,99 @@ class TestWriteWav(unittest.TestCase):
             os.remove(path)
 
 
+class TestFindWhisperServer(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_none_when_not_present_next_to_whisper_cli(self):
+        cli_path = os.path.join(self._tmp.name, "whisper-cli")
+        open(cli_path, "w").close()
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", cli_path):
+            self.assertIsNone(termux_audio.find_whisper_server())
+
+    def test_found_when_present_and_executable_next_to_whisper_cli(self):
+        cli_path = os.path.join(self._tmp.name, "whisper-cli")
+        open(cli_path, "w").close()
+        server_path = os.path.join(self._tmp.name, "whisper-server")
+        with open(server_path, "w") as f:
+            f.write("#!/bin/sh\\n")
+        os.chmod(server_path, 0o755)
+        with mock.patch.object(termux_audio.config, "WHISPER_CPP_BIN", cli_path):
+            self.assertEqual(termux_audio.find_whisper_server(), server_path)
+
+
+class TestEnsureServerRunning(unittest.TestCase):
+    def setUp(self):
+        termux_audio._server_proc = None
+        termux_audio._server_start_failed = False
+
+    def tearDown(self):
+        termux_audio._server_proc = None
+        termux_audio._server_start_failed = False
+
+    def test_returns_true_once_health_check_succeeds(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None  # still running
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \\
+             mock.patch.object(termux_audio, "_server_is_up", return_value=True), \\
+             mock.patch("atexit.register"):
+            self.assertTrue(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+
+    def test_reuses_an_already_running_server_without_spawning_again(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None
+        termux_audio._server_proc = fake_proc
+        with mock.patch("subprocess.Popen") as popen:
+            self.assertTrue(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+        popen.assert_not_called()
+
+    def test_returns_false_and_warns_once_when_process_exits_immediately(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = 3  # exited right away, e.g. bad model
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \\
+             mock.patch("atexit.register"), \\
+             mock.patch("builtins.print") as fake_print:
+            result = termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin")
+        self.assertFalse(result)
+        fake_print.assert_called_once()
+
+    def test_returns_false_when_health_check_never_succeeds_before_timeout(self):
+        fake_proc = mock.Mock()
+        fake_proc.poll.return_value = None
+        with mock.patch("subprocess.Popen", return_value=fake_proc), \\
+             mock.patch.object(termux_audio, "_server_is_up", return_value=False), \\
+             mock.patch.object(termux_audio, "_SERVER_STARTUP_TIMEOUT_SECONDS", 0), \\
+             mock.patch("atexit.register"):
+            self.assertFalse(termux_audio._ensure_server_running("/fake/whisper-server", "/fake/model.bin"))
+
+
+class TestTranscribeViaServer(unittest.TestCase):
+    def test_returns_stripped_text_on_a_200_response(self):
+        fake_resp = mock.Mock(status_code=200, text="list the files\\n")
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", return_value=fake_resp):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertEqual(result, "list the files")
+
+    def test_returns_none_on_a_non_200_response_so_caller_can_fall_back(self):
+        fake_resp = mock.Mock(status_code=500, text="")
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", return_value=fake_resp):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertIsNone(result)
+
+    def test_returns_none_when_the_server_is_unreachable(self):
+        import requests
+
+        with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+            with mock.patch("requests.post", side_effect=requests.exceptions.ConnectionError()):
+                result = termux_audio._transcribe_via_server(f.name, "en")
+        self.assertIsNone(result)
+
+
 class TestTranscribeTermux(unittest.TestCase):
     def setUp(self):
         termux_audio._setup_incomplete_warned = False
@@ -4299,6 +4588,18 @@ class TestTranscribeTermux(unittest.TestCase):
     def test_empty_audio_returns_empty_string_without_touching_the_binary(self):
         with mock.patch.object(termux_audio, "find_whisper_cli") as fake_find:
             result = termux_audio.transcribe_termux(np.zeros(0, dtype="float32"), 16000)
+        fake_find.assert_not_called()
+        self.assertEqual(result, "")
+
+    def test_near_silent_audio_returns_empty_string_without_touching_the_binary(self):
+        # Below config.SILENCE_RMS_THRESHOLD (0.012 default) -- e.g. a
+        # wake-word chunk that's just room noise. Must never reach
+        # whisper-cli: it has no VAD of its own and can hallucinate a short
+        # phrase out of near-silent audio, which can then false-trigger the
+        # wake word.
+        quiet = np.ones(1000, dtype="float32") * 0.001
+        with mock.patch.object(termux_audio, "find_whisper_cli") as fake_find:
+            result = termux_audio.transcribe_termux(quiet, 16000)
         fake_find.assert_not_called()
         self.assertEqual(result, "")
 

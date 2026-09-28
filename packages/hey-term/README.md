@@ -312,6 +312,27 @@ desktop -- it can include up to one extra clip's worth of trailing silence.
 Speech is still accurate; it just doesn't cut off the instant you stop
 talking, the same trade-off as pausing mid-sentence on desktop.
 
+Two more Termux-specific wrinkles, both fixed as of this version:
+
+- **Speed.** `whisper-cli` alone reloads the whole model from disk on every
+  single request, which on a phone CPU is real, repeated seconds of latency
+  -- felt as a slow response on every wake-word chunk and every command.
+  Hey Term now starts whisper.cpp's own bundled `whisper-server` in the
+  background instead (loopback-only, `127.0.0.1`, nothing reachable off the
+  phone) the first time it's needed, and keeps it warm for the life of the
+  run -- only the very first transcription pays the model-load cost. If
+  that fails to start for any reason (an older build without it, a port
+  conflict), Hey Term transparently falls back to the original per-call
+  `whisper-cli` path -- slower, but transcription still works.
+- **False wake-ups / hallucinated text.** Unlike `faster-whisper` on
+  desktop (which runs with voice-activity-detection filtering), plain
+  whisper.cpp has no built-in way to tell "silence" from "very quiet
+  audio," and can hallucinate a short phrase out of background noise on a
+  near-silent clip. Since most 2.5-second wake-word chunks *are* silence,
+  that occasionally fuzzy-matched "hey term" and woke Hey Term up on
+  nothing. Any chunk quieter than Hey Term's own silence threshold is now
+  skipped before it ever reaches whisper.cpp.
+
 If you see `(speech recognition isn't set up yet -- ...)`, the whisper.cpp
 build or model download didn't finish -- re-run `./install.sh` (or
 `bash scripts/setup-termux.sh`, or just the download line it prints if only
@@ -412,7 +433,7 @@ spoken sign-off.
 python test/run.py
 ```
 
-157 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+167 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
 safety blocklist, the audit log, the command executor -- including a
 regression test that bash-only syntax actually runs correctly -- the revert
@@ -420,7 +441,8 @@ safety net, background jobs, cost tracking, the offline fallback, the typed-
 request reader thread/queue, conversational-memory bookkeeping (forwarding,
 remembering, capping, and resetting history -- both at the `plan()` level
 and the `handle_request()` level), and the Termux pipeline's mic-capture,
-WAV-writing, and whisper.cpp command-building/error-handling logic) --
+WAV-writing, silence-gating, whisper-server lifecycle/fallback, and
+whisper.cpp command-building/error-handling logic) --
 nothing here needs a real microphone, speaker, or a phone, so it runs
 identically in CI, on a machine with no audio hardware at all, or in this
 sandbox (one exception, decoding a real audio file through the actual

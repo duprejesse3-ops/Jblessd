@@ -8,4 +8,7 @@
 # it builds from source on Termux (no prebuilt wheel), which can take a
 # while the first time -- that's normal, not a hang.
 numpy>=1.24
+# requests was already needed here for the Claude API calls (lib/agent.py);
+# lib/termux_audio.py also uses it to talk to the local whisper-server
+# process over loopback HTTP -- no new dependency, same package.
 requests>=2.31

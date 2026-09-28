@@ -35,7 +35,26 @@ Setup (once): install the separate "Termux:API" app (F-Droid or Play Store,
 same publisher as Termux), then run ./install.sh (or scripts/setup-termux.sh
 directly), which installs termux-api/ffmpeg/build tools, builds whisper.cpp,
 and downloads its model.
+
+Transcription runs through whisper.cpp's own bundled HTTP server
+(whisper-server), not the whisper-cli one-shot binary -- scripts/setup-
+termux.sh's plain `cmake --build` already compiles both from the same
+source tree, so nothing extra needs building for this. whisper-cli reloads
+the whole model from disk on every single invocation (there's no "keep it
+warm" option for a one-shot CLI), which on a phone CPU is real, repeated
+seconds of latency on top of the transcription itself -- felt as "slow to
+respond" on every wake-word chunk and every command. whisper-server loads
+the model once into memory and stays running for the life of the Hey Term
+process, so only the very first transcription after startup pays that
+cost; every call after that is just the actual inference time. It's
+started lazily (on first use), bound to 127.0.0.1 only -- still exactly as
+offline as before, this is loopback-only, nothing reachable off-device --
+and torn down when Hey Term exits. If the server binary is missing (an
+older build from before this existed) or it fails to start for any reason,
+this transparently falls back to the original per-call whisper-cli path
+instead of breaking transcription.
 """
+import atexit
 import os
 import shutil
 import subprocess
@@ -60,6 +79,113 @@ CHUNK_SECONDS = 1.5
 # phone CPU is normally a couple of seconds; this is a ceiling against a
 # hung process, not a value expected to be hit in practice.
 _TRANSCRIBE_TIMEOUT_SECONDS = 60
+
+# How long to wait for whisper-server to finish loading the model and start
+# answering requests, the first time it's started. Generous on purpose --
+# a phone CPU loading a multi-hundred-MB model from flash storage is slower
+# than a desktop, and this only happens once per Hey Term run, not per call.
+_SERVER_STARTUP_TIMEOUT_SECONDS = 45
+
+# Loopback-only -- see module docstring. Overridable in case something else
+# on the phone is already using this port.
+_server_proc = None
+_server_start_failed = False
+
+
+def _server_base_url() -> str:
+    return f"http://127.0.0.1:{config.WHISPER_SERVER_PORT}"
+
+
+def find_whisper_server():
+    """Path to the whisper.cpp server binary, next to whisper-cli in the
+    same build, or None if this build predates it / wasn't found."""
+    server_path = os.path.join(os.path.dirname(config.WHISPER_CPP_BIN), "whisper-server")
+    return server_path if os.path.isfile(server_path) and os.access(server_path, os.X_OK) else None
+
+
+def _server_is_up() -> bool:
+    import requests
+
+    try:
+        requests.get(_server_base_url() + "/", timeout=0.5)
+        return True
+    except requests.exceptions.RequestException:
+        return False
+
+
+def _stop_server() -> None:
+    """Registered with atexit so whisper-server doesn't outlive the Hey Term
+    process it was started for."""
+    global _server_proc
+    if _server_proc is not None and _server_proc.poll() is None:
+        _server_proc.terminate()
+        try:
+            _server_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _server_proc.kill()
+    _server_proc = None
+
+
+def _ensure_server_running(server_binary: str, model: str) -> bool:
+    """Starts whisper-server the first time this is called and waits for it
+    to be ready; a no-op check on every later call once it's already up.
+    Returns False (never raises) if it can't be started or doesn't become
+    ready in time, so callers can fall back to the per-call whisper-cli
+    path instead of failing transcription outright.
+    """
+    global _server_proc, _server_start_failed
+
+    if _server_proc is not None and _server_proc.poll() is None:
+        return True  # already running from an earlier call
+
+    _server_proc = subprocess.Popen(
+        [server_binary, "-m", model, "--host", "127.0.0.1", "--port", str(config.WHISPER_SERVER_PORT)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    atexit.register(_stop_server)
+
+    deadline = time.time() + _SERVER_STARTUP_TIMEOUT_SECONDS
+    while time.time() < deadline:
+        if _server_proc.poll() is not None:
+            break  # exited already -- e.g. bad model file -- won't come up
+        if _server_is_up():
+            return True
+        time.sleep(0.3)
+
+    if not _server_start_failed:
+        print("[Hey Term] (the fast local speech server didn't start in time -- "
+              "falling back to the slower per-request mode; still fully offline, just slower)")
+        _server_start_failed = True
+    return False
+
+
+def _transcribe_via_server(wav_path: str, language: str):
+    """Posts a clip to the already-running local whisper-server. Returns the
+    transcript (possibly ""), or None if the request itself failed -- the
+    None/"" distinction lets the caller tell "server unreachable, try the
+    fallback" apart from "server answered, there was just no speech."
+    """
+    import requests
+
+    try:
+        with open(wav_path, "rb") as f:
+            resp = requests.post(
+                _server_base_url() + "/inference",
+                files={"file": (os.path.basename(wav_path), f, "audio/wav")},
+                data={
+                    "language": language,
+                    "response_format": "text",
+                    "no_timestamps": "true",
+                    "suppress_nst": "true",  # suppress non-speech tokens -- extra guard against hallucinated text
+                },
+                timeout=_TRANSCRIBE_TIMEOUT_SECONDS,
+            )
+        if resp.status_code != 200:
+            return None
+        return resp.text.strip()
+    except requests.exceptions.RequestException:
+        return None
+
 
 # Printed once, not on every wake-word chunk (every ~2.5s), if whisper.cpp
 # isn't built/the model isn't downloaded yet -- the setup step this needs.
@@ -251,6 +377,23 @@ def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
     if audio is None or len(audio) == 0:
         return ""
 
+    # whisper.cpp does no voice-activity detection of its own (unlike
+    # faster-whisper's vad_filter=True on desktop, in lib/transcribe.py), so
+    # handing it a clip that's silence or faint background noise doesn't
+    # reliably come back empty -- it's a known whisper.cpp behavior to
+    # *hallucinate* a short phrase out of near-silent audio instead. On a
+    # wake-word chunk recorded every ~2.5s, most chunks ARE silence, so
+    # without this gate that hallucinated text sometimes fuzzy-matches the
+    # wake word and fires a false wake. Using the same RMS floor as
+    # record_until_silence_termux's own "has speech stopped" check --
+    # anything this quiet is silence by Hey Term's own definition, so it's
+    # never sent to whisper.cpp at all.
+    import numpy as np
+
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    if rms < config.SILENCE_RMS_THRESHOLD:
+        return ""
+
     binary = find_whisper_cli()
     model = find_whisper_model()
     if not binary or not model:
@@ -266,10 +409,25 @@ def transcribe_termux(audio, sample_rate: int, language: str = "en") -> str:
     txt_path = out_base + ".txt"
     try:
         _write_wav(audio, sample_rate, wav_path)
+
+        # Prefer the persistent whisper-server (loads the model once, stays
+        # warm for the life of the process) over spawning whisper-cli fresh
+        # -- see the module docstring for why the CLI alone is noticeably
+        # slower here than the identical model is on desktop. Anything that
+        # keeps this from working (older build without the server binary,
+        # server fails to start, one request drops) transparently falls
+        # through to the original per-call whisper-cli path below instead
+        # of ever failing transcription outright.
+        server_binary = find_whisper_server()
+        if server_binary and _ensure_server_running(server_binary, model):
+            result = _transcribe_via_server(wav_path, language or "auto")
+            if result is not None:
+                return result
+
         args = [
             binary, "-m", model, "-f", wav_path,
             "-l", language or "auto",
-            "-nt", "-np", "-otxt", "-of", out_base,
+            "-nt", "-np", "-sns", "-otxt", "-of", out_base,
         ]
         proc = subprocess.run(args, capture_output=True, timeout=_TRANSCRIBE_TIMEOUT_SECONDS)
         if proc.returncode != 0:

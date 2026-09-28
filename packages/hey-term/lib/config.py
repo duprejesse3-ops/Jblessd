@@ -4,7 +4,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -62,6 +62,12 @@ WHISPER_CPP_BIN = os.environ.get("WHISPER_CPP_BIN") or os.path.expanduser(
 WHISPER_CPP_MODELS_DIR = os.environ.get("WHISPER_CPP_MODELS_DIR") or os.path.expanduser(
     os.path.join("~", ".hey-term", "whisper-cpp", "models")
 )
+
+# Android/Termux only -- port whisper-server (the persistent, keeps-the-
+# model-warm sibling of whisper-cli; see lib/termux_audio.py) listens on,
+# loopback-only. Only needs changing if something else on the phone is
+# already bound to this port.
+WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8090"))
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
