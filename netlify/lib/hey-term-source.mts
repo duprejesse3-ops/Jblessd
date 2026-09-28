@@ -50,6 +50,17 @@ Every wake, request, plan, confirmation, and command run is appended to a
 plain-text audit log (\`.hey-term-audit.jsonl\` by default) -- a full record of
 what Hey Term has ever been asked to do and whether it actually did it.
 
+### Typing instead of speaking
+
+Don't want to talk out loud, or in a spot where the mic isn't reliable? You
+can type a request instead of saying it, any time Hey Term is running (on
+Windows and Linux/macOS/WSL): just type it into the same terminal window and
+press Enter -- no need to say the wake word first. It goes straight into the
+same planning/confirmation flow as a spoken request; only that one request
+skips voice capture, and the wake-word loop keeps listening for "Hey Term" at
+the same time. On Android/Termux, type your request in place of pressing
+Enter to trigger the push-to-talk prompt (see the Android section below).
+
 ## Language support
 
 Six languages ship with translated prompts and confirm/cancel words:
@@ -74,6 +85,93 @@ that language. **Adding a language** is one edit: add an entry to the
 \`LANGUAGES\` dict in \`lib/i18n.py\` with the same keys as the \`"en"\` entry
 (\`test/test_i18n.py\` enforces every language has exactly the same keys, so a
 missing one fails the test suite instead of failing silently at runtime).
+
+## Speech-to-text engine
+
+By default (\`SPEECH_BACKEND=auto\`), Hey Term uses the **platform's own
+speech recognizer** whenever one is available, since it's typically more
+accurate on ordinary speech than the offline Whisper model, especially at
+the default \`base\` size:
+
+- **Windows' own built-in speech recognizer** -- the same engine behind
+  Win+H voice typing -- when running on Windows.
+- **Android's speech recognizer, via Termux:API** -- when running inside
+  Termux (see "Android / Termux" below).
+
+It falls back to Whisper automatically: on plain Linux/macOS (where neither
+platform engine exists), if the platform engine can't be reached for some
+reason (mic busy, engine/companion app missing), and for any explicitly
+requested non-English \`--lang\` (neither engine listens in a per-request
+language the way Whisper does, so translated non-English requests still go
+through Whisper, which does support them directly). Whisper isn't a
+meaningful fallback on Android specifically -- see "Android / Termux" below.
+
+\`\`\`
+python main.py                          # default: platform engine when available, Whisper elsewhere
+python main.py --speech-backend whisper  # always use offline Whisper
+python main.py --speech-backend windows  # force the Windows engine; errors if unavailable
+python main.py --speech-backend termux   # force the Android engine; errors if unavailable
+\`\`\`
+
+For best accuracy from the Windows engine, check Settings > Privacy &
+security > Speech > "Online speech recognition" is turned on -- that's the
+same toggle Win+H itself depends on for its more accurate cloud-assisted
+mode; it still works offline, just with the smaller on-device model. See
+\`lib/speech_windows.py\` / \`lib/speech_termux.py\` for how this is wired up,
+and \`.env.example\` for the \`SPEECH_BACKEND\` setting.
+
+## Android / Termux
+
+Hey Term runs on Android too, inside [Termux](https://termux.dev) -- install
+Termux from **F-Droid**, not the Play Store (that build is outdated and
+widely reported broken), plus the separate **Termux:API** app (same
+publisher, also on F-Droid). Termux:API is what actually gives Hey Term
+access to the microphone, speech recognition, and text-to-speech; nothing
+audio-related works without it installed alongside Termux itself.
+
+\`\`\`
+pkg install git         # if you don't already have it, to get the source onto the device
+# (or: unzip your hey-term.zip purchase download inside Termux's storage)
+cd hey-term
+chmod +x install-termux.sh
+./install-termux.sh
+nano .env                # set ANTHROPIC_API_KEY
+python main.py --lang en
+\`\`\`
+
+Real differences from the Windows/Linux desktop version, all because Termux
+is a sandboxed, no-root Android environment rather than a full OS:
+
+- **No spoken "Hey Term" wake word -- press Enter instead.** Android's
+  speech recognizer is a discrete, one-shot call with real cold-start
+  latency each time it's invoked, which makes a short two-word phrase said
+  right at that cold start (exactly what "Hey Term" is) the hardest thing
+  to ask it to catch reliably in a repeating background-listening loop.
+  Rather than fight that, the Termux version skips the spoken wake word:
+  it prints a prompt, you press Enter, then say your request after the
+  beep -- pressing Enter *is* the wake word here. You can also just type
+  your request in place of a blank Enter press -- typing text and pressing
+  Enter runs that request straight away, no speech capture for that turn.
+  See \`run_push_to_talk_loop()\` in \`main.py\`.
+- **Speech-to-text always goes through Android's own recognizer**
+  (\`termux-speech-to-text\`, via Termux:API), never Whisper.
+  \`faster-whisper\`'s \`ctranslate2\` dependency generally has no prebuilt
+  wheel for Android's architecture and fails to build from source there, so
+  \`install-termux.sh\` installs a shorter \`requirements-termux.txt\` that
+  skips it entirely (along with \`sounddevice\`/\`numpy\`/\`pyttsx3\`, none of
+  which are needed on this platform either -- see that file). Each listen
+  briefly shows Android's own speech-recognition indicator (and plays its
+  start/end tones) rather than listening silently in the background the way
+  the desktop version's rolling-audio-chunk approach does -- wait for the
+  beep, then speak.
+- **Commands run inside Termux's own sandboxed filesystem** (its \`$HOME\`,
+  not the rest of the Android filesystem), same as any other Termux shell
+  command -- run \`termux-setup-storage\` yourself first if you want Hey Term
+  able to reach shared device storage (Downloads, Pictures, etc.) too.
+
+Everything else -- Claude-powered planning, spoken/typed confirmation, the
+dangerous-command blocklist, the audit log -- works the same as the desktop
+version. See \`scripts/setup-termux.sh\` for exactly what setup does.
 
 ## Linux / bash and Windows / PowerShell
 
@@ -325,12 +423,13 @@ import sys
 
 from lib import audit, config
 from lib.agent import AgentError, plan
-from lib.audio import record_fixed, record_until_silence
+from lib.audio import list_devices, record_fixed, record_until_silence, rms
 from lib.confirm import parse_confirmation
 from lib.executor import run_commands
 from lib.i18n import get as get_strings, is_translated, list_languages
 from lib.safety import dangerous_commands
 from lib.speak import speak
+from lib import speech_termux, speech_windows, text_input
 from lib.transcribe import transcribe, transcribe_wake
 from lib.wake import heard_wake_word
 
@@ -350,33 +449,144 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--audit-log", default=config.AUDIT_LOG_PATH, metavar="PATH",
                     help="Path to the JSONL audit log (default: .hey-term-audit.jsonl in --work-dir).")
     p.add_argument("--list-languages", action="store_true", help="List translated languages and exit.")
+    p.add_argument("--list-devices", action="store_true",
+                    help="List audio input devices (with the system default marked) and exit.")
+    p.add_argument("--mic-device", default=None, metavar="INDEX_OR_NAME",
+                    help="Force a specific input device (index or name substring from --list-devices) "
+                         "instead of the system default. Same as setting MIC_DEVICE in .env.")
+    p.add_argument("--speech-backend", default=config.SPEECH_BACKEND,
+                    choices=["auto", "windows", "termux", "whisper"], metavar="BACKEND",
+                    help="Speech-to-text engine: \\"auto\\" (default) uses Windows' own speech recognizer "
+                         "or Android's (via Termux:API) when available -- usually more accurate than "
+                         "offline Whisper -- else Whisper; \\"windows\\"/\\"termux\\" force one of those and "
+                         "error if unavailable; \\"whisper\\" always uses offline Whisper (not a real "
+                         "option on Android -- see scripts/setup-termux.sh). Same as SPEECH_BACKEND in .env.")
     p.add_argument("--version", action="version", version=f"{config.PRODUCT_NAME} {config.VERSION}")
     return p.parse_args(argv)
 
 
-def listen_for_wake_word(wake_word: str) -> bool:
-    """Records a short chunk and returns True if the wake word was heard in
-    it. Called in a loop by main(); each chunk is independent, so a missed
-    wake word just means "try the next chunk," not a lost turn. Always
-    decoded as English -- see lib/transcribe.py's transcribe_wake().
+_NATIVE_BACKENDS = {"windows": speech_windows, "termux": speech_termux}
+
+
+def resolve_speech_backend(requested: str) -> str:
+    """Turns config/--speech-backend's "auto"/"windows"/"termux"/"whisper"
+    into the engine actually used this run. Resolved once at startup (not
+    per wake-loop chunk) since checking availability touches the Windows
+    Runtime or shells out to \`which\`. Raises ValueError (caught in main(),
+    printed, causes a clean exit) if a specific native backend was forced
+    but isn't actually available.
     """
+    if requested == "whisper":
+        return "whisper"
+    if requested in _NATIVE_BACKENDS:
+        module = _NATIVE_BACKENDS[requested]
+        if module.is_available():
+            return requested
+        raise ValueError(
+            f"--speech-backend {requested} (or SPEECH_BACKEND={requested}) was requested, but it "
+            f"isn't available: {module.unavailable_reason()}"
+        )
+    if requested != "auto":
+        raise ValueError(f"Unknown SPEECH_BACKEND {requested!r}; expected auto, windows, termux, or whisper.")
+    for name, module in _NATIVE_BACKENDS.items():
+        if module.is_available():
+            return name
+    return "whisper"
+
+
+def _backend_for_language(backend: str, language: str) -> str:
+    """Windows' and Android's speech recognizers, invoked with no per-call
+    language override, listen in the system's default recognition language
+    -- neither is switched per Hey Term's --lang the way Whisper is. So a
+    native backend is only used for English/auto requests; any other
+    explicitly requested language still goes through Whisper, which does
+    support it directly (on platforms where Whisper itself is viable --
+    see scripts/setup-termux.sh's note for why that excludes Android)."""
+    if backend in _NATIVE_BACKENDS and language not in ("en", "auto"):
+        return "whisper"
+    return backend
+
+
+def listen_for_wake_word(wake_word: str, backend: str) -> bool:
+    """Returns True if the wake word was heard. Called in a loop by main();
+    each attempt is independent, so a miss just means "try again," not a
+    lost turn. Always decoded as English -- see lib/transcribe.py's
+    transcribe_wake() docstring for why that's true regardless of --lang.
+
+    With backend="windows" or "termux", the platform's own speech recognizer
+    does its own microphone capture and voice-activity detection in one call
+    (see lib/speech_windows.py / lib/speech_termux.py); on any failure (mic
+    busy, engine not installed, etc.) this falls back to the Whisper path
+    for that one attempt rather than crashing the loop -- except that on
+    Termux, Whisper isn't actually a viable fallback (see
+    scripts/setup-termux.sh), so a Termux failure here just means no wake
+    word was heard this round rather than a working fallback.
+
+    With backend="whisper" (or as that fallback), near-silent chunks skip
+    transcription entirely rather than being sent to Whisper -- on silence
+    or faint room noise it doesn't reliably return an empty string, it can
+    hallucinate a fluent, plausible-sounding sentence instead. Gating on
+    energy first is what actually stops those from showing up as [heard]
+    lines and (rarely) fuzzy-matching the wake word.
+    """
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
+        try:
+            text = module.recognize_once(timeout_seconds=config.WAKE_CHUNK_SECONDS)
+        except RuntimeError as err:
+            print(f"[warn] {err} -- falling back to Whisper for this listen")
+        else:
+            # Printed either way -- with a native backend there's no
+            # hallucination risk from printing an empty result (unlike the
+            # Whisper path below, which deliberately stays silent on
+            # near-silent chunks it never even sent to Whisper). Without
+            # this, total silence and a genuine hang look identical from the
+            # terminal: nothing prints in either case. This line is the only
+            # way to tell "it's cycling and just not catching me" apart from
+            # "it's stuck."
+            print(f"[heard] {text}" if text else "[listening] (nothing heard that round)")
+            return heard_wake_word(text, wake_word=wake_word)
+
     clip = record_fixed(config.WAKE_CHUNK_SECONDS)
+    if rms(clip) < config.SILENCE_RMS_THRESHOLD:
+        return False
     text = transcribe_wake(clip)
     if text:
         print(f"[heard] {text}")
     return heard_wake_word(text, wake_word=wake_word)
 
 
-def take_command(language: str) -> str:
+def take_command(language: str, backend: str) -> str:
     strings = get_strings(language)
     speak(strings["listening_prompt"], language=language)
+
+    backend = _backend_for_language(backend, language)
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
+        try:
+            return module.recognize_once().strip()
+        except RuntimeError as err:
+            print(f"[warn] {err} -- falling back to Whisper for this command")
+
     audio = record_until_silence(config.COMMAND_MAX_SECONDS)
     text = transcribe(audio, language=language)
     return text.strip()
 
 
-def get_confirmation(language: str) -> str:
+def get_confirmation(language: str, backend: str) -> str:
     """Returns "confirm", "cancel", or "unclear" from a spoken reply."""
+    backend = _backend_for_language(backend, language)
+    module = _NATIVE_BACKENDS.get(backend)
+    if module is not None:
+        try:
+            text = module.recognize_once(timeout_seconds=5)
+        except RuntimeError as err:
+            print(f"[warn] {err} -- falling back to Whisper for this confirmation")
+        else:
+            if text:
+                print(f"[heard] {text}")
+            return parse_confirmation(text, language=language)
+
     audio = record_until_silence(max_seconds=5)
     text = transcribe(audio, language=language)
     if text:
@@ -392,7 +602,7 @@ def get_typed_confirmation(prompt: str) -> bool:
     return typed.strip() == "CONFIRM"
 
 
-def handle_request(request_text: str, language: str, work_dir: str) -> None:
+def handle_request(request_text: str, language: str, work_dir: str, backend: str) -> None:
     strings = get_strings(language)
 
     if not request_text:
@@ -441,7 +651,7 @@ def handle_request(request_text: str, language: str, work_dir: str) -> None:
         speak(f"{summary} {strings['ask_confirm']}", language=language)
         for cmd in commands:
             print(f"    $ {cmd}")
-        answer = get_confirmation(language)
+        answer = get_confirmation(language, backend)
         audit.log_event("confirmation", language=language, method="voice", commands=commands, outcome=answer)
         if answer == "unclear":
             speak(strings["unclear_cancel"], language=language)
@@ -474,11 +684,87 @@ def handle_request(request_text: str, language: str, work_dir: str) -> None:
             print(f"[error] {r.error}")
 
 
-def print_banner(language: str, work_dir: str) -> None:
+def run_push_to_talk_loop(language: str, work_dir: str, backend: str) -> None:
+    """Termux's stand-in for the wake-word loop: press Enter, then say your
+    request directly (no "Hey Term" needed) -- pressing Enter *is* the wake
+    word here. Typing the request itself, then Enter, skips voice capture
+    for that turn entirely and runs it straight through handle_request() --
+    the same escape hatch main()'s wake-word loop gets from lib/text_input.py,
+    just implemented directly here since this loop already reads one line of
+    stdin per turn anyway (no need for that module's background thread).
+
+    Why not reuse listen_for_wake_word()'s repeated-short-recognition
+    approach: Android's speech recognizer is a discrete, one-shot call with
+    real cold-start latency each time (see lib/speech_termux.py's module
+    docstring), so a short two-word phrase said right at that cold start --
+    exactly what "Hey Term" is -- is the single hardest thing to ask it to
+    catch reliably, and testing this live is what surfaced that. Command and
+    confirmation capture don't have the same problem: both are already
+    preceded by a spoken TTS prompt that finishes right before listening
+    starts, which gives a natural, audible "listening starts now" cue the
+    bare wake-word loop never had. Enter does the same job for the first
+    step.
+    """
+    while True:
+        try:
+            typed = input(
+                '\\n[Hey Term] Press Enter, then say your request after the beep -- '
+                'or type it here and press Enter (Ctrl+C to quit)...'
+            )
+        except EOFError:
+            return
+        typed = typed.strip()
+        if typed:
+            print(f"[you typed] {typed}")
+            handle_request(typed, language, work_dir, backend)
+            continue
+        request_text = take_command(language, backend)
+        if request_text:
+            print(f"[you] {request_text}")
+        handle_request(request_text, language, work_dir, backend)
+
+
+def run_wake_word_loop(wake_word: str, language: str, work_dir: str, backend: str) -> None:
+    """The default (non-Termux) run loop: listens for the wake word in short
+    rolling chunks same as always, but on every pass through also checks --
+    without blocking -- whether a request has been typed instead (see
+    lib/text_input.py, started once here). A typed line always wins that
+    check and runs immediately, skipping voice capture for that turn; the
+    wake-word listen only happens when nothing's been typed since the last
+    time through.
+    """
+    text_input.start()
+    while True:
+        typed = text_input.poll()
+        if typed:
+            print(f"[you typed] {typed}")
+            audit.log_event("wake", method="typed")
+            handle_request(typed, language, work_dir, backend)
+            continue
+        if listen_for_wake_word(wake_word, backend):
+            audit.log_event("wake", method="voice")
+            request_text = take_command(language, backend)
+            if request_text:
+                print(f"[you] {request_text}")
+            handle_request(request_text, language, work_dir, backend)
+
+
+def print_banner(language: str, work_dir: str, backend: str) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
     print(f"Language: {language}" + ("" if is_translated(language) or language == "auto" else " (untranslated -- using English prompts)"))
-    print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
+    if backend in _NATIVE_BACKENDS:
+        label = "Windows' built-in speech recognizer" if backend == "windows" else "Android's speech recognizer (via Termux:API)"
+        note = "" if language in ("en", "auto") else " (falls back to Whisper for this non-English language)"
+        print(f"Speech-to-text: {label}{note}")
+    else:
+        print(f"Speech-to-text: offline Whisper ({config.WHISPER_MODEL_SIZE})")
+    if backend == "termux":
+        print('Wake: press Enter, then speak -- or type your request and press Enter instead '
+              '(no reliable passive wake-word listening on Android -- see README). Ctrl+C to quit.')
+    else:
+        print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks, "
+              "or just type a request here and press Enter. Ctrl+C to quit.")
     print(f"Audit log: {config.AUDIT_LOG_PATH}")
 
 
@@ -490,8 +776,21 @@ def main(argv=None) -> int:
             print(f"{code}\\t{get_strings(code)['name']}")
         return 0
 
+    if args.list_devices:
+        print(list_devices())
+        return 0
+
+    if args.mic_device is not None:
+        config.MIC_DEVICE = args.mic_device
+
     if not config.ANTHROPIC_API_KEY:
         print("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it in.")
+        return 1
+
+    try:
+        backend = resolve_speech_backend(args.speech_backend)
+    except ValueError as err:
+        print(err)
         return 1
 
     language = args.lang
@@ -499,18 +798,15 @@ def main(argv=None) -> int:
     work_dir = args.work_dir
     config.AUDIT_LOG_PATH = args.audit_log  # honor --audit-log override for this run
 
-    print_banner(language, work_dir)
-    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION)
+    print_banner(language, work_dir, backend)
+    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION, speech_backend=backend)
     speak(get_strings(language)["ready"], language=language)
 
     try:
-        while True:
-            if listen_for_wake_word(wake_word):
-                audit.log_event("wake")
-                request_text = take_command(language)
-                if request_text:
-                    print(f"[you] {request_text}")
-                handle_request(request_text, language, work_dir)
+        if backend == "termux":
+            run_push_to_talk_loop(language, work_dir, backend)
+        else:
+            run_wake_word_loop(wake_word, language, work_dir, backend)
     except KeyboardInterrupt:
         print("\\nStopped.")
         audit.log_event("shutdown", reason="keyboard_interrupt")
@@ -528,6 +824,10 @@ numpy>=1.24
 faster-whisper>=1.0.0
 pyttsx3>=2.90
 requests>=2.31
+# Windows' own speech recognizer (used by default on Windows -- see
+# lib/speech_windows.py and SPEECH_BACKEND in .env.example). Only installs
+# on Windows; Linux/macOS use Whisper only and never import this.
+winsdk>=1.0.0; sys_platform == "win32"
 `,
   },
   {
@@ -593,6 +893,28 @@ ANTHROPIC_API_KEY=
 # WHISPER_MODEL_SIZE=base
 # WHISPER_DEVICE=cpu
 
+# Which engine turns speech into text. "auto" (default) uses the platform's
+# own speech recognizer when available: Windows' built-in one (the same
+# engine behind Win+H voice typing) on Windows, or Android's via Termux:API
+# inside Termux -- both usually more accurate on ordinary speech than
+# offline Whisper -- falling back to Whisper anywhere neither applies.
+# "windows"/"termux" force one of those and error out if unavailable;
+# "whisper" always uses offline Whisper (not a real option on Android --
+# see scripts/setup-termux.sh). Only applies to English/auto -- an explicit
+# non-English LANGUAGE always uses Whisper, since neither native engine is
+# switched per-request the way Whisper is. See lib/speech_windows.py /
+# lib/speech_termux.py, and (Windows only) Settings > Privacy & security >
+# Speech > "Online speech recognition" for the toggle that affects its
+# accuracy.
+# SPEECH_BACKEND=auto
+
+# Forces a specific microphone instead of the system default. Run
+# \`python main.py --list-devices\` to see indices/names -- useful if the
+# default recording device isn't actually your mic (a "Stereo Mix"/"What U
+# Hear" loopback device left as Windows' default input will make Hey Term
+# hear whatever's playing through your speakers instead of your voice).
+# MIC_DEVICE=
+
 # SAMPLE_RATE=16000
 # WAKE_CHUNK_SECONDS=2.5
 # COMMAND_MAX_SECONDS=12
@@ -653,6 +975,38 @@ $setupArgs = @{ Langs = $Langs }
 if ($SkipCapabilities) { $setupArgs.SkipCapabilities = $true }
 if ($Yes) { $setupArgs.Yes = $true }
 & (Join-Path $PSScriptRoot "scripts\\setup-windows.ps1") @setupArgs
+`,
+  },
+  {
+    path: "install-termux.sh",
+    contents: `#!/usr/bin/env bash
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+# Licensed to a single purchaser under the terms in LICENSE.md.
+# Redistribution or resale of this source, in whole or in part, is not permitted.
+#
+# Entry point for Android setup (inside Termux -- see scripts/setup-termux.sh
+# for what it does and requirements-termux.txt for why the Termux dependency
+# list differs from install.sh's). Anything you pass here is forwarded as-is:
+#
+#   ./install-termux.sh --yes
+set -euo pipefail
+DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+exec "$DIR/scripts/setup-termux.sh" "$@"
+`,
+  },
+  {
+    path: "requirements-termux.txt",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Slimmed-down dependency list for Termux (Android). Deliberately NOT the
+# same as requirements.txt: sounddevice/numpy/faster-whisper/pyttsx3 either
+# don't work in Termux's sandbox (sounddevice/PortAudio has no real
+# microphone access there) or generally fail to build for Android's
+# architecture (faster-whisper's ctranslate2 dependency). None of them are
+# needed anyway -- lib/speech_termux.py and lib/speak.py's Termux path use
+# Termux:API's own commands (termux-speech-to-text, termux-tts-speak)
+# instead. See scripts/setup-termux.sh.
+requests>=2.31
 `,
   },
   {
@@ -821,16 +1175,84 @@ def parse_plan(text: str) -> dict:
 """Microphone capture. Imports sounddevice/numpy lazily inside functions so
 that importing this module (e.g. from a test) doesn't require audio hardware
 or system audio libraries (portaudio) to be installed.
+
+Imports the config module itself (not its values by name) so a runtime
+override of config.MIC_DEVICE -- e.g. main.py's --mic-device flag -- is
+actually seen here, the same reason lib/audit.py reads config.AUDIT_LOG_PATH
+live instead of importing it by value.
 """
-from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD
+from . import config
+
+
+def _resolve_device():
+    """Returns a sounddevice device index to pass as \`device=\`, or None to
+    use the system default. config.MIC_DEVICE can be a numeric index or a
+    case-insensitive substring of a device name (see --list-devices)."""
+    setting = config.MIC_DEVICE
+    if not setting:
+        return None
+    if setting.isdigit():
+        return int(setting)
+
+    import sounddevice as sd
+
+    needle = setting.lower()
+    matches = [
+        i
+        for i, d in enumerate(sd.query_devices())
+        if d["max_input_channels"] > 0 and needle in d["name"].lower()
+    ]
+    if not matches:
+        raise RuntimeError(
+            f"MIC_DEVICE={setting!r} didn't match any input device. "
+            f"Run \`python main.py --list-devices\` to see what's available."
+        )
+    return matches[0]
+
+
+def rms(clip) -> float:
+    """Root-mean-square energy of a recorded clip. Used to skip sending
+    near-silent audio to Whisper -- on silence or faint background noise,
+    Whisper doesn't reliably return an empty string, it can hallucinate a
+    fluent, plausible-sounding sentence instead (a documented Whisper
+    behavior, not a bug in this code). Gating on energy before transcribing
+    avoids feeding it the near-silent chunks that trigger this."""
+    import numpy as np
+
+    if clip is None or len(clip) == 0:
+        return 0.0
+    return float(np.sqrt(np.mean(np.square(clip))))
+
+
+def list_devices() -> str:
+    """Human-readable list of input-capable audio devices, for
+    --list-devices. Marks the system default explicitly, since a wrong
+    default (e.g. a loopback/"Stereo Mix" device instead of the real mic)
+    is the most common cause of Hey Term hearing background audio instead
+    of your voice."""
+    import sounddevice as sd
+
+    try:
+        default_input = sd.default.device[0]
+    except Exception:
+        default_input = None
+
+    lines = []
+    for i, d in enumerate(sd.query_devices()):
+        if d["max_input_channels"] <= 0:
+            continue
+        marker = "  <- system default" if i == default_input else ""
+        lines.append(f"  [{i}] {d['name']}{marker}")
+    return "\\n".join(lines) if lines else "No input devices found."
 
 
 def record_fixed(seconds: float, sample_rate: int = None):
     """Records a fixed-length clip and returns a 1-D float32 numpy array."""
     import sounddevice as sd
 
-    rate = sample_rate or SAMPLE_RATE
-    audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32")
+    rate = sample_rate or config.SAMPLE_RATE
+    audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32",
+                    device=_resolve_device())
     sd.wait()
     return audio.reshape(-1)
 
@@ -848,9 +1270,9 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     import numpy as np
     import sounddevice as sd
 
-    rate = sample_rate or SAMPLE_RATE
-    hold = silence_hold if silence_hold is not None else SILENCE_HOLD_SECONDS
-    threshold = rms_threshold if rms_threshold is not None else SILENCE_RMS_THRESHOLD
+    rate = sample_rate or config.SAMPLE_RATE
+    hold = silence_hold if silence_hold is not None else config.SILENCE_HOLD_SECONDS
+    threshold = rms_threshold if rms_threshold is not None else config.SILENCE_RMS_THRESHOLD
 
     block_seconds = 0.2
     block_size = int(rate * block_seconds)
@@ -860,7 +1282,7 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     heard_speech = False
     max_blocks = int(max_seconds / block_seconds)
 
-    with sd.InputStream(samplerate=rate, channels=1, dtype="float32") as stream:
+    with sd.InputStream(samplerate=rate, channels=1, dtype="float32", device=_resolve_device()) as stream:
         for _ in range(max_blocks):
             block, _overflow = stream.read(block_size)
             block = block.reshape(-1)
@@ -992,6 +1414,30 @@ LANGUAGE = os.environ.get("LANGUAGE", "en").lower().strip()
 
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
+
+# Which engine turns speech into text. "auto" (default) uses the platform's
+# own speech recognizer when available -- Windows' built-in one (the same
+# on-device/cloud-assisted engine behind Win+H voice typing) on Windows, or
+# Android's (via Termux:API's termux-speech-to-text) inside Termux -- since
+# both are typically more accurate on ordinary speech than the offline
+# Whisper "base"/"small" models, and falls back to Whisper anywhere neither
+# is available (plain Linux/macOS, or if the platform engine can't be
+# reached). "windows"/"termux" force one of those and error out if it's
+# unavailable; "whisper" always uses offline Whisper regardless of platform
+# -- not a real option on Android, see scripts/setup-termux.sh. See
+# lib/speech_windows.py and lib/speech_termux.py.
+SPEECH_BACKEND = os.environ.get("SPEECH_BACKEND", "auto").lower().strip()
+
+# Optional: force a specific input device instead of relying on the OS
+# default (sounddevice/PortAudio otherwise always records from whatever the
+# system's default recording device is). Set to a device index (e.g. "1")
+# or a case-insensitive substring of a device name (e.g. "Realtek", "USB
+# Microphone") -- run \`python main.py --list-devices\` to see what's
+# available. Useful when the system default isn't actually the mic you want
+# it to hear: a "Stereo Mix"/"What U Hear" loopback device (which records
+# whatever's playing through your speakers, not your voice) getting left as
+# the Windows default input is the most common way this goes wrong.
+MIC_DEVICE = os.environ.get("MIC_DEVICE", "").strip()
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
@@ -1438,16 +1884,27 @@ def dangerous_commands(commands: list) -> list:
     path: "lib/speak.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 """Text-to-speech via pyttsx3 (offline, cross-platform: SAPI5 on Windows,
-espeak on Linux, NSSpeechSynthesizer on macOS). Also prints everything it
-says, so the terminal itself is a full transcript even with sound off.
+espeak on Linux, NSSpeechSynthesizer on macOS) -- or, inside Termux on
+Android, via \`termux-tts-speak\` (Termux:API), which uses Android's own
+text-to-speech engine instead; pyttsx3 has no real backend to drive there.
+Also prints everything it says, so the terminal itself is a full transcript
+even with sound off.
 
 Which languages actually get a real spoken voice (rather than an English
 voice reading foreign text with an accent) depends entirely on which voices
-are installed on the OS -- Windows Narrator languages, or \`espeak-ng\` on
-Linux with the right language packs. This picks a matching installed voice
-when one exists and falls back to whatever the default voice is otherwise;
-it never fails the whole request over a missing voice.
+are installed on the OS -- Windows Narrator languages, \`espeak-ng\` on Linux
+with the right language packs, or Android's installed TTS languages on
+Termux. This picks a matching installed voice when one exists (pyttsx3 path
+only -- termux-tts-speak has no equivalent voice-selection API from the
+command line, so it always speaks in the device's default TTS voice) and
+falls back to whatever the default voice is otherwise; it never fails the
+whole request over a missing voice.
 """
+import shutil
+import subprocess
+
+from . import speech_termux
+
 _engine = None
 _voice_set_for_language = None
 
@@ -1480,8 +1937,20 @@ def _select_voice(language: str) -> None:
     _voice_set_for_language = language
 
 
+def _termux_tts_available() -> bool:
+    return speech_termux.running_in_termux() and shutil.which("termux-tts-speak") is not None
+
+
 def speak(text: str, language: str = "en") -> None:
     print(f"[Hey Term] {text}")
+
+    if _termux_tts_available():
+        try:
+            subprocess.run(["termux-tts-speak", text], check=True, timeout=30)
+            return
+        except Exception as err:  # pragma: no cover - depends on local Termux:API setup
+            print(f"[Hey Term] (Termux speech output unavailable: {err}; trying pyttsx3)")
+
     try:
         _select_voice(language)
         engine = _get_engine()
@@ -1489,6 +1958,351 @@ def speak(text: str, language: str = "en") -> None:
         engine.runAndWait()
     except Exception as err:  # pragma: no cover - depends on local audio setup
         print(f"[Hey Term] (speech output unavailable: {err})")
+`,
+  },
+  {
+    path: "lib/speech_termux.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Speech-to-text on Android via Termux:API's \`termux-speech-to-text\` --
+which hands off to Android's own speech recognizer (the same class of
+engine behind Google's voice typing), the same idea as lib/speech_windows.py
+does for Windows' own recognizer.
+
+Requires both the Termux app and the separate Termux:API app (they're
+companion apps -- Termux:API does nothing without the other one installed
+too), plus the \`termux-api\` package inside Termux (\`pkg install termux-api\`).
+See scripts/setup-termux.sh and install-termux.sh.
+
+This is not just the preferred backend on Android, it's effectively the
+*only* one: sounddevice/PortAudio (what lib/audio.py's Whisper path relies
+on) doesn't have working access to the microphone inside Termux's sandbox,
+so SPEECH_BACKEND="whisper" is not a meaningful fallback on this platform
+the way it is on Windows/Linux desktop -- see the Whisper note in
+scripts/setup-termux.sh. Every call here is still defensive and raises
+RuntimeError rather than crashing, mainly so a genuinely missing
+Termux:API setup fails with a clear message instead of a stack trace.
+"""
+import os
+import shutil
+import subprocess
+
+_availability_checked = False
+_available = False
+_unavailable_reason = ""
+
+
+def running_in_termux() -> bool:
+    """True if this process is running inside Termux at all (regardless of
+    whether termux-api is installed). Termux sets $PREFIX to something like
+    /data/data/com.termux/files/usr. Shared with lib/speak.py, which also
+    needs to know whether to route through termux-tts-speak."""
+    return "com.termux" in os.environ.get("PREFIX", "")
+
+
+def is_available() -> bool:
+    """True if termux-speech-to-text can plausibly be called: running inside
+    Termux, with the termux-api package's binaries on PATH. Doesn't (can't,
+    without actually calling it) confirm the separate Termux:API app is
+    installed or has been granted microphone permission -- that surfaces as
+    a RuntimeError from recognize_once() instead. Cached after the first
+    call, same reasoning as lib/speech_windows.py's is_available()."""
+    global _availability_checked, _available, _unavailable_reason
+    if _availability_checked:
+        return _available
+    _availability_checked = True
+
+    if not running_in_termux():
+        _unavailable_reason = "not running inside Termux"
+        _available = False
+        return False
+
+    if shutil.which("termux-speech-to-text") is None:
+        _unavailable_reason = (
+            "the 'termux-api' package isn't installed (pkg install termux-api) "
+            "-- see install-termux.sh / scripts/setup-termux.sh"
+        )
+        _available = False
+        return False
+
+    _available = True
+    return True
+
+
+def unavailable_reason() -> str:
+    """Human-readable reason is_available() returned False, for the one-time
+    startup message. Empty string if is_available() hasn't been called yet
+    or returned True."""
+    return _unavailable_reason
+
+
+def recognize_once(timeout_seconds: float = None) -> str:
+    """Runs one recognition via Android's speech recognizer (through
+    Termux:API) and returns the recognized text -- "" if nothing was
+    understood or the call times out. Raises RuntimeError on any failure
+    (Termux:API app not installed, microphone permission never granted,
+    etc.) so callers (main.py) can fall back for that turn rather than
+    crashing the app.
+
+    \`timeout_seconds\` is only a safety-net timeout on the subprocess call,
+    not a control over how long Android listens -- unlike
+    lib/speech_windows.py's WinRT timeouts, termux-speech-to-text exposes no
+    knob for that; Android's own recognizer decides when speech has ended.
+    A short value (like the wake-loop's ~2.5s chunk size) would false-timeout
+    on legitimate speech, so this floors it well above that.
+
+    Each call briefly surfaces Android's own speech-recognition indicator --
+    there's no silent background-listening mode the way the desktop's
+    rolling-audio-chunk approach has, since this hands off to the OS's own
+    recognizer instead of reading the microphone directly.
+    """
+    if not is_available():
+        raise RuntimeError(
+            f"Termux speech recognizer unavailable: {unavailable_reason() or 'unknown reason'}"
+        )
+
+    safety_timeout = max(timeout_seconds, 8.0) if timeout_seconds is not None else 20.0
+
+    try:
+        result = subprocess.run(
+            ["termux-speech-to-text"],
+            capture_output=True,
+            text=True,
+            timeout=safety_timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return ""
+    except Exception as err:  # noqa: BLE001 -- deliberately broad: any failure
+        # here (Termux:API app missing, mic permission denied, etc.) should
+        # read as "this backend failed for this turn," not crash the app.
+        raise RuntimeError(f"Termux speech recognition failed: {err}") from err
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"termux-speech-to-text exited {result.returncode}: {(result.stderr or '').strip()}"
+        )
+
+    output = (result.stdout or "").strip()
+    if output.startswith("ERROR:"):
+        # Android's recognizer reports "didn't catch anything" as plain
+        # stdout text with a normal (0) exit code, not a nonzero exit or
+        # stderr -- ERROR_NO_MATCH (nothing recognized) and
+        # ERROR_SPEECH_TIMEOUT (recognition window closed before any speech
+        # started) both just mean "no speech heard this round," same as an
+        # empty transcript everywhere else in this codebase. Anything else
+        # (no mic permission, no network, recognizer service busy, etc.) is
+        # a real failure worth surfacing so the caller can react to it.
+        code = output.split(":", 1)[1].strip()
+        if code in ("ERROR_NO_MATCH", "ERROR_SPEECH_TIMEOUT"):
+            return ""
+        raise RuntimeError(f"termux-speech-to-text reported {code}")
+
+    return output
+`,
+  },
+  {
+    path: "lib/speech_windows.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Speech-to-text via Windows' own built-in speech recognizer -- the same
+engine behind Win+H voice typing and Windows Speech Recognition -- instead of
+the offline Whisper model in lib/transcribe.py.
+
+Why this exists: Whisper's "base"/"small" models can mishear ordinary speech
+that Windows' own dictation gets right, because Windows' modern voice-typing
+engine is cloud-assisted by default (falling back to a smaller on-device
+model only when offline or when "Online speech recognition" is turned off in
+Settings > Privacy & security > Speech). Routing through it gets Hey Term
+closer to Win+H-level accuracy on Windows without a bigger Whisper download.
+
+This module is imported lazily and every call is defensive: anything that
+isn't actually a working Windows install with the WinRT speech APIs
+available should fail in a way lib/config.py's SPEECH_BACKEND="auto" can
+catch and fall back to Whisper for, not crash the app.
+
+Architecture note: unlike lib/transcribe.py (which transcribes an
+already-recorded numpy clip), the Windows speech recognizer captures audio
+itself, directly from the system default microphone, and does its own
+silence/end-of-speech detection -- there's no separate "record, then
+transcribe" step. recognize_once() below does capture-and-transcribe in one
+call. main.py branches on config.SPEECH_BACKEND to call either this or the
+record-then-transcribe pair used for Whisper.
+"""
+import sys
+
+_availability_checked = False
+_available = False
+_unavailable_reason = ""
+
+
+def is_available() -> bool:
+    """True if the Windows speech recognizer can plausibly be used: running
+    on Windows itself, and the winsdk (WinRT projection) package is
+    importable. Cached after the first call -- this touches the Windows
+    Runtime, not worth repeating every wake-loop iteration."""
+    global _availability_checked, _available, _unavailable_reason
+    if _availability_checked:
+        return _available
+    _availability_checked = True
+
+    if sys.platform != "win32":
+        _unavailable_reason = "not running on Windows"
+        _available = False
+        return False
+
+    try:
+        import winsdk.windows.media.speechrecognition  # noqa: F401
+    except ImportError:
+        _unavailable_reason = (
+            "the 'winsdk' package isn't installed (pip install winsdk) -- "
+            "it ships with requirements.txt on Windows, so this usually "
+            "means the install ran on a non-Windows shell/venv"
+        )
+        _available = False
+        return False
+
+    _available = True
+    return True
+
+
+def unavailable_reason() -> str:
+    """Human-readable reason is_available() returned False, for the one-time
+    startup message. Empty string if is_available() hasn't been called yet
+    or returned True."""
+    return _unavailable_reason
+
+
+def recognize_once(timeout_seconds: float = None) -> str:
+    """Listens on the system default microphone using Windows' own speech
+    recognizer and returns the recognized text (possibly "" if nothing was
+    understood, same contract as lib/transcribe.py's functions). Raises
+    RuntimeError if the Windows speech engine isn't available or the
+    recognition call itself fails -- callers (main.py) catch that and fall
+    back to the Whisper path for that turn rather than crashing the app.
+
+    \`timeout_seconds\`, when given, bounds how long this waits for speech to
+    start before giving up and returning "" -- used for the short wake-word
+    listening chunks so a silent room doesn't block the loop indefinitely.
+    Command listening (take_command) omits it and waits for real speech.
+    """
+    if not is_available():
+        raise RuntimeError(
+            f"Windows speech recognizer unavailable: {unavailable_reason() or 'unknown reason'}"
+        )
+
+    import asyncio
+    from datetime import timedelta
+
+    from winsdk.windows.media.speechrecognition import SpeechRecognizer
+
+    async def _run():
+        recognizer = SpeechRecognizer()
+        await recognizer.compile_constraints_async()
+
+        if timeout_seconds is not None:
+            # Timeouts on the recognizer's own topic/silence detectors --
+            # this is what lets a wake-word chunk give up quickly on silence
+            # instead of hanging, without us doing our own RMS gating (the
+            # Windows engine already does its own voice-activity detection).
+            # \`winsdk\` projects Windows' TimeSpan directly as a Python
+            # datetime.timedelta -- it's a plain immutable value, not an
+            # object with a settable .duration attribute the way the older
+            # \`winrt\` package projected it, so the whole property has to be
+            # reassigned a new timedelta rather than mutated in place.
+            #
+            # A brand new SpeechRecognizer() is constructed on every call
+            # (recognize_once() is stateless), and compile_constraints_async()
+            # above has real setup cost each time -- confirmed live: passing
+            # the wake-loop's raw ~2.5s chunk size straight through here left
+            # too little of that window as actual listening time after setup,
+            # so it kept giving up before ever catching real speech. Flooring
+            # it well above the chunk size (same fix as
+            # lib/speech_termux.py's recognize_once()) gives the engine
+            # enough real listening time regardless of a short chunk size
+            # upstream.
+            span = timedelta(seconds=max(timeout_seconds, 6.0))
+            recognizer.timeouts.initial_silence_timeout = span
+            recognizer.timeouts.end_silence_timeout = span
+
+        result = await recognizer.recognize_async()
+        return (result.text or "").strip() if result is not None else ""
+
+    try:
+        return asyncio.run(_run())
+    except Exception as err:  # noqa: BLE001 -- deliberately broad: any WinRT/
+        # COM failure here (mic in use, no default device, permission denied,
+        # engine not installed for the current language, etc.) should read as
+        # "this backend failed for this turn," not crash the whole app.
+        raise RuntimeError(f"Windows speech recognition failed: {err}") from err
+`,
+  },
+  {
+    path: "lib/text_input.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Lets Hey Term take a typed request instead of a spoken one, from the
+wake-word loop in main.py -- the same request text either way, so
+handle_request() doesn't know or care whether it came from a microphone or
+a keyboard. (The Termux push-to-talk loop doesn't need this module -- it
+already reads one line from stdin per turn, so it just checks whether that
+line is blank or not; see run_push_to_talk_loop() in main.py.)
+
+Why a background thread + queue instead of just calling input() at the top
+of each wake-loop iteration: the loop's own listening call
+(listen_for_wake_word) already blocks for up to WAKE_CHUNK_SECONDS on the
+microphone/recognizer, so a blocking input() call right before or after it
+would mean typing only works in the gap between chunks -- exactly the
+moment the terminal isn't looking, and the rest of the time a keypress just
+sits unread until the next gap. Reading stdin on its own daemon thread means
+a typed line queues up the instant Enter is pressed, and the main loop only
+has to check "is anything waiting?" (non-blocking) each time through,
+regardless of what the voice side is doing at that moment.
+"""
+import queue
+import sys
+import threading
+
+_lines: "queue.Queue[str]" = queue.Queue()
+_started = False
+_lock = threading.Lock()
+
+
+def _reader() -> None:
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            return
+        line = line.strip()
+        if line:
+            _lines.put(line)
+
+
+def start() -> None:
+    """Starts the background stdin reader, once per process. Safe to call
+    more than once (idempotent) -- main() calls this unconditionally before
+    entering the wake-word loop. No-ops when stdin isn't a real interactive
+    terminal (piped/redirected input, or none at all): reading it here would
+    either race whatever is actually feeding that stream, or -- with nothing
+    ever arriving -- just leave a harmless daemon thread blocked forever, so
+    skipping it entirely when there's no real keyboard behind stdin is both
+    safer and simpler than starting it and hoping it never matters.
+    """
+    global _started
+    with _lock:
+        if _started:
+            return
+        if not sys.stdin or not sys.stdin.isatty():
+            return
+        _started = True
+    thread = threading.Thread(target=_reader, daemon=True)
+    thread.start()
+
+
+def poll() -> str:
+    """Returns the next typed line (already stripped, never empty), or ""
+    if nothing has been typed since the last poll(). Never blocks."""
+    try:
+        return _lines.get_nowait()
+    except queue.Empty:
+        return ""
 `,
   },
   {
@@ -1507,6 +2321,25 @@ from .config import WHISPER_DEVICE, WHISPER_MODEL_SIZE
 
 _model = None
 
+# "Initial prompt" text handed to Whisper as decoding context -- it nudges
+# ambiguous audio toward these words without forcing them or touching the
+# model's actual weights. This is NOT voice training (Whisper's acoustic
+# model is never retrained or adapted to a specific speaker); it's closer to
+# how predictive text nudges toward likely words when a signal is unclear.
+# Kept short and generic on purpose: a long list of every possible command
+# dilutes the effect instead of sharpening it -- this only needs to tip
+# close calls on common terminal vocabulary, not dictate an exact grammar.
+COMMAND_VOCAB_PROMPT = (
+    "list files, create folder, delete file, current directory, git status, "
+    "run script, install package, show contents, remove folder, move file, "
+    "copy file, python, node, npm, git, docker, ls, cd, mkdir, rm"
+)
+
+# Biases the wake-listening chunk toward the product's own name, since a
+# short 2-3 syllable phrase is exactly where Whisper is most likely to lock
+# onto a similar-sounding word instead ("Hey Tom", "Hey Tarp").
+WAKE_VOCAB_PROMPT = "Hey Term"
+
 
 def _get_model():
     global _model
@@ -1517,13 +2350,18 @@ def _get_model():
     return _model
 
 
-def _transcribe(audio, language):
+def _transcribe(audio, language, initial_prompt=None):
     import numpy as np
 
     if audio is None or len(audio) == 0:
         return ""
     model = _get_model()
-    segments, _info = model.transcribe(np.asarray(audio, dtype="float32"), language=language, vad_filter=True)
+    segments, _info = model.transcribe(
+        np.asarray(audio, dtype="float32"),
+        language=language,
+        vad_filter=True,
+        initial_prompt=initial_prompt,
+    )
     return " ".join(seg.text.strip() for seg in segments).strip()
 
 
@@ -1532,9 +2370,12 @@ def transcribe(audio, language: str = "en") -> str:
     language code ("en", "es", ...), or "auto" to let Whisper detect it from
     the audio itself (a little slower and occasionally wrong on a very short
     clip, but useful when more than one person/language uses the same
-    installation).
+    installation). Only uses COMMAND_VOCAB_PROMPT for English -- the prompt
+    is English terminal vocabulary, and handing it to Whisper while decoding
+    a different language would bias it toward the wrong language entirely.
     """
-    return _transcribe(audio, None if language == "auto" else language)
+    prompt = COMMAND_VOCAB_PROMPT if language in ("en", "auto") else None
+    return _transcribe(audio, None if language == "auto" else language, initial_prompt=prompt)
 
 
 def transcribe_wake(audio) -> str:
@@ -1545,7 +2386,7 @@ def transcribe_wake(audio) -> str:
     to guess the audio is some other language first. See lib/i18n.py's
     module docstring for the full reasoning.
     """
-    return _transcribe(audio, "en")
+    return _transcribe(audio, "en", initial_prompt=WAKE_VOCAB_PROMPT)
 `,
   },
   {
@@ -1699,6 +2540,46 @@ class TestSystemPromptFormatting(unittest.TestCase):
         self.assertIn("bash", rendered)
         self.assertIn("Hey Term", rendered)
         self.assertIn("MultiNiche AI", rendered)
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
+    path: "test/test_audio.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Only lib.audio.rms() is tested here -- everything else in that module
+needs a real microphone/portaudio. rms() is plain math over a numpy array,
+so it's fully testable without audio hardware, same as the rest of this
+suite."""
+import unittest
+
+import numpy as np
+
+from lib.audio import rms
+
+
+class TestRms(unittest.TestCase):
+    def test_silence_is_zero(self):
+        self.assertEqual(rms(np.zeros(1000, dtype="float32")), 0.0)
+
+    def test_empty_clip_is_zero(self):
+        self.assertEqual(rms(np.zeros(0, dtype="float32")), 0.0)
+
+    def test_none_is_zero(self):
+        self.assertEqual(rms(None), 0.0)
+
+    def test_constant_amplitude_matches_its_own_magnitude(self):
+        # RMS of a constant-value signal equals the absolute value of that
+        # constant -- the simplest case to hand-verify.
+        clip = np.full(1000, 0.5, dtype="float32")
+        self.assertAlmostEqual(rms(clip), 0.5, places=5)
+
+    def test_louder_clip_has_higher_rms_than_quieter_one(self):
+        quiet = np.full(1000, 0.01, dtype="float32")
+        loud = np.full(1000, 0.3, dtype="float32")
+        self.assertLess(rms(quiet), rms(loud))
 
 
 if __name__ == "__main__":
@@ -2025,6 +2906,268 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_speech_backend.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Tests for main.py's backend-selection logic and lib/speech_windows.py's
+availability check. What's NOT tested here: actually calling
+speech_windows.recognize_once() -- that talks to the real Windows Runtime
+and a live microphone, so it has no meaningful behavior to unit-test on a
+machine that isn't Windows (or, for that matter, on one that is -- it's
+exercised by hand per README.md, same as the rest of the audio path)."""
+import os
+import subprocess
+import unittest
+from unittest.mock import patch
+
+from lib import speech_termux, speech_windows
+from main import (
+    _backend_for_language,
+    resolve_speech_backend,
+    run_push_to_talk_loop,
+    run_wake_word_loop,
+)
+
+
+class TestIsAvailable(unittest.TestCase):
+    def test_not_available_on_non_windows_platform(self):
+        # This suite always runs on Linux/macOS CI, never Windows, so this
+        # is really asserting "the platform check works," not "Windows
+        # itself lacks the engine."
+        import sys
+
+        if sys.platform == "win32":
+            self.skipTest("only meaningful off Windows")
+        self.assertFalse(speech_windows.is_available())
+        self.assertIn("Windows", speech_windows.unavailable_reason())
+
+    def test_not_available_outside_termux(self):
+        # Same reasoning as above, for the other native backend: this suite
+        # never actually runs inside Termux, so this just asserts the
+        # $PREFIX-based platform check itself works.
+        if "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful outside Termux")
+        self.assertFalse(speech_termux.is_available())
+        self.assertIn("Termux", speech_termux.unavailable_reason())
+
+
+class TestResolveSpeechBackend(unittest.TestCase):
+    def test_whisper_requested_stays_whisper_even_if_windows_available(self):
+        self.assertEqual(resolve_speech_backend("whisper"), "whisper")
+
+    def test_windows_requested_raises_when_unavailable(self):
+        import sys
+
+        if sys.platform == "win32":
+            self.skipTest("only meaningful off Windows")
+        with self.assertRaises(ValueError):
+            resolve_speech_backend("windows")
+
+    def test_termux_requested_raises_when_unavailable(self):
+        if "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful outside Termux")
+        with self.assertRaises(ValueError):
+            resolve_speech_backend("termux")
+
+    def test_unknown_backend_raises(self):
+        with self.assertRaises(ValueError):
+            resolve_speech_backend("carrier-pigeon")
+
+    def test_auto_falls_back_to_whisper_when_no_native_backend_available(self):
+        import sys
+
+        if sys.platform == "win32" or "com.termux" in os.environ.get("PREFIX", ""):
+            self.skipTest("only meaningful off Windows and outside Termux")
+        self.assertEqual(resolve_speech_backend("auto"), "whisper")
+
+
+class TestBackendForLanguage(unittest.TestCase):
+    def test_windows_backend_kept_for_english(self):
+        self.assertEqual(_backend_for_language("windows", "en"), "windows")
+
+    def test_windows_backend_kept_for_auto(self):
+        self.assertEqual(_backend_for_language("windows", "auto"), "windows")
+
+    def test_windows_backend_falls_back_to_whisper_for_other_languages(self):
+        self.assertEqual(_backend_for_language("windows", "es"), "whisper")
+
+    def test_termux_backend_kept_for_english(self):
+        self.assertEqual(_backend_for_language("termux", "en"), "termux")
+
+    def test_termux_backend_falls_back_to_whisper_for_other_languages(self):
+        self.assertEqual(_backend_for_language("termux", "es"), "whisper")
+
+    def test_whisper_backend_is_unaffected_by_language(self):
+        self.assertEqual(_backend_for_language("whisper", "es"), "whisper")
+
+
+class TestTermuxRecognizeOnceErrorHandling(unittest.TestCase):
+    """termux-speech-to-text reports "didn't catch anything" as plain stdout
+    text with a normal (0) exit code, not a nonzero exit -- these pin down
+    that recognize_once() tells that apart from a real failure. Regression
+    coverage for a bug caught live: ERROR_NO_MATCH was originally being
+    returned as if it were the recognized transcript itself.
+    """
+
+    def _run(self, stdout: str, returncode: int = 0):
+        fake_result = subprocess.CompletedProcess(
+            args=["termux-speech-to-text"], returncode=returncode, stdout=stdout, stderr=""
+        )
+        with patch.object(speech_termux, "is_available", return_value=True), \\
+                patch("subprocess.run", return_value=fake_result):
+            return speech_termux.recognize_once()
+
+    def test_no_match_returns_empty_string_not_the_error_text(self):
+        self.assertEqual(self._run("ERROR: ERROR_NO_MATCH\\n"), "")
+
+    def test_speech_timeout_returns_empty_string(self):
+        self.assertEqual(self._run("ERROR: ERROR_SPEECH_TIMEOUT\\n"), "")
+
+    def test_other_error_codes_raise(self):
+        with self.assertRaises(RuntimeError):
+            self._run("ERROR: ERROR_INSUFFICIENT_PERMISSIONS\\n")
+
+    def test_normal_transcript_passes_through(self):
+        self.assertEqual(self._run("list the files\\n"), "list the files")
+
+
+class TestPushToTalkLoop(unittest.TestCase):
+    """Termux's stand-in for the wake-word loop -- see run_push_to_talk_loop's
+    docstring for why Termux doesn't use listen_for_wake_word() at all. Only
+    the loop's own control flow is worth pinning down here; take_command()/
+    handle_request() are exercised elsewhere."""
+
+    def test_returns_on_eof_without_processing_a_request(self):
+        with patch("builtins.input", side_effect=EOFError), \\
+                patch("main.take_command") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        fake_take_command.assert_not_called()
+        fake_handle_request.assert_not_called()
+
+    def test_each_enter_press_captures_and_handles_one_request(self):
+        # Two Enter presses, then Ctrl+C (EOFError) to stop the loop -- each
+        # press should drive exactly one take_command()/handle_request() pair.
+        with patch("builtins.input", side_effect=["", "", EOFError]), \\
+                patch("main.take_command", return_value="list files") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        self.assertEqual(fake_take_command.call_count, 2)
+        self.assertEqual(fake_handle_request.call_count, 2)
+        fake_handle_request.assert_called_with("list files", "en", "/tmp", "termux")
+
+    def test_typed_text_skips_voice_capture_entirely(self):
+        # A non-blank line typed at the prompt is the request itself -- no
+        # take_command() call, straight to handle_request().
+        with patch("builtins.input", side_effect=["list the files", EOFError]), \\
+                patch("main.take_command") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        fake_take_command.assert_not_called()
+        fake_handle_request.assert_called_once_with("list the files", "en", "/tmp", "termux")
+
+
+class TestWakeWordLoopTypedInput(unittest.TestCase):
+    """Regression coverage for the typed-request escape hatch added to the
+    default (non-Termux) run loop -- see lib/text_input.py and
+    run_wake_word_loop()'s docstring. A KeyboardInterrupt from a mocked
+    text_input.poll()/listen_for_wake_word() is how these stop the loop,
+    same trick main()'s own Ctrl+C handling relies on."""
+
+    def test_typed_request_skips_listen_for_wake_word_and_take_command(self):
+        with patch("main.text_input") as fake_text_input, \\
+                patch("main.listen_for_wake_word") as fake_listen, \\
+                patch("main.take_command") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            fake_text_input.poll.side_effect = ["do the thing", KeyboardInterrupt]
+            with self.assertRaises(KeyboardInterrupt):
+                run_wake_word_loop("hey term", "en", "/tmp", "windows")
+        fake_text_input.start.assert_called_once()
+        fake_listen.assert_not_called()
+        fake_take_command.assert_not_called()
+        fake_handle_request.assert_called_once_with("do the thing", "en", "/tmp", "windows")
+
+    def test_falls_through_to_wake_word_listening_when_nothing_typed(self):
+        with patch("main.text_input") as fake_text_input, \\
+                patch("main.listen_for_wake_word") as fake_listen, \\
+                patch("main.take_command", return_value="list files") as fake_take_command, \\
+                patch("main.handle_request") as fake_handle_request:
+            fake_text_input.poll.side_effect = ["", KeyboardInterrupt]
+            fake_listen.return_value = True
+            with self.assertRaises(KeyboardInterrupt):
+                run_wake_word_loop("hey term", "en", "/tmp", "windows")
+        fake_listen.assert_called_once_with("hey term", "windows")
+        fake_take_command.assert_called_once_with("en", "windows")
+        fake_handle_request.assert_called_once_with("list files", "en", "/tmp", "windows")
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
+    path: "test/test_text_input.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Tests for lib/text_input.py's queue/poll contract. What's NOT tested
+here: start()'s actual background thread against a real terminal stdin --
+that has no meaningful behavior to unit-test headlessly (this suite's own
+stdin isn't a tty, so start() no-ops every time it runs here, which is
+itself covered below). poll()'s and the reader's queue-handling logic is
+exercised directly instead, the same way test_speech_backend.py exercises
+recognize_once()'s parsing without a real microphone."""
+import unittest
+from unittest.mock import patch
+
+from lib import text_input
+
+
+class TestStart(unittest.TestCase):
+    def test_noop_when_stdin_is_not_a_tty(self):
+        # This test suite's own stdin is never an interactive terminal, so
+        # this is really just asserting the isatty() guard exists and
+        # doesn't crash -- same reasoning as test_speech_backend.py's
+        # platform-guard tests.
+        text_input._started = False
+        with patch("sys.stdin") as fake_stdin:
+            fake_stdin.isatty.return_value = False
+            text_input.start()
+        self.assertFalse(text_input._started)
+
+    def test_idempotent_once_started(self):
+        text_input._started = True
+        try:
+            with patch("threading.Thread") as fake_thread:
+                text_input.start()
+            fake_thread.assert_not_called()
+        finally:
+            text_input._started = False
+
+
+class TestPoll(unittest.TestCase):
+    def setUp(self):
+        # Drain any leftovers from another test in this process.
+        while text_input.poll():
+            pass
+
+    def test_empty_queue_returns_empty_string(self):
+        self.assertEqual(text_input.poll(), "")
+
+    def test_returns_queued_line(self):
+        text_input._lines.put("list the files")
+        self.assertEqual(text_input.poll(), "list the files")
+        self.assertEqual(text_input.poll(), "")
+
+    def test_reader_skips_blank_lines(self):
+        with patch("builtins.input", side_effect=["", "  ", "hello", EOFError]):
+            text_input._reader()
+        self.assertEqual(text_input.poll(), "hello")
+        self.assertEqual(text_input.poll(), "")
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_wake.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import unittest
@@ -2230,6 +3373,101 @@ echo
 echo "Done. Next steps:"
 echo "  1. Edit .env and set ANTHROPIC_API_KEY."
 echo "  2. Run: python3 main.py --lang en   (or --lang es / fr / de / pt / it)"
+`,
+  },
+  {
+    path: "scripts/setup-termux.sh",
+    contents: `#!/usr/bin/env bash
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Automated setup for Hey Term on Android, inside Termux (https://termux.dev
+# -- install from F-Droid; the Google Play Store build is outdated and
+# widely reported broken). Installs Python + termux-api, Python deps, and
+# bootstraps .env.
+#
+# You also need the separate "Termux:API" app (same publisher, also on
+# F-Droid) installed alongside Termux -- the \`termux-api\` package below is
+# only the client side of that bridge and does nothing without it.
+#
+# Usage:
+#   ./install-termux.sh          # normal setup, asks before pkg installs
+#   ./install-termux.sh --yes    # don't prompt
+set -euo pipefail
+
+ASSUME_YES=0
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) ASSUME_YES=1 ;;
+    -h|--help)
+      echo "Usage: $0 [--yes]"
+      exit 0
+      ;;
+  esac
+done
+
+confirm_or_exit() {
+  if [ "$ASSUME_YES" = "1" ] || [ ! -t 0 ]; then
+    return 0
+  fi
+  read -r -p "$1 [y/N] " reply
+  case "$reply" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) echo "Skipped."; return 1 ;;
+  esac
+}
+
+if [ -z "\${PREFIX:-}" ] || [[ "$PREFIX" != *com.termux* ]]; then
+  echo "This doesn't look like Termux (\\$PREFIX=\${PREFIX:-<unset>}). Run this from inside the Termux app."
+  exit 1
+fi
+
+DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "== Hey Term Termux (Android) setup =="
+echo
+echo "IMPORTANT: install the separate \\"Termux:API\\" app too (F-Droid, same"
+echo "publisher as Termux) before continuing if you haven't already -- Hey"
+echo "Term's speech recognition and text-to-speech on Android both go"
+echo "through it, and neither works without it installed alongside Termux."
+echo
+
+if confirm_or_exit "Install/update core Termux packages (python, termux-api)?"; then
+  pkg update -y
+  pkg install -y python termux-api
+fi
+
+echo
+echo "Installing Python dependencies (requirements-termux.txt -- a shorter"
+echo "list than the desktop version; see that file for why)..."
+python -m pip install -q -r "$DIR/requirements-termux.txt"
+
+if [ ! -f "$DIR/.env" ]; then
+  cp "$DIR/.env.example" "$DIR/.env"
+  echo "Created .env -- edit it and add your ANTHROPIC_API_KEY before running Hey Term."
+else
+  echo ".env already exists -- leaving it alone."
+fi
+
+echo
+echo "NOTE on Whisper: faster-whisper's ctranslate2 dependency generally has"
+echo "no prebuilt wheel for Android/Termux and usually fails to build from"
+echo "source there -- that's why requirements-termux.txt skips it. This is"
+echo "fine: SPEECH_BACKEND defaults to \\"auto\\", which uses Android's own"
+echo "speech recognizer (via termux-speech-to-text) and never touches"
+echo "Whisper on this platform. Only set SPEECH_BACKEND=whisper if you've"
+echo "separately confirmed faster-whisper actually installs on your device."
+echo
+
+echo "One-time: grant Termux microphone access interactively before your"
+echo "first real run --"
+echo "  termux-microphone-record -h"
+echo "Android will prompt for the microphone permission the first time any"
+echo "termux-api audio command runs; accept it, then Ctrl+C out of that command."
+echo
+
+echo "Done. Next steps:"
+echo "  1. Edit .env and set ANTHROPIC_API_KEY (nano .env)."
+echo "  2. Run: python main.py --lang en"
 `,
   },
   {
