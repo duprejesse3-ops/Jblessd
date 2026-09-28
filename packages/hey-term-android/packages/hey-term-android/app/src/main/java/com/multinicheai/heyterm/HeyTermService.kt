@@ -108,11 +108,16 @@ class HeyTermService : Service() {
             }
 
             if (Wake.heardWakeWord(heard, Config.wakeWord(this))) {
+                // Visible the instant wake fires -- otherwise the screen
+                // goes blank for the whole record-command -> transcribe ->
+                // call Claude pipeline and it looks like nothing happened.
+                log("[Hey Term] Wake word heard -- go ahead.")
                 AuditLog.log(this, "wake", mapOf("via" to "voice"))
                 updateNotification("Listening…")
                 val commandClip = audio.recordUntilSilence(Config.COMMAND_MAX_SECONDS)
                 val requestText = WhisperBridge.transcribe(commandClip, "en")
-                if (requestText.isNotEmpty()) log("[you] $requestText")
+                if (requestText.isNotEmpty()) log("[you] $requestText") else log("[Hey Term] Didn't catch a command.")
+                log("[Hey Term] Thinking…")
                 handleRequest(requestText)
                 updateNotification(getString(R.string.notif_listening))
             }
