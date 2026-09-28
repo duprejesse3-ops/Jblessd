@@ -4,7 +4,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -68,6 +68,20 @@ WORK_DIR = os.environ.get("WORK_DIR") or os.getcwd()
 # your say-so should always be able to answer "what did you run, and when."
 AUDIT_LOG_PATH = os.environ.get("AUDIT_LOG_PATH") or os.path.join(WORK_DIR, ".hey-term-audit.jsonl")
 
+# How long a single command is allowed to run before Hey Term kills it and
+# reports a timeout, in seconds. Was a fixed 120s; now overridable per install
+# (via .env/COMMAND_TIMEOUT_SECONDS) and per-request (a spoken "give it more
+# time" -- see main.py's LONGER_TIMEOUT_PHRASES) for the genuinely slow stuff
+# (a big install, a long build) without raising the default for everything.
+COMMAND_TIMEOUT_SECONDS = float(os.environ.get("COMMAND_TIMEOUT_SECONDS", "120"))
+
+# Session running-total cost tracking (see lib/cost.py). Off by default would
+# defeat the point -- someone handing Hey Term their own API key should always
+# be able to ask "what has this cost me so far" without digging through the
+# Anthropic console. Persisted per work_dir so "cost" reflects this project,
+# not every project Hey Term has ever touched.
+COST_LOG_PATH = os.environ.get("COST_LOG_PATH") or os.path.join(WORK_DIR, ".hey-term-cost.json")
+
 _IS_WINDOWS = platform.system() == "Windows"
 
 
@@ -84,7 +98,7 @@ def is_windows() -> bool:
 # purpose: a long blocklist gives a false sense of coverage it can't deliver,
 # so this exists to catch the handful of single commands that can destroy an
 # entire disk or OS install, not to be a general security boundary.
-DANGEROUS_PATTERNS = [
+_BUILTIN_DANGEROUS_PATTERNS = [
     "rm -rf /",
     "rm -rf ~",
     "rm -rf .",
@@ -103,4 +117,51 @@ DANGEROUS_PATTERNS = [
     "drop database",
     "drop table",
     "truncate table",
+]
+
+
+def _load_extra_patterns() -> list:
+    """User-defined additions to the built-in blocklist above.
+
+    The built-in list only covers things that can nuke an entire disk or OS
+    install -- it deliberately says nothing about a specific person's own
+    "don't touch this" list (their production database's actual name, their
+    release branch, a customer-data table). Those are just as dangerous *to
+    that person* but can't be guessed in advance, so this loads more patterns
+    from two places, both optional and additive (nothing here can remove a
+    built-in pattern):
+
+    - EXTRA_DANGEROUS_PATTERNS env var / .env entry: comma-separated.
+    - A patterns file, one pattern per line ("#" comments allowed), at
+      PATTERNS_FILE if set, else ~/.hey-term/dangerous_patterns.txt if it
+      exists. Easier to keep a long list here than crammed into one env var.
+    """
+    extra = []
+
+    env_val = os.environ.get("EXTRA_DANGEROUS_PATTERNS", "")
+    if env_val:
+        extra.extend(p.strip() for p in env_val.split(",") if p.strip())
+
+    patterns_file = os.environ.get("PATTERNS_FILE") or os.path.expanduser(
+        os.path.join("~", ".hey-term", "dangerous_patterns.txt")
+    )
+    if os.path.isfile(patterns_file):
+        with open(patterns_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    extra.append(line)
+
+    return extra
+
+
+# Commands matching these (case-insensitive substring) patterns are never run
+# on a spoken "confirm" alone -- see lib/safety.py. The built-in list is kept
+# short and specific on purpose: a long blocklist gives a false sense of
+# coverage it can't deliver, so it exists to catch the handful of single
+# commands that can destroy an entire disk or OS install, not to be a general
+# security boundary. Anything install-specific belongs in _load_extra_patterns
+# instead of growing this list.
+DANGEROUS_PATTERNS = _BUILTIN_DANGEROUS_PATTERNS + [
+    p for p in _load_extra_patterns() if p.lower() not in {b.lower() for b in _BUILTIN_DANGEROUS_PATTERNS}
 ]

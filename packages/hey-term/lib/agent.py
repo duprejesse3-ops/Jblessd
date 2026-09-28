@@ -14,6 +14,7 @@ import platform
 
 import requests
 
+from . import cost
 from .config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, is_windows
 from .i18n import get as get_strings
 
@@ -106,6 +107,19 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
         ).strip()
     except (ValueError, KeyError) as err:
         raise AgentError(f"Unexpected response shape from Claude's API: {err}") from err
+
+    # Track spend from the API's own reported token counts -- best-effort,
+    # never lets a cost-tracking hiccup fail a request that otherwise
+    # succeeded. See lib/cost.py for why this exists.
+    try:
+        usage = data.get("usage") or {}
+        cost.record_usage(
+            model=ANTHROPIC_MODEL,
+            input_tokens=int(usage.get("input_tokens", 0)),
+            output_tokens=int(usage.get("output_tokens", 0)),
+        )
+    except Exception:
+        pass
 
     return parse_plan(text)
 

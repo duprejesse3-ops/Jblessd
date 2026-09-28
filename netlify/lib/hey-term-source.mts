@@ -50,41 +50,6 @@ Every wake, request, plan, confirmation, and command run is appended to a
 plain-text audit log (\`.hey-term-audit.jsonl\` by default) -- a full record of
 what Hey Term has ever been asked to do and whether it actually did it.
 
-### It remembers what you just said
-
-Each run keeps a short rolling memory of your recent requests and Hey Term's
-replies, so a follow-up actually lands in context instead of being judged as
-a brand new, standalone request:
-
-\`\`\`
-you:      "Hey Term"
-Hey Term: "Yes?"
-you:      "install kali"
-Hey Term: "Do you want Kali's tools on this device, or a full Kali environment?"
-you:      "just the tools with pkg"
-Hey Term: [plans and confirms an actual pkg-install command -- "just the tools with pkg"
-           only makes sense because it remembers the question it just asked]
-\`\`\`
-
-This resets automatically whenever you say "stop listening" (or its
-translated equivalent) -- a deliberate sign-off is a natural place to start
-the next topic with a clean slate. It's also capped at the last few
-exchanges (\`CONVERSATION_HISTORY_TURNS\` in \`.env\`, default 6) so a
-long-running session doesn't keep growing what gets sent to Claude on every
-single request forever; set it to \`0\` to turn this off entirely and have
-every request judged completely on its own, the original behavior.
-
-### Typing instead of speaking
-
-Don't want to talk out loud, or in a spot where the mic isn't reliable? You
-can type a request instead of saying it, any time Hey Term is running (on
-Windows and Linux/macOS/WSL): just type it into the same terminal window and
-press Enter -- no need to say the wake word first. It goes straight into the
-same planning/confirmation flow as a spoken request; only that one request
-skips voice capture, and the wake-word loop keeps listening for "Hey Term" at
-the same time. On Android/Termux, type your request in place of pressing
-Enter to trigger the push-to-talk prompt (see the Android section below).
-
 ## Language support
 
 Six languages ship with translated prompts and confirm/cancel words:
@@ -109,93 +74,6 @@ that language. **Adding a language** is one edit: add an entry to the
 \`LANGUAGES\` dict in \`lib/i18n.py\` with the same keys as the \`"en"\` entry
 (\`test/test_i18n.py\` enforces every language has exactly the same keys, so a
 missing one fails the test suite instead of failing silently at runtime).
-
-## Speech-to-text engine
-
-By default (\`SPEECH_BACKEND=auto\`), Hey Term uses the **platform's own
-speech recognizer** whenever one is available, since it's typically more
-accurate on ordinary speech than the offline Whisper model, especially at
-the default \`base\` size:
-
-- **Windows' own built-in speech recognizer** -- the same engine behind
-  Win+H voice typing -- when running on Windows.
-- **Android's speech recognizer, via Termux:API** -- when running inside
-  Termux (see "Android / Termux" below).
-
-It falls back to Whisper automatically: on plain Linux/macOS (where neither
-platform engine exists), if the platform engine can't be reached for some
-reason (mic busy, engine/companion app missing), and for any explicitly
-requested non-English \`--lang\` (neither engine listens in a per-request
-language the way Whisper does, so translated non-English requests still go
-through Whisper, which does support them directly). Whisper isn't a
-meaningful fallback on Android specifically -- see "Android / Termux" below.
-
-\`\`\`
-python main.py                          # default: platform engine when available, Whisper elsewhere
-python main.py --speech-backend whisper  # always use offline Whisper
-python main.py --speech-backend windows  # force the Windows engine; errors if unavailable
-python main.py --speech-backend termux   # force the Android engine; errors if unavailable
-\`\`\`
-
-For best accuracy from the Windows engine, check Settings > Privacy &
-security > Speech > "Online speech recognition" is turned on -- that's the
-same toggle Win+H itself depends on for its more accurate cloud-assisted
-mode; it still works offline, just with the smaller on-device model. See
-\`lib/speech_windows.py\` / \`lib/speech_termux.py\` for how this is wired up,
-and \`.env.example\` for the \`SPEECH_BACKEND\` setting.
-
-## Android / Termux
-
-Hey Term runs on Android too, inside [Termux](https://termux.dev) -- install
-Termux from **F-Droid**, not the Play Store (that build is outdated and
-widely reported broken), plus the separate **Termux:API** app (same
-publisher, also on F-Droid). Termux:API is what actually gives Hey Term
-access to the microphone, speech recognition, and text-to-speech; nothing
-audio-related works without it installed alongside Termux itself.
-
-\`\`\`
-pkg install git         # if you don't already have it, to get the source onto the device
-# (or: unzip your hey-term.zip purchase download inside Termux's storage)
-cd hey-term
-chmod +x install-termux.sh
-./install-termux.sh
-nano .env                # set ANTHROPIC_API_KEY
-python main.py --lang en
-\`\`\`
-
-Real differences from the Windows/Linux desktop version, all because Termux
-is a sandboxed, no-root Android environment rather than a full OS:
-
-- **No spoken "Hey Term" wake word -- press Enter instead.** Android's
-  speech recognizer is a discrete, one-shot call with real cold-start
-  latency each time it's invoked, which makes a short two-word phrase said
-  right at that cold start (exactly what "Hey Term" is) the hardest thing
-  to ask it to catch reliably in a repeating background-listening loop.
-  Rather than fight that, the Termux version skips the spoken wake word:
-  it prints a prompt, you press Enter, then say your request after the
-  beep -- pressing Enter *is* the wake word here. You can also just type
-  your request in place of a blank Enter press -- typing text and pressing
-  Enter runs that request straight away, no speech capture for that turn.
-  See \`run_push_to_talk_loop()\` in \`main.py\`.
-- **Speech-to-text always goes through Android's own recognizer**
-  (\`termux-speech-to-text\`, via Termux:API), never Whisper.
-  \`faster-whisper\`'s \`ctranslate2\` dependency generally has no prebuilt
-  wheel for Android's architecture and fails to build from source there, so
-  \`install-termux.sh\` installs a shorter \`requirements-termux.txt\` that
-  skips it entirely (along with \`sounddevice\`/\`numpy\`/\`pyttsx3\`, none of
-  which are needed on this platform either -- see that file). Each listen
-  briefly shows Android's own speech-recognition indicator (and plays its
-  start/end tones) rather than listening silently in the background the way
-  the desktop version's rolling-audio-chunk approach does -- wait for the
-  beep, then speak.
-- **Commands run inside Termux's own sandboxed filesystem** (its \`$HOME\`,
-  not the rest of the Android filesystem), same as any other Termux shell
-  command -- run \`termux-setup-storage\` yourself first if you want Hey Term
-  able to reach shared device storage (Downloads, Pictures, etc.) too.
-
-Everything else -- Claude-powered planning, spoken/typed confirmation, the
-dangerous-command blocklist, the audit log -- works the same as the desktop
-version. See \`scripts/setup-termux.sh\` for exactly what setup does.
 
 ## Linux / bash and Windows / PowerShell
 
@@ -232,6 +110,85 @@ actually what runs it. See \`test/test_executor.py\`'s
 6. **Audit** (\`lib/audit.py\`) -- every step above appends a JSON line to the
    audit log, independent of whether the request succeeded, was clarified,
    or was canceled.
+
+## Safety net: reverting what just ran
+
+Before running a confirmed plan, Hey Term takes a snapshot of \`git status\`
+in \`WORK_DIR\` (see \`lib/snapshot.py\`) -- if it's not a git repository, this
+is a silent no-op, everything else works exactly the same. After running,
+it diffs against that snapshot to see which paths changed, and says so:
+
+\`\`\`
+    $ npm install some-package
+    (2 file(s) changed -- say "revert" to undo)
+\`\`\`
+
+Say **"revert"** (or "undo that") right after, and it undoes just that run:
+a brand-new file gets deleted, a modified tracked file gets restored from
+\`HEAD\` via \`git checkout --\`. A file that was *already* dirty before Hey
+Term ran anything is always left alone and reported as skipped rather than
+guessed at -- there's no reliable way to tell "changes already there" apart
+from "changes this run just made" to the same file, and guessing wrong
+there is worse than doing nothing. This is one run deep, not a full undo
+stack: only the most recent run can be reverted.
+
+## Background jobs
+
+Add "in the background" (or "as a background job") to a request and Hey
+Term launches it detached instead of waiting for it -- useful for a build,
+an install, or anything slow enough that you'd rather keep talking than
+stare at the terminal:
+
+\`\`\`
+you: "Hey Term"
+you: "run the test suite in the background"
+Hey Term: "Started in the background. Say jobs to check on it."
+\`\`\`
+
+It's still voice-confirmed exactly like any other request first -- background
+only changes what happens *after* you confirm. Say **"jobs"** any time to see
+what's running or finished (\`lib/jobs.py\`); each job's full output is logged
+to \`.hey-term-jobs/<job-id>/output.log\` in \`WORK_DIR\`.
+
+## Session cost
+
+Hey Term is bring-your-own-\`ANTHROPIC_API_KEY\` -- your key, your bill, no
+markup. Every planning call's token usage is used to keep a running,
+approximate cost total for this project (\`lib/cost.py\`), persisted to
+\`.hey-term-cost.json\`. Say **"cost"** any time to hear it. This is an
+estimate from Anthropic's published per-token pricing, not a real-time
+bill -- check the Anthropic console for the actual number.
+
+## Working without Claude's API
+
+If Claude's API can't be reached (no key set, or a network failure), Hey
+Term doesn't just fail every request -- a small, fixed set of common,
+read-only requests (\`lib/offline_fallback.py\`) still work by matching
+directly to a safe command instead of asking Claude to plan one: listing
+files, git status, disk space, the current date, and a handful of others.
+Every one of those is read-only by construction; nothing in that fallback
+table writes, deletes, or installs anything, since there's no Claude call to
+reason about whether a given request is actually safe once it's this far
+outside the normal planning path. Anything outside that small list still
+needs a working connection to Claude, and Hey Term says so plainly instead
+of guessing at a command.
+
+## Custom "always ask me to type it" commands
+
+The built-in list of commands that require typed \`CONFIRM\` instead of a
+spoken one (\`lib/config.py\`'s \`DANGEROUS_PATTERNS\`) only covers things that
+can take down an entire disk or OS install -- it can't know your production
+database's actual name or which branch is your release branch. Add your own:
+
+\`\`\`
+# EXTRA_DANGEROUS_PATTERNS in .env, comma-separated:
+EXTRA_DANGEROUS_PATTERNS=drop prod_customers,git push origin release
+
+# or a longer list, one per line, in ~/.hey-term/dangerous_patterns.txt
+# (# comments allowed; set PATTERNS_FILE in .env to use a different path)
+\`\`\`
+
+Both are purely additive -- neither can remove a built-in pattern.
 
 ## Setup
 
@@ -439,23 +396,66 @@ Every command is voice-confirmed before it runs -- see README.md for the one
 exception (a short blocklist of genuinely disk/system-destroying commands
 that require the word CONFIRM typed on the keyboard instead of spoken).
 
+A few requests are handled directly instead of being sent to Claude as a
+shell-command request -- see MetaCommand below: "jobs" (check background
+jobs), "cost" (this project's running Claude API spend), and "revert" (undo
+the file changes from the last thing Hey Term ran, best-effort, git-only).
+These are recognized in English regardless of --lang for now, matching the
+audit log's existing English-first convention -- see README.md.
+
 Run:  python main.py [--lang es] [--wake-word "hey term"] [--work-dir .]
 Stop: Ctrl+C, or say the wake word then "stop listening".
 """
 import argparse
 import sys
 
-from lib import audit, config
+from lib import audit, config, cost, jobs, offline_fallback, snapshot
 from lib.agent import AgentError, plan
-from lib.audio import list_devices, record_fixed, record_until_silence, rms
+from lib.audio import record_fixed, record_until_silence
 from lib.confirm import parse_confirmation
 from lib.executor import run_commands
 from lib.i18n import get as get_strings, is_translated, list_languages
 from lib.safety import dangerous_commands
 from lib.speak import speak
-from lib import speech_termux, speech_windows, text_input
 from lib.transcribe import transcribe, transcribe_wake
 from lib.wake import heard_wake_word
+
+# Phrases that route a request to a local handler instead of Claude. Kept
+# separate from lib/i18n.py's per-language stop_phrases/yes_words/no_words on
+# purpose -- these are operator commands about Hey Term itself, not part of
+# the conversational confirm/cancel vocabulary, and adding six-language
+# variants for all of them before they've been used by a single real person
+# would be effort spent on the wrong thing. Recognized in English only for
+# now; README.md says so.
+JOBS_PHRASES = {"jobs", "check jobs", "list jobs", "job status"}
+COST_PHRASES = {"cost", "session cost", "how much has this cost", "what has this cost"}
+REVERT_PHRASES = {"revert", "revert that", "undo that", "undo it"}
+
+# A request containing any of these gets a longer timeout for its commands --
+# said when someone knows up front that what they're asking for is slow (a
+# big install, a full build) instead of hitting the default and having to
+# re-ask. The phrase itself is stripped before the request is sent to Claude
+# so it doesn't confuse the planner.
+LONGER_TIMEOUT_PHRASES = ["take your time", "give it more time", "this will take a while", "no rush"]
+LONGER_TIMEOUT_SECONDS_MULTIPLIER = 5
+
+# A request containing any of these launches as a detached background job
+# instead of blocking the voice loop -- see lib/jobs.py. Also stripped before
+# the request goes to Claude.
+BACKGROUND_PHRASES = ["in the background", "run it in the background", "as a background job"]
+
+# Per-run-loop state: the most recent snapshot taken before running commands,
+# and which paths changed, so a later "revert" request has something to act
+# on. Module-level and single-slot on purpose -- Hey Term is one interactive
+# session talking to one person, not a multi-session server, so "the last
+# thing that ran" is an unambiguous, correct scope for "revert" without
+# needing a job/snapshot ID system.
+_last_snapshot = None
+_last_changed_paths = []
+
+# Tracks whether the fallback-language notice has already been spoken this
+# run, so it's said once at startup, not on every single request.
+_fallback_notice_given = False
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -472,145 +472,36 @@ def parse_args(argv=None) -> argparse.Namespace:
                     help="Folder commands run in (default: current directory).")
     p.add_argument("--audit-log", default=config.AUDIT_LOG_PATH, metavar="PATH",
                     help="Path to the JSONL audit log (default: .hey-term-audit.jsonl in --work-dir).")
+    p.add_argument("--timeout", type=float, default=config.COMMAND_TIMEOUT_SECONDS, metavar="SECONDS",
+                    help=f"Per-command timeout in seconds (default: {config.COMMAND_TIMEOUT_SECONDS}).")
     p.add_argument("--list-languages", action="store_true", help="List translated languages and exit.")
-    p.add_argument("--list-devices", action="store_true",
-                    help="List audio input devices (with the system default marked) and exit.")
-    p.add_argument("--mic-device", default=None, metavar="INDEX_OR_NAME",
-                    help="Force a specific input device (index or name substring from --list-devices) "
-                         "instead of the system default. Same as setting MIC_DEVICE in .env.")
-    p.add_argument("--speech-backend", default=config.SPEECH_BACKEND,
-                    choices=["auto", "windows", "termux", "whisper"], metavar="BACKEND",
-                    help="Speech-to-text engine: \\"auto\\" (default) uses Windows' own speech recognizer "
-                         "or Android's (via Termux:API) when available -- usually more accurate than "
-                         "offline Whisper -- else Whisper; \\"windows\\"/\\"termux\\" force one of those and "
-                         "error if unavailable; \\"whisper\\" always uses offline Whisper (not a real "
-                         "option on Android -- see scripts/setup-termux.sh). Same as SPEECH_BACKEND in .env.")
     p.add_argument("--version", action="version", version=f"{config.PRODUCT_NAME} {config.VERSION}")
     return p.parse_args(argv)
 
 
-_NATIVE_BACKENDS = {"windows": speech_windows, "termux": speech_termux}
-
-
-def resolve_speech_backend(requested: str) -> str:
-    """Turns config/--speech-backend's "auto"/"windows"/"termux"/"whisper"
-    into the engine actually used this run. Resolved once at startup (not
-    per wake-loop chunk) since checking availability touches the Windows
-    Runtime or shells out to \`which\`. Raises ValueError (caught in main(),
-    printed, causes a clean exit) if a specific native backend was forced
-    but isn't actually available.
+def listen_for_wake_word(wake_word: str) -> bool:
+    """Records a short chunk and returns True if the wake word was heard in
+    it. Called in a loop by main(); each chunk is independent, so a missed
+    wake word just means "try the next chunk," not a lost turn. Always
+    decoded as English -- see lib/transcribe.py's transcribe_wake().
     """
-    if requested == "whisper":
-        return "whisper"
-    if requested in _NATIVE_BACKENDS:
-        module = _NATIVE_BACKENDS[requested]
-        if module.is_available():
-            return requested
-        raise ValueError(
-            f"--speech-backend {requested} (or SPEECH_BACKEND={requested}) was requested, but it "
-            f"isn't available: {module.unavailable_reason()}"
-        )
-    if requested != "auto":
-        raise ValueError(f"Unknown SPEECH_BACKEND {requested!r}; expected auto, windows, termux, or whisper.")
-    for name, module in _NATIVE_BACKENDS.items():
-        if module.is_available():
-            return name
-    return "whisper"
-
-
-def _backend_for_language(backend: str, language: str) -> str:
-    """Windows' and Android's speech recognizers, invoked with no per-call
-    language override, listen in the system's default recognition language
-    -- neither is switched per Hey Term's --lang the way Whisper is. So a
-    native backend is only used for English/auto requests; any other
-    explicitly requested language still goes through Whisper, which does
-    support it directly (on platforms where Whisper itself is viable --
-    see scripts/setup-termux.sh's note for why that excludes Android)."""
-    if backend in _NATIVE_BACKENDS and language not in ("en", "auto"):
-        return "whisper"
-    return backend
-
-
-def listen_for_wake_word(wake_word: str, backend: str) -> bool:
-    """Returns True if the wake word was heard. Called in a loop by main();
-    each attempt is independent, so a miss just means "try again," not a
-    lost turn. Always decoded as English -- see lib/transcribe.py's
-    transcribe_wake() docstring for why that's true regardless of --lang.
-
-    With backend="windows" or "termux", the platform's own speech recognizer
-    does its own microphone capture and voice-activity detection in one call
-    (see lib/speech_windows.py / lib/speech_termux.py); on any failure (mic
-    busy, engine not installed, etc.) this falls back to the Whisper path
-    for that one attempt rather than crashing the loop -- except that on
-    Termux, Whisper isn't actually a viable fallback (see
-    scripts/setup-termux.sh), so a Termux failure here just means no wake
-    word was heard this round rather than a working fallback.
-
-    With backend="whisper" (or as that fallback), near-silent chunks skip
-    transcription entirely rather than being sent to Whisper -- on silence
-    or faint room noise it doesn't reliably return an empty string, it can
-    hallucinate a fluent, plausible-sounding sentence instead. Gating on
-    energy first is what actually stops those from showing up as [heard]
-    lines and (rarely) fuzzy-matching the wake word.
-    """
-    module = _NATIVE_BACKENDS.get(backend)
-    if module is not None:
-        try:
-            text = module.recognize_once(timeout_seconds=config.WAKE_CHUNK_SECONDS)
-        except RuntimeError as err:
-            print(f"[warn] {err} -- falling back to Whisper for this listen")
-        else:
-            # Printed either way -- with a native backend there's no
-            # hallucination risk from printing an empty result (unlike the
-            # Whisper path below, which deliberately stays silent on
-            # near-silent chunks it never even sent to Whisper). Without
-            # this, total silence and a genuine hang look identical from the
-            # terminal: nothing prints in either case. This line is the only
-            # way to tell "it's cycling and just not catching me" apart from
-            # "it's stuck."
-            print(f"[heard] {text}" if text else "[listening] (nothing heard that round)")
-            return heard_wake_word(text, wake_word=wake_word)
-
     clip = record_fixed(config.WAKE_CHUNK_SECONDS)
-    if rms(clip) < config.SILENCE_RMS_THRESHOLD:
-        return False
     text = transcribe_wake(clip)
     if text:
         print(f"[heard] {text}")
     return heard_wake_word(text, wake_word=wake_word)
 
 
-def take_command(language: str, backend: str) -> str:
+def take_command(language: str) -> str:
     strings = get_strings(language)
     speak(strings["listening_prompt"], language=language)
-
-    backend = _backend_for_language(backend, language)
-    module = _NATIVE_BACKENDS.get(backend)
-    if module is not None:
-        try:
-            return module.recognize_once().strip()
-        except RuntimeError as err:
-            print(f"[warn] {err} -- falling back to Whisper for this command")
-
     audio = record_until_silence(config.COMMAND_MAX_SECONDS)
     text = transcribe(audio, language=language)
     return text.strip()
 
 
-def get_confirmation(language: str, backend: str) -> str:
+def get_confirmation(language: str) -> str:
     """Returns "confirm", "cancel", or "unclear" from a spoken reply."""
-    backend = _backend_for_language(backend, language)
-    module = _NATIVE_BACKENDS.get(backend)
-    if module is not None:
-        try:
-            text = module.recognize_once(timeout_seconds=5)
-        except RuntimeError as err:
-            print(f"[warn] {err} -- falling back to Whisper for this confirmation")
-        else:
-            if text:
-                print(f"[heard] {text}")
-            return parse_confirmation(text, language=language)
-
     audio = record_until_silence(max_seconds=5)
     text = transcribe(audio, language=language)
     if text:
@@ -626,16 +517,62 @@ def get_typed_confirmation(prompt: str) -> bool:
     return typed.strip() == "CONFIRM"
 
 
-def handle_request(request_text: str, language: str, work_dir: str, backend: str, history: list = None) -> None:
-    """\`history\`, when given, is the running conversation for this session
-    (see lib/agent.py's build_messages()) -- a mutable list this function
-    both reads (to give Claude prior context) and appends to (so the next
-    request gets this one as context too). Passing None (the default)
-    keeps the original behavior: every request judged with no memory of any
-    other. Both run loops in this file create one history list per run and
-    pass the same list into every handle_request() call, which is what
-    makes it a running conversation rather than a fresh one each time.
+def _strip_phrase(text: str, phrases: list) -> tuple:
+    """Returns (text_with_phrase_removed, found: bool) for the first matching
+    phrase, case-insensitively. Used to pull operator hints ("...in the
+    background", "...take your time") out of a request before it's sent to
+    Claude, so the planner reasons about the actual task, not Hey Term's own
+    control phrases.
     """
+    lowered = text.lower()
+    for phrase in phrases:
+        if phrase in lowered:
+            idx = lowered.find(phrase)
+            cleaned = (text[:idx] + text[idx + len(phrase):]).strip(" ,.")
+            return cleaned, True
+    return text, False
+
+
+def handle_jobs_command(language: str, work_dir: str) -> None:
+    strings = get_strings(language)
+    records = jobs.list_jobs(work_dir)
+    audit.log_event("jobs_check", count=len(records))
+    if not records:
+        speak(strings["jobs_none"], language=language)
+        return
+    running = [r for r in records if r.get("status") == "running"]
+    finished = [r for r in records if r.get("status") != "running"]
+    for r in records:
+        print(f"    [{r['status']}] {r['id']}  {r.get('label') or r['command']}")
+    speak(f"{len(running)} running, {len(finished)} finished.", language=language)
+
+
+def handle_cost_command(language: str) -> None:
+    audit.log_event("cost_check")
+    summary = cost.spoken_summary()
+    print(f"    {summary}")
+    speak(summary, language=language)
+
+
+def handle_revert_command(language: str) -> None:
+    global _last_snapshot, _last_changed_paths
+    strings = get_strings(language)
+    if not _last_snapshot or not _last_changed_paths:
+        speak(strings["revert_none"], language=language)
+        audit.log_event("revert", outcome="nothing_to_revert")
+        return
+    reverted, skipped = snapshot.revert(_last_snapshot, _last_changed_paths)
+    for path in reverted:
+        print(f"    reverted: {path}")
+    for path in skipped:
+        print(f"    skipped (already had unrelated changes): {path}")
+    audit.log_event("revert", reverted=reverted, skipped=skipped)
+    speak(strings["revert_done"].format(n=len(reverted)), language=language)
+    _last_snapshot, _last_changed_paths = None, []
+
+
+def handle_request(request_text: str, language: str, work_dir: str, timeout_seconds: float) -> None:
+    global _last_snapshot, _last_changed_paths
     strings = get_strings(language)
 
     if not request_text:
@@ -647,29 +584,36 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
     if normalized in strings["stop_phrases"]:
         speak(strings["stopping"], language=language)
         audit.log_event("request", language=language, text=request_text, outcome="stop_phrase")
-        if history is not None:
-            # A deliberate "stop"/"goodbye" is a natural conversation
-            # boundary -- whatever comes next shouldn't be resolved against
-            # what was asked before someone signed off.
-            history.clear()
+        return
+
+    if normalized in JOBS_PHRASES:
+        handle_jobs_command(language, work_dir)
+        return
+    if normalized in COST_PHRASES:
+        handle_cost_command(language)
+        return
+    if normalized in REVERT_PHRASES:
+        handle_revert_command(language)
         return
 
     audit.log_event("request", language=language, text=request_text)
 
+    request_text, run_longer = _strip_phrase(request_text, LONGER_TIMEOUT_PHRASES)
+    request_text, run_background = _strip_phrase(request_text, BACKGROUND_PHRASES)
+    effective_timeout = timeout_seconds * LONGER_TIMEOUT_SECONDS_MULTIPLIER if run_longer else timeout_seconds
+
     try:
-        result = plan(request_text, language=language, history=history)
+        result = plan(request_text, language=language)
     except AgentError as err:
         print(f"[error] {err}")
-        speak(strings["agent_error"], language=language)
         audit.log_event("plan_error", language=language, error=str(err))
-        return
-
-    if history is not None:
-        history.append({"request": request_text, "result": result})
-        if config.CONVERSATION_HISTORY_TURNS <= 0:
-            history.clear()
-        else:
-            del history[:-config.CONVERSATION_HISTORY_TURNS]
+        offline_result = offline_fallback.try_offline_plan(request_text)
+        if offline_result is None:
+            speak(strings["offline_no_match"], language=language)
+            return
+        speak(strings["offline_notice"], language=language)
+        result = offline_result
+        audit.log_event("offline_plan", language=language, summary=result["summary"], commands=result["commands"])
 
     if "clarify" in result:
         speak(result["clarify"], language=language)
@@ -696,7 +640,7 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
         speak(f"{summary} {strings['ask_confirm']}", language=language)
         for cmd in commands:
             print(f"    $ {cmd}")
-        answer = get_confirmation(language, backend)
+        answer = get_confirmation(language)
         audit.log_event("confirmation", language=language, method="voice", commands=commands, outcome=answer)
         if answer == "unclear":
             speak(strings["unclear_cancel"], language=language)
@@ -705,12 +649,31 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
             speak(strings["canceled"], language=language)
             return
 
-    report = run_commands(commands, work_dir=work_dir)
+    # Note: a background request still went through the same confirm gate
+    # above -- risky commands still required typed CONFIRM either way. Only
+    # what happens AFTER confirmation differs here: detached instead of
+    # waited-on in the foreground.
+    if run_background:
+        joined = " && ".join(commands)
+        record = jobs.start(joined, work_dir=work_dir, label=summary)
+        audit.log_event("background_start", job_id=record["id"], commands=commands)
+        speak(strings["background_started"], language=language)
+        print(f"    job {record['id']} started (pid {record.get('pid')})")
+        return
+
+    snap = snapshot.take(work_dir)
+
+    report = run_commands(commands, work_dir=work_dir, timeout_seconds=effective_timeout)
+
+    changed = snapshot.changed_since(snap)
+    _last_snapshot, _last_changed_paths = snap, changed
+
     speak(report.spoken_summary(language=language), language=language)
     audit.log_event(
         "run",
         language=language,
         ok=report.ok,
+        changed_files=changed,
         results=[
             {"command": r.command, "returncode": r.returncode, "ran": r.ran, "error": r.error}
             for r in report.results
@@ -727,95 +690,22 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
             print(f"[stderr] {r.stderr}")
         if r.error:
             print(f"[error] {r.error}")
+    if changed:
+        print(f"    ({len(changed)} file(s) changed -- say \\"revert\\" to undo)")
 
 
-def run_push_to_talk_loop(language: str, work_dir: str, backend: str) -> None:
-    """Termux's stand-in for the wake-word loop: press Enter, then say your
-    request directly (no "Hey Term" needed) -- pressing Enter *is* the wake
-    word here. Typing the request itself, then Enter, skips voice capture
-    for that turn entirely and runs it straight through handle_request() --
-    the same escape hatch main()'s wake-word loop gets from lib/text_input.py,
-    just implemented directly here since this loop already reads one line of
-    stdin per turn anyway (no need for that module's background thread).
-
-    Why not reuse listen_for_wake_word()'s repeated-short-recognition
-    approach: Android's speech recognizer is a discrete, one-shot call with
-    real cold-start latency each time (see lib/speech_termux.py's module
-    docstring), so a short two-word phrase said right at that cold start --
-    exactly what "Hey Term" is -- is the single hardest thing to ask it to
-    catch reliably, and testing this live is what surfaced that. Command and
-    confirmation capture don't have the same problem: both are already
-    preceded by a spoken TTS prompt that finishes right before listening
-    starts, which gives a natural, audible "listening starts now" cue the
-    bare wake-word loop never had. Enter does the same job for the first
-    step.
-    """
-    history: list = []
-    while True:
-        try:
-            typed = input(
-                '\\n[Hey Term] Press Enter, then say your request after the beep -- '
-                'or type it here and press Enter (Ctrl+C to quit)...'
-            )
-        except EOFError:
-            return
-        typed = typed.strip()
-        if typed:
-            print(f"[you typed] {typed}")
-            handle_request(typed, language, work_dir, backend, history)
-            continue
-        request_text = take_command(language, backend)
-        if request_text:
-            print(f"[you] {request_text}")
-        handle_request(request_text, language, work_dir, backend, history)
-
-
-def run_wake_word_loop(wake_word: str, language: str, work_dir: str, backend: str) -> None:
-    """The default (non-Termux) run loop: listens for the wake word in short
-    rolling chunks same as always, but on every pass through also checks --
-    without blocking -- whether a request has been typed instead (see
-    lib/text_input.py, started once here). A typed line always wins that
-    check and runs immediately, skipping voice capture for that turn; the
-    wake-word listen only happens when nothing's been typed since the last
-    time through.
-    """
-    history: list = []
-    text_input.start()
-    while True:
-        typed = text_input.poll()
-        if typed:
-            print(f"[you typed] {typed}")
-            audit.log_event("wake", method="typed")
-            handle_request(typed, language, work_dir, backend, history)
-            continue
-        if listen_for_wake_word(wake_word, backend):
-            audit.log_event("wake", method="voice")
-            request_text = take_command(language, backend)
-            if request_text:
-                print(f"[you] {request_text}")
-            handle_request(request_text, language, work_dir, backend, history)
-
-
-def print_banner(language: str, work_dir: str, backend: str) -> None:
+def print_banner(language: str, work_dir: str) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
     print(f"Language: {language}" + ("" if is_translated(language) or language == "auto" else " (untranslated -- using English prompts)"))
-    if backend in _NATIVE_BACKENDS:
-        label = "Windows' built-in speech recognizer" if backend == "windows" else "Android's speech recognizer (via Termux:API)"
-        note = "" if language in ("en", "auto") else " (falls back to Whisper for this non-English language)"
-        print(f"Speech-to-text: {label}{note}")
-    else:
-        print(f"Speech-to-text: offline Whisper ({config.WHISPER_MODEL_SIZE})")
-    if backend == "termux":
-        print('Wake: press Enter, then speak -- or type your request and press Enter instead '
-              '(no reliable passive wake-word listening on Android -- see README). Ctrl+C to quit.')
-    else:
-        print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks, "
-              "or just type a request here and press Enter. Ctrl+C to quit.")
+    print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
     print(f"Audit log: {config.AUDIT_LOG_PATH}")
+    print(f"Command timeout: {config.COMMAND_TIMEOUT_SECONDS}s (say \\"take your time\\" in a request for a longer one)")
+    print("Say \\"jobs\\", \\"cost\\", or \\"revert\\" any time for background-job status, session spend, or to undo the last run.")
 
 
 def main(argv=None) -> int:
+    global _fallback_notice_given
     args = parse_args(argv)
 
     if args.list_languages:
@@ -823,41 +713,46 @@ def main(argv=None) -> int:
             print(f"{code}\\t{get_strings(code)['name']}")
         return 0
 
-    if args.list_devices:
-        print(list_devices())
-        return 0
-
-    if args.mic_device is not None:
-        config.MIC_DEVICE = args.mic_device
-
     if not config.ANTHROPIC_API_KEY:
-        print("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it in.")
-        return 1
-
-    try:
-        backend = resolve_speech_backend(args.speech_backend)
-    except ValueError as err:
-        print(err)
-        return 1
+        print("ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it in. "
+              "Hey Term will still answer a small set of common requests (see lib/offline_fallback.py) "
+              "without it, but full planning needs a key.")
 
     language = args.lang
     wake_word = args.wake_word.lower().strip()
     work_dir = args.work_dir
     config.AUDIT_LOG_PATH = args.audit_log  # honor --audit-log override for this run
+    config.COMMAND_TIMEOUT_SECONDS = args.timeout  # honor --timeout override for this run
 
-    print_banner(language, work_dir, backend)
-    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION, speech_backend=backend)
+    print_banner(language, work_dir)
+    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION)
+
+    if language != "auto" and not is_translated(language) and not _fallback_notice_given:
+        speak(get_strings(language)["fallback_language_notice"], language=DEFAULT_LANGUAGE_FOR_NOTICE)
+        _fallback_notice_given = True
+
     speak(get_strings(language)["ready"], language=language)
 
     try:
-        if backend == "termux":
-            run_push_to_talk_loop(language, work_dir, backend)
-        else:
-            run_wake_word_loop(wake_word, language, work_dir, backend)
+        while True:
+            if listen_for_wake_word(wake_word):
+                audit.log_event("wake")
+                request_text = take_command(language)
+                if request_text:
+                    print(f"[you] {request_text}")
+                handle_request(request_text, language, work_dir, config.COMMAND_TIMEOUT_SECONDS)
     except KeyboardInterrupt:
         print("\\nStopped.")
         audit.log_event("shutdown", reason="keyboard_interrupt")
         return 0
+
+
+# get_strings() already falls back an untranslated language's strings to
+# English, so the notice itself is always spoken in English -- named as a
+# constant, not lib.i18n.DEFAULT_LANGUAGE re-imported under a new name, so
+# it's clear at the call site *why* English is forced here rather than
+# leaving a reader to wonder if it's a bug.
+DEFAULT_LANGUAGE_FOR_NOTICE = "en"
 
 
 if __name__ == "__main__":
@@ -871,10 +766,6 @@ numpy>=1.24
 faster-whisper>=1.0.0
 pyttsx3>=2.90
 requests>=2.31
-# Windows' own speech recognizer (used by default on Windows -- see
-# lib/speech_windows.py and SPEECH_BACKEND in .env.example). Only installs
-# on Windows; Linux/macOS use Whisper only and never import this.
-winsdk>=1.0.0; sys_platform == "win32"
 `,
   },
   {
@@ -911,78 +802,55 @@ include = ["lib*"]
   },
   {
     path: ".env.example",
-    contents: `# Hey Term -- Copyright (c) 2026 MultiNiche AI. All rights reserved.
+    contents: `# Copy this file to .env and fill in at least ANTHROPIC_API_KEY.
+# Every setting below is optional except that one -- Hey Term runs with just
+# the built-in defaults for everything else. See lib/config.py for how each
+# of these is read and README.md for what they do.
 
-# Required: your Anthropic API key (console.anthropic.com -> API Keys).
+# Required. Your own Anthropic API key -- Hey Term is bring-your-own-key,
+# your usage, your bill, no markup. Get one at https://console.anthropic.com
 ANTHROPIC_API_KEY=
 
-# Optional overrides -- defaults shown. CLI flags (--lang, --wake-word,
-# --work-dir, --audit-log) override these for a single run without editing
-# this file; run \`python main.py --help\` to see them.
+# Which Claude model plans your requests.
 # ANTHROPIC_MODEL=claude-sonnet-4-5
 
-# How many recent request/reply exchanges get replayed back to Claude on
-# every new request, so a follow-up ("the chroot one", "undo that") resolves
-# against what was just said instead of being judged as a brand new,
-# context-free request. Resets automatically on "stop listening" (or its
-# translated equivalent). Set to 0 to turn this off entirely.
-# CONVERSATION_HISTORY_TURNS=6
-
-# The wake phrase is Hey Term's name and, like "Hey Siri"/"Hey Google", is
-# said the same way regardless of which language you set below.
+# The wake phrase. Not translated per-language on purpose -- see lib/i18n.py.
 # WAKE_WORD=hey term
 # WAKE_MATCH_THRESHOLD=0.72
 
-# Language spoken/listened to AFTER the wake word. "auto" detects it from
-# each utterance instead of assuming one. Run \`python main.py --list-languages\`
-# for the languages with translated prompts (en, es, fr, de, pt, it as
-# shipped); any language Whisper/Claude understand still works for the
-# request itself even if it isn't in that list -- it just gets English
-# prompts/confirmation words back. See lib/i18n.py to add a new one.
+# Spoken/listening language after the wake word. "auto" detects per request.
+# See \`python main.py --list-languages\` for what's translated.
 # LANGUAGE=en
 
-# base is the multilingual Whisper model (required for LANGUAGE != en).
-# small is more accurate but slower per chunk; tiny is faster but misses
-# more words. All run fully offline once downloaded.
+# Offline speech-to-text model size/device (faster-whisper).
 # WHISPER_MODEL_SIZE=base
 # WHISPER_DEVICE=cpu
 
-# Which engine turns speech into text. "auto" (default) uses the platform's
-# own speech recognizer when available: Windows' built-in one (the same
-# engine behind Win+H voice typing) on Windows, or Android's via Termux:API
-# inside Termux -- both usually more accurate on ordinary speech than
-# offline Whisper -- falling back to Whisper anywhere neither applies.
-# "windows"/"termux" force one of those and error out if unavailable;
-# "whisper" always uses offline Whisper (not a real option on Android --
-# see scripts/setup-termux.sh). Only applies to English/auto -- an explicit
-# non-English LANGUAGE always uses Whisper, since neither native engine is
-# switched per-request the way Whisper is. See lib/speech_windows.py /
-# lib/speech_termux.py, and (Windows only) Settings > Privacy & security >
-# Speech > "Online speech recognition" for the toggle that affects its
-# accuracy.
-# SPEECH_BACKEND=auto
-
-# Forces a specific microphone instead of the system default. Run
-# \`python main.py --list-devices\` to see indices/names -- useful if the
-# default recording device isn't actually your mic (a "Stereo Mix"/"What U
-# Hear" loopback device left as Windows' default input will make Hey Term
-# hear whatever's playing through your speakers instead of your voice).
-# MIC_DEVICE=
-
+# Audio tuning -- rarely needs changing.
 # SAMPLE_RATE=16000
 # WAKE_CHUNK_SECONDS=2.5
 # COMMAND_MAX_SECONDS=12
 # SILENCE_HOLD_SECONDS=1.2
 # SILENCE_RMS_THRESHOLD=0.012
 
-# Folder commands run in. Defaults to wherever you launch \`python main.py\`
-# from -- set this to pin it to one project instead.
-# WORK_DIR=/home/you/projects/my-repo
+# Folder commands run in. Defaults to wherever you launched Hey Term from.
+# WORK_DIR=
 
-# Every wake/request/plan/confirmation/run is appended here as one JSON
-# object per line -- a full audit trail of what Hey Term has ever done.
-# Defaults to .hey-term-audit.jsonl inside WORK_DIR.
-# AUDIT_LOG_PATH=/home/you/projects/my-repo/.hey-term-audit.jsonl
+# Where the JSONL audit log and the running cost total are written.
+# Default to WORK_DIR/.hey-term-audit.jsonl and WORK_DIR/.hey-term-cost.json.
+# AUDIT_LOG_PATH=
+# COST_LOG_PATH=
+
+# How long (seconds) a single command may run before Hey Term kills it and
+# reports a timeout. Say "take your time" in a request for a one-off longer
+# timeout without raising this default.
+# COMMAND_TIMEOUT_SECONDS=120
+
+# Your own additions to the built-in dangerous-command blocklist (see
+# README.md's "Custom always-ask-me-to-type-it commands"). Comma-separated
+# here, or point PATTERNS_FILE at a longer one-per-line file instead.
+# EXTRA_DANGEROUS_PATTERNS=
+# PATTERNS_FILE=
 `,
   },
   {
@@ -1032,38 +900,6 @@ if ($Yes) { $setupArgs.Yes = $true }
 `,
   },
   {
-    path: "install-termux.sh",
-    contents: `#!/usr/bin/env bash
-# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-# Licensed to a single purchaser under the terms in LICENSE.md.
-# Redistribution or resale of this source, in whole or in part, is not permitted.
-#
-# Entry point for Android setup (inside Termux -- see scripts/setup-termux.sh
-# for what it does and requirements-termux.txt for why the Termux dependency
-# list differs from install.sh's). Anything you pass here is forwarded as-is:
-#
-#   ./install-termux.sh --yes
-set -euo pipefail
-DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-exec "$DIR/scripts/setup-termux.sh" "$@"
-`,
-  },
-  {
-    path: "requirements-termux.txt",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-#
-# Slimmed-down dependency list for Termux (Android). Deliberately NOT the
-# same as requirements.txt: sounddevice/numpy/faster-whisper/pyttsx3 either
-# don't work in Termux's sandbox (sounddevice/PortAudio has no real
-# microphone access there) or generally fail to build for Android's
-# architecture (faster-whisper's ctranslate2 dependency). None of them are
-# needed anyway -- lib/speech_termux.py and lib/speak.py's Termux path use
-# Termux:API's own commands (termux-speech-to-text, termux-tts-speak)
-# instead. See scripts/setup-termux.sh.
-requests>=2.31
-`,
-  },
-  {
     path: "lib/__init__.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 `,
@@ -1086,7 +922,8 @@ import platform
 
 import requests
 
-from .config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, CONVERSATION_HISTORY_TURNS, is_windows
+from . import cost
+from .config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, is_windows
 from .i18n import get as get_strings
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -1114,12 +951,6 @@ real bash (not a generic POSIX sh subset) on Linux/macOS, real PowerShell \\
 short, natural, speakable sentence -- it will be read aloud by text-to-speech, \\
 not displayed as text. Commands stay in real shell syntax regardless of \\
 {language_name}, since a shell doesn't speak {language_name}.
-- Earlier turns in this conversation, if any, are real prior exchanges -- use \\
-them to resolve a request that only makes sense in light of what was just \\
-said ("the chroot one" answering a clarifying question you just asked, "undo \\
-that" referring to the last command you planned). A request that stands on \\
-its own is planned on its own merits; don't let old context invent extra \\
-steps a self-contained request didn't ask for.
 
 Respond with ONLY a single JSON object, no other text, in exactly one of \\
 these two shapes:
@@ -1141,46 +972,12 @@ def _shell_name() -> str:
     return "PowerShell" if is_windows() else "bash"
 
 
-def build_messages(request_text: str, history: list = None) -> list:
-    """Turns the current request plus prior (request, result) pairs into the
-    Messages API's alternating user/assistant list -- each earlier result
-    (a "clarify" or a "summary"+"commands" dict) is replayed back exactly as
-    Claude returned it, so it's grounded in what it actually said before, not
-    a paraphrase of it. Separated from plan() so the shape of what gets sent
-    is directly testable without a network call.
-
-    \`history\` is oldest-first; only the last CONVERSATION_HISTORY_TURNS
-    entries are used, so a long-running session doesn't grow the request
-    sent to Claude without bound. Pass None/[] (the default) for no memory --
-    every request judged purely on its own, the original behavior.
-    """
-    if CONVERSATION_HISTORY_TURNS <= 0:
-        # \`list[-0:]\` is \`list[0:]\` -- the WHOLE list, not "none of it" --
-        # so 0 needs its own branch rather than falling through to the
-        # slice below, which would otherwise silently send full history
-        # even though 0 is documented (lib/config.py) as "disables this
-        # entirely."
-        return [{"role": "user", "content": request_text}]
-
-    messages = []
-    for turn in (history or [])[-CONVERSATION_HISTORY_TURNS:]:
-        messages.append({"role": "user", "content": turn["request"]})
-        messages.append({"role": "assistant", "content": json.dumps(turn["result"])})
-    messages.append({"role": "user", "content": request_text})
-    return messages
-
-
-def plan(request_text: str, language: str = "en", api_key: str = None, history: list = None) -> dict:
+def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
     """Ask Claude to turn spoken text into a plan. Returns either
     {"summary": str, "commands": [str, ...]} or {"clarify": str}.
     Raises AgentError on a network failure or a response that isn't valid
     JSON in one of those two shapes -- callers should treat that as "ask the
     person to repeat themselves," never as a command to run.
-
-    \`history\`, if given, is the running conversation so far (see
-    build_messages()) -- lets a follow-up request ("the chroot one", "undo
-    that") resolve against what was just discussed instead of being judged
-    as a brand new, context-free request.
     """
     key = api_key or ANTHROPIC_API_KEY
     if not key:
@@ -1201,7 +998,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None, history: 
                 "model": ANTHROPIC_MODEL,
                 "max_tokens": 500,
                 "system": system,
-                "messages": build_messages(request_text, history),
+                "messages": [{"role": "user", "content": request_text}],
             },
             timeout=TIMEOUT_SECONDS,
         )
@@ -1218,6 +1015,19 @@ def plan(request_text: str, language: str = "en", api_key: str = None, history: 
         ).strip()
     except (ValueError, KeyError) as err:
         raise AgentError(f"Unexpected response shape from Claude's API: {err}") from err
+
+    # Track spend from the API's own reported token counts -- best-effort,
+    # never lets a cost-tracking hiccup fail a request that otherwise
+    # succeeded. See lib/cost.py for why this exists.
+    try:
+        usage = data.get("usage") or {}
+        cost.record_usage(
+            model=ANTHROPIC_MODEL,
+            input_tokens=int(usage.get("input_tokens", 0)),
+            output_tokens=int(usage.get("output_tokens", 0)),
+        )
+    except Exception:
+        pass
 
     return parse_plan(text)
 
@@ -1269,84 +1079,16 @@ def parse_plan(text: str) -> dict:
 """Microphone capture. Imports sounddevice/numpy lazily inside functions so
 that importing this module (e.g. from a test) doesn't require audio hardware
 or system audio libraries (portaudio) to be installed.
-
-Imports the config module itself (not its values by name) so a runtime
-override of config.MIC_DEVICE -- e.g. main.py's --mic-device flag -- is
-actually seen here, the same reason lib/audit.py reads config.AUDIT_LOG_PATH
-live instead of importing it by value.
 """
-from . import config
-
-
-def _resolve_device():
-    """Returns a sounddevice device index to pass as \`device=\`, or None to
-    use the system default. config.MIC_DEVICE can be a numeric index or a
-    case-insensitive substring of a device name (see --list-devices)."""
-    setting = config.MIC_DEVICE
-    if not setting:
-        return None
-    if setting.isdigit():
-        return int(setting)
-
-    import sounddevice as sd
-
-    needle = setting.lower()
-    matches = [
-        i
-        for i, d in enumerate(sd.query_devices())
-        if d["max_input_channels"] > 0 and needle in d["name"].lower()
-    ]
-    if not matches:
-        raise RuntimeError(
-            f"MIC_DEVICE={setting!r} didn't match any input device. "
-            f"Run \`python main.py --list-devices\` to see what's available."
-        )
-    return matches[0]
-
-
-def rms(clip) -> float:
-    """Root-mean-square energy of a recorded clip. Used to skip sending
-    near-silent audio to Whisper -- on silence or faint background noise,
-    Whisper doesn't reliably return an empty string, it can hallucinate a
-    fluent, plausible-sounding sentence instead (a documented Whisper
-    behavior, not a bug in this code). Gating on energy before transcribing
-    avoids feeding it the near-silent chunks that trigger this."""
-    import numpy as np
-
-    if clip is None or len(clip) == 0:
-        return 0.0
-    return float(np.sqrt(np.mean(np.square(clip))))
-
-
-def list_devices() -> str:
-    """Human-readable list of input-capable audio devices, for
-    --list-devices. Marks the system default explicitly, since a wrong
-    default (e.g. a loopback/"Stereo Mix" device instead of the real mic)
-    is the most common cause of Hey Term hearing background audio instead
-    of your voice."""
-    import sounddevice as sd
-
-    try:
-        default_input = sd.default.device[0]
-    except Exception:
-        default_input = None
-
-    lines = []
-    for i, d in enumerate(sd.query_devices()):
-        if d["max_input_channels"] <= 0:
-            continue
-        marker = "  <- system default" if i == default_input else ""
-        lines.append(f"  [{i}] {d['name']}{marker}")
-    return "\\n".join(lines) if lines else "No input devices found."
+from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD
 
 
 def record_fixed(seconds: float, sample_rate: int = None):
     """Records a fixed-length clip and returns a 1-D float32 numpy array."""
     import sounddevice as sd
 
-    rate = sample_rate or config.SAMPLE_RATE
-    audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32",
-                    device=_resolve_device())
+    rate = sample_rate or SAMPLE_RATE
+    audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32")
     sd.wait()
     return audio.reshape(-1)
 
@@ -1364,9 +1106,9 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     import numpy as np
     import sounddevice as sd
 
-    rate = sample_rate or config.SAMPLE_RATE
-    hold = silence_hold if silence_hold is not None else config.SILENCE_HOLD_SECONDS
-    threshold = rms_threshold if rms_threshold is not None else config.SILENCE_RMS_THRESHOLD
+    rate = sample_rate or SAMPLE_RATE
+    hold = silence_hold if silence_hold is not None else SILENCE_HOLD_SECONDS
+    threshold = rms_threshold if rms_threshold is not None else SILENCE_RMS_THRESHOLD
 
     block_seconds = 0.2
     block_size = int(rate * block_seconds)
@@ -1376,7 +1118,7 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     heard_speech = False
     max_blocks = int(max_seconds / block_seconds)
 
-    with sd.InputStream(samplerate=rate, channels=1, dtype="float32", device=_resolve_device()) as stream:
+    with sd.InputStream(samplerate=rate, channels=1, dtype="float32") as stream:
         for _ in range(max_blocks):
             block, _overflow = stream.read(block_size)
             block = block.reshape(-1)
@@ -1463,7 +1205,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -1509,41 +1251,6 @@ LANGUAGE = os.environ.get("LANGUAGE", "en").lower().strip()
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "base")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 
-# Which engine turns speech into text. "auto" (default) uses the platform's
-# own speech recognizer when available -- Windows' built-in one (the same
-# on-device/cloud-assisted engine behind Win+H voice typing) on Windows, or
-# Android's (via Termux:API's termux-speech-to-text) inside Termux -- since
-# both are typically more accurate on ordinary speech than the offline
-# Whisper "base"/"small" models, and falls back to Whisper anywhere neither
-# is available (plain Linux/macOS, or if the platform engine can't be
-# reached). "windows"/"termux" force one of those and error out if it's
-# unavailable; "whisper" always uses offline Whisper regardless of platform
-# -- not a real option on Android, see scripts/setup-termux.sh. See
-# lib/speech_windows.py and lib/speech_termux.py.
-SPEECH_BACKEND = os.environ.get("SPEECH_BACKEND", "auto").lower().strip()
-
-# Optional: force a specific input device instead of relying on the OS
-# default (sounddevice/PortAudio otherwise always records from whatever the
-# system's default recording device is). Set to a device index (e.g. "1")
-# or a case-insensitive substring of a device name (e.g. "Realtek", "USB
-# Microphone") -- run \`python main.py --list-devices\` to see what's
-# available. Useful when the system default isn't actually the mic you want
-# it to hear: a "Stereo Mix"/"What U Hear" loopback device (which records
-# whatever's playing through your speakers, not your voice) getting left as
-# the Windows default input is the most common way this goes wrong.
-MIC_DEVICE = os.environ.get("MIC_DEVICE", "").strip()
-
-# How many prior request/response exchanges are replayed back to Claude on
-# every new request, so it has conversational memory -- answering "the
-# chroot one" after Hey Term asked a clarifying question, or "undo that"
-# after a prior command, actually resolves against what was just said
-# instead of landing as a standalone, context-free request. 0 disables this
-# entirely (each request judged alone, the original behavior). Kept small on
-# purpose: this is resent as full conversation turns on every single
-# request, so a larger number means more tokens (and a slower, pricier call)
-# every time, not just when a follow-up actually needs the context.
-CONVERSATION_HISTORY_TURNS = int(os.environ.get("CONVERSATION_HISTORY_TURNS", "6"))
-
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
 COMMAND_MAX_SECONDS = float(os.environ.get("COMMAND_MAX_SECONDS", "12"))
@@ -1562,6 +1269,20 @@ WORK_DIR = os.environ.get("WORK_DIR") or os.getcwd()
 # your say-so should always be able to answer "what did you run, and when."
 AUDIT_LOG_PATH = os.environ.get("AUDIT_LOG_PATH") or os.path.join(WORK_DIR, ".hey-term-audit.jsonl")
 
+# How long a single command is allowed to run before Hey Term kills it and
+# reports a timeout, in seconds. Was a fixed 120s; now overridable per install
+# (via .env/COMMAND_TIMEOUT_SECONDS) and per-request (a spoken "give it more
+# time" -- see main.py's LONGER_TIMEOUT_PHRASES) for the genuinely slow stuff
+# (a big install, a long build) without raising the default for everything.
+COMMAND_TIMEOUT_SECONDS = float(os.environ.get("COMMAND_TIMEOUT_SECONDS", "120"))
+
+# Session running-total cost tracking (see lib/cost.py). Off by default would
+# defeat the point -- someone handing Hey Term their own API key should always
+# be able to ask "what has this cost me so far" without digging through the
+# Anthropic console. Persisted per work_dir so "cost" reflects this project,
+# not every project Hey Term has ever touched.
+COST_LOG_PATH = os.environ.get("COST_LOG_PATH") or os.path.join(WORK_DIR, ".hey-term-cost.json")
+
 _IS_WINDOWS = platform.system() == "Windows"
 
 
@@ -1578,7 +1299,7 @@ def is_windows() -> bool:
 # purpose: a long blocklist gives a false sense of coverage it can't deliver,
 # so this exists to catch the handful of single commands that can destroy an
 # entire disk or OS install, not to be a general security boundary.
-DANGEROUS_PATTERNS = [
+_BUILTIN_DANGEROUS_PATTERNS = [
     "rm -rf /",
     "rm -rf ~",
     "rm -rf .",
@@ -1597,6 +1318,53 @@ DANGEROUS_PATTERNS = [
     "drop database",
     "drop table",
     "truncate table",
+]
+
+
+def _load_extra_patterns() -> list:
+    """User-defined additions to the built-in blocklist above.
+
+    The built-in list only covers things that can nuke an entire disk or OS
+    install -- it deliberately says nothing about a specific person's own
+    "don't touch this" list (their production database's actual name, their
+    release branch, a customer-data table). Those are just as dangerous *to
+    that person* but can't be guessed in advance, so this loads more patterns
+    from two places, both optional and additive (nothing here can remove a
+    built-in pattern):
+
+    - EXTRA_DANGEROUS_PATTERNS env var / .env entry: comma-separated.
+    - A patterns file, one pattern per line ("#" comments allowed), at
+      PATTERNS_FILE if set, else ~/.hey-term/dangerous_patterns.txt if it
+      exists. Easier to keep a long list here than crammed into one env var.
+    """
+    extra = []
+
+    env_val = os.environ.get("EXTRA_DANGEROUS_PATTERNS", "")
+    if env_val:
+        extra.extend(p.strip() for p in env_val.split(",") if p.strip())
+
+    patterns_file = os.environ.get("PATTERNS_FILE") or os.path.expanduser(
+        os.path.join("~", ".hey-term", "dangerous_patterns.txt")
+    )
+    if os.path.isfile(patterns_file):
+        with open(patterns_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    extra.append(line)
+
+    return extra
+
+
+# Commands matching these (case-insensitive substring) patterns are never run
+# on a spoken "confirm" alone -- see lib/safety.py. The built-in list is kept
+# short and specific on purpose: a long blocklist gives a false sense of
+# coverage it can't deliver, so it exists to catch the handful of single
+# commands that can destroy an entire disk or OS install, not to be a general
+# security boundary. Anything install-specific belongs in _load_extra_patterns
+# instead of growing this list.
+DANGEROUS_PATTERNS = _BUILTIN_DANGEROUS_PATTERNS + [
+    p for p in _load_extra_patterns() if p.lower() not in {b.lower() for b in _BUILTIN_DANGEROUS_PATTERNS}
 ]
 `,
   },
@@ -1649,6 +1417,99 @@ def parse_confirmation(text: str, language: str = DEFAULT_LANGUAGE) -> str:
 `,
   },
   {
+    path: "lib/cost.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Running total of what this project's Hey Term sessions have spent calling
+Claude's API, in dollars.
+
+Hey Term is bring-your-own-API-key: the person's key, their bill, no
+markup, no metering on MultiNiche AI's end. That also means the only way
+someone finds out what a voice-controlled terminal has been costing them is
+the Anthropic console -- easy to forget to check. This keeps a local,
+approximate running total instead, computed from the token counts the API
+itself returns with every response (see lib/agent.py's plan()), persisted to
+config.COST_LOG_PATH so it survives restarts and reflects one project's
+usage, not every project Hey Term has ever touched.
+
+Prices are approximate and only cover models this product is actually
+configured to call -- see PRICING below. A model not listed falls back to
+the default entry rather than raising, since "the estimate might be slightly
+off" is a far better failure mode for a cost *estimate* than "Hey Term
+crashed because a model string didn't match."
+"""
+import json
+import os
+import threading
+
+from . import config
+
+_LOCK = threading.Lock()
+
+# Dollars per million tokens (input, output). Anthropic's published pricing
+# as of when this was written -- check the current rates if this number
+# looks stale, this is a local estimate, not a bill.
+PRICING = {
+    "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-opus-4-5": (5.00, 25.00),
+    "claude-haiku-4-5": (1.00, 5.00),
+    "_default": (3.00, 15.00),
+}
+
+
+def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    in_rate, out_rate = PRICING.get(model, PRICING["_default"])
+    return (input_tokens / 1_000_000) * in_rate + (output_tokens / 1_000_000) * out_rate
+
+
+def _load(path: str) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict) and "total_cost_usd" in data:
+                return data
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"total_cost_usd": 0.0, "total_input_tokens": 0, "total_output_tokens": 0, "requests": 0}
+
+
+def record_usage(model: str, input_tokens: int, output_tokens: int, path: str = None) -> dict:
+    """Adds one API call's usage to the running total and persists it.
+    Returns the updated totals. Thread-safe (the background-jobs feature and
+    the main loop could in principle both touch this) and best-effort -- a
+    write failure here must never take down the request it's tracking.
+    """
+    target = path or config.COST_LOG_PATH
+    cost = estimate_cost(model, input_tokens, output_tokens)
+    with _LOCK:
+        totals = _load(target)
+        totals["total_cost_usd"] = round(totals["total_cost_usd"] + cost, 6)
+        totals["total_input_tokens"] += input_tokens
+        totals["total_output_tokens"] += output_tokens
+        totals["requests"] += 1
+        try:
+            os.makedirs(os.path.dirname(target) or ".", exist_ok=True)
+            with open(target, "w", encoding="utf-8") as f:
+                json.dump(totals, f)
+        except OSError:
+            pass
+    return totals
+
+
+def get_totals(path: str = None) -> dict:
+    return _load(path or config.COST_LOG_PATH)
+
+
+def spoken_summary(path: str = None) -> str:
+    totals = get_totals(path)
+    cost = totals["total_cost_usd"]
+    requests = totals["requests"]
+    if requests == 0:
+        return "This project hasn't made any Claude requests yet."
+    noun = "request" if requests == 1 else "requests"
+    return f"This project has used about \${cost:.2f} across {requests} {noun}."
+`,
+  },
+  {
     path: "lib/executor.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 """Runs confirmed shell commands and captures their output. No hidden retries,
@@ -1665,17 +1526,35 @@ error. Likewise \`shell=True\` on Windows runs \`cmd.exe\`, not PowerShell, even
 though the agent is told PowerShell and writes PowerShell syntax. This module
 builds the actual interpreter invocation explicitly on both platforms so what
 runs always matches what the agent was told it could write.
+
+Output streams live instead of only after the command finishes -- a build or
+install that takes a while used to look hung until the whole thing completed
+or the fixed timeout killed it. Streaming is done with a reader thread per
+pipe (stdout, stderr) so the overall wall-clock timeout is still enforced even
+when the child process goes quiet for a while, not just when it's spewing
+output.
 """
 import os
+import queue
 import shutil
 import subprocess
+import threading
+import time
 from dataclasses import dataclass, field
 
+from . import config
 from .config import WORK_DIR, is_windows
 from .i18n import DEFAULT_LANGUAGE, get as get_strings
 
-COMMAND_TIMEOUT_SECONDS = 120
+# Kept for backward compatibility with anything importing the old constant
+# directly; config.COMMAND_TIMEOUT_SECONDS is the live, overridable value.
+COMMAND_TIMEOUT_SECONDS = config.COMMAND_TIMEOUT_SECONDS
 OUTPUT_TRUNCATE_CHARS = 4000
+
+# How often the reader loop checks the wall-clock deadline while waiting for
+# output. Small enough that a timeout is enforced promptly, large enough not
+# to busy-loop.
+_POLL_SECONDS = 0.5
 
 
 @dataclass
@@ -1686,6 +1565,7 @@ class CommandResult:
     stderr: str
     ran: bool = True
     error: str = ""
+    timed_out: bool = False
 
 
 @dataclass
@@ -1733,11 +1613,81 @@ def _build_argv(command: str) -> list:
     return [exe, "-c", command]
 
 
-def run_commands(commands: list, work_dir: str = None) -> RunReport:
+def _stream_process(argv, cwd, timeout_seconds, on_line=None):
+    """Runs argv, streaming stdout/stderr line-by-line as they arrive instead
+    of blocking until the process exits. Returns (stdout, stderr, returncode,
+    timed_out). on_line, if given, is called as on_line(stream, line) for
+    every line as it's read, where stream is "stdout" or "stderr" -- this is
+    what lets a caller print output live instead of only after the fact.
+    """
+    proc = subprocess.Popen(
+        argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
+    )
+    q = queue.Queue()
+
+    def _reader(stream, tag):
+        try:
+            for line in iter(stream.readline, ""):
+                q.put((tag, line))
+        finally:
+            q.put((tag, None))
+            try:
+                stream.close()
+            except OSError:
+                pass
+
+    threads = [
+        threading.Thread(target=_reader, args=(proc.stdout, "stdout"), daemon=True),
+        threading.Thread(target=_reader, args=(proc.stderr, "stderr"), daemon=True),
+    ]
+    for t in threads:
+        t.start()
+
+    out_parts, err_parts = [], []
+    finished_streams = set()
+    start = time.monotonic()
+    timed_out = False
+
+    while len(finished_streams) < 2:
+        remaining = timeout_seconds - (time.monotonic() - start)
+        if remaining <= 0:
+            timed_out = True
+            proc.kill()
+            break
+        try:
+            tag, line = q.get(timeout=min(remaining, _POLL_SECONDS))
+        except queue.Empty:
+            continue
+        if line is None:
+            finished_streams.add(tag)
+            continue
+        (out_parts if tag == "stdout" else err_parts).append(line)
+        if on_line:
+            on_line(tag, line.rstrip("\\n"))
+
+    if timed_out:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        returncode = -1
+    else:
+        returncode = proc.wait()
+
+    return "".join(out_parts), "".join(err_parts), returncode, timed_out
+
+
+def run_commands(commands: list, work_dir: str = None, timeout_seconds: float = None, on_line=None) -> RunReport:
     """Runs each command in order, stopping at the first non-zero exit so a
     later command never runs against a state the earlier one failed to reach.
+
+    timeout_seconds overrides config.COMMAND_TIMEOUT_SECONDS for this call --
+    useful for a request that's expected to take a while (a big install, a
+    long build) without raising the default for every command. on_line, if
+    given, is called live as output arrives: on_line(stream, line).
     """
     cwd = work_dir or WORK_DIR
+    limit = timeout_seconds if timeout_seconds is not None else config.COMMAND_TIMEOUT_SECONDS
     report = RunReport()
     stop = False
     for cmd in commands:
@@ -1745,25 +1695,19 @@ def run_commands(commands: list, work_dir: str = None) -> RunReport:
             report.results.append(CommandResult(command=cmd, returncode=-1, stdout="", stderr="", ran=False))
             continue
         try:
-            proc = subprocess.run(
-                _build_argv(cmd),
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                timeout=COMMAND_TIMEOUT_SECONDS,
+            stdout, stderr, returncode, timed_out = _stream_process(
+                _build_argv(cmd), cwd, limit, on_line=on_line,
             )
-            result = CommandResult(
-                command=cmd,
-                returncode=proc.returncode,
-                stdout=_truncate(proc.stdout),
-                stderr=_truncate(proc.stderr),
-                ran=True,
-            )
-        except subprocess.TimeoutExpired:
-            result = CommandResult(
-                command=cmd, returncode=-1, stdout="", stderr="", ran=True,
-                error=f"Timed out after {COMMAND_TIMEOUT_SECONDS}s",
-            )
+            if timed_out:
+                result = CommandResult(
+                    command=cmd, returncode=-1, stdout=_truncate(stdout), stderr=_truncate(stderr),
+                    ran=True, error=f"Timed out after {limit}s", timed_out=True,
+                )
+            else:
+                result = CommandResult(
+                    command=cmd, returncode=returncode, stdout=_truncate(stdout), stderr=_truncate(stderr),
+                    ran=True,
+                )
         except OSError as err:
             result = CommandResult(command=cmd, returncode=-1, stdout="", stderr="", ran=True, error=str(err))
 
@@ -1810,6 +1754,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Type CONFIRM (all caps) to run these commands, or press Enter to cancel: ",
         "stopping": "Stopping. Say the wake word again any time.",
         "agent_error": "Something went wrong asking Claude how to do that. Check the terminal for details.",
+        "fallback_language_notice": "I don't have that language translated yet, so I'll use English for now.",
+        "offline_notice": "I can't reach Claude right now, so I'm using a basic offline command for this.",
+        "offline_no_match": "I can't reach Claude to plan that, and it's not one of the basic commands I can run offline.",
+        "background_started": "Started in the background. Say jobs to check on it.",
+        "jobs_none": "No background jobs yet.",
+        "revert_none": "Nothing to revert.",
+        "revert_done": "Reverted {n} file(s).",
         "yes_words": {"confirm", "confirmed", "yes", "yeah", "yep", "sure", "do it", "go ahead", "run it", "proceed"},
         "no_words": {"cancel", "cancelled", "canceled", "no", "nope", "stop", "abort", "don't", "never mind", "nevermind"},
         "stop_phrases": {"stop listening", "shut down", "power off", "goodbye"},
@@ -1834,6 +1785,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Escribe CONFIRM (en mayúsculas) para ejecutar estos comandos, o presiona Enter para cancelar: ",
         "stopping": "Deteniendo. Di la palabra de activación cuando quieras.",
         "agent_error": "Algo salió mal al preguntarle a Claude cómo hacer eso. Revisa la terminal para más detalles.",
+        "fallback_language_notice": "No tengo ese idioma traducido todavía, así que usaré inglés por ahora.",
+        "offline_notice": "No puedo comunicarme con Claude ahora mismo, así que voy a usar un comando básico sin conexión para esto.",
+        "offline_no_match": "No puedo comunicarme con Claude para planear eso, y no es uno de los comandos básicos que puedo ejecutar sin conexión.",
+        "background_started": "Iniciado en segundo plano. Di jobs para revisarlo.",
+        "jobs_none": "Todavía no hay tareas en segundo plano.",
+        "revert_none": "No hay nada que revertir.",
+        "revert_done": "Se revirtieron {n} archivo(s).",
         "yes_words": {"confirmar", "confirmado", "sí", "si", "vale", "dale", "adelante", "hazlo", "procede"},
         "no_words": {"cancelar", "cancelado", "no", "para", "detente", "aborta", "olvídalo", "olvidalo"},
         "stop_phrases": {"deja de escuchar", "apágate", "apagate", "adiós", "adios"},
@@ -1858,6 +1816,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Tape CONFIRM (en majuscules) pour exécuter ces commandes, ou appuie sur Entrée pour annuler : ",
         "stopping": "Arrêt. Dis le mot d'activation quand tu veux.",
         "agent_error": "Un problème est survenu en demandant à Claude comment faire cela. Vérifie le terminal pour plus de détails.",
+        "fallback_language_notice": "Je n'ai pas encore cette langue traduite, donc je vais utiliser l'anglais pour l'instant.",
+        "offline_notice": "Je ne peux pas joindre Claude en ce moment, donc j'utilise une commande de base hors ligne pour ça.",
+        "offline_no_match": "Je ne peux pas joindre Claude pour planifier ça, et ce n'est pas une des commandes de base que je peux exécuter hors ligne.",
+        "background_started": "Démarré en arrière-plan. Dis jobs pour vérifier.",
+        "jobs_none": "Aucune tâche en arrière-plan pour l'instant.",
+        "revert_none": "Rien à annuler.",
+        "revert_done": "{n} fichier(s) annulé(s).",
         "yes_words": {"confirmer", "confirmé", "oui", "ouais", "vas-y", "fais-le", "d'accord", "daccord", "procède"},
         "no_words": {"annuler", "annulé", "non", "arrête", "arrete", "stop", "laisse tomber"},
         "stop_phrases": {"arrête d'écouter", "arrete d'ecouter", "éteins-toi", "eteins-toi", "au revoir"},
@@ -1882,6 +1847,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Tippe CONFIRM (großgeschrieben) ein, um diese Befehle auszuführen, oder drücke Enter zum Abbrechen: ",
         "stopping": "Stoppe. Sag jederzeit das Aktivierungswort.",
         "agent_error": "Beim Fragen von Claude ist etwas schiefgelaufen. Details im Terminal.",
+        "fallback_language_notice": "Diese Sprache ist noch nicht übersetzt, also verwende ich vorerst Englisch.",
+        "offline_notice": "Ich kann Claude gerade nicht erreichen, also verwende ich dafür einen einfachen Offline-Befehl.",
+        "offline_no_match": "Ich kann Claude nicht erreichen, um das zu planen, und das ist keiner der einfachen Befehle, die ich offline ausführen kann.",
+        "background_started": "Im Hintergrund gestartet. Sag jobs, um nachzusehen.",
+        "jobs_none": "Noch keine Hintergrundaufgaben.",
+        "revert_none": "Nichts rückgängig zu machen.",
+        "revert_done": "{n} Datei(en) zurückgesetzt.",
         "yes_words": {"bestätigen", "bestatigen", "bestätigt", "ja", "klar", "mach es", "los", "weiter"},
         "no_words": {"abbrechen", "abgebrochen", "nein", "stopp", "stop", "halt", "vergiss es"},
         "stop_phrases": {"hör auf zu hören", "hoer auf zu hoeren", "schalt dich ab", "tschüss", "tschuss"},
@@ -1906,6 +1878,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Digite CONFIRM (em maiúsculas) para executar esses comandos, ou pressione Enter para cancelar: ",
         "stopping": "Parando. Diga a palavra de ativação quando quiser.",
         "agent_error": "Algo deu errado ao perguntar ao Claude como fazer isso. Veja o terminal para detalhes.",
+        "fallback_language_notice": "Ainda não tenho esse idioma traduzido, então vou usar inglês por enquanto.",
+        "offline_notice": "Não consigo falar com o Claude agora, então vou usar um comando básico offline para isso.",
+        "offline_no_match": "Não consigo falar com o Claude para planejar isso, e não é um dos comandos básicos que sei executar offline.",
+        "background_started": "Iniciado em segundo plano. Diga jobs para verificar.",
+        "jobs_none": "Ainda não há tarefas em segundo plano.",
+        "revert_none": "Nada para reverter.",
+        "revert_done": "{n} arquivo(s) revertido(s).",
         "yes_words": {"confirmar", "confirmado", "sim", "vai", "pode", "faça", "faz", "prossiga"},
         "no_words": {"cancelar", "cancelado", "não", "nao", "pare", "para", "esquece"},
         "stop_phrases": {"pare de ouvir", "desliga", "tchau"},
@@ -1930,6 +1909,13 @@ LANGUAGES = {
         "typed_confirm_prompt": "Digita CONFIRM (in maiuscolo) per eseguire questi comandi, o premi Invio per annullare: ",
         "stopping": "Mi fermo. Di' la parola di attivazione quando vuoi.",
         "agent_error": "Qualcosa è andato storto chiedendo a Claude come farlo. Controlla il terminale per i dettagli.",
+        "fallback_language_notice": "Non ho ancora questa lingua tradotta, quindi userò l'inglese per ora.",
+        "offline_notice": "Non riesco a raggiungere Claude in questo momento, quindi uso un comando offline di base per questo.",
+        "offline_no_match": "Non riesco a raggiungere Claude per pianificarlo, e non è uno dei comandi di base che posso eseguire offline.",
+        "background_started": "Avviato in background. Di' jobs per controllare.",
+        "jobs_none": "Ancora nessun lavoro in background.",
+        "revert_none": "Niente da annullare.",
+        "revert_done": "{n} file ripristinati.",
         "yes_words": {"conferma", "confermato", "sì", "si", "vai", "fallo", "procedi", "certo"},
         "no_words": {"annulla", "annullato", "no", "ferma", "fermati", "stop", "lascia perdere"},
         "stop_phrases": {"smetti di ascoltare", "spegniti", "ciao"},
@@ -1962,6 +1948,253 @@ def list_languages() -> list:
 `,
   },
   {
+    path: "lib/jobs.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Detached background jobs, for a request the person doesn't want to block
+the voice loop on ("kick off the build" and keep talking, instead of staring
+at the terminal until it finishes or hits the timeout).
+
+A job is still confirmed exactly like any other command -- the only thing
+"background" changes is that Hey Term doesn't wait for it, so nothing here
+weakens the spoken/typed confirmation model in lib/confirm.py and
+lib/safety.py. Each job is a real detached subprocess (still run through the
+same explicit bash/PowerShell invocation as lib/executor.py, not
+shell=True), with its own log file and a status file main.py's "jobs" command
+reads back.
+
+State lives in JOBS_DIR (".hey-term-jobs" under the work dir by default), one
+subfolder per job -- no daemon, no database, just files, so a job someone
+started, closed the terminal, and reopened Hey Term for is still checkable.
+"""
+import json
+import os
+import subprocess
+import threading
+import time
+import uuid
+
+from .config import WORK_DIR, is_windows
+
+JOBS_DIRNAME = ".hey-term-jobs"
+
+
+def _jobs_dir(work_dir: str) -> str:
+    path = os.path.join(work_dir, JOBS_DIRNAME)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _build_argv(command: str) -> list:
+    # Deliberately duplicated from lib/executor.py rather than imported: a
+    # background job's argv-building must never change behavior just because
+    # someone edits the foreground executor, and the two are small enough
+    # that keeping them independently readable beats a shared abstraction.
+    if is_windows():
+        import shutil
+        exe = shutil.which("pwsh") or shutil.which("powershell") or "powershell"
+        return [exe, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command]
+    import shutil
+    exe = shutil.which("bash") or ("/bin/bash" if os.path.exists("/bin/bash") else None) or shutil.which("sh") or "/bin/sh"
+    return [exe, "-c", command]
+
+
+def start(command: str, work_dir: str = None, label: str = "") -> dict:
+    """Launches \`command\` detached and returns its job record immediately --
+    does not wait for it to finish. The job's own stdout+stderr go to
+    <job_dir>/output.log; its exit code (once known) goes to status.json.
+    """
+    cwd = work_dir or WORK_DIR
+    jobs_dir = _jobs_dir(cwd)
+    job_id = uuid.uuid4().hex[:8]
+    job_dir = os.path.join(jobs_dir, job_id)
+    os.makedirs(job_dir, exist_ok=True)
+
+    log_path = os.path.join(job_dir, "output.log")
+    status_path = os.path.join(job_dir, "status.json")
+
+    record = {
+        "id": job_id,
+        "command": command,
+        "label": label,
+        "work_dir": cwd,
+        "started_at": time.time(),
+        "finished_at": None,
+        "returncode": None,
+        "status": "running",
+        "log_path": log_path,
+    }
+    with open(status_path, "w", encoding="utf-8") as f:
+        json.dump(record, f)
+
+    log_file = open(log_path, "w", encoding="utf-8")
+    # start_new_session detaches the child from Hey Term's own process group
+    # on POSIX so Ctrl+C in the foreground loop doesn't also kill the job;
+    # CREATE_NEW_PROCESS_GROUP is the Windows equivalent.
+    kwargs = {}
+    if is_windows():
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+
+    proc = subprocess.Popen(
+        _build_argv(command), cwd=cwd, stdout=log_file, stderr=subprocess.STDOUT, **kwargs,
+    )
+
+    record["pid"] = proc.pid
+    _write_status(status_path, record)
+
+    # A background job's Popen handle would otherwise never be wait()ed on --
+    # main.py doesn't block on it, that's the whole point -- which leaves a
+    # zombie/defunct process behind on POSIX once it exits. A zombie's PID
+    # stays valid, so checking "is this PID still alive" (os.kill(pid, 0))
+    # would report it as running forever. A daemon thread that actually
+    # wait()s reaps the process AND gets the real exit code, instead of
+    # polling PID liveness and guessing.
+    def _reap():
+        returncode = proc.wait()
+        try:
+            log_file.close()
+        except OSError:
+            pass
+        record["status"] = "finished"
+        record["returncode"] = returncode
+        record["finished_at"] = time.time()
+        _write_status(status_path, record)
+
+    threading.Thread(target=_reap, daemon=True).start()
+
+    return record
+
+
+def _write_status(status_path: str, record: dict) -> None:
+    try:
+        with open(status_path, "w", encoding="utf-8") as f:
+            json.dump(record, f)
+    except OSError:
+        pass
+
+
+def _refresh(job_dir: str) -> dict:
+    """Reads a job's current status.json. The reaper thread started in
+    start() keeps this file up to date as the job finishes -- but only for
+    the lifetime of the Hey Term process that started it. If Hey Term itself
+    was restarted while a job was still running, there's no reaper thread
+    left to update the file, so this falls back to a one-off liveness check
+    (a process can only be wait()ed on by its own parent, and a restarted
+    Hey Term isn't that parent -- os.kill(pid, 0) is the best a *different*
+    process can do). A job found dead this way is marked finished with an
+    unknown exit code rather than guessing success.
+    """
+    status_path = os.path.join(job_dir, "status.json")
+    try:
+        with open(status_path, "r", encoding="utf-8") as f:
+            record = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    if record.get("status") == "running" and record.get("pid") is not None:
+        try:
+            os.kill(record["pid"], 0)
+        except OSError:
+            record["status"] = "finished"
+            record["finished_at"] = time.time()
+            record.setdefault("returncode", None)
+            _write_status(status_path, record)
+
+    return record
+
+
+def list_jobs(work_dir: str = None) -> list:
+    cwd = work_dir or WORK_DIR
+    jobs_dir = os.path.join(cwd, JOBS_DIRNAME)
+    if not os.path.isdir(jobs_dir):
+        return []
+    records = []
+    for job_id in sorted(os.listdir(jobs_dir)):
+        job_dir = os.path.join(jobs_dir, job_id)
+        if os.path.isdir(job_dir):
+            record = _refresh(job_dir)
+            if record:
+                records.append(record)
+    return records
+
+
+def tail_log(job_id: str, work_dir: str = None, max_chars: int = 2000) -> str:
+    cwd = work_dir or WORK_DIR
+    log_path = os.path.join(cwd, JOBS_DIRNAME, job_id, "output.log")
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - max_chars))
+            return f.read()
+    except OSError:
+        return ""
+`,
+  },
+  {
+    path: "lib/offline_fallback.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""A small, deliberately narrow rule-based matcher for common read-only
+requests, used only when Claude's API can't be reached (no key set, or a
+network failure) -- see lib/agent.py's AgentError and main.py's
+handle_request().
+
+This is NOT a local LLM and doesn't try to be one. Full request planning
+still needs Claude -- that's the actual product. What this covers is the
+handful of requests common enough, and safe enough, that answering "sorry,
+I need the internet for that" every single time would be a worse experience
+than just answering them: listing files, checking git status, disk space,
+the current date, and so on. Every pattern here maps to exactly one
+non-destructive, read-only command -- nothing in this table writes, deletes,
+or installs anything, on purpose, since there's no Claude call to reason
+about whether a request is actually safe once it's this far outside the
+normal planning path.
+
+Matching is intentionally simple (substring/keyword, not NLU) and
+conservative: an ambiguous or unrecognized request returns None so the
+caller falls through to its normal "couldn't reach Claude" error instead of
+guessing.
+"""
+from .config import is_windows
+
+# Each entry: (keywords that must ALL appear in the lowercased request,
+# posix command, windows command, one-line spoken description).
+_RULES = [
+    (("list", "file"), "ls -la", "Get-ChildItem", "Lists the files in the current folder."),
+    (("what", "director"), "pwd", "Get-Location", "Shows the current folder."),
+    (("current", "director"), "pwd", "Get-Location", "Shows the current folder."),
+    (("disk", "space"), "df -h .", "Get-PSDrive -PSProvider FileSystem", "Shows disk space."),
+    (("git", "status"), "git status", "git status", "Shows the git status of this folder."),
+    (("git", "log"), "git log --oneline -10", "git log --oneline -10", "Shows the last 10 git commits."),
+    (("what", "date"), "date", "Get-Date", "Shows the current date and time."),
+    (("what", "time"), "date", "Get-Date", "Shows the current date and time."),
+    (("who", "am", "i"), "whoami", "whoami", "Shows the current user."),
+    (("what", "ip"), "curl -s ifconfig.me || hostname -I", "ipconfig", "Shows this machine's IP information."),
+    (("environment", "variable"), "env", "Get-ChildItem Env:", "Lists environment variables."),
+    (("python", "version"), "python3 --version || python --version", "python --version", "Shows the installed Python version."),
+    (("node", "version"), "node --version", "node --version", "Shows the installed Node version."),
+]
+
+
+def try_offline_plan(request_text: str) -> dict:
+    """Returns {"summary": str, "commands": [str]} if the request matches a
+    known safe read-only pattern, else None. Callers should treat None
+    exactly like "couldn't plan this," not as an error on its own.
+    """
+    lowered = (request_text or "").lower()
+    if not lowered.strip():
+        return None
+
+    for keywords, posix_cmd, windows_cmd, description in _RULES:
+        if all(kw in lowered for kw in keywords):
+            command = windows_cmd if is_windows() else posix_cmd
+            return {"summary": description, "commands": [command]}
+
+    return None
+`,
+  },
+  {
     path: "lib/safety.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 """Pattern-based check for commands dangerous enough to need typed, not
@@ -1986,30 +2219,159 @@ def dangerous_commands(commands: list) -> list:
 `,
   },
   {
+    path: "lib/snapshot.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Best-effort before/after safety net for file-changing commands, inside a
+git repository only.
+
+Voice confirmation lowers the bar to running a command; this exists to lower
+the cost of having confirmed the wrong one. It is NOT a general undo system --
+it can only ever see what git can see, and it never touches a file that was
+already dirty before Hey Term ran anything (touching that would risk
+destroying changes that had nothing to do with what Hey Term just did, which
+is worse than doing nothing).
+
+What it actually does: record \`git status --porcelain -uall\` before running
+a plan's commands, record it again after, and diff the two. Any path whose
+status changed -- newly modified, newly created, newly deleted -- is a
+candidate for "revert". A path that was *already* dirty before the snapshot
+was taken is always left alone, reported but not reverted, since there's no
+reliable way to separate "changes already there" from "changes Hey Term just
+made" to the same file.
+"""
+import os
+import subprocess
+
+GIT_TIMEOUT_SECONDS = 10
+
+
+def _run_git(args: list, cwd: str):
+    try:
+        proc = subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except (OSError, subprocess.TimeoutExpired):
+        return 1, "", "git unavailable"
+
+
+def is_git_repo(work_dir: str) -> bool:
+    code, out, _ = _run_git(["rev-parse", "--is-inside-work-tree"], work_dir)
+    return code == 0 and out.strip() == "true"
+
+
+def _status_map(work_dir: str) -> dict:
+    """Returns {path: two-char status code} from \`git status --porcelain\`,
+    e.g. {"foo.py": " M", "new.txt": "??"}. -uall so a new file inside a new
+    untracked directory is still listed individually, not collapsed to the
+    directory name.
+    """
+    code, out, _ = _run_git(["status", "--porcelain", "-uall"], work_dir)
+    result = {}
+    if code != 0:
+        return result
+    for line in out.splitlines():
+        if len(line) < 4:
+            continue
+        status = line[:2]
+        path = line[3:]
+        if " -> " in path:  # rename: "old -> new" -- track the new path
+            path = path.split(" -> ", 1)[1]
+        result[path] = status
+    return result
+
+
+class Snapshot:
+    """Opaque handle returned by take(); pass it straight to changed_since()
+    and revert(). is_git is False whenever work_dir isn't (or isn't inside) a
+    git repository -- every other function on this module treats that as
+    "nothing to do" rather than raising, since most commands never touch a
+    git repo at all and that's a completely normal, unremarkable case.
+    """
+
+    def __init__(self, work_dir: str, is_git: bool, before: dict):
+        self.work_dir = work_dir
+        self.is_git = is_git
+        self.before = before
+
+
+def take(work_dir: str) -> Snapshot:
+    is_git = is_git_repo(work_dir)
+    before = _status_map(work_dir) if is_git else {}
+    return Snapshot(work_dir=work_dir, is_git=is_git, before=before)
+
+
+def changed_since(snap: Snapshot) -> list:
+    """Paths whose git status is different now than when the snapshot was
+    taken -- newly modified, newly created, newly deleted, or newly staged.
+    Returns [] outside a git repo, or if nothing changed.
+    """
+    if not snap.is_git:
+        return []
+    after = _status_map(snap.work_dir)
+    all_paths = set(snap.before) | set(after)
+    return sorted(p for p in all_paths if snap.before.get(p) != after.get(p))
+
+
+def revert(snap: Snapshot, paths: list) -> tuple:
+    """Best-effort revert of \`paths\` back to how they were when the snapshot
+    was taken. Returns (reverted, skipped) -- two lists of paths. A path is
+    skipped, never forced, when it was already dirty before the snapshot (see
+    module docstring), when it's outside a git repo, or when the underlying
+    git/filesystem operation fails.
+    """
+    if not snap.is_git:
+        return [], list(paths)
+
+    after = _status_map(snap.work_dir)
+    reverted, skipped = [], []
+
+    for path in paths:
+        if snap.before.get(path) is not None:
+            # Already dirty before Hey Term touched anything -- don't guess
+            # which part of the diff is "ours" to undo.
+            skipped.append(path)
+            continue
+
+        after_status = after.get(path, "")
+        full_path = os.path.join(snap.work_dir, path)
+
+        try:
+            if after_status.startswith("??"):
+                # Brand-new untracked file -- reverting means deleting it.
+                if os.path.isfile(full_path):
+                    os.remove(full_path)
+                    reverted.append(path)
+                else:
+                    skipped.append(path)
+            else:
+                # Tracked file that went from clean to modified/deleted --
+                # restore it from HEAD.
+                code, _, _ = _run_git(["checkout", "--", path], snap.work_dir)
+                if code == 0:
+                    reverted.append(path)
+                else:
+                    skipped.append(path)
+        except OSError:
+            skipped.append(path)
+
+    return reverted, skipped
+`,
+  },
+  {
     path: "lib/speak.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 """Text-to-speech via pyttsx3 (offline, cross-platform: SAPI5 on Windows,
-espeak on Linux, NSSpeechSynthesizer on macOS) -- or, inside Termux on
-Android, via \`termux-tts-speak\` (Termux:API), which uses Android's own
-text-to-speech engine instead; pyttsx3 has no real backend to drive there.
-Also prints everything it says, so the terminal itself is a full transcript
-even with sound off.
+espeak on Linux, NSSpeechSynthesizer on macOS). Also prints everything it
+says, so the terminal itself is a full transcript even with sound off.
 
 Which languages actually get a real spoken voice (rather than an English
 voice reading foreign text with an accent) depends entirely on which voices
-are installed on the OS -- Windows Narrator languages, \`espeak-ng\` on Linux
-with the right language packs, or Android's installed TTS languages on
-Termux. This picks a matching installed voice when one exists (pyttsx3 path
-only -- termux-tts-speak has no equivalent voice-selection API from the
-command line, so it always speaks in the device's default TTS voice) and
-falls back to whatever the default voice is otherwise; it never fails the
-whole request over a missing voice.
+are installed on the OS -- Windows Narrator languages, or \`espeak-ng\` on
+Linux with the right language packs. This picks a matching installed voice
+when one exists and falls back to whatever the default voice is otherwise;
+it never fails the whole request over a missing voice.
 """
-import shutil
-import subprocess
-
-from . import speech_termux
-
 _engine = None
 _voice_set_for_language = None
 
@@ -2042,20 +2404,8 @@ def _select_voice(language: str) -> None:
     _voice_set_for_language = language
 
 
-def _termux_tts_available() -> bool:
-    return speech_termux.running_in_termux() and shutil.which("termux-tts-speak") is not None
-
-
 def speak(text: str, language: str = "en") -> None:
     print(f"[Hey Term] {text}")
-
-    if _termux_tts_available():
-        try:
-            subprocess.run(["termux-tts-speak", text], check=True, timeout=30)
-            return
-        except Exception as err:  # pragma: no cover - depends on local Termux:API setup
-            print(f"[Hey Term] (Termux speech output unavailable: {err}; trying pyttsx3)")
-
     try:
         _select_voice(language)
         engine = _get_engine()
@@ -2063,351 +2413,6 @@ def speak(text: str, language: str = "en") -> None:
         engine.runAndWait()
     except Exception as err:  # pragma: no cover - depends on local audio setup
         print(f"[Hey Term] (speech output unavailable: {err})")
-`,
-  },
-  {
-    path: "lib/speech_termux.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Speech-to-text on Android via Termux:API's \`termux-speech-to-text\` --
-which hands off to Android's own speech recognizer (the same class of
-engine behind Google's voice typing), the same idea as lib/speech_windows.py
-does for Windows' own recognizer.
-
-Requires both the Termux app and the separate Termux:API app (they're
-companion apps -- Termux:API does nothing without the other one installed
-too), plus the \`termux-api\` package inside Termux (\`pkg install termux-api\`).
-See scripts/setup-termux.sh and install-termux.sh.
-
-This is not just the preferred backend on Android, it's effectively the
-*only* one: sounddevice/PortAudio (what lib/audio.py's Whisper path relies
-on) doesn't have working access to the microphone inside Termux's sandbox,
-so SPEECH_BACKEND="whisper" is not a meaningful fallback on this platform
-the way it is on Windows/Linux desktop -- see the Whisper note in
-scripts/setup-termux.sh. Every call here is still defensive and raises
-RuntimeError rather than crashing, mainly so a genuinely missing
-Termux:API setup fails with a clear message instead of a stack trace.
-"""
-import os
-import shutil
-import subprocess
-
-_availability_checked = False
-_available = False
-_unavailable_reason = ""
-
-
-def running_in_termux() -> bool:
-    """True if this process is running inside Termux at all (regardless of
-    whether termux-api is installed). Termux sets $PREFIX to something like
-    /data/data/com.termux/files/usr. Shared with lib/speak.py, which also
-    needs to know whether to route through termux-tts-speak."""
-    return "com.termux" in os.environ.get("PREFIX", "")
-
-
-def is_available() -> bool:
-    """True if termux-speech-to-text can plausibly be called: running inside
-    Termux, with the termux-api package's binaries on PATH. Doesn't (can't,
-    without actually calling it) confirm the separate Termux:API app is
-    installed or has been granted microphone permission -- that surfaces as
-    a RuntimeError from recognize_once() instead. Cached after the first
-    call, same reasoning as lib/speech_windows.py's is_available()."""
-    global _availability_checked, _available, _unavailable_reason
-    if _availability_checked:
-        return _available
-    _availability_checked = True
-
-    if not running_in_termux():
-        _unavailable_reason = "not running inside Termux"
-        _available = False
-        return False
-
-    if shutil.which("termux-speech-to-text") is None:
-        _unavailable_reason = (
-            "the 'termux-api' package isn't installed (pkg install termux-api) "
-            "-- see install-termux.sh / scripts/setup-termux.sh"
-        )
-        _available = False
-        return False
-
-    _available = True
-    return True
-
-
-def unavailable_reason() -> str:
-    """Human-readable reason is_available() returned False, for the one-time
-    startup message. Empty string if is_available() hasn't been called yet
-    or returned True."""
-    return _unavailable_reason
-
-
-def recognize_once(timeout_seconds: float = None) -> str:
-    """Runs one recognition via Android's speech recognizer (through
-    Termux:API) and returns the recognized text -- "" if nothing was
-    understood or the call times out. Raises RuntimeError on any failure
-    (Termux:API app not installed, microphone permission never granted,
-    etc.) so callers (main.py) can fall back for that turn rather than
-    crashing the app.
-
-    \`timeout_seconds\` is only a safety-net timeout on the subprocess call,
-    not a control over how long Android listens -- unlike
-    lib/speech_windows.py's WinRT timeouts, termux-speech-to-text exposes no
-    knob for that; Android's own recognizer decides when speech has ended.
-    A short value (like the wake-loop's ~2.5s chunk size) would false-timeout
-    on legitimate speech, so this floors it well above that.
-
-    Each call briefly surfaces Android's own speech-recognition indicator --
-    there's no silent background-listening mode the way the desktop's
-    rolling-audio-chunk approach has, since this hands off to the OS's own
-    recognizer instead of reading the microphone directly.
-    """
-    if not is_available():
-        raise RuntimeError(
-            f"Termux speech recognizer unavailable: {unavailable_reason() or 'unknown reason'}"
-        )
-
-    safety_timeout = max(timeout_seconds, 8.0) if timeout_seconds is not None else 20.0
-
-    try:
-        result = subprocess.run(
-            ["termux-speech-to-text"],
-            capture_output=True,
-            text=True,
-            timeout=safety_timeout,
-        )
-    except subprocess.TimeoutExpired:
-        return ""
-    except Exception as err:  # noqa: BLE001 -- deliberately broad: any failure
-        # here (Termux:API app missing, mic permission denied, etc.) should
-        # read as "this backend failed for this turn," not crash the app.
-        raise RuntimeError(f"Termux speech recognition failed: {err}") from err
-
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"termux-speech-to-text exited {result.returncode}: {(result.stderr or '').strip()}"
-        )
-
-    output = (result.stdout or "").strip()
-    if output.startswith("ERROR:"):
-        # Android's recognizer reports "didn't catch anything" as plain
-        # stdout text with a normal (0) exit code, not a nonzero exit or
-        # stderr -- ERROR_NO_MATCH (nothing recognized) and
-        # ERROR_SPEECH_TIMEOUT (recognition window closed before any speech
-        # started) both just mean "no speech heard this round," same as an
-        # empty transcript everywhere else in this codebase. Anything else
-        # (no mic permission, no network, recognizer service busy, etc.) is
-        # a real failure worth surfacing so the caller can react to it.
-        code = output.split(":", 1)[1].strip()
-        if code in ("ERROR_NO_MATCH", "ERROR_SPEECH_TIMEOUT"):
-            return ""
-        raise RuntimeError(f"termux-speech-to-text reported {code}")
-
-    return output
-`,
-  },
-  {
-    path: "lib/speech_windows.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Speech-to-text via Windows' own built-in speech recognizer -- the same
-engine behind Win+H voice typing and Windows Speech Recognition -- instead of
-the offline Whisper model in lib/transcribe.py.
-
-Why this exists: Whisper's "base"/"small" models can mishear ordinary speech
-that Windows' own dictation gets right, because Windows' modern voice-typing
-engine is cloud-assisted by default (falling back to a smaller on-device
-model only when offline or when "Online speech recognition" is turned off in
-Settings > Privacy & security > Speech). Routing through it gets Hey Term
-closer to Win+H-level accuracy on Windows without a bigger Whisper download.
-
-This module is imported lazily and every call is defensive: anything that
-isn't actually a working Windows install with the WinRT speech APIs
-available should fail in a way lib/config.py's SPEECH_BACKEND="auto" can
-catch and fall back to Whisper for, not crash the app.
-
-Architecture note: unlike lib/transcribe.py (which transcribes an
-already-recorded numpy clip), the Windows speech recognizer captures audio
-itself, directly from the system default microphone, and does its own
-silence/end-of-speech detection -- there's no separate "record, then
-transcribe" step. recognize_once() below does capture-and-transcribe in one
-call. main.py branches on config.SPEECH_BACKEND to call either this or the
-record-then-transcribe pair used for Whisper.
-"""
-import sys
-
-_availability_checked = False
-_available = False
-_unavailable_reason = ""
-
-
-def is_available() -> bool:
-    """True if the Windows speech recognizer can plausibly be used: running
-    on Windows itself, and the winsdk (WinRT projection) package is
-    importable. Cached after the first call -- this touches the Windows
-    Runtime, not worth repeating every wake-loop iteration."""
-    global _availability_checked, _available, _unavailable_reason
-    if _availability_checked:
-        return _available
-    _availability_checked = True
-
-    if sys.platform != "win32":
-        _unavailable_reason = "not running on Windows"
-        _available = False
-        return False
-
-    try:
-        import winsdk.windows.media.speechrecognition  # noqa: F401
-    except ImportError:
-        _unavailable_reason = (
-            "the 'winsdk' package isn't installed (pip install winsdk) -- "
-            "it ships with requirements.txt on Windows, so this usually "
-            "means the install ran on a non-Windows shell/venv"
-        )
-        _available = False
-        return False
-
-    _available = True
-    return True
-
-
-def unavailable_reason() -> str:
-    """Human-readable reason is_available() returned False, for the one-time
-    startup message. Empty string if is_available() hasn't been called yet
-    or returned True."""
-    return _unavailable_reason
-
-
-def recognize_once(timeout_seconds: float = None) -> str:
-    """Listens on the system default microphone using Windows' own speech
-    recognizer and returns the recognized text (possibly "" if nothing was
-    understood, same contract as lib/transcribe.py's functions). Raises
-    RuntimeError if the Windows speech engine isn't available or the
-    recognition call itself fails -- callers (main.py) catch that and fall
-    back to the Whisper path for that turn rather than crashing the app.
-
-    \`timeout_seconds\`, when given, bounds how long this waits for speech to
-    start before giving up and returning "" -- used for the short wake-word
-    listening chunks so a silent room doesn't block the loop indefinitely.
-    Command listening (take_command) omits it and waits for real speech.
-    """
-    if not is_available():
-        raise RuntimeError(
-            f"Windows speech recognizer unavailable: {unavailable_reason() or 'unknown reason'}"
-        )
-
-    import asyncio
-    from datetime import timedelta
-
-    from winsdk.windows.media.speechrecognition import SpeechRecognizer
-
-    async def _run():
-        recognizer = SpeechRecognizer()
-        await recognizer.compile_constraints_async()
-
-        if timeout_seconds is not None:
-            # Timeouts on the recognizer's own topic/silence detectors --
-            # this is what lets a wake-word chunk give up quickly on silence
-            # instead of hanging, without us doing our own RMS gating (the
-            # Windows engine already does its own voice-activity detection).
-            # \`winsdk\` projects Windows' TimeSpan directly as a Python
-            # datetime.timedelta -- it's a plain immutable value, not an
-            # object with a settable .duration attribute the way the older
-            # \`winrt\` package projected it, so the whole property has to be
-            # reassigned a new timedelta rather than mutated in place.
-            #
-            # A brand new SpeechRecognizer() is constructed on every call
-            # (recognize_once() is stateless), and compile_constraints_async()
-            # above has real setup cost each time -- confirmed live: passing
-            # the wake-loop's raw ~2.5s chunk size straight through here left
-            # too little of that window as actual listening time after setup,
-            # so it kept giving up before ever catching real speech. Flooring
-            # it well above the chunk size (same fix as
-            # lib/speech_termux.py's recognize_once()) gives the engine
-            # enough real listening time regardless of a short chunk size
-            # upstream.
-            span = timedelta(seconds=max(timeout_seconds, 6.0))
-            recognizer.timeouts.initial_silence_timeout = span
-            recognizer.timeouts.end_silence_timeout = span
-
-        result = await recognizer.recognize_async()
-        return (result.text or "").strip() if result is not None else ""
-
-    try:
-        return asyncio.run(_run())
-    except Exception as err:  # noqa: BLE001 -- deliberately broad: any WinRT/
-        # COM failure here (mic in use, no default device, permission denied,
-        # engine not installed for the current language, etc.) should read as
-        # "this backend failed for this turn," not crash the whole app.
-        raise RuntimeError(f"Windows speech recognition failed: {err}") from err
-`,
-  },
-  {
-    path: "lib/text_input.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Lets Hey Term take a typed request instead of a spoken one, from the
-wake-word loop in main.py -- the same request text either way, so
-handle_request() doesn't know or care whether it came from a microphone or
-a keyboard. (The Termux push-to-talk loop doesn't need this module -- it
-already reads one line from stdin per turn, so it just checks whether that
-line is blank or not; see run_push_to_talk_loop() in main.py.)
-
-Why a background thread + queue instead of just calling input() at the top
-of each wake-loop iteration: the loop's own listening call
-(listen_for_wake_word) already blocks for up to WAKE_CHUNK_SECONDS on the
-microphone/recognizer, so a blocking input() call right before or after it
-would mean typing only works in the gap between chunks -- exactly the
-moment the terminal isn't looking, and the rest of the time a keypress just
-sits unread until the next gap. Reading stdin on its own daemon thread means
-a typed line queues up the instant Enter is pressed, and the main loop only
-has to check "is anything waiting?" (non-blocking) each time through,
-regardless of what the voice side is doing at that moment.
-"""
-import queue
-import sys
-import threading
-
-_lines: "queue.Queue[str]" = queue.Queue()
-_started = False
-_lock = threading.Lock()
-
-
-def _reader() -> None:
-    while True:
-        try:
-            line = input()
-        except EOFError:
-            return
-        line = line.strip()
-        if line:
-            _lines.put(line)
-
-
-def start() -> None:
-    """Starts the background stdin reader, once per process. Safe to call
-    more than once (idempotent) -- main() calls this unconditionally before
-    entering the wake-word loop. No-ops when stdin isn't a real interactive
-    terminal (piped/redirected input, or none at all): reading it here would
-    either race whatever is actually feeding that stream, or -- with nothing
-    ever arriving -- just leave a harmless daemon thread blocked forever, so
-    skipping it entirely when there's no real keyboard behind stdin is both
-    safer and simpler than starting it and hoping it never matters.
-    """
-    global _started
-    with _lock:
-        if _started:
-            return
-        if not sys.stdin or not sys.stdin.isatty():
-            return
-        _started = True
-    thread = threading.Thread(target=_reader, daemon=True)
-    thread.start()
-
-
-def poll() -> str:
-    """Returns the next typed line (already stripped, never empty), or ""
-    if nothing has been typed since the last poll(). Never blocks."""
-    try:
-        return _lines.get_nowait()
-    except queue.Empty:
-        return ""
 `,
   },
   {
@@ -2426,25 +2431,6 @@ from .config import WHISPER_DEVICE, WHISPER_MODEL_SIZE
 
 _model = None
 
-# "Initial prompt" text handed to Whisper as decoding context -- it nudges
-# ambiguous audio toward these words without forcing them or touching the
-# model's actual weights. This is NOT voice training (Whisper's acoustic
-# model is never retrained or adapted to a specific speaker); it's closer to
-# how predictive text nudges toward likely words when a signal is unclear.
-# Kept short and generic on purpose: a long list of every possible command
-# dilutes the effect instead of sharpening it -- this only needs to tip
-# close calls on common terminal vocabulary, not dictate an exact grammar.
-COMMAND_VOCAB_PROMPT = (
-    "list files, create folder, delete file, current directory, git status, "
-    "run script, install package, show contents, remove folder, move file, "
-    "copy file, python, node, npm, git, docker, ls, cd, mkdir, rm"
-)
-
-# Biases the wake-listening chunk toward the product's own name, since a
-# short 2-3 syllable phrase is exactly where Whisper is most likely to lock
-# onto a similar-sounding word instead ("Hey Tom", "Hey Tarp").
-WAKE_VOCAB_PROMPT = "Hey Term"
-
 
 def _get_model():
     global _model
@@ -2455,18 +2441,13 @@ def _get_model():
     return _model
 
 
-def _transcribe(audio, language, initial_prompt=None):
+def _transcribe(audio, language):
     import numpy as np
 
     if audio is None or len(audio) == 0:
         return ""
     model = _get_model()
-    segments, _info = model.transcribe(
-        np.asarray(audio, dtype="float32"),
-        language=language,
-        vad_filter=True,
-        initial_prompt=initial_prompt,
-    )
+    segments, _info = model.transcribe(np.asarray(audio, dtype="float32"), language=language, vad_filter=True)
     return " ".join(seg.text.strip() for seg in segments).strip()
 
 
@@ -2475,12 +2456,9 @@ def transcribe(audio, language: str = "en") -> str:
     language code ("en", "es", ...), or "auto" to let Whisper detect it from
     the audio itself (a little slower and occasionally wrong on a very short
     clip, but useful when more than one person/language uses the same
-    installation). Only uses COMMAND_VOCAB_PROMPT for English -- the prompt
-    is English terminal vocabulary, and handing it to Whisper while decoding
-    a different language would bias it toward the wrong language entirely.
+    installation).
     """
-    prompt = COMMAND_VOCAB_PROMPT if language in ("en", "auto") else None
-    return _transcribe(audio, None if language == "auto" else language, initial_prompt=prompt)
+    return _transcribe(audio, None if language == "auto" else language)
 
 
 def transcribe_wake(audio) -> str:
@@ -2491,7 +2469,7 @@ def transcribe_wake(audio) -> str:
     to guess the audio is some other language first. See lib/i18n.py's
     module docstring for the full reasoning.
     """
-    return _transcribe(audio, "en", initial_prompt=WAKE_VOCAB_PROMPT)
+    return _transcribe(audio, "en")
 `,
   },
   {
@@ -2578,7 +2556,7 @@ if __name__ == "__main__":
 import unittest
 from unittest import mock
 
-from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, build_messages, parse_plan
+from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, parse_plan
 
 
 class TestParsePlan(unittest.TestCase):
@@ -2647,90 +2625,6 @@ class TestSystemPromptFormatting(unittest.TestCase):
         self.assertIn("MultiNiche AI", rendered)
 
 
-class TestBuildMessages(unittest.TestCase):
-    """build_messages() is what actually gives Hey Term conversational
-    memory -- see lib/config.py's CONVERSATION_HISTORY_TURNS. These pin down
-    the exact shape sent to the Messages API and the truncation behavior,
-    without a network call."""
-
-    def test_no_history_is_just_the_one_user_message(self):
-        self.assertEqual(
-            build_messages("list the files"),
-            [{"role": "user", "content": "list the files"}],
-        )
-
-    def test_none_history_same_as_omitted(self):
-        self.assertEqual(build_messages("list the files", history=None), build_messages("list the files"))
-
-    def test_prior_turn_replayed_as_user_then_assistant(self):
-        history = [{"request": "install kali", "result": {"clarify": "Which environment?"}}]
-        messages = build_messages("the chroot one", history=history)
-        self.assertEqual(messages, [
-            {"role": "user", "content": "install kali"},
-            {"role": "assistant", "content": '{"clarify": "Which environment?"}'},
-            {"role": "user", "content": "the chroot one"},
-        ])
-
-    def test_summary_and_commands_result_serialized_as_assistant_json(self):
-        history = [{"request": "list files", "result": {"summary": "Lists files.", "commands": ["ls -la"]}}]
-        messages = build_messages("do it again", history=history)
-        self.assertEqual(messages[1]["role"], "assistant")
-        self.assertIn("ls -la", messages[1]["content"])
-
-    def test_history_longer_than_the_turn_limit_is_truncated_to_the_most_recent(self):
-        history = [{"request": f"request {i}", "result": {"summary": "x", "commands": ["x"]}} for i in range(10)]
-        with mock.patch("lib.agent.CONVERSATION_HISTORY_TURNS", 2):
-            messages = build_messages("latest request", history=history)
-        # 2 turns kept * 2 messages each + the new request = 5.
-        self.assertEqual(len(messages), 5)
-        self.assertEqual(messages[0]["content"], "request 8")
-        self.assertEqual(messages[2]["content"], "request 9")
-        self.assertEqual(messages[-1]["content"], "latest request")
-
-    def test_empty_history_list_same_as_none(self):
-        self.assertEqual(build_messages("hello", history=[]), build_messages("hello"))
-
-
-if __name__ == "__main__":
-    unittest.main()
-`,
-  },
-  {
-    path: "test/test_audio.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Only lib.audio.rms() is tested here -- everything else in that module
-needs a real microphone/portaudio. rms() is plain math over a numpy array,
-so it's fully testable without audio hardware, same as the rest of this
-suite."""
-import unittest
-
-import numpy as np
-
-from lib.audio import rms
-
-
-class TestRms(unittest.TestCase):
-    def test_silence_is_zero(self):
-        self.assertEqual(rms(np.zeros(1000, dtype="float32")), 0.0)
-
-    def test_empty_clip_is_zero(self):
-        self.assertEqual(rms(np.zeros(0, dtype="float32")), 0.0)
-
-    def test_none_is_zero(self):
-        self.assertEqual(rms(None), 0.0)
-
-    def test_constant_amplitude_matches_its_own_magnitude(self):
-        # RMS of a constant-value signal equals the absolute value of that
-        # constant -- the simplest case to hand-verify.
-        clip = np.full(1000, 0.5, dtype="float32")
-        self.assertAlmostEqual(rms(clip), 0.5, places=5)
-
-    def test_louder_clip_has_higher_rms_than_quieter_one(self):
-        quiet = np.full(1000, 0.01, dtype="float32")
-        loud = np.full(1000, 0.3, dtype="float32")
-        self.assertLess(rms(quiet), rms(loud))
-
-
 if __name__ == "__main__":
     unittest.main()
 `,
@@ -2785,6 +2679,58 @@ class TestAudit(unittest.TestCase):
         events = audit.read_events()
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["kind"], "ok_line")
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
+    path: "test/test_config.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import importlib
+import os
+import tempfile
+import unittest
+from unittest import mock
+
+from lib import config
+
+
+class TestExtraDangerousPatterns(unittest.TestCase):
+    def test_builtin_patterns_always_present(self):
+        self.assertIn("rm -rf /", config.DANGEROUS_PATTERNS)
+
+    def test_env_var_adds_patterns(self):
+        with mock.patch.dict(os.environ, {"EXTRA_DANGEROUS_PATTERNS": "kubectl delete namespace, terraform destroy"}):
+            extra = config._load_extra_patterns()
+        self.assertIn("kubectl delete namespace", extra)
+        self.assertIn("terraform destroy", extra)
+
+    def test_patterns_file_adds_patterns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            patterns_path = os.path.join(tmp, "patterns.txt")
+            with open(patterns_path, "w") as f:
+                f.write("# a comment\\n")
+                f.write("drop prod_customers\\n")
+                f.write("\\n")
+                f.write("git push origin release\\n")
+            with mock.patch.dict(os.environ, {"PATTERNS_FILE": patterns_path}, clear=False):
+                extra = config._load_extra_patterns()
+        self.assertEqual(extra, ["drop prod_customers", "git push origin release"])
+
+    def test_missing_patterns_file_is_not_an_error(self):
+        with mock.patch.dict(os.environ, {"PATTERNS_FILE": "/no/such/file.txt"}):
+            extra = config._load_extra_patterns()
+        self.assertEqual(extra, [])
+
+    def test_command_timeout_seconds_configurable_via_env(self):
+        with mock.patch.dict(os.environ, {"COMMAND_TIMEOUT_SECONDS": "45"}):
+            reloaded = importlib.reload(config)
+        try:
+            self.assertEqual(reloaded.COMMAND_TIMEOUT_SECONDS, 45.0)
+        finally:
+            importlib.reload(config)  # restore normal env for every other test
 
 
 if __name__ == "__main__":
@@ -2880,6 +2826,63 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_cost.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import os
+import tempfile
+import unittest
+
+from lib import cost
+
+
+class TestCost(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self._tmp.name, "cost.json")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_estimate_cost_known_model(self):
+        # 1M input + 1M output tokens on sonnet-4-5 at $3/$15 per million.
+        value = cost.estimate_cost("claude-sonnet-4-5", 1_000_000, 1_000_000)
+        self.assertAlmostEqual(value, 18.00, places=2)
+
+    def test_estimate_cost_unknown_model_uses_default(self):
+        known = cost.estimate_cost("claude-sonnet-4-5", 1000, 1000)
+        unknown = cost.estimate_cost("some-future-model", 1000, 1000)
+        self.assertEqual(known, unknown)
+
+    def test_get_totals_empty_when_no_file(self):
+        totals = cost.get_totals(self.path)
+        self.assertEqual(totals["total_cost_usd"], 0.0)
+        self.assertEqual(totals["requests"], 0)
+
+    def test_record_usage_accumulates(self):
+        cost.record_usage("claude-sonnet-4-5", 1000, 500, path=self.path)
+        cost.record_usage("claude-sonnet-4-5", 2000, 1000, path=self.path)
+        totals = cost.get_totals(self.path)
+        self.assertEqual(totals["requests"], 2)
+        self.assertEqual(totals["total_input_tokens"], 3000)
+        self.assertEqual(totals["total_output_tokens"], 1500)
+        self.assertGreater(totals["total_cost_usd"], 0)
+
+    def test_spoken_summary_no_requests(self):
+        summary = cost.spoken_summary(self.path)
+        self.assertIn("hasn't made any Claude requests", summary)
+
+    def test_spoken_summary_after_usage(self):
+        cost.record_usage("claude-sonnet-4-5", 1_000_000, 1_000_000, path=self.path)
+        summary = cost.spoken_summary(self.path)
+        self.assertIn("$18.00", summary)
+        self.assertIn("1 request", summary)
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_executor.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import sys
@@ -2958,98 +2961,33 @@ class TestRunCommands(unittest.TestCase):
         self.assertIn("-Command", argv)
         self.assertEqual(argv[-1], "Get-ChildItem")
 
+    @unittest.skipIf(sys.platform == "win32", "sleep/timeout syntax differs")
+    def test_slow_command_is_killed_after_custom_timeout(self):
+        report = run_commands(["sleep 5"], timeout_seconds=0.5)
+        self.assertEqual(len(report.results), 1)
+        result = report.results[0]
+        self.assertTrue(result.timed_out)
+        self.assertEqual(result.returncode, -1)
 
-if __name__ == "__main__":
-    unittest.main()
-`,
-  },
-  {
-    path: "test/test_handle_request.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Tests for handle_request()'s conversation-memory bookkeeping: which
-outcomes get recorded into the shared \`history\` list, which don't, and that
-lib.agent.plan() actually receives it. What's NOT tested here: build_messages()
-itself (see test_agent.py's TestBuildMessages) or the confirmation/execution
-flow (see test_confirm.py / test_executor.py) -- this is only about history's
-append/clear bookkeeping around those, with everything else mocked out."""
-import unittest
-from unittest.mock import patch
+    def test_stderr_captured_separately_from_stdout(self):
+        cmd = "echo to-stdout; echo to-stderr 1>&2" if sys.platform != "win32" else \\
+            "Write-Output to-stdout; Write-Error to-stderr"
+        report = run_commands([cmd])
+        result = report.results[0]
+        self.assertIn("to-stdout", result.stdout)
+        self.assertIn("to-stderr", result.stderr)
 
-from lib.agent import AgentError
-from main import handle_request
+    def test_on_line_callback_receives_streamed_output(self):
+        seen = []
+        run_commands(["echo one && echo two"], on_line=lambda stream, line: seen.append((stream, line)))
+        lines = [line for _, line in seen]
+        self.assertIn("one", lines)
+        self.assertIn("two", lines)
 
-
-class TestHandleRequestHistory(unittest.TestCase):
-    def test_clarify_result_is_appended_to_history(self):
-        history = []
-        with patch("main.plan", return_value={"clarify": "Which environment?"}) as fake_plan, \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("install kali", "en", "/tmp", "windows", history)
-        self.assertEqual(history, [{"request": "install kali", "result": {"clarify": "Which environment?"}}])
-        # plan() is called (and must see the still-EMPTY history) before
-        # handle_request() appends this turn's own result -- checked via the
-        # mock's recorded call args, which is why this can't just re-inspect
-        # \`history\` now: append() already mutated the very list object plan()
-        # was given, since it's identity-passed, not copied.
-        called_history = fake_plan.call_args.kwargs["history"]
-        self.assertIs(called_history, history)
-
-    def test_summary_and_commands_appended_even_when_confirmation_is_canceled(self):
-        history = []
-        plan_result = {"summary": "Lists files.", "commands": ["ls -la"]}
-        with patch("main.plan", return_value=plan_result), \\
-                patch("main.dangerous_commands", return_value=[]), \\
-                patch("main.get_confirmation", return_value="cancel") as fake_get_confirmation, \\
-                patch("main.run_commands") as fake_run_commands, \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("list files", "en", "/tmp", "windows", history)
-        self.assertEqual(history, [{"request": "list files", "result": plan_result}])
-        fake_get_confirmation.assert_called_once()
-        fake_run_commands.assert_not_called()
-
-    def test_agent_error_does_not_touch_history(self):
-        history = []
-        with patch("main.plan", side_effect=AgentError("boom")), \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("do something", "en", "/tmp", "windows", history)
-        self.assertEqual(history, [])
-
-    def test_empty_request_does_not_touch_existing_history(self):
-        history = [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}]
-        with patch("main.speak"), patch("main.audit"):
-            handle_request("", "en", "/tmp", "windows", history)
-        self.assertEqual(history, [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}])
-
-    def test_stop_phrase_clears_existing_history(self):
-        history = [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}]
-        with patch("main.speak"), patch("main.audit"):
-            handle_request("stop listening", "en", "/tmp", "windows", history)
-        self.assertEqual(history, [])
-
-    def test_history_none_is_accepted_and_plan_gets_none(self):
-        with patch("main.plan", return_value={"clarify": "Which one?"}) as fake_plan, \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("install kali", "en", "/tmp", "windows")  # history omitted
-        fake_plan.assert_called_once_with("install kali", language="en", history=None)
-
-    def test_history_list_object_identity_is_preserved_across_calls(self):
-        # The same list object handle_request() was given is the one it
-        # mutates -- this is what lets a caller's loop see the accumulated
-        # conversation grow turn over turn (see run_wake_word_loop() and
-        # run_push_to_talk_loop() in main.py, which each keep one history
-        # list alive across their whole while-loop).
-        history = []
-        with patch("main.plan", return_value={"clarify": "Which one?"}), \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("first request", "en", "/tmp", "windows", history)
-        with patch("main.plan", return_value={"summary": "ok", "commands": ["echo hi"]}), \\
-                patch("main.dangerous_commands", return_value=[]), \\
-                patch("main.get_confirmation", return_value="cancel"), \\
-                patch("main.speak"), patch("main.audit"):
-            handle_request("second request", "en", "/tmp", "windows", history)
-        self.assertEqual(len(history), 2)
-        self.assertEqual(history[0]["request"], "first request")
-        self.assertEqual(history[1]["request"], "second request")
+    def test_default_timeout_comes_from_config_when_not_overridden(self):
+        with mock.patch("lib.executor.config.COMMAND_TIMEOUT_SECONDS", 0.5):
+            report = run_commands(["sleep 5" if sys.platform != "win32" else "Start-Sleep -Seconds 5"])
+        self.assertTrue(report.results[0].timed_out)
 
 
 if __name__ == "__main__":
@@ -3109,6 +3047,127 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_jobs.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import sys
+import tempfile
+import time
+import unittest
+
+from lib import jobs
+
+
+class TestJobs(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.work_dir = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _wait_until_finished(self, job_id, timeout=10):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            for record in jobs.list_jobs(self.work_dir):
+                if record["id"] == job_id and record["status"] == "finished":
+                    return record
+            time.sleep(0.1)
+        self.fail(f"job {job_id} did not finish within {timeout}s")
+
+    def test_start_returns_a_job_record_with_pid(self):
+        # A near-instant command may already be reaped (status "finished")
+        # by the time start() returns, since the reaper thread races the
+        # caller -- that's correct, not flaky, so this only asserts the
+        # shape of the record, not a status that a fast command can't
+        # reliably still be in by the time we check it.
+        record = jobs.start("echo background-job-output", work_dir=self.work_dir)
+        self.assertIn("id", record)
+        self.assertIn("pid", record)
+        self.assertIn(record["status"], ("running", "finished"))
+
+    def test_list_jobs_empty_when_none_started(self):
+        self.assertEqual(jobs.list_jobs(self.work_dir), [])
+
+    def test_job_eventually_reports_finished(self):
+        record = jobs.start("echo done-marker", work_dir=self.work_dir)
+        finished = self._wait_until_finished(record["id"])
+        self.assertEqual(finished["status"], "finished")
+
+    def test_tail_log_contains_command_output(self):
+        record = jobs.start("echo hello-from-job", work_dir=self.work_dir)
+        self._wait_until_finished(record["id"])
+        log = jobs.tail_log(record["id"], work_dir=self.work_dir)
+        self.assertIn("hello-from-job", log)
+
+    def test_tail_log_missing_job_returns_empty_string(self):
+        self.assertEqual(jobs.tail_log("no-such-job", work_dir=self.work_dir), "")
+
+    def test_list_jobs_includes_label(self):
+        jobs.start("echo x", work_dir=self.work_dir, label="test label")
+        records = jobs.list_jobs(self.work_dir)
+        self.assertEqual(records[0]["label"], "test label")
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
+    path: "test/test_offline_fallback.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import unittest
+from unittest import mock
+
+from lib import offline_fallback
+
+
+class TestOfflineFallback(unittest.TestCase):
+    def test_no_match_returns_none(self):
+        self.assertIsNone(offline_fallback.try_offline_plan("write me a poem about clouds"))
+
+    def test_empty_request_returns_none(self):
+        self.assertIsNone(offline_fallback.try_offline_plan(""))
+
+    def test_list_files_matches_on_posix(self):
+        with mock.patch("lib.offline_fallback.is_windows", return_value=False):
+            result = offline_fallback.try_offline_plan("list the files here")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["commands"], ["ls -la"])
+
+    def test_list_files_matches_on_windows(self):
+        with mock.patch("lib.offline_fallback.is_windows", return_value=True):
+            result = offline_fallback.try_offline_plan("list the files here")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["commands"], ["Get-ChildItem"])
+
+    def test_git_status_matches(self):
+        with mock.patch("lib.offline_fallback.is_windows", return_value=False):
+            result = offline_fallback.try_offline_plan("what's the git status")
+        self.assertEqual(result["commands"], ["git status"])
+
+    def test_result_never_contains_destructive_keywords(self):
+        # Cheap guardrail: every command this module can ever return should
+        # be obviously read-only, never touching rm/del/drop/format.
+        destructive = ("rm ", "del ", "drop ", "format", "mkfs", "dd if=")
+        for _, posix_cmd, windows_cmd, _ in offline_fallback._RULES:
+            for cmd in (posix_cmd, windows_cmd):
+                lowered = cmd.lower()
+                self.assertFalse(
+                    any(d in lowered for d in destructive),
+                    f"offline fallback command looked destructive: {cmd}",
+                )
+
+    def test_summary_is_a_nonempty_string(self):
+        with mock.patch("lib.offline_fallback.is_windows", return_value=False):
+            result = offline_fallback.try_offline_plan("what is the current date")
+        self.assertTrue(isinstance(result["summary"], str) and result["summary"])
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_safety.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import unittest
@@ -3148,273 +3207,110 @@ if __name__ == "__main__":
 `,
   },
   {
-    path: "test/test_speech_backend.py",
+    path: "test/test_snapshot.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Tests for main.py's backend-selection logic and lib/speech_windows.py's
-availability check. What's NOT tested here: actually calling
-speech_windows.recognize_once() -- that talks to the real Windows Runtime
-and a live microphone, so it has no meaningful behavior to unit-test on a
-machine that isn't Windows (or, for that matter, on one that is -- it's
-exercised by hand per README.md, same as the rest of the audio path)."""
-import os
 import subprocess
+import tempfile
 import unittest
-from unittest.mock import ANY, patch
+import os
 
-from lib import speech_termux, speech_windows
-from main import (
-    _backend_for_language,
-    resolve_speech_backend,
-    run_push_to_talk_loop,
-    run_wake_word_loop,
-)
+from lib import snapshot
 
 
-class TestIsAvailable(unittest.TestCase):
-    def test_not_available_on_non_windows_platform(self):
-        # This suite always runs on Linux/macOS CI, never Windows, so this
-        # is really asserting "the platform check works," not "Windows
-        # itself lacks the engine."
-        import sys
-
-        if sys.platform == "win32":
-            self.skipTest("only meaningful off Windows")
-        self.assertFalse(speech_windows.is_available())
-        self.assertIn("Windows", speech_windows.unavailable_reason())
-
-    def test_not_available_outside_termux(self):
-        # Same reasoning as above, for the other native backend: this suite
-        # never actually runs inside Termux, so this just asserts the
-        # $PREFIX-based platform check itself works.
-        if "com.termux" in os.environ.get("PREFIX", ""):
-            self.skipTest("only meaningful outside Termux")
-        self.assertFalse(speech_termux.is_available())
-        self.assertIn("Termux", speech_termux.unavailable_reason())
+def _git(args, cwd):
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
 
 
-class TestResolveSpeechBackend(unittest.TestCase):
-    def test_whisper_requested_stays_whisper_even_if_windows_available(self):
-        self.assertEqual(resolve_speech_backend("whisper"), "whisper")
-
-    def test_windows_requested_raises_when_unavailable(self):
-        import sys
-
-        if sys.platform == "win32":
-            self.skipTest("only meaningful off Windows")
-        with self.assertRaises(ValueError):
-            resolve_speech_backend("windows")
-
-    def test_termux_requested_raises_when_unavailable(self):
-        if "com.termux" in os.environ.get("PREFIX", ""):
-            self.skipTest("only meaningful outside Termux")
-        with self.assertRaises(ValueError):
-            resolve_speech_backend("termux")
-
-    def test_unknown_backend_raises(self):
-        with self.assertRaises(ValueError):
-            resolve_speech_backend("carrier-pigeon")
-
-    def test_auto_falls_back_to_whisper_when_no_native_backend_available(self):
-        import sys
-
-        if sys.platform == "win32" or "com.termux" in os.environ.get("PREFIX", ""):
-            self.skipTest("only meaningful off Windows and outside Termux")
-        self.assertEqual(resolve_speech_backend("auto"), "whisper")
+def _git_available() -> bool:
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+        return True
+    except (OSError, subprocess.CalledProcessError):
+        return False
 
 
-class TestBackendForLanguage(unittest.TestCase):
-    def test_windows_backend_kept_for_english(self):
-        self.assertEqual(_backend_for_language("windows", "en"), "windows")
-
-    def test_windows_backend_kept_for_auto(self):
-        self.assertEqual(_backend_for_language("windows", "auto"), "windows")
-
-    def test_windows_backend_falls_back_to_whisper_for_other_languages(self):
-        self.assertEqual(_backend_for_language("windows", "es"), "whisper")
-
-    def test_termux_backend_kept_for_english(self):
-        self.assertEqual(_backend_for_language("termux", "en"), "termux")
-
-    def test_termux_backend_falls_back_to_whisper_for_other_languages(self):
-        self.assertEqual(_backend_for_language("termux", "es"), "whisper")
-
-    def test_whisper_backend_is_unaffected_by_language(self):
-        self.assertEqual(_backend_for_language("whisper", "es"), "whisper")
-
-
-class TestTermuxRecognizeOnceErrorHandling(unittest.TestCase):
-    """termux-speech-to-text reports "didn't catch anything" as plain stdout
-    text with a normal (0) exit code, not a nonzero exit -- these pin down
-    that recognize_once() tells that apart from a real failure. Regression
-    coverage for a bug caught live: ERROR_NO_MATCH was originally being
-    returned as if it were the recognized transcript itself.
-    """
-
-    def _run(self, stdout: str, returncode: int = 0):
-        fake_result = subprocess.CompletedProcess(
-            args=["termux-speech-to-text"], returncode=returncode, stdout=stdout, stderr=""
-        )
-        with patch.object(speech_termux, "is_available", return_value=True), \\
-                patch("subprocess.run", return_value=fake_result):
-            return speech_termux.recognize_once()
-
-    def test_no_match_returns_empty_string_not_the_error_text(self):
-        self.assertEqual(self._run("ERROR: ERROR_NO_MATCH\\n"), "")
-
-    def test_speech_timeout_returns_empty_string(self):
-        self.assertEqual(self._run("ERROR: ERROR_SPEECH_TIMEOUT\\n"), "")
-
-    def test_other_error_codes_raise(self):
-        with self.assertRaises(RuntimeError):
-            self._run("ERROR: ERROR_INSUFFICIENT_PERMISSIONS\\n")
-
-    def test_normal_transcript_passes_through(self):
-        self.assertEqual(self._run("list the files\\n"), "list the files")
-
-
-class TestPushToTalkLoop(unittest.TestCase):
-    """Termux's stand-in for the wake-word loop -- see run_push_to_talk_loop's
-    docstring for why Termux doesn't use listen_for_wake_word() at all. Only
-    the loop's own control flow is worth pinning down here; take_command()/
-    handle_request() are exercised elsewhere."""
-
-    def test_returns_on_eof_without_processing_a_request(self):
-        with patch("builtins.input", side_effect=EOFError), \\
-                patch("main.take_command") as fake_take_command, \\
-                patch("main.handle_request") as fake_handle_request:
-            run_push_to_talk_loop("en", "/tmp", "termux")
-        fake_take_command.assert_not_called()
-        fake_handle_request.assert_not_called()
-
-    def test_each_enter_press_captures_and_handles_one_request(self):
-        # Two Enter presses, then Ctrl+C (EOFError) to stop the loop -- each
-        # press should drive exactly one take_command()/handle_request() pair.
-        with patch("builtins.input", side_effect=["", "", EOFError]), \\
-                patch("main.take_command", return_value="list files") as fake_take_command, \\
-                patch("main.handle_request") as fake_handle_request:
-            run_push_to_talk_loop("en", "/tmp", "termux")
-        self.assertEqual(fake_take_command.call_count, 2)
-        self.assertEqual(fake_handle_request.call_count, 2)
-        fake_handle_request.assert_called_with("list files", "en", "/tmp", "termux", ANY)
-
-    def test_typed_text_skips_voice_capture_entirely(self):
-        # A non-blank line typed at the prompt is the request itself -- no
-        # take_command() call, straight to handle_request().
-        with patch("builtins.input", side_effect=["list the files", EOFError]), \\
-                patch("main.take_command") as fake_take_command, \\
-                patch("main.handle_request") as fake_handle_request:
-            run_push_to_talk_loop("en", "/tmp", "termux")
-        fake_take_command.assert_not_called()
-        fake_handle_request.assert_called_once_with("list the files", "en", "/tmp", "termux", ANY)
-
-    def test_same_history_list_threaded_across_turns(self):
-        # Both the wake-word loop and this one are supposed to give
-        # handle_request() the SAME history object turn after turn (so it
-        # accumulates across a run) -- not a fresh empty list each time.
-        with patch("builtins.input", side_effect=["", "", EOFError]), \\
-                patch("main.take_command", return_value="list files"), \\
-                patch("main.handle_request") as fake_handle_request:
-            run_push_to_talk_loop("en", "/tmp", "termux")
-        first_history = fake_handle_request.call_args_list[0].args[4]
-        second_history = fake_handle_request.call_args_list[1].args[4]
-        self.assertIs(first_history, second_history)
-
-
-class TestWakeWordLoopTypedInput(unittest.TestCase):
-    """Regression coverage for the typed-request escape hatch added to the
-    default (non-Termux) run loop -- see lib/text_input.py and
-    run_wake_word_loop()'s docstring. A KeyboardInterrupt from a mocked
-    text_input.poll()/listen_for_wake_word() is how these stop the loop,
-    same trick main()'s own Ctrl+C handling relies on."""
-
-    def test_typed_request_skips_listen_for_wake_word_and_take_command(self):
-        with patch("main.text_input") as fake_text_input, \\
-                patch("main.listen_for_wake_word") as fake_listen, \\
-                patch("main.take_command") as fake_take_command, \\
-                patch("main.handle_request") as fake_handle_request:
-            fake_text_input.poll.side_effect = ["do the thing", KeyboardInterrupt]
-            with self.assertRaises(KeyboardInterrupt):
-                run_wake_word_loop("hey term", "en", "/tmp", "windows")
-        fake_text_input.start.assert_called_once()
-        fake_listen.assert_not_called()
-        fake_take_command.assert_not_called()
-        fake_handle_request.assert_called_once_with("do the thing", "en", "/tmp", "windows", ANY)
-
-    def test_falls_through_to_wake_word_listening_when_nothing_typed(self):
-        with patch("main.text_input") as fake_text_input, \\
-                patch("main.listen_for_wake_word") as fake_listen, \\
-                patch("main.take_command", return_value="list files") as fake_take_command, \\
-                patch("main.handle_request") as fake_handle_request:
-            fake_text_input.poll.side_effect = ["", KeyboardInterrupt]
-            fake_listen.return_value = True
-            with self.assertRaises(KeyboardInterrupt):
-                run_wake_word_loop("hey term", "en", "/tmp", "windows")
-        fake_listen.assert_called_once_with("hey term", "windows")
-        fake_take_command.assert_called_once_with("en", "windows")
-        fake_handle_request.assert_called_once_with("list files", "en", "/tmp", "windows", ANY)
-
-
-if __name__ == "__main__":
-    unittest.main()
-`,
-  },
-  {
-    path: "test/test_text_input.py",
-    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-"""Tests for lib/text_input.py's queue/poll contract. What's NOT tested
-here: start()'s actual background thread against a real terminal stdin --
-that has no meaningful behavior to unit-test headlessly (this suite's own
-stdin isn't a tty, so start() no-ops every time it runs here, which is
-itself covered below). poll()'s and the reader's queue-handling logic is
-exercised directly instead, the same way test_speech_backend.py exercises
-recognize_once()'s parsing without a real microphone."""
-import unittest
-from unittest.mock import patch
-
-from lib import text_input
-
-
-class TestStart(unittest.TestCase):
-    def test_noop_when_stdin_is_not_a_tty(self):
-        # This test suite's own stdin is never an interactive terminal, so
-        # this is really just asserting the isatty() guard exists and
-        # doesn't crash -- same reasoning as test_speech_backend.py's
-        # platform-guard tests.
-        text_input._started = False
-        with patch("sys.stdin") as fake_stdin:
-            fake_stdin.isatty.return_value = False
-            text_input.start()
-        self.assertFalse(text_input._started)
-
-    def test_idempotent_once_started(self):
-        text_input._started = True
-        try:
-            with patch("threading.Thread") as fake_thread:
-                text_input.start()
-            fake_thread.assert_not_called()
-        finally:
-            text_input._started = False
-
-
-class TestPoll(unittest.TestCase):
+@unittest.skipUnless(_git_available(), "git not installed in this environment")
+class TestSnapshot(unittest.TestCase):
     def setUp(self):
-        # Drain any leftovers from another test in this process.
-        while text_input.poll():
-            pass
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = self._tmp.name
+        _git(["init", "-q"], self.repo)
+        _git(["config", "user.email", "test@example.com"], self.repo)
+        _git(["config", "user.name", "Test"], self.repo)
+        with open(os.path.join(self.repo, "tracked.txt"), "w") as f:
+            f.write("original\\n")
+        _git(["add", "."], self.repo)
+        _git(["commit", "-q", "-m", "init"], self.repo)
 
-    def test_empty_queue_returns_empty_string(self):
-        self.assertEqual(text_input.poll(), "")
+    def tearDown(self):
+        self._tmp.cleanup()
 
-    def test_returns_queued_line(self):
-        text_input._lines.put("list the files")
-        self.assertEqual(text_input.poll(), "list the files")
-        self.assertEqual(text_input.poll(), "")
+    def test_is_git_repo_true_inside_repo(self):
+        self.assertTrue(snapshot.is_git_repo(self.repo))
 
-    def test_reader_skips_blank_lines(self):
-        with patch("builtins.input", side_effect=["", "  ", "hello", EOFError]):
-            text_input._reader()
-        self.assertEqual(text_input.poll(), "hello")
-        self.assertEqual(text_input.poll(), "")
+    def test_is_git_repo_false_outside_repo(self):
+        with tempfile.TemporaryDirectory() as other:
+            self.assertFalse(snapshot.is_git_repo(other))
+
+    def test_no_changes_reports_empty(self):
+        snap = snapshot.take(self.repo)
+        self.assertEqual(snapshot.changed_since(snap), [])
+
+    def test_detects_new_untracked_file(self):
+        snap = snapshot.take(self.repo)
+        with open(os.path.join(self.repo, "new.txt"), "w") as f:
+            f.write("hello\\n")
+        self.assertIn("new.txt", snapshot.changed_since(snap))
+
+    def test_detects_modified_tracked_file(self):
+        snap = snapshot.take(self.repo)
+        with open(os.path.join(self.repo, "tracked.txt"), "w") as f:
+            f.write("changed\\n")
+        self.assertIn("tracked.txt", snapshot.changed_since(snap))
+
+    def test_revert_deletes_newly_created_file(self):
+        snap = snapshot.take(self.repo)
+        new_path = os.path.join(self.repo, "new.txt")
+        with open(new_path, "w") as f:
+            f.write("hello\\n")
+        reverted, skipped = snapshot.revert(snap, ["new.txt"])
+        self.assertEqual(reverted, ["new.txt"])
+        self.assertEqual(skipped, [])
+        self.assertFalse(os.path.exists(new_path))
+
+    def test_revert_restores_modified_tracked_file(self):
+        snap = snapshot.take(self.repo)
+        tracked_path = os.path.join(self.repo, "tracked.txt")
+        with open(tracked_path, "w") as f:
+            f.write("changed\\n")
+        reverted, skipped = snapshot.revert(snap, ["tracked.txt"])
+        self.assertEqual(reverted, ["tracked.txt"])
+        with open(tracked_path) as f:
+            self.assertEqual(f.read(), "original\\n")
+
+    def test_revert_skips_file_that_was_already_dirty(self):
+        with open(os.path.join(self.repo, "tracked.txt"), "w") as f:
+            f.write("already dirty before snapshot\\n")
+        snap = snapshot.take(self.repo)  # snapshot taken AFTER dirtying it
+        with open(os.path.join(self.repo, "tracked.txt"), "w") as f:
+            f.write("even more changed\\n")
+        reverted, skipped = snapshot.revert(snap, ["tracked.txt"])
+        self.assertEqual(reverted, [])
+        self.assertEqual(skipped, ["tracked.txt"])
+
+    def test_changed_since_empty_outside_git_repo(self):
+        with tempfile.TemporaryDirectory() as other:
+            snap = snapshot.take(other)
+            with open(os.path.join(other, "whatever.txt"), "w") as f:
+                f.write("x\\n")
+            self.assertEqual(snapshot.changed_since(snap), [])
+
+    def test_revert_outside_git_repo_skips_everything(self):
+        with tempfile.TemporaryDirectory() as other:
+            snap = snapshot.take(other)
+            reverted, skipped = snapshot.revert(snap, ["whatever.txt"])
+            self.assertEqual(reverted, [])
+            self.assertEqual(skipped, ["whatever.txt"])
 
 
 if __name__ == "__main__":
@@ -3627,101 +3523,6 @@ echo
 echo "Done. Next steps:"
 echo "  1. Edit .env and set ANTHROPIC_API_KEY."
 echo "  2. Run: python3 main.py --lang en   (or --lang es / fr / de / pt / it)"
-`,
-  },
-  {
-    path: "scripts/setup-termux.sh",
-    contents: `#!/usr/bin/env bash
-# Copyright (c) 2026 MultiNiche AI. All rights reserved.
-#
-# Automated setup for Hey Term on Android, inside Termux (https://termux.dev
-# -- install from F-Droid; the Google Play Store build is outdated and
-# widely reported broken). Installs Python + termux-api, Python deps, and
-# bootstraps .env.
-#
-# You also need the separate "Termux:API" app (same publisher, also on
-# F-Droid) installed alongside Termux -- the \`termux-api\` package below is
-# only the client side of that bridge and does nothing without it.
-#
-# Usage:
-#   ./install-termux.sh          # normal setup, asks before pkg installs
-#   ./install-termux.sh --yes    # don't prompt
-set -euo pipefail
-
-ASSUME_YES=0
-for arg in "$@"; do
-  case "$arg" in
-    --yes|-y) ASSUME_YES=1 ;;
-    -h|--help)
-      echo "Usage: $0 [--yes]"
-      exit 0
-      ;;
-  esac
-done
-
-confirm_or_exit() {
-  if [ "$ASSUME_YES" = "1" ] || [ ! -t 0 ]; then
-    return 0
-  fi
-  read -r -p "$1 [y/N] " reply
-  case "$reply" in
-    [yY]|[yY][eE][sS]) return 0 ;;
-    *) echo "Skipped."; return 1 ;;
-  esac
-}
-
-if [ -z "\${PREFIX:-}" ] || [[ "$PREFIX" != *com.termux* ]]; then
-  echo "This doesn't look like Termux (\\$PREFIX=\${PREFIX:-<unset>}). Run this from inside the Termux app."
-  exit 1
-fi
-
-DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-
-echo "== Hey Term Termux (Android) setup =="
-echo
-echo "IMPORTANT: install the separate \\"Termux:API\\" app too (F-Droid, same"
-echo "publisher as Termux) before continuing if you haven't already -- Hey"
-echo "Term's speech recognition and text-to-speech on Android both go"
-echo "through it, and neither works without it installed alongside Termux."
-echo
-
-if confirm_or_exit "Install/update core Termux packages (python, termux-api)?"; then
-  pkg update -y
-  pkg install -y python termux-api
-fi
-
-echo
-echo "Installing Python dependencies (requirements-termux.txt -- a shorter"
-echo "list than the desktop version; see that file for why)..."
-python -m pip install -q -r "$DIR/requirements-termux.txt"
-
-if [ ! -f "$DIR/.env" ]; then
-  cp "$DIR/.env.example" "$DIR/.env"
-  echo "Created .env -- edit it and add your ANTHROPIC_API_KEY before running Hey Term."
-else
-  echo ".env already exists -- leaving it alone."
-fi
-
-echo
-echo "NOTE on Whisper: faster-whisper's ctranslate2 dependency generally has"
-echo "no prebuilt wheel for Android/Termux and usually fails to build from"
-echo "source there -- that's why requirements-termux.txt skips it. This is"
-echo "fine: SPEECH_BACKEND defaults to \\"auto\\", which uses Android's own"
-echo "speech recognizer (via termux-speech-to-text) and never touches"
-echo "Whisper on this platform. Only set SPEECH_BACKEND=whisper if you've"
-echo "separately confirmed faster-whisper actually installs on your device."
-echo
-
-echo "One-time: grant Termux microphone access interactively before your"
-echo "first real run --"
-echo "  termux-microphone-record -h"
-echo "Android will prompt for the microphone permission the first time any"
-echo "termux-api audio command runs; accept it, then Ctrl+C out of that command."
-echo
-
-echo "Done. Next steps:"
-echo "  1. Edit .env and set ANTHROPIC_API_KEY (nano .env)."
-echo "  2. Run: python main.py --lang en"
 `,
   },
   {

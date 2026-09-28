@@ -88,6 +88,85 @@ actually what runs it. See `test/test_executor.py`'s
    audit log, independent of whether the request succeeded, was clarified,
    or was canceled.
 
+## Safety net: reverting what just ran
+
+Before running a confirmed plan, Hey Term takes a snapshot of `git status`
+in `WORK_DIR` (see `lib/snapshot.py`) -- if it's not a git repository, this
+is a silent no-op, everything else works exactly the same. After running,
+it diffs against that snapshot to see which paths changed, and says so:
+
+```
+    $ npm install some-package
+    (2 file(s) changed -- say "revert" to undo)
+```
+
+Say **"revert"** (or "undo that") right after, and it undoes just that run:
+a brand-new file gets deleted, a modified tracked file gets restored from
+`HEAD` via `git checkout --`. A file that was *already* dirty before Hey
+Term ran anything is always left alone and reported as skipped rather than
+guessed at -- there's no reliable way to tell "changes already there" apart
+from "changes this run just made" to the same file, and guessing wrong
+there is worse than doing nothing. This is one run deep, not a full undo
+stack: only the most recent run can be reverted.
+
+## Background jobs
+
+Add "in the background" (or "as a background job") to a request and Hey
+Term launches it detached instead of waiting for it -- useful for a build,
+an install, or anything slow enough that you'd rather keep talking than
+stare at the terminal:
+
+```
+you: "Hey Term"
+you: "run the test suite in the background"
+Hey Term: "Started in the background. Say jobs to check on it."
+```
+
+It's still voice-confirmed exactly like any other request first -- background
+only changes what happens *after* you confirm. Say **"jobs"** any time to see
+what's running or finished (`lib/jobs.py`); each job's full output is logged
+to `.hey-term-jobs/<job-id>/output.log` in `WORK_DIR`.
+
+## Session cost
+
+Hey Term is bring-your-own-`ANTHROPIC_API_KEY` -- your key, your bill, no
+markup. Every planning call's token usage is used to keep a running,
+approximate cost total for this project (`lib/cost.py`), persisted to
+`.hey-term-cost.json`. Say **"cost"** any time to hear it. This is an
+estimate from Anthropic's published per-token pricing, not a real-time
+bill -- check the Anthropic console for the actual number.
+
+## Working without Claude's API
+
+If Claude's API can't be reached (no key set, or a network failure), Hey
+Term doesn't just fail every request -- a small, fixed set of common,
+read-only requests (`lib/offline_fallback.py`) still work by matching
+directly to a safe command instead of asking Claude to plan one: listing
+files, git status, disk space, the current date, and a handful of others.
+Every one of those is read-only by construction; nothing in that fallback
+table writes, deletes, or installs anything, since there's no Claude call to
+reason about whether a given request is actually safe once it's this far
+outside the normal planning path. Anything outside that small list still
+needs a working connection to Claude, and Hey Term says so plainly instead
+of guessing at a command.
+
+## Custom "always ask me to type it" commands
+
+The built-in list of commands that require typed `CONFIRM` instead of a
+spoken one (`lib/config.py`'s `DANGEROUS_PATTERNS`) only covers things that
+can take down an entire disk or OS install -- it can't know your production
+database's actual name or which branch is your release branch. Add your own:
+
+```
+# EXTRA_DANGEROUS_PATTERNS in .env, comma-separated:
+EXTRA_DANGEROUS_PATTERNS=drop prod_customers,git push origin release
+
+# or a longer list, one per line, in ~/.hey-term/dangerous_patterns.txt
+# (# comments allowed; set PATTERNS_FILE in .env to use a different path)
+```
+
+Both are purely additive -- neither can remove a built-in pattern.
+
 ## Setup
 
 Unzip `hey-term.zip` (your purchase download) anywhere, then `cd` into that

@@ -13,17 +13,35 @@ error. Likewise `shell=True` on Windows runs `cmd.exe`, not PowerShell, even
 though the agent is told PowerShell and writes PowerShell syntax. This module
 builds the actual interpreter invocation explicitly on both platforms so what
 runs always matches what the agent was told it could write.
+
+Output streams live instead of only after the command finishes -- a build or
+install that takes a while used to look hung until the whole thing completed
+or the fixed timeout killed it. Streaming is done with a reader thread per
+pipe (stdout, stderr) so the overall wall-clock timeout is still enforced even
+when the child process goes quiet for a while, not just when it's spewing
+output.
 """
 import os
+import queue
 import shutil
 import subprocess
+import threading
+import time
 from dataclasses import dataclass, field
 
+from . import config
 from .config import WORK_DIR, is_windows
 from .i18n import DEFAULT_LANGUAGE, get as get_strings
 
-COMMAND_TIMEOUT_SECONDS = 120
+# Kept for backward compatibility with anything importing the old constant
+# directly; config.COMMAND_TIMEOUT_SECONDS is the live, overridable value.
+COMMAND_TIMEOUT_SECONDS = config.COMMAND_TIMEOUT_SECONDS
 OUTPUT_TRUNCATE_CHARS = 4000
+
+# How often the reader loop checks the wall-clock deadline while waiting for
+# output. Small enough that a timeout is enforced promptly, large enough not
+# to busy-loop.
+_POLL_SECONDS = 0.5
 
 
 @dataclass
@@ -34,6 +52,7 @@ class CommandResult:
     stderr: str
     ran: bool = True
     error: str = ""
+    timed_out: bool = False
 
 
 @dataclass
@@ -81,11 +100,81 @@ def _build_argv(command: str) -> list:
     return [exe, "-c", command]
 
 
-def run_commands(commands: list, work_dir: str = None) -> RunReport:
+def _stream_process(argv, cwd, timeout_seconds, on_line=None):
+    """Runs argv, streaming stdout/stderr line-by-line as they arrive instead
+    of blocking until the process exits. Returns (stdout, stderr, returncode,
+    timed_out). on_line, if given, is called as on_line(stream, line) for
+    every line as it's read, where stream is "stdout" or "stderr" -- this is
+    what lets a caller print output live instead of only after the fact.
+    """
+    proc = subprocess.Popen(
+        argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
+    )
+    q = queue.Queue()
+
+    def _reader(stream, tag):
+        try:
+            for line in iter(stream.readline, ""):
+                q.put((tag, line))
+        finally:
+            q.put((tag, None))
+            try:
+                stream.close()
+            except OSError:
+                pass
+
+    threads = [
+        threading.Thread(target=_reader, args=(proc.stdout, "stdout"), daemon=True),
+        threading.Thread(target=_reader, args=(proc.stderr, "stderr"), daemon=True),
+    ]
+    for t in threads:
+        t.start()
+
+    out_parts, err_parts = [], []
+    finished_streams = set()
+    start = time.monotonic()
+    timed_out = False
+
+    while len(finished_streams) < 2:
+        remaining = timeout_seconds - (time.monotonic() - start)
+        if remaining <= 0:
+            timed_out = True
+            proc.kill()
+            break
+        try:
+            tag, line = q.get(timeout=min(remaining, _POLL_SECONDS))
+        except queue.Empty:
+            continue
+        if line is None:
+            finished_streams.add(tag)
+            continue
+        (out_parts if tag == "stdout" else err_parts).append(line)
+        if on_line:
+            on_line(tag, line.rstrip("\n"))
+
+    if timed_out:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        returncode = -1
+    else:
+        returncode = proc.wait()
+
+    return "".join(out_parts), "".join(err_parts), returncode, timed_out
+
+
+def run_commands(commands: list, work_dir: str = None, timeout_seconds: float = None, on_line=None) -> RunReport:
     """Runs each command in order, stopping at the first non-zero exit so a
     later command never runs against a state the earlier one failed to reach.
+
+    timeout_seconds overrides config.COMMAND_TIMEOUT_SECONDS for this call --
+    useful for a request that's expected to take a while (a big install, a
+    long build) without raising the default for every command. on_line, if
+    given, is called live as output arrives: on_line(stream, line).
     """
     cwd = work_dir or WORK_DIR
+    limit = timeout_seconds if timeout_seconds is not None else config.COMMAND_TIMEOUT_SECONDS
     report = RunReport()
     stop = False
     for cmd in commands:
@@ -93,25 +182,19 @@ def run_commands(commands: list, work_dir: str = None) -> RunReport:
             report.results.append(CommandResult(command=cmd, returncode=-1, stdout="", stderr="", ran=False))
             continue
         try:
-            proc = subprocess.run(
-                _build_argv(cmd),
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                timeout=COMMAND_TIMEOUT_SECONDS,
+            stdout, stderr, returncode, timed_out = _stream_process(
+                _build_argv(cmd), cwd, limit, on_line=on_line,
             )
-            result = CommandResult(
-                command=cmd,
-                returncode=proc.returncode,
-                stdout=_truncate(proc.stdout),
-                stderr=_truncate(proc.stderr),
-                ran=True,
-            )
-        except subprocess.TimeoutExpired:
-            result = CommandResult(
-                command=cmd, returncode=-1, stdout="", stderr="", ran=True,
-                error=f"Timed out after {COMMAND_TIMEOUT_SECONDS}s",
-            )
+            if timed_out:
+                result = CommandResult(
+                    command=cmd, returncode=-1, stdout=_truncate(stdout), stderr=_truncate(stderr),
+                    ran=True, error=f"Timed out after {limit}s", timed_out=True,
+                )
+            else:
+                result = CommandResult(
+                    command=cmd, returncode=returncode, stdout=_truncate(stdout), stderr=_truncate(stderr),
+                    ran=True,
+                )
         except OSError as err:
             result = CommandResult(command=cmd, returncode=-1, stdout="", stderr="", ran=True, error=str(err))
 

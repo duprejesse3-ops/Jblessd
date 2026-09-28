@@ -75,6 +75,34 @@ class TestRunCommands(unittest.TestCase):
         self.assertIn("-Command", argv)
         self.assertEqual(argv[-1], "Get-ChildItem")
 
+    @unittest.skipIf(sys.platform == "win32", "sleep/timeout syntax differs")
+    def test_slow_command_is_killed_after_custom_timeout(self):
+        report = run_commands(["sleep 5"], timeout_seconds=0.5)
+        self.assertEqual(len(report.results), 1)
+        result = report.results[0]
+        self.assertTrue(result.timed_out)
+        self.assertEqual(result.returncode, -1)
+
+    def test_stderr_captured_separately_from_stdout(self):
+        cmd = "echo to-stdout; echo to-stderr 1>&2" if sys.platform != "win32" else \
+            "Write-Output to-stdout; Write-Error to-stderr"
+        report = run_commands([cmd])
+        result = report.results[0]
+        self.assertIn("to-stdout", result.stdout)
+        self.assertIn("to-stderr", result.stderr)
+
+    def test_on_line_callback_receives_streamed_output(self):
+        seen = []
+        run_commands(["echo one && echo two"], on_line=lambda stream, line: seen.append((stream, line)))
+        lines = [line for _, line in seen]
+        self.assertIn("one", lines)
+        self.assertIn("two", lines)
+
+    def test_default_timeout_comes_from_config_when_not_overridden(self):
+        with mock.patch("lib.executor.config.COMMAND_TIMEOUT_SECONDS", 0.5):
+            report = run_commands(["sleep 5" if sys.platform != "win32" else "Start-Sleep -Seconds 5"])
+        self.assertTrue(report.results[0].timed_out)
+
 
 if __name__ == "__main__":
     unittest.main()
