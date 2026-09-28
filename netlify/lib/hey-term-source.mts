@@ -50,6 +50,30 @@ Every wake, request, plan, confirmation, and command run is appended to a
 plain-text audit log (\`.hey-term-audit.jsonl\` by default) -- a full record of
 what Hey Term has ever been asked to do and whether it actually did it.
 
+### It remembers what you just said
+
+Each run keeps a short rolling memory of your recent requests and Hey Term's
+replies, so a follow-up actually lands in context instead of being judged as
+a brand new, standalone request:
+
+\`\`\`
+you:      "Hey Term"
+Hey Term: "Yes?"
+you:      "install kali"
+Hey Term: "Do you want Kali's tools on this device, or a full Kali environment?"
+you:      "just the tools with pkg"
+Hey Term: [plans and confirms an actual pkg-install command -- "just the tools with pkg"
+           only makes sense because it remembers the question it just asked]
+\`\`\`
+
+This resets automatically whenever you say "stop listening" (or its
+translated equivalent) -- a deliberate sign-off is a natural place to start
+the next topic with a clean slate. It's also capped at the last few
+exchanges (\`CONVERSATION_HISTORY_TURNS\` in \`.env\`, default 6) so a
+long-running session doesn't keep growing what gets sent to Claude on every
+single request forever; set it to \`0\` to turn this off entirely and have
+every request judged completely on its own, the original behavior.
+
 ### Typing instead of speaking
 
 Don't want to talk out loud, or in a spot where the mic isn't reliable? You
@@ -602,7 +626,16 @@ def get_typed_confirmation(prompt: str) -> bool:
     return typed.strip() == "CONFIRM"
 
 
-def handle_request(request_text: str, language: str, work_dir: str, backend: str) -> None:
+def handle_request(request_text: str, language: str, work_dir: str, backend: str, history: list = None) -> None:
+    """\`history\`, when given, is the running conversation for this session
+    (see lib/agent.py's build_messages()) -- a mutable list this function
+    both reads (to give Claude prior context) and appends to (so the next
+    request gets this one as context too). Passing None (the default)
+    keeps the original behavior: every request judged with no memory of any
+    other. Both run loops in this file create one history list per run and
+    pass the same list into every handle_request() call, which is what
+    makes it a running conversation rather than a fresh one each time.
+    """
     strings = get_strings(language)
 
     if not request_text:
@@ -614,17 +647,29 @@ def handle_request(request_text: str, language: str, work_dir: str, backend: str
     if normalized in strings["stop_phrases"]:
         speak(strings["stopping"], language=language)
         audit.log_event("request", language=language, text=request_text, outcome="stop_phrase")
+        if history is not None:
+            # A deliberate "stop"/"goodbye" is a natural conversation
+            # boundary -- whatever comes next shouldn't be resolved against
+            # what was asked before someone signed off.
+            history.clear()
         return
 
     audit.log_event("request", language=language, text=request_text)
 
     try:
-        result = plan(request_text, language=language)
+        result = plan(request_text, language=language, history=history)
     except AgentError as err:
         print(f"[error] {err}")
         speak(strings["agent_error"], language=language)
         audit.log_event("plan_error", language=language, error=str(err))
         return
+
+    if history is not None:
+        history.append({"request": request_text, "result": result})
+        if config.CONVERSATION_HISTORY_TURNS <= 0:
+            history.clear()
+        else:
+            del history[:-config.CONVERSATION_HISTORY_TURNS]
 
     if "clarify" in result:
         speak(result["clarify"], language=language)
@@ -705,6 +750,7 @@ def run_push_to_talk_loop(language: str, work_dir: str, backend: str) -> None:
     bare wake-word loop never had. Enter does the same job for the first
     step.
     """
+    history: list = []
     while True:
         try:
             typed = input(
@@ -716,12 +762,12 @@ def run_push_to_talk_loop(language: str, work_dir: str, backend: str) -> None:
         typed = typed.strip()
         if typed:
             print(f"[you typed] {typed}")
-            handle_request(typed, language, work_dir, backend)
+            handle_request(typed, language, work_dir, backend, history)
             continue
         request_text = take_command(language, backend)
         if request_text:
             print(f"[you] {request_text}")
-        handle_request(request_text, language, work_dir, backend)
+        handle_request(request_text, language, work_dir, backend, history)
 
 
 def run_wake_word_loop(wake_word: str, language: str, work_dir: str, backend: str) -> None:
@@ -733,20 +779,21 @@ def run_wake_word_loop(wake_word: str, language: str, work_dir: str, backend: st
     wake-word listen only happens when nothing's been typed since the last
     time through.
     """
+    history: list = []
     text_input.start()
     while True:
         typed = text_input.poll()
         if typed:
             print(f"[you typed] {typed}")
             audit.log_event("wake", method="typed")
-            handle_request(typed, language, work_dir, backend)
+            handle_request(typed, language, work_dir, backend, history)
             continue
         if listen_for_wake_word(wake_word, backend):
             audit.log_event("wake", method="voice")
             request_text = take_command(language, backend)
             if request_text:
                 print(f"[you] {request_text}")
-            handle_request(request_text, language, work_dir, backend)
+            handle_request(request_text, language, work_dir, backend, history)
 
 
 def print_banner(language: str, work_dir: str, backend: str) -> None:
@@ -873,6 +920,13 @@ ANTHROPIC_API_KEY=
 # --work-dir, --audit-log) override these for a single run without editing
 # this file; run \`python main.py --help\` to see them.
 # ANTHROPIC_MODEL=claude-sonnet-4-5
+
+# How many recent request/reply exchanges get replayed back to Claude on
+# every new request, so a follow-up ("the chroot one", "undo that") resolves
+# against what was just said instead of being judged as a brand new,
+# context-free request. Resets automatically on "stop listening" (or its
+# translated equivalent). Set to 0 to turn this off entirely.
+# CONVERSATION_HISTORY_TURNS=6
 
 # The wake phrase is Hey Term's name and, like "Hey Siri"/"Hey Google", is
 # said the same way regardless of which language you set below.
@@ -1032,7 +1086,7 @@ import platform
 
 import requests
 
-from .config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, is_windows
+from .config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, CONVERSATION_HISTORY_TURNS, is_windows
 from .i18n import get as get_strings
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -1060,6 +1114,12 @@ real bash (not a generic POSIX sh subset) on Linux/macOS, real PowerShell \\
 short, natural, speakable sentence -- it will be read aloud by text-to-speech, \\
 not displayed as text. Commands stay in real shell syntax regardless of \\
 {language_name}, since a shell doesn't speak {language_name}.
+- Earlier turns in this conversation, if any, are real prior exchanges -- use \\
+them to resolve a request that only makes sense in light of what was just \\
+said ("the chroot one" answering a clarifying question you just asked, "undo \\
+that" referring to the last command you planned). A request that stands on \\
+its own is planned on its own merits; don't let old context invent extra \\
+steps a self-contained request didn't ask for.
 
 Respond with ONLY a single JSON object, no other text, in exactly one of \\
 these two shapes:
@@ -1081,12 +1141,46 @@ def _shell_name() -> str:
     return "PowerShell" if is_windows() else "bash"
 
 
-def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
+def build_messages(request_text: str, history: list = None) -> list:
+    """Turns the current request plus prior (request, result) pairs into the
+    Messages API's alternating user/assistant list -- each earlier result
+    (a "clarify" or a "summary"+"commands" dict) is replayed back exactly as
+    Claude returned it, so it's grounded in what it actually said before, not
+    a paraphrase of it. Separated from plan() so the shape of what gets sent
+    is directly testable without a network call.
+
+    \`history\` is oldest-first; only the last CONVERSATION_HISTORY_TURNS
+    entries are used, so a long-running session doesn't grow the request
+    sent to Claude without bound. Pass None/[] (the default) for no memory --
+    every request judged purely on its own, the original behavior.
+    """
+    if CONVERSATION_HISTORY_TURNS <= 0:
+        # \`list[-0:]\` is \`list[0:]\` -- the WHOLE list, not "none of it" --
+        # so 0 needs its own branch rather than falling through to the
+        # slice below, which would otherwise silently send full history
+        # even though 0 is documented (lib/config.py) as "disables this
+        # entirely."
+        return [{"role": "user", "content": request_text}]
+
+    messages = []
+    for turn in (history or [])[-CONVERSATION_HISTORY_TURNS:]:
+        messages.append({"role": "user", "content": turn["request"]})
+        messages.append({"role": "assistant", "content": json.dumps(turn["result"])})
+    messages.append({"role": "user", "content": request_text})
+    return messages
+
+
+def plan(request_text: str, language: str = "en", api_key: str = None, history: list = None) -> dict:
     """Ask Claude to turn spoken text into a plan. Returns either
     {"summary": str, "commands": [str, ...]} or {"clarify": str}.
     Raises AgentError on a network failure or a response that isn't valid
     JSON in one of those two shapes -- callers should treat that as "ask the
     person to repeat themselves," never as a command to run.
+
+    \`history\`, if given, is the running conversation so far (see
+    build_messages()) -- lets a follow-up request ("the chroot one", "undo
+    that") resolve against what was just discussed instead of being judged
+    as a brand new, context-free request.
     """
     key = api_key or ANTHROPIC_API_KEY
     if not key:
@@ -1107,7 +1201,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
                 "model": ANTHROPIC_MODEL,
                 "max_tokens": 500,
                 "system": system,
-                "messages": [{"role": "user", "content": request_text}],
+                "messages": build_messages(request_text, history),
             },
             timeout=TIMEOUT_SECONDS,
         )
@@ -1438,6 +1532,17 @@ SPEECH_BACKEND = os.environ.get("SPEECH_BACKEND", "auto").lower().strip()
 # whatever's playing through your speakers, not your voice) getting left as
 # the Windows default input is the most common way this goes wrong.
 MIC_DEVICE = os.environ.get("MIC_DEVICE", "").strip()
+
+# How many prior request/response exchanges are replayed back to Claude on
+# every new request, so it has conversational memory -- answering "the
+# chroot one" after Hey Term asked a clarifying question, or "undo that"
+# after a prior command, actually resolves against what was just said
+# instead of landing as a standalone, context-free request. 0 disables this
+# entirely (each request judged alone, the original behavior). Kept small on
+# purpose: this is resent as full conversation turns on every single
+# request, so a larger number means more tokens (and a slower, pricier call)
+# every time, not just when a follow-up actually needs the context.
+CONVERSATION_HISTORY_TURNS = int(os.environ.get("CONVERSATION_HISTORY_TURNS", "6"))
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", "16000"))
 WAKE_CHUNK_SECONDS = float(os.environ.get("WAKE_CHUNK_SECONDS", "2.5"))
@@ -2473,7 +2578,7 @@ if __name__ == "__main__":
 import unittest
 from unittest import mock
 
-from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, parse_plan
+from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, build_messages, parse_plan
 
 
 class TestParsePlan(unittest.TestCase):
@@ -2540,6 +2645,50 @@ class TestSystemPromptFormatting(unittest.TestCase):
         self.assertIn("bash", rendered)
         self.assertIn("Hey Term", rendered)
         self.assertIn("MultiNiche AI", rendered)
+
+
+class TestBuildMessages(unittest.TestCase):
+    """build_messages() is what actually gives Hey Term conversational
+    memory -- see lib/config.py's CONVERSATION_HISTORY_TURNS. These pin down
+    the exact shape sent to the Messages API and the truncation behavior,
+    without a network call."""
+
+    def test_no_history_is_just_the_one_user_message(self):
+        self.assertEqual(
+            build_messages("list the files"),
+            [{"role": "user", "content": "list the files"}],
+        )
+
+    def test_none_history_same_as_omitted(self):
+        self.assertEqual(build_messages("list the files", history=None), build_messages("list the files"))
+
+    def test_prior_turn_replayed_as_user_then_assistant(self):
+        history = [{"request": "install kali", "result": {"clarify": "Which environment?"}}]
+        messages = build_messages("the chroot one", history=history)
+        self.assertEqual(messages, [
+            {"role": "user", "content": "install kali"},
+            {"role": "assistant", "content": '{"clarify": "Which environment?"}'},
+            {"role": "user", "content": "the chroot one"},
+        ])
+
+    def test_summary_and_commands_result_serialized_as_assistant_json(self):
+        history = [{"request": "list files", "result": {"summary": "Lists files.", "commands": ["ls -la"]}}]
+        messages = build_messages("do it again", history=history)
+        self.assertEqual(messages[1]["role"], "assistant")
+        self.assertIn("ls -la", messages[1]["content"])
+
+    def test_history_longer_than_the_turn_limit_is_truncated_to_the_most_recent(self):
+        history = [{"request": f"request {i}", "result": {"summary": "x", "commands": ["x"]}} for i in range(10)]
+        with mock.patch("lib.agent.CONVERSATION_HISTORY_TURNS", 2):
+            messages = build_messages("latest request", history=history)
+        # 2 turns kept * 2 messages each + the new request = 5.
+        self.assertEqual(len(messages), 5)
+        self.assertEqual(messages[0]["content"], "request 8")
+        self.assertEqual(messages[2]["content"], "request 9")
+        self.assertEqual(messages[-1]["content"], "latest request")
+
+    def test_empty_history_list_same_as_none(self):
+        self.assertEqual(build_messages("hello", history=[]), build_messages("hello"))
 
 
 if __name__ == "__main__":
@@ -2815,6 +2964,99 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_handle_request.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Tests for handle_request()'s conversation-memory bookkeeping: which
+outcomes get recorded into the shared \`history\` list, which don't, and that
+lib.agent.plan() actually receives it. What's NOT tested here: build_messages()
+itself (see test_agent.py's TestBuildMessages) or the confirmation/execution
+flow (see test_confirm.py / test_executor.py) -- this is only about history's
+append/clear bookkeeping around those, with everything else mocked out."""
+import unittest
+from unittest.mock import patch
+
+from lib.agent import AgentError
+from main import handle_request
+
+
+class TestHandleRequestHistory(unittest.TestCase):
+    def test_clarify_result_is_appended_to_history(self):
+        history = []
+        with patch("main.plan", return_value={"clarify": "Which environment?"}) as fake_plan, \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("install kali", "en", "/tmp", "windows", history)
+        self.assertEqual(history, [{"request": "install kali", "result": {"clarify": "Which environment?"}}])
+        # plan() is called (and must see the still-EMPTY history) before
+        # handle_request() appends this turn's own result -- checked via the
+        # mock's recorded call args, which is why this can't just re-inspect
+        # \`history\` now: append() already mutated the very list object plan()
+        # was given, since it's identity-passed, not copied.
+        called_history = fake_plan.call_args.kwargs["history"]
+        self.assertIs(called_history, history)
+
+    def test_summary_and_commands_appended_even_when_confirmation_is_canceled(self):
+        history = []
+        plan_result = {"summary": "Lists files.", "commands": ["ls -la"]}
+        with patch("main.plan", return_value=plan_result), \\
+                patch("main.dangerous_commands", return_value=[]), \\
+                patch("main.get_confirmation", return_value="cancel") as fake_get_confirmation, \\
+                patch("main.run_commands") as fake_run_commands, \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("list files", "en", "/tmp", "windows", history)
+        self.assertEqual(history, [{"request": "list files", "result": plan_result}])
+        fake_get_confirmation.assert_called_once()
+        fake_run_commands.assert_not_called()
+
+    def test_agent_error_does_not_touch_history(self):
+        history = []
+        with patch("main.plan", side_effect=AgentError("boom")), \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("do something", "en", "/tmp", "windows", history)
+        self.assertEqual(history, [])
+
+    def test_empty_request_does_not_touch_existing_history(self):
+        history = [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}]
+        with patch("main.speak"), patch("main.audit"):
+            handle_request("", "en", "/tmp", "windows", history)
+        self.assertEqual(history, [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}])
+
+    def test_stop_phrase_clears_existing_history(self):
+        history = [{"request": "earlier", "result": {"summary": "x", "commands": ["x"]}}]
+        with patch("main.speak"), patch("main.audit"):
+            handle_request("stop listening", "en", "/tmp", "windows", history)
+        self.assertEqual(history, [])
+
+    def test_history_none_is_accepted_and_plan_gets_none(self):
+        with patch("main.plan", return_value={"clarify": "Which one?"}) as fake_plan, \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("install kali", "en", "/tmp", "windows")  # history omitted
+        fake_plan.assert_called_once_with("install kali", language="en", history=None)
+
+    def test_history_list_object_identity_is_preserved_across_calls(self):
+        # The same list object handle_request() was given is the one it
+        # mutates -- this is what lets a caller's loop see the accumulated
+        # conversation grow turn over turn (see run_wake_word_loop() and
+        # run_push_to_talk_loop() in main.py, which each keep one history
+        # list alive across their whole while-loop).
+        history = []
+        with patch("main.plan", return_value={"clarify": "Which one?"}), \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("first request", "en", "/tmp", "windows", history)
+        with patch("main.plan", return_value={"summary": "ok", "commands": ["echo hi"]}), \\
+                patch("main.dangerous_commands", return_value=[]), \\
+                patch("main.get_confirmation", return_value="cancel"), \\
+                patch("main.speak"), patch("main.audit"):
+            handle_request("second request", "en", "/tmp", "windows", history)
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["request"], "first request")
+        self.assertEqual(history[1]["request"], "second request")
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_i18n.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import unittest
@@ -2917,7 +3159,7 @@ exercised by hand per README.md, same as the rest of the audio path)."""
 import os
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from lib import speech_termux, speech_windows
 from main import (
@@ -3053,7 +3295,7 @@ class TestPushToTalkLoop(unittest.TestCase):
             run_push_to_talk_loop("en", "/tmp", "termux")
         self.assertEqual(fake_take_command.call_count, 2)
         self.assertEqual(fake_handle_request.call_count, 2)
-        fake_handle_request.assert_called_with("list files", "en", "/tmp", "termux")
+        fake_handle_request.assert_called_with("list files", "en", "/tmp", "termux", ANY)
 
     def test_typed_text_skips_voice_capture_entirely(self):
         # A non-blank line typed at the prompt is the request itself -- no
@@ -3063,7 +3305,19 @@ class TestPushToTalkLoop(unittest.TestCase):
                 patch("main.handle_request") as fake_handle_request:
             run_push_to_talk_loop("en", "/tmp", "termux")
         fake_take_command.assert_not_called()
-        fake_handle_request.assert_called_once_with("list the files", "en", "/tmp", "termux")
+        fake_handle_request.assert_called_once_with("list the files", "en", "/tmp", "termux", ANY)
+
+    def test_same_history_list_threaded_across_turns(self):
+        # Both the wake-word loop and this one are supposed to give
+        # handle_request() the SAME history object turn after turn (so it
+        # accumulates across a run) -- not a fresh empty list each time.
+        with patch("builtins.input", side_effect=["", "", EOFError]), \\
+                patch("main.take_command", return_value="list files"), \\
+                patch("main.handle_request") as fake_handle_request:
+            run_push_to_talk_loop("en", "/tmp", "termux")
+        first_history = fake_handle_request.call_args_list[0].args[4]
+        second_history = fake_handle_request.call_args_list[1].args[4]
+        self.assertIs(first_history, second_history)
 
 
 class TestWakeWordLoopTypedInput(unittest.TestCase):
@@ -3084,7 +3338,7 @@ class TestWakeWordLoopTypedInput(unittest.TestCase):
         fake_text_input.start.assert_called_once()
         fake_listen.assert_not_called()
         fake_take_command.assert_not_called()
-        fake_handle_request.assert_called_once_with("do the thing", "en", "/tmp", "windows")
+        fake_handle_request.assert_called_once_with("do the thing", "en", "/tmp", "windows", ANY)
 
     def test_falls_through_to_wake_word_listening_when_nothing_typed(self):
         with patch("main.text_input") as fake_text_input, \\
@@ -3097,7 +3351,7 @@ class TestWakeWordLoopTypedInput(unittest.TestCase):
                 run_wake_word_loop("hey term", "en", "/tmp", "windows")
         fake_listen.assert_called_once_with("hey term", "windows")
         fake_take_command.assert_called_once_with("en", "windows")
-        fake_handle_request.assert_called_once_with("list files", "en", "/tmp", "windows")
+        fake_handle_request.assert_called_once_with("list files", "en", "/tmp", "windows", ANY)
 
 
 if __name__ == "__main__":
