@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hey Term</string>
+    <string name="notif_channel_name">Hey Term</string>
+    <string name="notif_listening">Listening for \"hey term\"…</string>
+    <string name="notif_confirm_title">Confirm command?</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="btn_start">Start Listening</string>
+    <string name="btn_stop">Stop</string>
+    <string name="hint_type_request">Type a request instead…</string>
+</resources>
