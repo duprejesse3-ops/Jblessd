@@ -36,13 +36,24 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK + CMake
+      # ubuntu-latest runners already have an Android SDK preinstalled at
+      # /usr/local/lib/android/sdk -- reusing it directly instead of the
+      # android-actions/setup-android@v3 action, which was failing here:
+      # its own internal license-acceptance step hit a license (Google TV
+      # add-on) that isn't in its baked-in accepted list and tried an
+      # interactive "Review licenses (y/N)?" prompt with no stdin to answer
+      # it, which fails outright in CI. `yes | sdkmanager --licenses` below
+      # accepts everything non-interactively instead.
+      - name: Set up Android SDK env
         run: |
-          sdkmanager --install "ndk;26.3.11579264" "cmake;3.22.1" > /dev/null
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+
+      - name: Accept SDK licenses and install NDK + CMake
+        run: |
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.3.11579264" "cmake;3.22.1"
+          echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/26.3.11579264" >> "$GITHUB_ENV"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
