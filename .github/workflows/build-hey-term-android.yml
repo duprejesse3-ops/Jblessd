@@ -1,0 +1,67 @@
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Builds the Hey Term Android app (packages/hey-term-android). Runs here,
+# not in Claude's own sandbox, because that sandbox's network is locked
+# down to npm/pip/GitHub and can't reach Google's Android SDK/NDK/Maven
+# servers or Gradle's distribution server -- GitHub Actions runners have
+# ordinary internet access, so this is where the actual compile happens.
+#
+# Trigger manually from the Actions tab (workflow_dispatch) or push to main
+# with changes under packages/hey-term-android/. The result is a debug-
+# signed APK attached as a downloadable build artifact on the run -- good
+# enough to sideload onto your own phone; a real release build (signed with
+# your own keystore, for wider distribution) is a separate step later.
+name: Build Hey Term Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/hey-term-android/**"
+      - ".github/workflows/build-hey-term-android.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/hey-term-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK + CMake
+        run: |
+          sdkmanager --install "ndk;26.3.11579264" "cmake;3.22.1" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Download the ggml speech model
+        run: |
+          mkdir -p app/src/main/assets/models
+          curl -fL --retry 3 -o app/src/main/assets/models/ggml-base.bin \
+            https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin
+          ls -la app/src/main/assets/models/
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hey-term-debug-apk
+          path: packages/hey-term-android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
