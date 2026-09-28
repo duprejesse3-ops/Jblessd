@@ -20,7 +20,10 @@ Run:  python main.py [--lang es] [--wake-word "hey term"] [--work-dir .]
 Stop: Ctrl+C, or say the wake word then "stop listening".
 """
 import argparse
+import json
+import queue
 import sys
+import threading
 
 from lib import audit, config, cost, jobs, offline_fallback, snapshot
 from lib.agent import AgentError, plan
@@ -66,9 +69,85 @@ BACKGROUND_PHRASES = ["in the background", "run it in the background", "as a bac
 _last_snapshot = None
 _last_changed_paths = []
 
+# Short-term conversational memory: the Claude-facing back-and-forth so far
+# this run, as {"role", "content"} messages, sent ahead of each new request
+# (see lib/agent.py's plan()) so a clarifying answer or a follow-up
+# reference ("undo that") lands in context instead of starting over. Reset
+# on "stop listening" (handle_request's stop_phrase branch) -- an
+# indefinitely growing history would otherwise keep costing tokens for
+# context that's stopped being relevant, and "stop listening" is the one
+# phrase a person already says specifically to mean "start fresh." Capped at
+# MAX_HISTORY_MESSAGES for the same reason even within one still-active
+# conversation. Only real Claude round-trips are added -- see
+# handle_request's offline-fallback branch for why that path is excluded.
+MAX_HISTORY_MESSAGES = 12
+_conversation_history = []
+
 # Tracks whether the fallback-language notice has already been spoken this
 # run, so it's said once at startup, not on every single request.
 _fallback_notice_given = False
+
+# Typed input goes through one background reader thread and one queue,
+# whatever it's for -- a request typed instead of spoken, or a typed CONFIRM
+# for a dangerous command -- rather than each call site doing its own input()
+# read. Two independent input() calls racing each other on the same stdin is
+# how a keystroke ends up silently eaten by the wrong one; one reader thread
+# and one queue means there's only ever one thing consuming stdin, so a typed
+# line always reaches whichever consumer is actually waiting for it next.
+_typed_input_queue: "queue.Queue" = queue.Queue()
+_stdin_reader_thread = None
+
+
+def _stdin_reader_loop(input_fn=input, out_queue=None) -> None:
+    """Reads lines from stdin forever and enqueues non-empty, stripped ones.
+    Exits (returns) on EOFError -- stdin closed, redirected from an
+    exhausted pipe, or otherwise non-interactive -- rather than spinning.
+    Takes input_fn/out_queue as parameters so it can be unit-tested with a
+    fake stdin instead of the real one.
+    """
+    if out_queue is None:
+        out_queue = _typed_input_queue
+    while True:
+        try:
+            line = input_fn()
+        except EOFError:
+            return
+        line = line.strip()
+        if line:
+            out_queue.put(line)
+
+
+def start_stdin_reader() -> bool:
+    """Starts the background stdin-reader thread once, only when stdin is an
+    interactive terminal. Returns whether it's running (already-started
+    counts). A no-op on a piped/redirected/non-interactive stdin (including
+    the test suite and a scheduled/headless run) -- typing instead of the
+    wake word just isn't offered there, but voice keeps working either way,
+    and nothing blocks or crashes over the missing terminal.
+    """
+    global _stdin_reader_thread
+    if _stdin_reader_thread is not None:
+        return True
+    try:
+        interactive = sys.stdin is not None and sys.stdin.isatty()
+    except Exception:
+        interactive = False
+    if not interactive:
+        return False
+    _stdin_reader_thread = threading.Thread(target=_stdin_reader_loop, daemon=True)
+    _stdin_reader_thread.start()
+    return True
+
+
+def take_typed_request():
+    """Non-blocking check for a request typed instead of spoken. Returns the
+    text, or None if nothing's waiting -- called once per wake-word-loop
+    iteration so a typed request is picked up between mic chunks without
+    ever blocking the voice path."""
+    try:
+        return _typed_input_queue.get_nowait()
+    except queue.Empty:
+        return None
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -123,10 +202,14 @@ def get_confirmation(language: str) -> str:
 
 
 def get_typed_confirmation(prompt: str) -> bool:
-    try:
-        typed = input(prompt)
-    except EOFError:
-        return False
+    print(prompt, end="", flush=True)
+    if start_stdin_reader():
+        typed = _typed_input_queue.get()  # blocks until the reader thread enqueues a line
+    else:
+        try:
+            typed = input()
+        except EOFError:
+            return False
     return typed.strip() == "CONFIRM"
 
 
@@ -144,6 +227,18 @@ def _strip_phrase(text: str, phrases: list) -> tuple:
             cleaned = (text[:idx] + text[idx + len(phrase):]).strip(" ,.")
             return cleaned, True
     return text, False
+
+
+def _remember_turn(role: str, content: str) -> None:
+    global _conversation_history
+    _conversation_history.append({"role": role, "content": content})
+    if len(_conversation_history) > MAX_HISTORY_MESSAGES:
+        _conversation_history = _conversation_history[-MAX_HISTORY_MESSAGES:]
+
+
+def _reset_conversation() -> None:
+    global _conversation_history
+    _conversation_history = []
 
 
 def handle_jobs_command(language: str, work_dir: str) -> None:
@@ -197,6 +292,7 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
     if normalized in strings["stop_phrases"]:
         speak(strings["stopping"], language=language)
         audit.log_event("request", language=language, text=request_text, outcome="stop_phrase")
+        _reset_conversation()
         return
 
     if normalized in JOBS_PHRASES:
@@ -216,7 +312,12 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
     effective_timeout = timeout_seconds * LONGER_TIMEOUT_SECONDS_MULTIPLIER if run_longer else timeout_seconds
 
     try:
-        result = plan(request_text, language=language)
+        result = plan(request_text, language=language, history=_conversation_history)
+        # Only a real Claude round-trip joins the remembered conversation --
+        # see MAX_HISTORY_MESSAGES's comment above for why the offline-
+        # fallback branch below deliberately doesn't do this too.
+        _remember_turn("user", request_text)
+        _remember_turn("assistant", json.dumps(result))
     except AgentError as err:
         print(f"[error] {err}")
         audit.log_event("plan_error", language=language, error=str(err))
@@ -307,11 +408,13 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
         print(f"    ({len(changed)} file(s) changed -- say \"revert\" to undo)")
 
 
-def print_banner(language: str, work_dir: str) -> None:
+def print_banner(language: str, work_dir: str, typing_available: bool) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
     print(f"Language: {language}" + ("" if is_translated(language) or language == "auto" else " (untranslated -- using English prompts)"))
     print(f"Wake word: \"{config.WAKE_WORD}\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
+    if typing_available:
+        print("You can also just type a request and press Enter, any time -- no need to say the wake word first.")
     print(f"Audit log: {config.AUDIT_LOG_PATH}")
     print(f"Command timeout: {config.COMMAND_TIMEOUT_SECONDS}s (say \"take your time\" in a request for a longer one)")
     print("Say \"jobs\", \"cost\", or \"revert\" any time for background-job status, session spend, or to undo the last run.")
@@ -319,6 +422,7 @@ def print_banner(language: str, work_dir: str) -> None:
 
 def main(argv=None) -> int:
     global _fallback_notice_given
+    _reset_conversation()
     args = parse_args(argv)
 
     if args.list_languages:
@@ -337,8 +441,9 @@ def main(argv=None) -> int:
     config.AUDIT_LOG_PATH = args.audit_log  # honor --audit-log override for this run
     config.COMMAND_TIMEOUT_SECONDS = args.timeout  # honor --timeout override for this run
 
-    print_banner(language, work_dir)
-    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION)
+    typing_available = start_stdin_reader()
+    print_banner(language, work_dir, typing_available)
+    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION, typing_available=typing_available)
 
     if language != "auto" and not is_translated(language) and not _fallback_notice_given:
         speak(get_strings(language)["fallback_language_notice"], language=DEFAULT_LANGUAGE_FOR_NOTICE)
@@ -348,8 +453,14 @@ def main(argv=None) -> int:
 
     try:
         while True:
+            typed_request = take_typed_request()
+            if typed_request is not None:
+                print(f"[you] {typed_request}")
+                audit.log_event("wake", via="typed")
+                handle_request(typed_request, language, work_dir, config.COMMAND_TIMEOUT_SECONDS)
+                continue
             if listen_for_wake_word(wake_word):
-                audit.log_event("wake")
+                audit.log_event("wake", via="voice")
                 request_text = take_command(language)
                 if request_text:
                     print(f"[you] {request_text}")

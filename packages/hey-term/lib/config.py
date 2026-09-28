@@ -4,7 +4,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 

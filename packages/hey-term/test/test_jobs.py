@@ -9,7 +9,13 @@ from lib import jobs
 
 class TestJobs(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
+        # ignore_cleanup_errors: a job's daemon reaper thread (see
+        # lib/jobs.py's start()) can still be writing status.json in this
+        # directory the instant a test ends and tearDown races it to delete
+        # the folder -- that's a harmless timing overlap in the test, not a
+        # product bug, so cleanup tolerates "directory not empty" instead of
+        # failing the test that happened to run last.
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.work_dir = self._tmp.name
 
     def tearDown(self):

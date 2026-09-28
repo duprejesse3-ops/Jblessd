@@ -23,6 +23,16 @@ over a branch, dropping a database, etc.) is never run on a spoken "confirm"
 alone -- those require typing the word `CONFIRM` on the keyboard instead. See
 `lib/config.py`'s `DANGEROUS_PATTERNS` to see or extend that list.
 
+**You don't have to speak at all.** Type a request and press Enter any time
+-- no need to say "Hey Term" first -- and it's picked up the same as if it
+had been spoken (checked between wake-word listening chunks, so there's up
+to one chunk's worth of delay, a couple of seconds by default). This only
+needs an interactive terminal; it's silently unavailable when stdin is
+piped, redirected, or otherwise non-interactive (voice still works either
+way). Confirmations themselves are unaffected by this -- an ordinary
+command still expects a spoken "confirm"/"cancel", and only the dangerous-
+command blocklist above still asks for typed `CONFIRM`.
+
 Every wake, request, plan, confirmation, and command run is appended to a
 plain-text audit log (`.hey-term-audit.jsonl` by default) -- a full record of
 what Hey Term has ever been asked to do and whether it actually did it.
@@ -76,7 +86,9 @@ actually what runs it. See `test/test_executor.py`'s
 3. **Planning** (`lib/agent.py`) -- your request goes to Claude's API (plain
    HTTPS, no SDK) with instructions to either return an exact command plan
    plus a summary in your language, or ask a clarifying question if the
-   request is ambiguous. It never guesses on unclear requests.
+   request is ambiguous. It never guesses on unclear requests. Recent turns
+   go with it (see "Conversational memory" below), so a clarifying answer or
+   a follow-up like "undo that" is understood in context.
 4. **Confirmation** (`lib/confirm.py`) -- the summary is spoken back, and it
    listens for an unambiguous yes/no in your language. A mumble, silence, or
    contradictory reply all count as "unclear" and cancel -- only a clear
@@ -87,6 +99,31 @@ actually what runs it. See `test/test_executor.py`'s
 6. **Audit** (`lib/audit.py`) -- every step above appends a JSON line to the
    audit log, independent of whether the request succeeded, was clarified,
    or was canceled.
+
+## Conversational memory
+
+The back-and-forth with Claude within one run is remembered (`main.py`'s
+`_conversation_history`, capped at the most recent 12 messages so it doesn't
+grow -- and cost -- indefinitely) and sent along with each new request, so:
+
+```
+you:      "Hey Term"
+Hey Term: "Yes?"
+you:      "delete the log file"
+Hey Term: "Which log file did you mean?"
+you:      "Hey Term"
+Hey Term: "Yes?"
+you:      "the one in /var/log/app"
+Hey Term: "Deletes /var/log/app/app.log. Say confirm to run it, or cancel."
+```
+
+answering a clarifying question, or referring back to what just ran ("undo
+that", "run it again but in the background") actually lands in context
+instead of Claude re-planning from nothing each time. It resets on "stop
+listening" (or its translated equivalent) -- the one phrase that already
+means "start over" -- and isn't affected by the offline fallback below,
+which never talks to Claude in the first place. `jobs`/`cost`/`revert` don't
+touch it either, since they're answered locally and never go to Claude.
 
 ## Safety net: reverting what just ran
 
@@ -210,13 +247,58 @@ voice by hand instead (Settings > Time & Language > Language & region > Add
 a language > check "Text-to-speech") -- everything else (Python deps,
 `.env`, the Whisper model) still runs normally either way.
 
+**Android (Termux):**
+```
+chmod +x install.sh
+./install.sh                    # detects Termux automatically, asks before installing
+./install.sh --yes              # don't prompt before pkg installs
+./install.sh --dry-run          # preview what it would do, changes nothing
+```
+`install.sh` detects Termux (via `$PREFIX`) and runs `scripts/setup-termux.sh`
+instead of the Linux script -- it installs `termux-api` and `ffmpeg` via
+`pkg` rather than `portaudio19-dev`/`espeak-ng`, since voice on Android goes
+through a completely different path (see "Voice on Android (Termux)" below),
+then Python dependencies from `requirements-termux.txt`, `.env`, and the
+Whisper model, same as the other platforms.
+
 Either one leaves you with a ready `.env` (add your API key) and the
 Whisper model already downloaded. Skip straight to [step 4](#4-run-it)
 below.
 
 `install.sh`/`install.ps1` are thin wrappers -- they just forward whatever
-you pass to `scripts/setup-linux.sh` / `scripts\setup-windows.ps1`, so
-calling those directly does exactly the same thing if you'd rather.
+you pass to `scripts/setup-linux.sh` / `scripts/setup-termux.sh` /
+`scripts\setup-windows.ps1`, so calling those directly does exactly the same
+thing if you'd rather.
+
+### Voice on Android (Termux)
+
+Termux itself has no access to the phone's microphone or speaker -- nothing
+running inside it can reach either one directly. The bridge is a separate
+app, **Termux:API** (same publisher as Termux, get it from the same store --
+F-Droid or Play Store, don't mix sources), plus its CLI package:
+
+```
+pkg install termux-api ffmpeg
+```
+
+(`./install.sh` does this for you.) Once both the app and the CLI package
+are installed, grant microphone permission the first time Android prompts
+for it (or set it by hand under Android's App Info screen for Termux:API if
+the prompt never appears). `ffmpeg` decodes what the mic-recording tool
+captures into the format the rest of Hey Term expects -- it's a real
+dependency, not optional.
+
+Recording works in short clips rather than one continuous stream (that's a
+limitation of `termux-microphone-record` itself, which only starts/stops a
+recording to a file), so silence detection on Termux is coarser than on
+desktop -- it can include up to one extra clip's worth of trailing silence.
+Speech is still accurate; it just doesn't cut off the instant you stop
+talking, the same trade-off as pausing mid-sentence on desktop.
+
+If you see `(speech output unavailable: termux-tts-speak failed -- ...)` or
+a `termux-microphone-record failed` error, it almost always means the
+Termux:API **app** isn't installed, or the mic permission was denied -- the
+CLI package alone can't do either without it.
 
 ### Option B: fully manual
 
@@ -251,15 +333,24 @@ br` for Portuguese, `mbrola-it` for Italian -- and `sudo apt-get install`
 whichever package names it finds. `scripts/setup-linux.sh --langs <codes>`
 does exactly this search-and-install automatically.
 
+**Android (Termux):** different dependencies entirely -- see "Voice on
+Android (Termux)" above. Install `termux-api` and `ffmpeg` via `pkg`, not
+`portaudio19-dev`/`espeak-ng`.
+
 #### 2. Install
 
-Either:
+Either (Windows/Linux/macOS):
 ```
 pip install -r requirements.txt
 ```
 or, as an installed command (`hey-term` on your PATH afterward):
 ```
 pip install -e .
+```
+On Termux, use the Termux-specific requirements file instead (it omits
+`sounddevice`/`pyttsx3`, which have no Android build):
+```
+pip install -r requirements-termux.txt
 ```
 
 The first run downloads the local Whisper model (`base`, the multilingual
@@ -283,9 +374,10 @@ python main.py --work-dir ~/projects/my-repo
 hey-term --lang fr                  # if installed with `pip install -e .`
 ```
 
-Say "Hey Term", wait for it to prompt you, say what you want. Ctrl+C to
-quit, or say the wake word then "stop listening" (or its translated
-equivalent) for a spoken sign-off.
+Say "Hey Term", wait for it to prompt you, say what you want -- or just type
+your request and press Enter, no wake word needed. Ctrl+C to quit, or say
+the wake word then "stop listening" (or its translated equivalent) for a
+spoken sign-off.
 
 ## Testing
 
@@ -293,12 +385,20 @@ equivalent) for a spoken sign-off.
 python test/run.py
 ```
 
-73 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+142 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
-safety blocklist, the audit log, and the command executor -- including a
-regression test that bash-only syntax actually runs correctly) -- nothing
-here needs a microphone or speaker, so it runs identically in CI or on a
-machine with no audio hardware at all.
+safety blocklist, the audit log, the command executor -- including a
+regression test that bash-only syntax actually runs correctly -- the revert
+safety net, background jobs, cost tracking, the offline fallback, the typed-
+request reader thread/queue, conversational-memory bookkeeping (forwarding,
+remembering, capping, and resetting history -- both at the `plan()` level
+and the `handle_request()` level), and the Termux audio bridge's command-
+building/error-handling/decode logic) -- nothing here needs a real
+microphone, speaker, or a phone, so it runs identically in CI, on a machine
+with no audio hardware at all, or in this sandbox (the one exception,
+decoding a real audio file through the actual `ffmpeg` binary, is skipped
+automatically
+if `ffmpeg` isn't on the `PATH`).
 
 ## Tuning
 

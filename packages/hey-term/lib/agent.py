@@ -64,12 +64,20 @@ def _shell_name() -> str:
     return "PowerShell" if is_windows() else "bash"
 
 
-def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
+def plan(request_text: str, language: str = "en", api_key: str = None, history: list = None) -> dict:
     """Ask Claude to turn spoken text into a plan. Returns either
     {"summary": str, "commands": [str, ...]} or {"clarify": str}.
     Raises AgentError on a network failure or a response that isn't valid
     JSON in one of those two shapes -- callers should treat that as "ask the
     person to repeat themselves," never as a command to run.
+
+    `history` is the conversation so far as a list of {"role", "content"}
+    messages (main.py keeps this across requests within a run, reset on
+    "stop listening") -- it's sent ahead of `request_text` so a clarifying
+    answer ("just the tools with pkg") or a follow-up reference ("undo
+    that") is understood in context instead of being planned in isolation.
+    Callers, not this function, decide what belongs in history and when to
+    reset it -- this just forwards whatever it's given.
     """
     key = api_key or ANTHROPIC_API_KEY
     if not key:
@@ -77,6 +85,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
 
     language_name = get_strings(language)["name"]
     system = SYSTEM_PROMPT.format(shell=_shell_name(), os_name=platform.system(), language_name=language_name)
+    messages = list(history or []) + [{"role": "user", "content": request_text}]
 
     try:
         resp = requests.post(
@@ -90,7 +99,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
                 "model": ANTHROPIC_MODEL,
                 "max_tokens": 500,
                 "system": system,
-                "messages": [{"role": "user", "content": request_text}],
+                "messages": messages,
             },
             timeout=TIMEOUT_SECONDS,
         )

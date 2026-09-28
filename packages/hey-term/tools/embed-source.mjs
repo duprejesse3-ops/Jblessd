@@ -19,6 +19,7 @@ const INCLUDE_FILES = [
   'LICENSE.md',
   'main.py',
   'requirements.txt',
+  'requirements-termux.txt',
   'pyproject.toml',
   '.env.example',
   'install.sh',

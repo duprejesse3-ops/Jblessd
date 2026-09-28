@@ -9,7 +9,14 @@ are installed on the OS -- Windows Narrator languages, or `espeak-ng` on
 Linux with the right language packs. This picks a matching installed voice
 when one exists and falls back to whatever the default voice is otherwise;
 it never fails the whole request over a missing voice.
+
+pyttsx3 has no Android backend at all (no SAPI5/espeak/NSSpeechSynthesizer
+there), so on Termux this instead goes through lib.termux_audio.speak_termux,
+which drives Android's own system TTS via the Termux:API app. The printed
+transcript line always happens either way.
 """
+from . import termux_audio
+
 _engine = None
 _voice_set_for_language = None
 
@@ -44,6 +51,13 @@ def _select_voice(language: str) -> None:
 
 def speak(text: str, language: str = "en") -> None:
     print(f"[Hey Term] {text}")
+
+    if termux_audio.is_termux():
+        if not termux_audio.speak_termux(text, language):
+            print("[Hey Term] (speech output unavailable: termux-tts-speak failed -- "
+                  "is the Termux:API app installed, and `pkg install termux-api` done?)")
+        return
+
     try:
         _select_voice(language)
         engine = _get_engine()

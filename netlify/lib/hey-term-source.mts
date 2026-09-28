@@ -46,6 +46,16 @@ over a branch, dropping a database, etc.) is never run on a spoken "confirm"
 alone -- those require typing the word \`CONFIRM\` on the keyboard instead. See
 \`lib/config.py\`'s \`DANGEROUS_PATTERNS\` to see or extend that list.
 
+**You don't have to speak at all.** Type a request and press Enter any time
+-- no need to say "Hey Term" first -- and it's picked up the same as if it
+had been spoken (checked between wake-word listening chunks, so there's up
+to one chunk's worth of delay, a couple of seconds by default). This only
+needs an interactive terminal; it's silently unavailable when stdin is
+piped, redirected, or otherwise non-interactive (voice still works either
+way). Confirmations themselves are unaffected by this -- an ordinary
+command still expects a spoken "confirm"/"cancel", and only the dangerous-
+command blocklist above still asks for typed \`CONFIRM\`.
+
 Every wake, request, plan, confirmation, and command run is appended to a
 plain-text audit log (\`.hey-term-audit.jsonl\` by default) -- a full record of
 what Hey Term has ever been asked to do and whether it actually did it.
@@ -99,7 +109,9 @@ actually what runs it. See \`test/test_executor.py\`'s
 3. **Planning** (\`lib/agent.py\`) -- your request goes to Claude's API (plain
    HTTPS, no SDK) with instructions to either return an exact command plan
    plus a summary in your language, or ask a clarifying question if the
-   request is ambiguous. It never guesses on unclear requests.
+   request is ambiguous. It never guesses on unclear requests. Recent turns
+   go with it (see "Conversational memory" below), so a clarifying answer or
+   a follow-up like "undo that" is understood in context.
 4. **Confirmation** (\`lib/confirm.py\`) -- the summary is spoken back, and it
    listens for an unambiguous yes/no in your language. A mumble, silence, or
    contradictory reply all count as "unclear" and cancel -- only a clear
@@ -110,6 +122,31 @@ actually what runs it. See \`test/test_executor.py\`'s
 6. **Audit** (\`lib/audit.py\`) -- every step above appends a JSON line to the
    audit log, independent of whether the request succeeded, was clarified,
    or was canceled.
+
+## Conversational memory
+
+The back-and-forth with Claude within one run is remembered (\`main.py\`'s
+\`_conversation_history\`, capped at the most recent 12 messages so it doesn't
+grow -- and cost -- indefinitely) and sent along with each new request, so:
+
+\`\`\`
+you:      "Hey Term"
+Hey Term: "Yes?"
+you:      "delete the log file"
+Hey Term: "Which log file did you mean?"
+you:      "Hey Term"
+Hey Term: "Yes?"
+you:      "the one in /var/log/app"
+Hey Term: "Deletes /var/log/app/app.log. Say confirm to run it, or cancel."
+\`\`\`
+
+answering a clarifying question, or referring back to what just ran ("undo
+that", "run it again but in the background") actually lands in context
+instead of Claude re-planning from nothing each time. It resets on "stop
+listening" (or its translated equivalent) -- the one phrase that already
+means "start over" -- and isn't affected by the offline fallback below,
+which never talks to Claude in the first place. \`jobs\`/\`cost\`/\`revert\` don't
+touch it either, since they're answered locally and never go to Claude.
 
 ## Safety net: reverting what just ran
 
@@ -233,13 +270,58 @@ voice by hand instead (Settings > Time & Language > Language & region > Add
 a language > check "Text-to-speech") -- everything else (Python deps,
 \`.env\`, the Whisper model) still runs normally either way.
 
+**Android (Termux):**
+\`\`\`
+chmod +x install.sh
+./install.sh                    # detects Termux automatically, asks before installing
+./install.sh --yes              # don't prompt before pkg installs
+./install.sh --dry-run          # preview what it would do, changes nothing
+\`\`\`
+\`install.sh\` detects Termux (via \`$PREFIX\`) and runs \`scripts/setup-termux.sh\`
+instead of the Linux script -- it installs \`termux-api\` and \`ffmpeg\` via
+\`pkg\` rather than \`portaudio19-dev\`/\`espeak-ng\`, since voice on Android goes
+through a completely different path (see "Voice on Android (Termux)" below),
+then Python dependencies from \`requirements-termux.txt\`, \`.env\`, and the
+Whisper model, same as the other platforms.
+
 Either one leaves you with a ready \`.env\` (add your API key) and the
 Whisper model already downloaded. Skip straight to [step 4](#4-run-it)
 below.
 
 \`install.sh\`/\`install.ps1\` are thin wrappers -- they just forward whatever
-you pass to \`scripts/setup-linux.sh\` / \`scripts\\setup-windows.ps1\`, so
-calling those directly does exactly the same thing if you'd rather.
+you pass to \`scripts/setup-linux.sh\` / \`scripts/setup-termux.sh\` /
+\`scripts\\setup-windows.ps1\`, so calling those directly does exactly the same
+thing if you'd rather.
+
+### Voice on Android (Termux)
+
+Termux itself has no access to the phone's microphone or speaker -- nothing
+running inside it can reach either one directly. The bridge is a separate
+app, **Termux:API** (same publisher as Termux, get it from the same store --
+F-Droid or Play Store, don't mix sources), plus its CLI package:
+
+\`\`\`
+pkg install termux-api ffmpeg
+\`\`\`
+
+(\`./install.sh\` does this for you.) Once both the app and the CLI package
+are installed, grant microphone permission the first time Android prompts
+for it (or set it by hand under Android's App Info screen for Termux:API if
+the prompt never appears). \`ffmpeg\` decodes what the mic-recording tool
+captures into the format the rest of Hey Term expects -- it's a real
+dependency, not optional.
+
+Recording works in short clips rather than one continuous stream (that's a
+limitation of \`termux-microphone-record\` itself, which only starts/stops a
+recording to a file), so silence detection on Termux is coarser than on
+desktop -- it can include up to one extra clip's worth of trailing silence.
+Speech is still accurate; it just doesn't cut off the instant you stop
+talking, the same trade-off as pausing mid-sentence on desktop.
+
+If you see \`(speech output unavailable: termux-tts-speak failed -- ...)\` or
+a \`termux-microphone-record failed\` error, it almost always means the
+Termux:API **app** isn't installed, or the mic permission was denied -- the
+CLI package alone can't do either without it.
 
 ### Option B: fully manual
 
@@ -274,15 +356,24 @@ br\` for Portuguese, \`mbrola-it\` for Italian -- and \`sudo apt-get install\`
 whichever package names it finds. \`scripts/setup-linux.sh --langs <codes>\`
 does exactly this search-and-install automatically.
 
+**Android (Termux):** different dependencies entirely -- see "Voice on
+Android (Termux)" above. Install \`termux-api\` and \`ffmpeg\` via \`pkg\`, not
+\`portaudio19-dev\`/\`espeak-ng\`.
+
 #### 2. Install
 
-Either:
+Either (Windows/Linux/macOS):
 \`\`\`
 pip install -r requirements.txt
 \`\`\`
 or, as an installed command (\`hey-term\` on your PATH afterward):
 \`\`\`
 pip install -e .
+\`\`\`
+On Termux, use the Termux-specific requirements file instead (it omits
+\`sounddevice\`/\`pyttsx3\`, which have no Android build):
+\`\`\`
+pip install -r requirements-termux.txt
 \`\`\`
 
 The first run downloads the local Whisper model (\`base\`, the multilingual
@@ -306,9 +397,10 @@ python main.py --work-dir ~/projects/my-repo
 hey-term --lang fr                  # if installed with \`pip install -e .\`
 \`\`\`
 
-Say "Hey Term", wait for it to prompt you, say what you want. Ctrl+C to
-quit, or say the wake word then "stop listening" (or its translated
-equivalent) for a spoken sign-off.
+Say "Hey Term", wait for it to prompt you, say what you want -- or just type
+your request and press Enter, no wake word needed. Ctrl+C to quit, or say
+the wake word then "stop listening" (or its translated equivalent) for a
+spoken sign-off.
 
 ## Testing
 
@@ -316,12 +408,20 @@ equivalent) for a spoken sign-off.
 python test/run.py
 \`\`\`
 
-73 tests, all pure-logic (plan parsing, wake-word matching, confirmation
+142 tests, all pure-logic (plan parsing, wake-word matching, confirmation
 parsing in all six languages, i18n key-consistency across languages, the
-safety blocklist, the audit log, and the command executor -- including a
-regression test that bash-only syntax actually runs correctly) -- nothing
-here needs a microphone or speaker, so it runs identically in CI or on a
-machine with no audio hardware at all.
+safety blocklist, the audit log, the command executor -- including a
+regression test that bash-only syntax actually runs correctly -- the revert
+safety net, background jobs, cost tracking, the offline fallback, the typed-
+request reader thread/queue, conversational-memory bookkeeping (forwarding,
+remembering, capping, and resetting history -- both at the \`plan()\` level
+and the \`handle_request()\` level), and the Termux audio bridge's command-
+building/error-handling/decode logic) -- nothing here needs a real
+microphone, speaker, or a phone, so it runs identically in CI, on a machine
+with no audio hardware at all, or in this sandbox (the one exception,
+decoding a real audio file through the actual \`ffmpeg\` binary, is skipped
+automatically
+if \`ffmpeg\` isn't on the \`PATH\`).
 
 ## Tuning
 
@@ -407,7 +507,10 @@ Run:  python main.py [--lang es] [--wake-word "hey term"] [--work-dir .]
 Stop: Ctrl+C, or say the wake word then "stop listening".
 """
 import argparse
+import json
+import queue
 import sys
+import threading
 
 from lib import audit, config, cost, jobs, offline_fallback, snapshot
 from lib.agent import AgentError, plan
@@ -453,9 +556,85 @@ BACKGROUND_PHRASES = ["in the background", "run it in the background", "as a bac
 _last_snapshot = None
 _last_changed_paths = []
 
+# Short-term conversational memory: the Claude-facing back-and-forth so far
+# this run, as {"role", "content"} messages, sent ahead of each new request
+# (see lib/agent.py's plan()) so a clarifying answer or a follow-up
+# reference ("undo that") lands in context instead of starting over. Reset
+# on "stop listening" (handle_request's stop_phrase branch) -- an
+# indefinitely growing history would otherwise keep costing tokens for
+# context that's stopped being relevant, and "stop listening" is the one
+# phrase a person already says specifically to mean "start fresh." Capped at
+# MAX_HISTORY_MESSAGES for the same reason even within one still-active
+# conversation. Only real Claude round-trips are added -- see
+# handle_request's offline-fallback branch for why that path is excluded.
+MAX_HISTORY_MESSAGES = 12
+_conversation_history = []
+
 # Tracks whether the fallback-language notice has already been spoken this
 # run, so it's said once at startup, not on every single request.
 _fallback_notice_given = False
+
+# Typed input goes through one background reader thread and one queue,
+# whatever it's for -- a request typed instead of spoken, or a typed CONFIRM
+# for a dangerous command -- rather than each call site doing its own input()
+# read. Two independent input() calls racing each other on the same stdin is
+# how a keystroke ends up silently eaten by the wrong one; one reader thread
+# and one queue means there's only ever one thing consuming stdin, so a typed
+# line always reaches whichever consumer is actually waiting for it next.
+_typed_input_queue: "queue.Queue" = queue.Queue()
+_stdin_reader_thread = None
+
+
+def _stdin_reader_loop(input_fn=input, out_queue=None) -> None:
+    """Reads lines from stdin forever and enqueues non-empty, stripped ones.
+    Exits (returns) on EOFError -- stdin closed, redirected from an
+    exhausted pipe, or otherwise non-interactive -- rather than spinning.
+    Takes input_fn/out_queue as parameters so it can be unit-tested with a
+    fake stdin instead of the real one.
+    """
+    if out_queue is None:
+        out_queue = _typed_input_queue
+    while True:
+        try:
+            line = input_fn()
+        except EOFError:
+            return
+        line = line.strip()
+        if line:
+            out_queue.put(line)
+
+
+def start_stdin_reader() -> bool:
+    """Starts the background stdin-reader thread once, only when stdin is an
+    interactive terminal. Returns whether it's running (already-started
+    counts). A no-op on a piped/redirected/non-interactive stdin (including
+    the test suite and a scheduled/headless run) -- typing instead of the
+    wake word just isn't offered there, but voice keeps working either way,
+    and nothing blocks or crashes over the missing terminal.
+    """
+    global _stdin_reader_thread
+    if _stdin_reader_thread is not None:
+        return True
+    try:
+        interactive = sys.stdin is not None and sys.stdin.isatty()
+    except Exception:
+        interactive = False
+    if not interactive:
+        return False
+    _stdin_reader_thread = threading.Thread(target=_stdin_reader_loop, daemon=True)
+    _stdin_reader_thread.start()
+    return True
+
+
+def take_typed_request():
+    """Non-blocking check for a request typed instead of spoken. Returns the
+    text, or None if nothing's waiting -- called once per wake-word-loop
+    iteration so a typed request is picked up between mic chunks without
+    ever blocking the voice path."""
+    try:
+        return _typed_input_queue.get_nowait()
+    except queue.Empty:
+        return None
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -510,10 +689,14 @@ def get_confirmation(language: str) -> str:
 
 
 def get_typed_confirmation(prompt: str) -> bool:
-    try:
-        typed = input(prompt)
-    except EOFError:
-        return False
+    print(prompt, end="", flush=True)
+    if start_stdin_reader():
+        typed = _typed_input_queue.get()  # blocks until the reader thread enqueues a line
+    else:
+        try:
+            typed = input()
+        except EOFError:
+            return False
     return typed.strip() == "CONFIRM"
 
 
@@ -531,6 +714,18 @@ def _strip_phrase(text: str, phrases: list) -> tuple:
             cleaned = (text[:idx] + text[idx + len(phrase):]).strip(" ,.")
             return cleaned, True
     return text, False
+
+
+def _remember_turn(role: str, content: str) -> None:
+    global _conversation_history
+    _conversation_history.append({"role": role, "content": content})
+    if len(_conversation_history) > MAX_HISTORY_MESSAGES:
+        _conversation_history = _conversation_history[-MAX_HISTORY_MESSAGES:]
+
+
+def _reset_conversation() -> None:
+    global _conversation_history
+    _conversation_history = []
 
 
 def handle_jobs_command(language: str, work_dir: str) -> None:
@@ -584,6 +779,7 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
     if normalized in strings["stop_phrases"]:
         speak(strings["stopping"], language=language)
         audit.log_event("request", language=language, text=request_text, outcome="stop_phrase")
+        _reset_conversation()
         return
 
     if normalized in JOBS_PHRASES:
@@ -603,7 +799,12 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
     effective_timeout = timeout_seconds * LONGER_TIMEOUT_SECONDS_MULTIPLIER if run_longer else timeout_seconds
 
     try:
-        result = plan(request_text, language=language)
+        result = plan(request_text, language=language, history=_conversation_history)
+        # Only a real Claude round-trip joins the remembered conversation --
+        # see MAX_HISTORY_MESSAGES's comment above for why the offline-
+        # fallback branch below deliberately doesn't do this too.
+        _remember_turn("user", request_text)
+        _remember_turn("assistant", json.dumps(result))
     except AgentError as err:
         print(f"[error] {err}")
         audit.log_event("plan_error", language=language, error=str(err))
@@ -694,11 +895,13 @@ def handle_request(request_text: str, language: str, work_dir: str, timeout_seco
         print(f"    ({len(changed)} file(s) changed -- say \\"revert\\" to undo)")
 
 
-def print_banner(language: str, work_dir: str) -> None:
+def print_banner(language: str, work_dir: str, typing_available: bool) -> None:
     print(f"{config.PRODUCT_NAME} v{config.VERSION} -- {config.COPYRIGHT}")
     print(f"Working directory: {work_dir}")
     print(f"Language: {language}" + ("" if is_translated(language) or language == "auto" else " (untranslated -- using English prompts)"))
     print(f"Wake word: \\"{config.WAKE_WORD}\\". Listening in {config.WAKE_CHUNK_SECONDS}s chunks. Ctrl+C to quit.")
+    if typing_available:
+        print("You can also just type a request and press Enter, any time -- no need to say the wake word first.")
     print(f"Audit log: {config.AUDIT_LOG_PATH}")
     print(f"Command timeout: {config.COMMAND_TIMEOUT_SECONDS}s (say \\"take your time\\" in a request for a longer one)")
     print("Say \\"jobs\\", \\"cost\\", or \\"revert\\" any time for background-job status, session spend, or to undo the last run.")
@@ -706,6 +909,7 @@ def print_banner(language: str, work_dir: str) -> None:
 
 def main(argv=None) -> int:
     global _fallback_notice_given
+    _reset_conversation()
     args = parse_args(argv)
 
     if args.list_languages:
@@ -724,8 +928,9 @@ def main(argv=None) -> int:
     config.AUDIT_LOG_PATH = args.audit_log  # honor --audit-log override for this run
     config.COMMAND_TIMEOUT_SECONDS = args.timeout  # honor --timeout override for this run
 
-    print_banner(language, work_dir)
-    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION)
+    typing_available = start_stdin_reader()
+    print_banner(language, work_dir, typing_available)
+    audit.log_event("startup", language=language, work_dir=work_dir, version=config.VERSION, typing_available=typing_available)
 
     if language != "auto" and not is_translated(language) and not _fallback_notice_given:
         speak(get_strings(language)["fallback_language_notice"], language=DEFAULT_LANGUAGE_FOR_NOTICE)
@@ -735,8 +940,14 @@ def main(argv=None) -> int:
 
     try:
         while True:
+            typed_request = take_typed_request()
+            if typed_request is not None:
+                print(f"[you] {typed_request}")
+                audit.log_event("wake", via="typed")
+                handle_request(typed_request, language, work_dir, config.COMMAND_TIMEOUT_SECONDS)
+                continue
             if listen_for_wake_word(wake_word):
-                audit.log_event("wake")
+                audit.log_event("wake", via="voice")
                 request_text = take_command(language)
                 if request_text:
                     print(f"[you] {request_text}")
@@ -761,10 +972,31 @@ if __name__ == "__main__":
   },
   {
     path: "requirements.txt",
-    contents: `sounddevice>=0.4.6
+    contents: `# For a regular Windows/Linux/macOS install. On Android/Termux, use
+# requirements-termux.txt instead (scripts/setup-termux.sh does this for
+# you) -- sounddevice and pyttsx3 below have no Android wheel and aren't
+# needed there, since lib/audio.py and lib/speak.py route through
+# lib/termux_audio.py (the Termux:API app's CLI tools + ffmpeg) instead of
+# these two when running under Termux.
+sounddevice>=0.4.6
 numpy>=1.24
 faster-whisper>=1.0.0
 pyttsx3>=2.90
+requests>=2.31
+`,
+  },
+  {
+    path: "requirements-termux.txt",
+    contents: `# Termux (Android) dependencies. Same as requirements.txt but WITHOUT
+# sounddevice and pyttsx3: both are desktop-only audio backends, and pip has
+# no prebuilt wheel for either on Android -- attempting to build sounddevice
+# from source there needs PortAudio dev headers Termux doesn't ship, and it
+# would install for nothing anyway, since lib/audio.py and lib/speak.py
+# import both lazily and only take that code path when NOT running under
+# Termux (see lib/termux_audio.py, used instead on Android). Everything else
+# here is unchanged from requirements.txt.
+numpy>=1.24
+faster-whisper>=1.0.0
 requests>=2.31
 `,
   },
@@ -860,15 +1092,20 @@ ANTHROPIC_API_KEY=
 # Licensed to a single purchaser under the terms in LICENSE.md.
 # Redistribution or resale of this source, in whole or in part, is not permitted.
 #
-# Entry point: hands off to the real Linux setup script (system audio deps,
-# best-effort voice packs, Python deps, .env, Whisper model). See
-# scripts/setup-linux.sh --help for every flag; anything you pass here is
-# forwarded as-is, e.g.:
+# Entry point: detects Termux (Android) vs. a regular Linux machine and hands
+# off to the matching setup script, since the two need different system
+# packages -- Termux has no PortAudio/espeak-ng to install and instead needs
+# the Termux:API CLI tools + ffmpeg (see scripts/setup-termux.sh's own header
+# for why). See that script's or scripts/setup-linux.sh's --help for every
+# flag; anything you pass here is forwarded as-is, e.g.:
 #
-#   ./install.sh --langs es,fr,de
-#   ./install.sh --yes
+#   ./install.sh --langs es,fr,de      # regular Linux
+#   ./install.sh --yes                 # either
 set -euo pipefail
 DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "\${PREFIX:-}" ] && [ "\${PREFIX#*com.termux}" != "$PREFIX" ]; then
+  exec "$DIR/scripts/setup-termux.sh" "$@"
+fi
 exec "$DIR/scripts/setup-linux.sh" "$@"
 `,
   },
@@ -972,12 +1209,20 @@ def _shell_name() -> str:
     return "PowerShell" if is_windows() else "bash"
 
 
-def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
+def plan(request_text: str, language: str = "en", api_key: str = None, history: list = None) -> dict:
     """Ask Claude to turn spoken text into a plan. Returns either
     {"summary": str, "commands": [str, ...]} or {"clarify": str}.
     Raises AgentError on a network failure or a response that isn't valid
     JSON in one of those two shapes -- callers should treat that as "ask the
     person to repeat themselves," never as a command to run.
+
+    \`history\` is the conversation so far as a list of {"role", "content"}
+    messages (main.py keeps this across requests within a run, reset on
+    "stop listening") -- it's sent ahead of \`request_text\` so a clarifying
+    answer ("just the tools with pkg") or a follow-up reference ("undo
+    that") is understood in context instead of being planned in isolation.
+    Callers, not this function, decide what belongs in history and when to
+    reset it -- this just forwards whatever it's given.
     """
     key = api_key or ANTHROPIC_API_KEY
     if not key:
@@ -985,6 +1230,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
 
     language_name = get_strings(language)["name"]
     system = SYSTEM_PROMPT.format(shell=_shell_name(), os_name=platform.system(), language_name=language_name)
+    messages = list(history or []) + [{"role": "user", "content": request_text}]
 
     try:
         resp = requests.post(
@@ -998,7 +1244,7 @@ def plan(request_text: str, language: str = "en", api_key: str = None) -> dict:
                 "model": ANTHROPIC_MODEL,
                 "max_tokens": 500,
                 "system": system,
-                "messages": [{"role": "user", "content": request_text}],
+                "messages": messages,
             },
             timeout=TIMEOUT_SECONDS,
         )
@@ -1079,15 +1325,25 @@ def parse_plan(text: str) -> dict:
 """Microphone capture. Imports sounddevice/numpy lazily inside functions so
 that importing this module (e.g. from a test) doesn't require audio hardware
 or system audio libraries (portaudio) to be installed.
+
+On Android/Termux, sounddevice has nothing to talk to -- there is no
+PortAudio backend there -- so both functions below check lib.termux_audio's
+is_termux() first and delegate to its termux-microphone-record-based
+implementation instead. Desktop (Windows/Linux/macOS) behavior is unchanged.
 """
+from . import termux_audio
 from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD
 
 
 def record_fixed(seconds: float, sample_rate: int = None):
     """Records a fixed-length clip and returns a 1-D float32 numpy array."""
+    rate = sample_rate or SAMPLE_RATE
+
+    if termux_audio.is_termux():
+        return termux_audio.record_fixed_termux(seconds, rate)
+
     import sounddevice as sd
 
-    rate = sample_rate or SAMPLE_RATE
     audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32")
     sd.wait()
     return audio.reshape(-1)
@@ -1103,12 +1359,15 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     mid-sentence to think would get cut off. It waits for a sustained quiet
     stretch, not just one quiet instant.
     """
-    import numpy as np
-    import sounddevice as sd
-
     rate = sample_rate or SAMPLE_RATE
     hold = silence_hold if silence_hold is not None else SILENCE_HOLD_SECONDS
     threshold = rms_threshold if rms_threshold is not None else SILENCE_RMS_THRESHOLD
+
+    if termux_audio.is_termux():
+        return termux_audio.record_until_silence_termux(max_seconds, rate, hold, threshold)
+
+    import numpy as np
+    import sounddevice as sd
 
     block_seconds = 0.2
     block_size = int(rate * block_seconds)
@@ -1205,7 +1464,7 @@ import os
 import platform
 
 PRODUCT_NAME = "Hey Term"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 COPYRIGHT = "Copyright (c) 2026 MultiNiche AI. All rights reserved."
 
 
@@ -2371,7 +2630,14 @@ are installed on the OS -- Windows Narrator languages, or \`espeak-ng\` on
 Linux with the right language packs. This picks a matching installed voice
 when one exists and falls back to whatever the default voice is otherwise;
 it never fails the whole request over a missing voice.
+
+pyttsx3 has no Android backend at all (no SAPI5/espeak/NSSpeechSynthesizer
+there), so on Termux this instead goes through lib.termux_audio.speak_termux,
+which drives Android's own system TTS via the Termux:API app. The printed
+transcript line always happens either way.
 """
+from . import termux_audio
+
 _engine = None
 _voice_set_for_language = None
 
@@ -2406,6 +2672,13 @@ def _select_voice(language: str) -> None:
 
 def speak(text: str, language: str = "en") -> None:
     print(f"[Hey Term] {text}")
+
+    if termux_audio.is_termux():
+        if not termux_audio.speak_termux(text, language):
+            print("[Hey Term] (speech output unavailable: termux-tts-speak failed -- "
+                  "is the Termux:API app installed, and \`pkg install termux-api\` done?)")
+        return
+
     try:
         _select_voice(language)
         engine = _get_engine()
@@ -2413,6 +2686,184 @@ def speak(text: str, language: str = "en") -> None:
         engine.runAndWait()
     except Exception as err:  # pragma: no cover - depends on local audio setup
         print(f"[Hey Term] (speech output unavailable: {err})")
+`,
+  },
+  {
+    path: "lib/termux_audio.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+"""Microphone and speech output on Android, through the Termux:API app.
+
+sounddevice (lib/audio.py) and pyttsx3 (lib/speak.py) are desktop-only --
+PortAudio and SAPI5/espeak/NSSpeechSynthesizer have no real Android backend.
+Termux has no direct access to the phone's mic or speaker at all; the
+Termux:API companion app is the only bridge, exposing them as small CLI
+tools (termux-microphone-record, termux-tts-speak) that talk to the app over
+Android's own APIs. This module is that bridge for Hey Term:
+
+Setup (once): install the separate "Termux:API" app (F-Droid or Play Store,
+same publisher as Termux), then in Termux:
+
+    pkg install termux-api ffmpeg
+
+ffmpeg is required here too -- termux-microphone-record only writes
+compressed containers (aac/amr, not raw PCM), and this module decodes them
+to the float32 PCM arrays the rest of Hey Term (lib/transcribe.py) expects
+before it can pass them to faster-whisper.
+
+Everything here degrades honestly instead of pretending: is_termux() is the
+single detection point both lib/audio.py and lib/speak.py branch on, and a
+missing binary/timeout/decode failure raises or returns False rather than
+silently producing empty audio that would look like "you said nothing."
+"""
+import os
+import shutil
+import subprocess
+import tempfile
+import time
+
+# termux-microphone-record has no live block-by-block streaming mode (it
+# only starts/stops a recording to a file), so record_until_silence_termux
+# approximates the desktop version's fine-grained silence detection with
+# back-to-back fixed-length chunks instead. Coarser (up to one chunk's
+# worth of trailing silence gets included) but the only thing actually
+# possible through this CLI.
+CHUNK_SECONDS = 1.5
+
+_RECORD_BIN = "termux-microphone-record"
+_TTS_BIN = "termux-tts-speak"
+
+
+def is_termux() -> bool:
+    """True when running under Termux with the termux-api package installed
+    (the Termux:API *app* also has to be installed and granted mic
+    permission on the phone itself -- this can only detect the CLI side).
+    """
+    if "com.termux" in os.environ.get("PREFIX", ""):
+        return True
+    return shutil.which(_RECORD_BIN) is not None
+
+
+def _decode_to_float32(path: str, sample_rate: int):
+    """Decodes an audio file (any format ffmpeg understands) to a 1-D
+    float32 PCM numpy array at \`sample_rate\`, mono. Raises RuntimeError with
+    ffmpeg's own message on failure rather than returning silence, so a
+    decode problem is never mistaken for "no speech."
+    """
+    import numpy as np
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError(
+            "ffmpeg not found -- required to decode Termux microphone recordings. "
+            "Install it with: pkg install ffmpeg"
+        )
+    proc = subprocess.run(
+        [ffmpeg, "-v", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(sample_rate), "-"],
+        capture_output=True,
+        timeout=30,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed to decode recording: {proc.stderr.decode(errors='replace')[:300]}")
+    return np.frombuffer(proc.stdout, dtype="<f4").copy()
+
+
+def _record_clip(seconds: float, sample_rate: int):
+    """Records one clip of up to \`seconds\` seconds via termux-microphone-record
+    and returns it as a 1-D float32 numpy array at \`sample_rate\`.
+
+    termux-microphone-record's own \`-l\` limit stops the recording on the
+    Termux:API app's side, but the command itself returns as soon as
+    recording *starts*, not when it finishes (documented Termux:API
+    behavior) -- so this sleeps out the requested duration itself before
+    reading the file, and sends an explicit \`-q\` stop afterward as a
+    safety net in case the app's own limit didn't fire (harmless no-op if
+    it already had).
+    """
+    import numpy as np
+
+    seconds = max(0.3, seconds)
+    fd, path = tempfile.mkstemp(suffix=".m4a", prefix="hey-term-rec-")
+    os.close(fd)
+    os.remove(path)  # termux-microphone-record creates this itself
+
+    try:
+        subprocess.run(
+            [_RECORD_BIN, "-f", path, "-l", str(round(seconds)), "-r", str(sample_rate), "-c", "1"],
+            check=True, capture_output=True, timeout=10,
+        )
+        time.sleep(seconds + 0.5)
+        subprocess.run([_RECORD_BIN, "-q"], capture_output=True, timeout=5)
+        time.sleep(0.3)
+
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            return np.zeros(0, dtype="float32")
+        return _decode_to_float32(path, sample_rate)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as err:
+        raise RuntimeError(
+            f"termux-microphone-record failed ({err}). Is the Termux:API app installed "
+            "and granted microphone permission, and is \`pkg install termux-api\` done?"
+        ) from err
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def record_fixed_termux(seconds: float, sample_rate: int):
+    return _record_clip(seconds, sample_rate)
+
+
+def record_until_silence_termux(max_seconds: float, sample_rate: int, silence_hold: float, rms_threshold: float):
+    """Chunk-based approximation of lib/audio.py's record_until_silence --
+    see CHUNK_SECONDS above for why this can't be as fine-grained on Termux.
+    """
+    import numpy as np
+
+    blocks = []
+    elapsed = 0.0
+    heard_speech = False
+    consecutive_silent = 0.0
+
+    while elapsed < max_seconds:
+        this_chunk = min(CHUNK_SECONDS, max_seconds - elapsed)
+        clip = _record_clip(this_chunk, sample_rate)
+        blocks.append(clip)
+        elapsed += this_chunk
+
+        rms = float(np.sqrt(np.mean(np.square(clip)))) if len(clip) else 0.0
+        if rms >= rms_threshold:
+            heard_speech = True
+            consecutive_silent = 0.0
+        else:
+            consecutive_silent += this_chunk
+
+        if heard_speech and consecutive_silent >= silence_hold:
+            break
+
+    if not blocks:
+        return np.zeros(0, dtype="float32")
+    return np.concatenate(blocks)
+
+
+def speak_termux(text: str, language: str = "en") -> bool:
+    """Speaks via Android's own system TTS, through termux-tts-speak.
+    Returns True on success, False if the binary is missing, the Termux:API
+    app isn't installed, or the call otherwise fails -- callers should print
+    the text as a fallback either way, never treat this as fatal.
+    """
+    try:
+        subprocess.run([_TTS_BIN, "-l", language, text], check=True, capture_output=True, timeout=30)
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    # Not every termux-tts-speak build accepts -l for every locale code --
+    # retry once with the plain default voice before giving up entirely.
+    try:
+        subprocess.run([_TTS_BIN, text], check=True, capture_output=True, timeout=30)
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        return False
 `,
   },
   {
@@ -2553,10 +3004,11 @@ if __name__ == "__main__":
   {
     path: "test/test_agent.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import json
 import unittest
 from unittest import mock
 
-from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, parse_plan
+from lib.agent import SYSTEM_PROMPT, AgentError, _shell_name, parse_plan, plan
 
 
 class TestParsePlan(unittest.TestCase):
@@ -2623,6 +3075,54 @@ class TestSystemPromptFormatting(unittest.TestCase):
         self.assertIn("bash", rendered)
         self.assertIn("Hey Term", rendered)
         self.assertIn("MultiNiche AI", rendered)
+
+
+def _fake_response(payload: dict, usage=None):
+    return mock.Mock(
+        status_code=200,
+        json=mock.Mock(return_value={
+            "content": [{"type": "text", "text": json.dumps(payload)}],
+            "usage": usage or {"input_tokens": 10, "output_tokens": 5},
+        }),
+    )
+
+
+class TestPlanConversationHistory(unittest.TestCase):
+    """plan()'s \`history\` param is what main.py's conversational-memory
+    feature relies on to let a follow-up ("undo that") or a clarifying
+    answer land in context -- see main.py's _remember_turn/_reset_conversation
+    and its module docstring. These tests cover plan()'s side of that
+    contract without a real network call.
+    """
+
+    def test_no_history_sends_only_the_current_request(self):
+        with mock.patch("lib.agent.requests.post", return_value=_fake_response({"summary": "ok", "commands": ["ls"]})) as post:
+            plan("list files", api_key="test-key")
+        sent = post.call_args.kwargs["json"]["messages"]
+        self.assertEqual(sent, [{"role": "user", "content": "list files"}])
+
+    def test_history_is_forwarded_ahead_of_the_new_request(self):
+        history = [
+            {"role": "user", "content": "list files"},
+            {"role": "assistant", "content": '{"summary": "Lists files.", "commands": ["ls -la"]}'},
+        ]
+        with mock.patch("lib.agent.requests.post", return_value=_fake_response({"summary": "ok", "commands": ["rm foo"]})) as post:
+            plan("undo that", api_key="test-key", history=history)
+        sent = post.call_args.kwargs["json"]["messages"]
+        self.assertEqual(sent, history + [{"role": "user", "content": "undo that"}])
+
+    def test_none_history_is_treated_the_same_as_no_history(self):
+        with mock.patch("lib.agent.requests.post", return_value=_fake_response({"summary": "ok", "commands": ["ls"]})) as post:
+            plan("list files", api_key="test-key", history=None)
+        sent = post.call_args.kwargs["json"]["messages"]
+        self.assertEqual(sent, [{"role": "user", "content": "list files"}])
+
+    def test_does_not_mutate_the_caller_s_history_list(self):
+        history = [{"role": "user", "content": "list files"}]
+        original_len = len(history)
+        with mock.patch("lib.agent.requests.post", return_value=_fake_response({"summary": "ok", "commands": ["ls"]})):
+            plan("and now what", api_key="test-key", history=history)
+        self.assertEqual(len(history), original_len)
 
 
 if __name__ == "__main__":
@@ -2826,6 +3326,53 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_conversation_history.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import unittest
+
+import main
+
+
+class TestConversationHistory(unittest.TestCase):
+    def setUp(self):
+        self._original = list(main._conversation_history)
+        main._reset_conversation()
+
+    def tearDown(self):
+        main._conversation_history = self._original
+
+    def test_starts_empty_after_reset(self):
+        self.assertEqual(main._conversation_history, [])
+
+    def test_remember_turn_appends_role_and_content(self):
+        main._remember_turn("user", "list files")
+        main._remember_turn("assistant", '{"summary": "ok", "commands": ["ls"]}')
+        self.assertEqual(main._conversation_history, [
+            {"role": "user", "content": "list files"},
+            {"role": "assistant", "content": '{"summary": "ok", "commands": ["ls"]}'},
+        ])
+
+    def test_reset_clears_previously_remembered_turns(self):
+        main._remember_turn("user", "list files")
+        main._reset_conversation()
+        self.assertEqual(main._conversation_history, [])
+
+    def test_history_is_capped_at_max_history_messages(self):
+        for i in range(main.MAX_HISTORY_MESSAGES + 5):
+            main._remember_turn("user", f"request {i}")
+        self.assertEqual(len(main._conversation_history), main.MAX_HISTORY_MESSAGES)
+        # Oldest turns age out first -- the most recent ones survive.
+        self.assertEqual(
+            main._conversation_history[-1],
+            {"role": "user", "content": f"request {main.MAX_HISTORY_MESSAGES + 4}"},
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_cost.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import os
@@ -2995,6 +3542,97 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_handle_request_history.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import json
+import tempfile
+import unittest
+from unittest import mock
+
+import main
+from lib.agent import AgentError
+from lib.executor import CommandResult
+
+
+class TestHandleRequestConversationHistory(unittest.TestCase):
+    """handle_request() is what actually wires main.py's conversational
+    memory together -- forwarding _conversation_history into plan(),
+    remembering a successful turn, resetting on "stop listening", and
+    deliberately NOT remembering an offline-fallback turn (see
+    MAX_HISTORY_MESSAGES's comment in main.py for why). Heavily mocked since
+    the function itself talks to voice/confirmation/execution, but the
+    history bookkeeping is real.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.work_dir = self._tmp.name
+        main._reset_conversation()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+        main._reset_conversation()
+
+    def test_successful_plan_is_forwarded_history_and_then_remembered(self):
+        main._conversation_history = [{"role": "user", "content": "earlier turn"}]
+        seen_history = []
+
+        def fake_plan(request_text, language, history=None):
+            # handle_request passes the live module-level list by reference,
+            # not a copy -- snapshot it immediately, the same way the real
+            # plan() does internally (see lib/agent.py's \`list(history or [])\`),
+            # since later _remember_turn() calls mutate that same object.
+            seen_history.append(list(history or []))
+            return {"summary": "Lists files.", "commands": ["ls"]}
+
+        with mock.patch("main.plan", side_effect=fake_plan), \\
+             mock.patch("main.speak"), \\
+             mock.patch("main.get_confirmation", return_value="cancel"):
+            main.handle_request("list files", "en", self.work_dir, 30)
+
+        self.assertEqual(seen_history, [[{"role": "user", "content": "earlier turn"}]])
+        self.assertEqual(main._conversation_history[-2], {"role": "user", "content": "list files"})
+        self.assertEqual(
+            json.loads(main._conversation_history[-1]["content"]),
+            {"summary": "Lists files.", "commands": ["ls"]},
+        )
+
+    def test_clarify_response_is_also_remembered(self):
+        with mock.patch("main.plan", return_value={"clarify": "Which file do you mean?"}), \\
+             mock.patch("main.speak"):
+            main.handle_request("delete it", "en", self.work_dir, 30)
+
+        self.assertEqual(main._conversation_history[-2], {"role": "user", "content": "delete it"})
+        self.assertEqual(json.loads(main._conversation_history[-1]["content"]), {"clarify": "Which file do you mean?"})
+
+    def test_offline_fallback_does_not_join_the_remembered_conversation(self):
+        offline_result = {"summary": "Lists files.", "commands": ["ls -la"]}
+        with mock.patch("main.plan", side_effect=AgentError("no API key")), \\
+             mock.patch("main.offline_fallback.try_offline_plan", return_value=offline_result), \\
+             mock.patch("main.speak"), \\
+             mock.patch("main.get_confirmation", return_value="cancel"):
+            main.handle_request("list files", "en", self.work_dir, 30)
+
+        self.assertEqual(main._conversation_history, [])
+
+    def test_stop_phrase_resets_conversation(self):
+        main._conversation_history = [{"role": "user", "content": "earlier turn"}]
+        with mock.patch("main.speak"):
+            main.handle_request("stop listening", "en", self.work_dir, 30)
+        self.assertEqual(main._conversation_history, [])
+
+    def test_a_meta_command_like_jobs_leaves_history_untouched(self):
+        main._conversation_history = [{"role": "user", "content": "earlier turn"}]
+        with mock.patch("main.speak"):
+            main.handle_request("jobs", "en", self.work_dir, 30)
+        self.assertEqual(main._conversation_history, [{"role": "user", "content": "earlier turn"}])
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_i18n.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import unittest
@@ -3059,7 +3697,13 @@ from lib import jobs
 
 class TestJobs(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
+        # ignore_cleanup_errors: a job's daemon reaper thread (see
+        # lib/jobs.py's start()) can still be writing status.json in this
+        # directory the instant a test ends and tearDown races it to delete
+        # the folder -- that's a harmless timing overlap in the test, not a
+        # product bug, so cleanup tolerates "directory not empty" instead of
+        # failing the test that happened to run last.
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.work_dir = self._tmp.name
 
     def tearDown(self):
@@ -3318,6 +3962,229 @@ if __name__ == "__main__":
 `,
   },
   {
+    path: "test/test_termux_audio.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import shutil
+import subprocess
+import tempfile
+import unittest
+from unittest import mock
+
+import numpy as np
+
+from lib import termux_audio
+
+
+class TestIsTermux(unittest.TestCase):
+    def test_true_when_prefix_env_contains_com_termux(self):
+        with mock.patch.dict("os.environ", {"PREFIX": "/data/data/com.termux/files/usr"}):
+            self.assertTrue(termux_audio.is_termux())
+
+    def test_true_when_record_binary_is_on_path_even_without_prefix(self):
+        with mock.patch.dict("os.environ", {"PREFIX": ""}, clear=False):
+            with mock.patch("shutil.which", return_value="/usr/bin/termux-microphone-record"):
+                self.assertTrue(termux_audio.is_termux())
+
+    def test_false_on_a_plain_desktop_environment(self):
+        with mock.patch.dict("os.environ", {"PREFIX": "/usr"}, clear=False):
+            with mock.patch("shutil.which", return_value=None):
+                self.assertFalse(termux_audio.is_termux())
+
+
+class TestDecodeToFloat32(unittest.TestCase):
+    def setUp(self):
+        if not shutil.which("ffmpeg"):
+            self.skipTest("ffmpeg not available in this environment")
+
+    def test_decodes_a_real_wav_file_to_the_expected_float32_array(self):
+        rate = 16000
+        tone = (0.5 * np.sin(2 * np.pi * 440 * np.arange(rate) / rate)).astype("float32")
+
+        with tempfile.NamedTemporaryFile(suffix=".wav") as wav_file:
+            # Write a real WAV using ffmpeg itself so this test round-trips
+            # through the exact binary termux_audio shells out to, rather
+            # than trusting a second, unrelated WAV writer to agree with it.
+            proc = subprocess.run(
+                [
+                    "ffmpeg", "-y", "-v", "error",
+                    "-f", "f32le", "-ar", str(rate), "-ac", "1", "-i", "-",
+                    wav_file.name,
+                ],
+                input=tone.tobytes(),
+                capture_output=True,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            decoded = termux_audio._decode_to_float32(wav_file.name, rate)
+
+        self.assertEqual(decoded.dtype, np.dtype("float32"))
+        self.assertGreater(len(decoded), 0)
+        # Lossy container round-trip (this exercises the real ffmpeg binary),
+        # so compare on shape/energy rather than bit-for-bit equality.
+        self.assertAlmostEqual(
+            float(np.sqrt(np.mean(np.square(decoded)))),
+            float(np.sqrt(np.mean(np.square(tone)))),
+            places=2,
+        )
+
+    def test_missing_ffmpeg_raises_a_runtime_error_instead_of_returning_silence(self):
+        with mock.patch("shutil.which", return_value=None):
+            with self.assertRaises(RuntimeError):
+                termux_audio._decode_to_float32("/tmp/does-not-matter.m4a", 16000)
+
+    def test_ffmpeg_failure_raises_with_its_stderr_instead_of_returning_silence(self):
+        with mock.patch("shutil.which", return_value="/usr/bin/ffmpeg"):
+            failed = subprocess.CompletedProcess(args=[], returncode=1, stdout=b"", stderr=b"no such file")
+            with mock.patch("subprocess.run", return_value=failed):
+                with self.assertRaises(RuntimeError):
+                    termux_audio._decode_to_float32("/tmp/does-not-exist.m4a", 16000)
+
+
+class TestRecordClip(unittest.TestCase):
+    def test_missing_termux_api_binary_raises_a_clear_runtime_error(self):
+        with mock.patch("subprocess.run", side_effect=FileNotFoundError()):
+            with self.assertRaises(RuntimeError) as ctx:
+                termux_audio._record_clip(1.0, 16000)
+        self.assertIn("termux-microphone-record", str(ctx.exception))
+
+    def test_recording_that_never_produces_a_file_returns_silence_not_an_error(self):
+        # termux-microphone-record itself exits 0 (start/stop both succeed)
+        # but if the Termux:API app declined mic permission, no file ever
+        # appears -- that's "no audio captured", not a crash.
+        with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)):
+            with mock.patch("time.sleep"):
+                with mock.patch("os.path.exists", return_value=False):
+                    result = termux_audio._record_clip(1.0, 16000)
+        self.assertEqual(len(result), 0)
+
+
+class TestSpeakTermux(unittest.TestCase):
+    def test_returns_true_when_the_language_specific_call_succeeds(self):
+        with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertTrue(termux_audio.speak_termux("hello", "en"))
+        run.assert_called_once()
+        self.assertIn("-l", run.call_args[0][0])
+
+    def test_falls_back_to_default_voice_when_language_flag_is_rejected(self):
+        calls = [
+            subprocess.CalledProcessError(1, ["termux-tts-speak", "-l", "xx", "hi"]),
+            subprocess.CompletedProcess([], 0),
+        ]
+
+        def fake_run(*args, **kwargs):
+            result = calls.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with mock.patch("subprocess.run", side_effect=fake_run) as run:
+            self.assertTrue(termux_audio.speak_termux("hi", "xx"))
+        self.assertEqual(run.call_count, 2)
+
+    def test_returns_false_when_the_binary_is_missing_entirely(self):
+        with mock.patch("subprocess.run", side_effect=FileNotFoundError()):
+            self.assertFalse(termux_audio.speak_termux("hello"))
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
+    path: "test/test_typed_input.py",
+    contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+import queue
+import time
+import unittest
+from unittest import mock
+
+import main
+
+
+class TestStdinReaderLoop(unittest.TestCase):
+    def test_enqueues_each_nonempty_stripped_line_until_eof(self):
+        lines = iter(["  list files  ", "", "cost", EOFError()])
+
+        def fake_input():
+            item = next(lines)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        q = queue.Queue()
+        main._stdin_reader_loop(input_fn=fake_input, out_queue=q)
+
+        self.assertEqual(q.get_nowait(), "list files")
+        self.assertEqual(q.get_nowait(), "cost")
+        self.assertTrue(q.empty())
+
+    def test_returns_immediately_on_first_eof_without_enqueuing_anything(self):
+        def fake_input():
+            raise EOFError()
+
+        q = queue.Queue()
+        main._stdin_reader_loop(input_fn=fake_input, out_queue=q)
+        self.assertTrue(q.empty())
+
+
+class TestTakeTypedRequest(unittest.TestCase):
+    def setUp(self):
+        # take_typed_request() reads the module-level queue -- swap it out
+        # per test so tests can't see each other's leftover items.
+        self._original_queue = main._typed_input_queue
+        main._typed_input_queue = queue.Queue()
+
+    def tearDown(self):
+        main._typed_input_queue = self._original_queue
+
+    def test_returns_none_when_nothing_has_been_typed(self):
+        self.assertIsNone(main.take_typed_request())
+
+    def test_returns_a_queued_line_without_blocking(self):
+        main._typed_input_queue.put("check disk space")
+        start = time.monotonic()
+        result = main.take_typed_request()
+        elapsed = time.monotonic() - start
+        self.assertEqual(result, "check disk space")
+        self.assertLess(elapsed, 0.5)
+
+
+class TestStartStdinReader(unittest.TestCase):
+    def setUp(self):
+        self._original_thread = main._stdin_reader_thread
+
+    def tearDown(self):
+        main._stdin_reader_thread = self._original_thread
+
+    def test_returns_false_and_starts_nothing_when_stdin_is_not_a_tty(self):
+        main._stdin_reader_thread = None
+        with mock.patch("sys.stdin") as fake_stdin:
+            fake_stdin.isatty.return_value = False
+            self.assertFalse(main.start_stdin_reader())
+        self.assertIsNone(main._stdin_reader_thread)
+
+    def test_returns_true_and_starts_a_thread_when_stdin_is_a_tty(self):
+        main._stdin_reader_thread = None
+        with mock.patch("sys.stdin") as fake_stdin:
+            fake_stdin.isatty.return_value = True
+            with mock.patch("threading.Thread") as fake_thread_cls:
+                fake_thread = mock.Mock()
+                fake_thread_cls.return_value = fake_thread
+                self.assertTrue(main.start_stdin_reader())
+        fake_thread.start.assert_called_once()
+
+    def test_second_call_is_a_noop_once_already_started(self):
+        main._stdin_reader_thread = mock.Mock()  # pretend already started
+        with mock.patch("threading.Thread") as fake_thread_cls:
+            self.assertTrue(main.start_stdin_reader())
+        fake_thread_cls.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
+`,
+  },
+  {
     path: "test/test_wake.py",
     contents: `# Copyright (c) 2026 MultiNiche AI. All rights reserved.
 import unittest
@@ -3523,6 +4390,130 @@ echo
 echo "Done. Next steps:"
 echo "  1. Edit .env and set ANTHROPIC_API_KEY."
 echo "  2. Run: python3 main.py --lang en   (or --lang es / fr / de / pt / it)"
+`,
+  },
+  {
+    path: "scripts/setup-termux.sh",
+    contents: `#!/usr/bin/env bash
+# Copyright (c) 2026 MultiNiche AI. All rights reserved.
+#
+# Automated setup for Hey Term on Android, inside Termux.
+#
+# This is a different script from scripts/setup-linux.sh (not just "Linux
+# with different package names") because voice I/O itself is different on
+# Termux: there is no PortAudio and no espeak-ng speech engine reaching real
+# hardware, so lib/audio.py and lib/speak.py both route through
+# lib/termux_audio.py instead, which drives the mic and speaker through the
+# separate Termux:API app's CLI tools (termux-microphone-record,
+# termux-tts-speak). Those tools -- and ffmpeg, needed to decode what
+# termux-microphone-record records -- are what this script installs;
+# sounddevice/pyttsx3's system dependencies (portaudio, espeak-ng) are not
+# needed here at all.
+#
+# Usage:
+#   ./scripts/setup-termux.sh              # installs termux-api, ffmpeg, Python deps, .env
+#   ./scripts/setup-termux.sh --yes        # don't prompt before pkg installs
+#   ./scripts/setup-termux.sh --dry-run    # print what it would do, change nothing
+set -euo pipefail
+
+ASSUME_YES=0
+DRY_RUN=0
+
+usage() {
+  echo "Usage: $0 [--yes] [--dry-run]"
+  echo "  --yes     Don't prompt before running pkg install."
+  echo "  --dry-run Print what would happen; run nothing that changes the system."
+  exit "\${1:-0}"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --yes|-y) ASSUME_YES=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage 1 ;;
+  esac
+done
+
+run() {
+  if [ "$DRY_RUN" = "1" ]; then
+    echo "[dry-run] $*"
+  else
+    "$@"
+  fi
+}
+
+confirm_or_exit() {
+  if [ "$ASSUME_YES" = "1" ] || [ "$DRY_RUN" = "1" ] || [ ! -t 0 ]; then
+    return 0
+  fi
+  read -r -p "$1 [y/N] " reply
+  case "$reply" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) echo "Skipped."; return 1 ;;
+  esac
+}
+
+if [ -z "\${PREFIX:-}" ] || [ "\${PREFIX#*com.termux}" = "$PREFIX" ]; then
+  echo "This doesn't look like Termux (no com.termux in \\$PREFIX)." >&2
+  echo "On a regular Linux machine, use ./install.sh (scripts/setup-linux.sh) instead." >&2
+  exit 1
+fi
+
+echo "== Hey Term Termux setup =="
+echo
+
+# --- 1. termux-api (the CLI side of the Termux:API bridge) + ffmpeg -----
+echo "Note: this installs the *CLI tools* (termux-api package). You still need"
+echo "the separate \\"Termux:API\\" app installed from the same store you got"
+echo "Termux from (F-Droid or Play Store, matching publisher) -- the CLI tools"
+echo "talk to that app, and can't reach the mic/speaker without it."
+echo
+if confirm_or_exit "Install termux-api and ffmpeg via pkg?"; then
+  run pkg update -y
+  run pkg install -y termux-api ffmpeg
+fi
+echo
+
+# --- 2. Mic permission reminder -----------------------------------------
+echo "Android will prompt for microphone permission the first time Hey Term"
+echo "listens -- grant it, or set it manually in Android's App Info screen"
+echo "for Termux:API if the prompt doesn't appear."
+echo
+
+# --- 3. Python dependencies -----------------------------------------------
+echo "Installing Python dependencies..."
+PIP_ARGS=""
+if python3 -c "import sys; sys.exit(0 if sys.prefix != sys.base_prefix else 1)" 2>/dev/null; then
+  echo "(virtual environment detected -- installing into it)"
+else
+  PIP_ARGS="--break-system-packages"
+fi
+run python3 -m pip install -q $PIP_ARGS -r "$(dirname "$0")/../requirements-termux.txt"
+
+# --- 4. .env bootstrap ---------------------------------------------------
+ENV_DIR="$(dirname "$0")/.."
+if [ ! -f "$ENV_DIR/.env" ]; then
+  run cp "$ENV_DIR/.env.example" "$ENV_DIR/.env"
+  echo "Created .env -- edit it and add your ANTHROPIC_API_KEY before running Hey Term."
+else
+  echo ".env already exists -- leaving it alone."
+fi
+
+# --- 5. Pre-download the Whisper model -----------------------------------
+if [ "$DRY_RUN" = "0" ]; then
+  echo "Pre-downloading the Whisper speech-to-text model (one-time, ~150MB)..."
+  python3 -c "from faster_whisper import WhisperModel; WhisperModel('base')" || \\
+    echo "Model pre-download failed or was skipped -- it will just download on first run instead."
+else
+  echo "[dry-run] would pre-download the Whisper model"
+fi
+
+echo
+echo "Done. Next steps:"
+echo "  1. Install the \\"Termux:API\\" app if you haven't already (same store as Termux)."
+echo "  2. Edit .env and set ANTHROPIC_API_KEY."
+echo "  3. Run: python main.py --lang en   (or --lang es / fr / de / pt / it)"
 `,
   },
   {

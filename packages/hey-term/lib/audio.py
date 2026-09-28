@@ -2,15 +2,25 @@
 """Microphone capture. Imports sounddevice/numpy lazily inside functions so
 that importing this module (e.g. from a test) doesn't require audio hardware
 or system audio libraries (portaudio) to be installed.
+
+On Android/Termux, sounddevice has nothing to talk to -- there is no
+PortAudio backend there -- so both functions below check lib.termux_audio's
+is_termux() first and delegate to its termux-microphone-record-based
+implementation instead. Desktop (Windows/Linux/macOS) behavior is unchanged.
 """
+from . import termux_audio
 from .config import SAMPLE_RATE, SILENCE_HOLD_SECONDS, SILENCE_RMS_THRESHOLD
 
 
 def record_fixed(seconds: float, sample_rate: int = None):
     """Records a fixed-length clip and returns a 1-D float32 numpy array."""
+    rate = sample_rate or SAMPLE_RATE
+
+    if termux_audio.is_termux():
+        return termux_audio.record_fixed_termux(seconds, rate)
+
     import sounddevice as sd
 
-    rate = sample_rate or SAMPLE_RATE
     audio = sd.rec(int(seconds * rate), samplerate=rate, channels=1, dtype="float32")
     sd.wait()
     return audio.reshape(-1)
@@ -26,12 +36,15 @@ def record_until_silence(max_seconds: float, sample_rate: int = None,
     mid-sentence to think would get cut off. It waits for a sustained quiet
     stretch, not just one quiet instant.
     """
-    import numpy as np
-    import sounddevice as sd
-
     rate = sample_rate or SAMPLE_RATE
     hold = silence_hold if silence_hold is not None else SILENCE_HOLD_SECONDS
     threshold = rms_threshold if rms_threshold is not None else SILENCE_RMS_THRESHOLD
+
+    if termux_audio.is_termux():
+        return termux_audio.record_until_silence_termux(max_seconds, rate, hold, threshold)
+
+    import numpy as np
+    import sounddevice as sd
 
     block_seconds = 0.2
     block_size = int(rate * block_seconds)

@@ -1,3 +1,9 @@
+# For a regular Windows/Linux/macOS install. On Android/Termux, use
+# requirements-termux.txt instead (scripts/setup-termux.sh does this for
+# you) -- sounddevice and pyttsx3 below have no Android wheel and aren't
+# needed there, since lib/audio.py and lib/speak.py route through
+# lib/termux_audio.py (the Termux:API app's CLI tools + ffmpeg) instead of
+# these two when running under Termux.
 sounddevice>=0.4.6
 numpy>=1.24
 faster-whisper>=1.0.0
