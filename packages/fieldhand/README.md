@@ -9,9 +9,10 @@ chatbot did.
 A single self-contained file: `fieldhand.html`. No install, no build step,
 no dependencies. Open it in any modern browser.
 
-## What works offline, right out of this zip
+## What works fully offline
 
-- The job-ticket form (letter type, tone, parties, project, facts, the ask)
+- The job-ticket form (letter type, tone, length, parties, project, facts,
+  the ask)
 - The Upload tab — any file type; text files are read in, images are staged,
   everything else attaches for your own record
 - The scrub pass that strips stock AI phrasing, em dashes, curly quotes, and
@@ -19,21 +20,18 @@ no dependencies. Open it in any modern browser.
 - Copy / download of a finished letter as `.txt`
 - The Recent list (kept in your browser's local storage on this machine)
 
-## What needs Claude
+## What needs an internet connection
 
-The **Draft Letter** button asks Claude to write the first pass from your
-ticket. That call only works when this page is opened as a Claude artifact
-(claude.ai), signed in — it is not bundled into this offline file, because
-it runs on Claude's own infrastructure, not in your browser.
+The **Generate** button drafts the letter (and, when you upload a file,
+fills in the ticket from it first). It calls a small drafting service
+(`multinicheai.com/api/fieldhand-draft`) rather than running the model in
+your browser, so it needs internet — but nothing else. No Claude account, no
+sign-in, no dependency on this page being open inside claude.ai. It works the
+same whether you're on the hosted copy or this file downloaded to your
+phone or laptop.
 
-Two ways to use the AI drafting step:
-
-1. Open the hosted copy at the link on your order confirmation page and work
-   from there directly — the Upload tab, the scrub pass, and the Recent list
-   all work there too.
-2. Or draft the letter in any chat model you already use, paste the result
-   into this offline copy, and run it through the scrub pass here before you
-   send it — the scrub pass itself needs nothing but the browser.
+Everything else in the list above runs entirely in the file itself, with no
+connection at all.
 
 ## License
 

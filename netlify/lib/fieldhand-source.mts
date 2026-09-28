@@ -82,6 +82,11 @@ h1,h2,h3{font-family:'Special Elite','Courier New',monospace; font-weight:400; l
   display:flex; align-items:baseline; justify-content:space-between; gap:16px;
   border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap;
 }
+.masthead .brand{display:flex; align-items:center; gap:12px;}
+.masthead .logo{
+  width:44px; height:44px; object-fit:cover; border-radius:6px;
+  border:1px solid var(--rule-strong); box-shadow:0 1px 0 var(--shadow); flex:0 0 auto;
+}
 .masthead .stamp{
   font-family:'Special Elite','Courier New',monospace;
   font-size:clamp(28px,4vw,40px);
@@ -153,11 +158,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   font-family:'IBM Plex Sans Condensed',sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.06em;
   border:1px solid var(--ink); background:var(--ink); color:var(--paper);
   padding:9px 16px; border-radius:3px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:7px;
 }
 .btn:hover{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
 .btn:disabled{opacity:.45; cursor:not-allowed; background:var(--ink); color:var(--paper);}
 .btn.ghost{background:none; color:var(--ink); border:1px solid var(--rule-strong);}
 .btn.ghost:hover{border-color:var(--ink); background:none; color:var(--ink);}
+.btn svg{width:14px; height:14px; flex:0 0 auto; stroke:currentColor;}
 .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;}
 
 .addfact{
@@ -182,7 +189,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   white-space:pre-wrap; flex:1; min-height:220px; color:var(--ink);
 }
 .lettertext:empty::before{
-  content:"Fill in the ticket on the left and hit Draft Letter. Your draft appears here, already run through the scrub.";
+  content:"Pick a letter type, drop a file on the Upload tab if you have one, and hit Generate — it fills in what it can find and drafts the letter, already run through the scrub. Everything stays editable.";
   color:var(--ink-soft); font-style:normal;
 }
 .scrubreport{
@@ -252,8 +259,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
 
 <div class="wrap">
   <div class="masthead">
-    <div class="stamp">FIELD<span>HAND</span></div>
+    <div class="brand">
+      <img class="logo" src="data:image/jpeg;base64,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" alt="Hard hat">
+      <div class="stamp">FIELD<span>HAND</span></div>
+    </div>
     <div class="tag">Correspondence drafted like a contractor wrote it — not like a machine did.</div>
+    <button class="theme-toggle" id="themeToggleBtn" type="button">Toggle Paper/Blueprint</button>
   </div>
 
   <div class="tabs">
@@ -312,6 +323,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
               <option>Firm</option>
               <option>Neutral</option>
               <option>Conciliatory</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="length">Length</label>
+            <select id="length">
+              <option>Short</option>
+              <option selected>Standard</option>
+              <option>In-Depth</option>
             </select>
           </div>
           <div class="field">
@@ -375,7 +394,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
       </fieldset>
 
       <div class="btnrow">
-        <button class="btn" id="draftBtn">Draft Letter</button>
+        <button class="btn" id="draftBtn">Generate</button>
         <button class="btn ghost" id="clearBtn" type="button">Clear ticket</button>
       </div>
       <div class="status" id="status"></div>
@@ -395,8 +414,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
         </div>
       </div>
       <div class="btnrow" style="margin-top:12px;">
-        <button class="btn ghost" id="copyBtn" type="button">Copy</button>
-        <button class="btn ghost" id="downloadBtn" type="button">Download .txt</button>
+        <button class="btn ghost" id="copyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1.5"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>Copy</button>
+        <button class="btn ghost" id="downloadBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M4 19h16"></path></svg>Download .txt</button>
         <button class="btn ghost" id="reportBtn" type="button">Show scrub report</button>
       </div>
       <div class="footnote">Letters you draft here are kept in the Recent list below, in this browser only. Copy or download anything you need to keep.</div>
@@ -412,10 +431,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   <div class="view" id="view-upload">
     <div class="panel">
       <h2><span class="n">↑</span> Upload Job Files</h2>
-      <p style="font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 14px;">Any format — daily reports, photos, RFIs, contracts, spreadsheets, emails. These carry over to the Draft tab automatically.</p>
+      <p style="font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 14px;">Any format — daily reports, photos, RFIs, contracts, spreadsheets, emails. Drop one here, pick a letter type on the Draft tab, and hit Generate — it reads what's readable and fills in who it's to, the project, the facts it can find, all still editable before you send.</p>
       <div class="dropzone" id="dropzone" tabindex="0">
         <strong>Drop files here</strong> or click to browse — any format, any size.<br>
-        Photos and scans are handed to the draft as images. Text-based files (.txt, .csv, .md, .json, .rtf, .log) are read in as reference text. Other formats (.pdf, .docx, .xlsx, .zip, etc.) attach for your own record but aren't read into the draft — pull the key facts into the Facts list on the Draft tab.
+        Photos and scans are handed to the draft as images. Text files (.txt, .csv, .md, .json, .rtf, .log), PDFs, Word docs (.docx), and Excel files (.xlsx, .xls) are all read in as reference text. Other formats (.zip, etc.) attach for your own record but aren't read into the draft — pull the key facts into the Facts list on the Draft tab.
       </div>
       <input type="file" id="fileinput" multiple accept="*/*" hidden>
       <div class="filelist" id="filelist"></div>
@@ -432,10 +451,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
         <li>The job ticket, the scrubber, and your Recent list all work offline, right in the file.</li>
       </ol>
       <div class="btnrow">
-        <button class="btn" id="downloadAppBtn" type="button">Download fieldhand.html</button>
+        <button class="btn" id="downloadAppBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M4 19h16"></path></svg>Download fieldhand.html</button>
       </div>
       <div class="status" id="downloadStatus"></div>
-      <p class="fine">One thing doesn't travel with it: the <strong>Draft Letter</strong> button calls Claude to write the first pass, so that step needs this page open here, signed in. Everything after the draft — the scrub, the copy, the download, the recent list — runs entirely in the saved file itself, offline.</p>
+      <p class="fine">The <strong>Generate</strong> button calls a small drafting service to fill in details from an upload and write the first pass — that needs an internet connection, same as it does here, but nothing else: no Claude account, no sign-in. Everything after the draft — the scrub, the copy, the download, the recent list — runs entirely in the saved file itself, no connection needed.</p>
     </div>
   </div>
 </div>
@@ -464,40 +483,66 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   if (goUploadBtn) goUploadBtn.addEventListener('click', function(){ showTab('upload'); });
 
   // ---------- download the app itself ----------
-  document.getElementById('downloadAppBtn').addEventListener('click', async function(){
-    var statusEl2 = document.getElementById('downloadStatus');
-    var html = '<!doctype html>\\n' + document.documentElement.outerHTML;
+  // Three ways to get a file onto the device, tried in order:
+  // 1) the artifact's own downloads capability (works inside the Claude app/viewer)
+  // 2) a plain browser download via a temporary <a download> link (works when this
+  //    page is opened directly in a browser tab, e.g. Chrome, outside the app frame)
+  // 3) copy to clipboard, as a last resort
+  async function saveFile(filename, data, mime){
     if (downloadsFn) {
       try {
-        await downloadsFn.save({ filename: 'fieldhand.html', data: html });
-        statusFlash(this, 'Saved');
-        return;
+        await downloadsFn.save({ filename: filename, data: data });
+        return 'saved';
       } catch (e) {
-        // fall through to clipboard fallback below
+        // fall through
       }
     }
     try {
-      await navigator.clipboard.writeText(html);
-      statusEl2.textContent = 'Couldn’t trigger a save here, so the file’s HTML is on your clipboard — paste it into a text editor and save as fieldhand.html.';
+      var blob = new Blob([data], { type: mime || 'text/plain' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      return 'saved';
     } catch (e) {
-      statusEl2.textContent = 'Couldn’t save or copy automatically in this view. Try the Download .txt-style save from a browser tab instead of an embedded view.';
+      // fall through
+    }
+    try {
+      await navigator.clipboard.writeText(data);
+      return 'copied';
+    } catch (e) {
+      return 'failed';
+    }
+  }
+
+  document.getElementById('downloadAppBtn').addEventListener('click', async function(){
+    var statusEl2 = document.getElementById('downloadStatus');
+    var html = '<!doctype html>\\n' + document.documentElement.outerHTML;
+    var result = await saveFile('fieldhand.html', html, 'text/html');
+    if (result === 'saved') {
+      statusFlash(this, 'Saved');
+      statusEl2.textContent = '';
+    } else if (result === 'copied') {
+      statusEl2.textContent = 'Couldn’t trigger a save here, so the file’s HTML is on your clipboard — paste it into a text editor and save as fieldhand.html.';
+    } else {
+      statusEl2.textContent = 'Couldn’t save or copy automatically in this view. Try opening this page directly in Chrome (not embedded) and use Download again.';
     }
   });
 
   // ---------- theme toggle (optional manual override) ----------
-  var mh = document.querySelector('.masthead');
-  var tbtn = document.createElement('button');
-  tbtn.className = 'theme-toggle';
-  tbtn.type = 'button';
-  tbtn.textContent = 'Toggle Paper/Blueprint';
-  tbtn.addEventListener('click', function(){
+  // The button itself lives in the static HTML (not created here) so it
+  // can never get duplicated by a captured-and-reopened copy of the page.
+  document.getElementById('themeToggleBtn').addEventListener('click', function(){
     var root = document.documentElement;
     var cur = root.getAttribute('data-theme');
     if(cur === 'dark'){ root.setAttribute('data-theme','light'); }
     else if(cur === 'light'){ root.removeAttribute('data-theme'); }
     else { root.setAttribute('data-theme','dark'); }
   });
-  mh.appendChild(tbtn);
 
   // ---------- facts list ----------
   var factlist = document.getElementById('factlist');
@@ -527,25 +572,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   }
 
   // ---------- example starting state ----------
-  function loadExample(){
-    document.getElementById('ltype').value = 'Claim Response';
-    document.getElementById('tone').value = 'Firm';
+  function startCleared(){
     document.getElementById('ldate').value = new Date().toISOString().slice(0,10);
-    document.getElementById('fromName').value = 'J. Dupree, Project Manager';
-    document.getElementById('fromCo').value = 'Dupree Contracting LLC';
-    document.getElementById('toName').value = 'R. Hager, Project Engineer';
-    document.getElementById('toCo').value = 'City Engineering Office';
-    document.getElementById('project').value = 'Elm Street Lift Station Upgrade';
-    document.getElementById('ref').value = 'Section 01 26 00 — Time Extensions';
-    document.getElementById('subject').value = 'Response to Notice of Liquidated Damages';
-    document.getElementById('ask').value = 'Reject the liquidated damages assessment and request a 21-day time extension tied to the dewatering delay documented in daily reports #38–44.';
-    document.getElementById('notes').value = 'Keep it short and factual. No legal citations. Point directly at the daily reports and the RFI log.';
     factlist.innerHTML = '';
-    addFact('Unforeseen groundwater intrusion encountered at Station 4+50 on 6/10, confirmed by geotech on 6/11.');
-    addFact('Dewatering equipment mobilized 6/12; excavation resumed 6/19 — 7 working days lost, logged in daily reports #38–44.');
-    addFact('RFI-014 requesting revised shoring design was submitted 6/13 and not answered until 6/24, adding 4 further days of delay not caused by the contractor.');
+    addFact('');
   }
-  loadExample();
+  startCleared();
 
   // ---------- AI-tell scrubber ----------
   function scrub(raw){
@@ -602,39 +634,149 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     return { text: t, report: report };
   }
 
-  // ---------- capability wiring ----------
-  var sampleFn = null;
+  // ---------- drafting: native artifact API, with a backend fallback ----------
+  // Inside the claude.ai viewer, window.claude.use('sample') already works — use it
+  // directly there, same as always. A downloaded copy of this file has no such API
+  // (it only exists inside the claude.ai iframe), so when it's missing this falls back
+  // to our own endpoint (Netlify function, holds the Claude API key server-side).
+  // That makes drafting work from any browser — the live page or this file on your
+  // phone — as long as there's an internet connection, without changing behavior for
+  // anyone already using the live page.
+  var API_BASE = 'https://multinicheai.com';
+  var nativeSample = null;
   var downloadsFn = null;
-  var imageLimits = null;
+  var imageLimits = { maxCount: 5 };
+
   (async function(){
     try {
       if (window.claude && window.claude.use) {
-        sampleFn = await window.claude.use('sample');
+        nativeSample = await window.claude.use('sample');
         downloadsFn = await window.claude.use('downloads');
+        if (nativeSample && nativeSample.limits) {
+          try {
+            var lims = await nativeSample.limits();
+            if (lims && lims.images) imageLimits = lims.images;
+          } catch (e) {}
+        }
       }
     } catch (e) {}
-    if (!sampleFn) {
-      var draftBtn = document.getElementById('draftBtn');
-      draftBtn.disabled = true;
-      document.getElementById('status').textContent = 'Drafting isn’t available in this view.';
-    } else if (sampleFn.limits) {
-      try {
-        var lims = await sampleFn.limits();
-        imageLimits = lims && lims.images ? lims.images : null;
-      } catch (e) {}
-    }
-    if (!downloadsFn) {
-      document.getElementById('downloadBtn').disabled = true;
-    }
     renderFileList();
   })();
+
+  function apiError(code, message){
+    var e = new Error(message || code);
+    e.code = code;
+    return e;
+  }
+
+  function encodeImages(files){
+    return Promise.all(Array.prototype.map.call(files, function(file){
+      return new Promise(function(resolve, reject){
+        var reader = new FileReader();
+        reader.onload = function(){
+          var result = String(reader.result || '');
+          var comma = result.indexOf(',');
+          var meta = result.slice(5, result.indexOf(';'));
+          resolve({ mediaType: meta || file.type || 'image/jpeg', data: result.slice(comma + 1) });
+        };
+        reader.onerror = function(){ reject(new Error('Could not read ' + file.name)); };
+        reader.readAsDataURL(file);
+      });
+    }));
+  }
+
+  async function callBackend(mode, prompt, opts){
+    opts = opts || {};
+    var images = [];
+    if (opts.images && opts.images.length) {
+      try { images = await encodeImages(opts.images); }
+      catch (e) { throw apiError('image_rejected', e.message); }
+    }
+    var res;
+    try {
+      res = await fetch(API_BASE + '/api/fieldhand-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: mode, prompt: prompt, images: images })
+      });
+    } catch (e) {
+      throw apiError('network', 'Could not reach the drafting service — check your internet connection.');
+    }
+    if (res.status === 429) throw apiError('rate_limited', 'Rate limited.');
+    if (!res.ok) throw apiError('error', 'Drafting failed.');
+    return res;
+  }
+
+  async function backendDraft(prompt, opts){
+    opts = opts || {};
+    var res = await callBackend('draft', prompt, opts);
+    if (!res.body) {
+      var data = await res.json().catch(function(){ return null; });
+      return { text: (data && data.text) || '' };
+    }
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var full = '';
+    var errMsg = null;
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      var lines = buffer.split('\\n');
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        var evt;
+        try { evt = JSON.parse(line); } catch (e) { continue; }
+        if (evt.type === 'text') {
+          full += evt.text;
+          if (opts.onText) opts.onText({ text: full });
+        } else if (evt.type === 'error') {
+          errMsg = evt.message;
+        }
+      }
+    }
+    if (!full && errMsg) throw apiError('error', errMsg);
+    return { text: full };
+  }
+
+  // The single entry point the rest of the page calls. Prefers the native artifact
+  // API (already works today on the live page); falls back to the backend endpoint
+  // when that API isn't present, i.e. a downloaded copy opened outside claude.ai.
+  async function sampleFn(prompt, opts){
+    if (nativeSample) return nativeSample(prompt, opts);
+    return backendDraft(prompt, opts);
+  }
+
+  sampleFn.json = async function(prompt, opts){
+    if (nativeSample && nativeSample.json) {
+      try { return await nativeSample.json(prompt, opts); }
+      catch (e) { return null; }
+    }
+    try {
+      var res = await callBackend('extract', prompt, opts);
+      var data = await res.json();
+      return data && data.json ? data.json : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   // ---------- attachments ----------
   var attachments = []; // { file, kind }
   var TEXT_EXT = /\\.(txt|csv|tsv|md|markdown|json|rtf|log|xml|yaml|yml)$/i;
+  var PDF_EXT = /\\.pdf$/i;
+  var DOCX_EXT = /\\.docx$/i;
+  var XLSX_EXT = /\\.(xlsx|xls)$/i;
 
   function classify(file){
     if (file.type.indexOf('image/') === 0) return 'image';
+    if (file.type === 'application/pdf' || PDF_EXT.test(file.name)) return 'pdf';
+    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || DOCX_EXT.test(file.name)) return 'docx';
+    if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.type === 'application/vnd.ms-excel' || XLSX_EXT.test(file.name)) return 'xlsx';
     if (file.type.indexOf('text/') === 0 || file.type === 'application/json' ||
         file.type === 'application/xml' || TEXT_EXT.test(file.name)) return 'text';
     return 'binary';
@@ -646,8 +788,96 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   }
   function badgeLabel(kind, idx, imageIdxAllowed){
     if (kind === 'text') return 'text → draft';
+    if (kind === 'pdf') return 'pdf → draft';
+    if (kind === 'docx') return 'doc → draft';
+    if (kind === 'xlsx') return 'sheet → draft';
     if (kind === 'image') return imageIdxAllowed ? 'image → draft' : 'image — not sent';
     return 'attached only';
+  }
+  // Reused for the filechip's meta color — pdf/docx/xlsx read in just like text does.
+  function cssKind(kind){
+    return (kind === 'pdf' || kind === 'docx' || kind === 'xlsx') ? 'text' : kind;
+  }
+
+  // ---------- lazy-loaded readers for pdf/docx/xlsx ----------
+  // These libraries only load if the user actually attaches that file type, so the
+  // page itself stays light. All parsing happens right in the browser — no upload
+  // to any server — so it works the same whether drafting goes through the live
+  // artifact's native API or the backend fallback.
+  var PDFJS_VERSION = '3.4.120';
+  var libPromises = {};
+  function loadScript(url){
+    if (libPromises[url]) return libPromises[url];
+    libPromises[url] = new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function(){ resolve(); };
+      s.onerror = function(){ reject(new Error('Could not load ' + url)); };
+      document.head.appendChild(s);
+    });
+    return libPromises[url];
+  }
+  function ensurePdfJs(){
+    return loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.js').then(function(){
+      if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.js';
+      }
+    });
+  }
+  function ensureMammoth(){
+    return loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+  }
+  function ensureXlsx(){
+    return loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  }
+
+  function readPdfFile(file){
+    return ensurePdfJs().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      return window.pdfjsLib.getDocument({ data: buf }).promise;
+    }).then(function(pdf){
+      var maxPages = Math.min(pdf.numPages, 25);
+      var pages = [];
+      var chain = Promise.resolve();
+      var _loop = function(pageNum){
+        chain = chain.then(function(){
+          return pdf.getPage(pageNum).then(function(page){ return page.getTextContent(); })
+            .then(function(tc){ pages.push(tc.items.map(function(it){ return it.str; }).join(' ')); });
+        });
+      };
+      for (var i = 1; i <= maxPages; i++) _loop(i);
+      return chain.then(function(){
+        var out = pages.join('\\n\\n');
+        if (pdf.numPages > maxPages) out += '\\n\\n[...' + (pdf.numPages - maxPages) + ' more page(s) not read...]';
+        return out;
+      });
+    }).catch(function(e){ return ''; });
+  }
+
+  function readDocxFile(file){
+    return ensureMammoth().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      return window.mammoth.extractRawText({ arrayBuffer: buf });
+    }).then(function(result){
+      return (result && result.value) || '';
+    }).catch(function(e){ return ''; });
+  }
+
+  function readXlsxFile(file){
+    return ensureXlsx().then(function(){
+      return file.arrayBuffer();
+    }).then(function(buf){
+      var wb = window.XLSX.read(buf, { type: 'array' });
+      var parts = [];
+      wb.SheetNames.forEach(function(name){
+        var csv = window.XLSX.utils.sheet_to_csv(wb.Sheets[name]);
+        if (csv && csv.trim()) parts.push('[Sheet: ' + name + ']\\n' + csv);
+      });
+      return parts.join('\\n\\n');
+    }).catch(function(e){ return ''; });
   }
 
   var dropzone = document.getElementById('dropzone');
@@ -693,7 +923,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
       name.className = 'fname';
       name.textContent = item.file.name;
       var meta = document.createElement('span');
-      meta.className = 'fmeta ' + item.kind;
+      meta.className = 'fmeta ' + cssKind(item.kind);
       meta.textContent = badgeLabel(item.kind, idx, allowedAsImage) + ' · ' + fmtSize(item.file.size);
       var rm = document.createElement('button');
       rm.type = 'button';
@@ -736,6 +966,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     });
   }
 
+  var LENGTH_GUIDANCE = {
+    'Short': 'Keep it tight — 3 to 5 short paragraphs total, the facts and the ask only, nothing else. No throat-clearing, no restating the obvious.',
+    'Standard': 'A normal business letter length — enough paragraphs to state the facts clearly and make the ask, without padding.',
+    'In-Depth': 'Go thorough — walk through each fact with its date and source in its own short paragraph, lay out the reasoning that connects the facts to the ask, and address likely questions or objections before closing. Still plain, still no filler — thorough because the facts warrant it, not because the sentences got longer.'
+  };
+
   var TYPE_GUIDANCE = {
     'Request for Proposal (RFP)': 'Lay out the scope of work being requested, what a responding proposal needs to include (pricing, schedule, qualifications), and the response deadline. Structure it so each requirement is easy to find.',
     'Request for Quote (RFQ)': 'Spell out exactly what needs pricing (materials, quantities, specs) and the deadline and format for the quote. Keep it short and itemized.',
@@ -767,6 +1003,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     lines.push('Use plain, direct language a working contractor would actually write: short sentences, concrete dated facts, no corporate throat-clearing, no hedging, no phrases like "I hope this finds you well," "please don\\'t hesitate," "furthermore," or "in conclusion."');
     var guidance = TYPE_GUIDANCE[f.ltype];
     if (guidance) lines.push('For this letter type specifically: ' + guidance);
+    var lengthGuidance = LENGTH_GUIDANCE[f.length] || LENGTH_GUIDANCE.Standard;
+    lines.push('Length: ' + lengthGuidance);
     lines.push('');
     lines.push('Letter type: ' + f.ltype);
     lines.push('Tone: ' + f.tone);
@@ -801,6 +1039,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     return {
       ltype: document.getElementById('ltype').value,
       tone: document.getElementById('tone').value,
+      length: document.getElementById('length').value,
       ldate: document.getElementById('ldate').value || new Date().toISOString().slice(0,10),
       fromName: document.getElementById('fromName').value.trim(),
       fromCo: document.getElementById('fromCo').value.trim(),
@@ -828,14 +1067,74 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     document.getElementById('lh-right').textContent = f.subject ? (f.subject + ' — ' + f.ldate) : f.ldate;
   }
 
+  // ---------- auto-fill the ticket from whatever was uploaded ----------
+  var SCALAR_FIELD_IDS = ['toName', 'toCo', 'fromName', 'fromCo', 'project', 'ref', 'subject', 'ask'];
+
+  function buildExtractionPrompt(ltype, textExcerpts){
+    var lines = [];
+    lines.push('You are reading job-site documents to prefill a contractor correspondence ticket for a "' + ltype + '" letter.');
+    lines.push('From the material below (and any attached images), pull out only what is actually present. Do not guess or invent anything — leave a field as an empty string, or facts as an empty array, when the material does not say.');
+    lines.push('Fields: who the letter should go to (toName: name and title if given; toCo: their company or office), who it is from if evident (fromName, fromCo), the project name (project), any reference number such as an RFI#, CO#, or contract section (ref), a short one-line subject fitting a ' + ltype + ' (subject), a list of concrete dated facts found in the material, each as one short standalone sentence (facts, an array of strings, most relevant first, at most 8), and what the letter should ask for or accomplish if the material makes that evident (ask).');
+    if (textExcerpts && textExcerpts.length) {
+      lines.push('');
+      lines.push('Material:');
+      textExcerpts.forEach(function(ex){
+        lines.push('--- ' + ex.name + ' ---');
+        lines.push(ex.content);
+      });
+    }
+    lines.push('');
+    lines.push('Reply with ONLY a JSON object, no other text, with exactly these keys: toName, toCo, fromName, fromCo, project, ref, subject, facts, ask.');
+    return lines.join('\\n');
+  }
+
+  function fieldIsBlank(id){
+    return !document.getElementById(id).value.trim();
+  }
+
+  function applyExtractedFields(extracted){
+    var filled = [];
+    SCALAR_FIELD_IDS.forEach(function(id){
+      var val = extracted && typeof extracted[id] === 'string' ? extracted[id].trim() : '';
+      if (val && fieldIsBlank(id)) {
+        document.getElementById(id).value = val;
+        filled.push(id);
+      }
+    });
+    var existing = getFacts().map(function(s){ return s.toLowerCase(); });
+    var addedFacts = 0;
+    if (extracted && Array.isArray(extracted.facts)) {
+      var blankRows = Array.prototype.slice.call(factlist.querySelectorAll('input')).filter(function(i){ return !i.value.trim(); });
+      extracted.facts.forEach(function(fact){
+        if (typeof fact !== 'string') return;
+        var trimmed = fact.trim();
+        if (!trimmed || existing.indexOf(trimmed.toLowerCase()) !== -1) return;
+        if (blankRows.length) {
+          blankRows.shift().value = trimmed;
+        } else {
+          addFact(trimmed);
+        }
+        existing.push(trimmed.toLowerCase());
+        addedFacts++;
+      });
+    }
+    return { filled: filled, addedFacts: addedFacts };
+  }
+
+  async function extractFromAttachments(ltype, textExcerpts, imageFiles){
+    if (!sampleFn || !sampleFn.json) return null;
+    if (!textExcerpts.length && !imageFiles.length) return null;
+    var opts = { modelTier: 'quick' };
+    if (imageFiles.length) opts.images = imageFiles;
+    try {
+      return await sampleFn.json(buildExtractionPrompt(ltype, textExcerpts), opts);
+    } catch (e) {
+      return null;
+    }
+  }
+
   document.getElementById('draftBtn').addEventListener('click', async function(){
     if (!sampleFn) return;
-    var f = readForm();
-    if (!f.subject || f.facts.length === 0) {
-      statusEl.textContent = 'Add a subject line and at least one fact first.';
-      return;
-    }
-    setLetterhead(f);
     var btn = this;
     btn.disabled = true;
     statusEl.textContent = 'Reading attachments…';
@@ -845,18 +1144,57 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
     scrubreportEl.classList.remove('show');
 
     try {
-      var textItems = attachments.filter(function(a){ return a.kind === 'text'; });
+      var readableItems = attachments.filter(function(a){
+        return a.kind === 'text' || a.kind === 'pdf' || a.kind === 'docx' || a.kind === 'xlsx';
+      });
       var textExcerpts = [];
-      for (var i = 0; i < textItems.length; i++) {
-        var content = await readTextFile(textItems[i].file);
-        textExcerpts.push({ name: textItems[i].file.name, content: content.slice(0, 4000) });
+      for (var i = 0; i < readableItems.length; i++) {
+        var ritem = readableItems[i];
+        var content = '';
+        if (ritem.kind === 'text') {
+          content = await readTextFile(ritem.file);
+        } else if (ritem.kind === 'pdf') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (PDF)…';
+          content = await readPdfFile(ritem.file);
+        } else if (ritem.kind === 'docx') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (Word doc)…';
+          content = await readDocxFile(ritem.file);
+        } else if (ritem.kind === 'xlsx') {
+          statusEl.textContent = 'Reading ' + ritem.file.name + ' (spreadsheet)…';
+          content = await readXlsxFile(ritem.file);
+        }
+        if (content) textExcerpts.push({ name: ritem.file.name, content: content.slice(0, 6000) });
       }
+      statusEl.textContent = 'Reading attachments…';
 
       var imageBudget = imageLimits ? imageLimits.maxCount : 0;
       var imageFiles = attachments
         .filter(function(a){ return a.kind === 'image'; })
         .slice(0, imageBudget)
         .map(function(a){ return a.file; });
+
+      var ltypeNow = document.getElementById('ltype').value;
+      if (textExcerpts.length || imageFiles.length) {
+        statusEl.textContent = 'Finding who it’s to and filling in the details…';
+        var extracted = await extractFromAttachments(ltypeNow, textExcerpts, imageFiles);
+        if (extracted) {
+          var result = applyExtractedFields(extracted);
+          if (result.filled.length || result.addedFacts) {
+            statusEl.textContent = 'Filled in ' + result.filled.length + ' field' + (result.filled.length === 1 ? '' : 's') +
+              (result.addedFacts ? ' and ' + result.addedFacts + ' fact' + (result.addedFacts === 1 ? '' : 's') : '') +
+              ' from your upload — check them, then drafting…';
+          }
+        }
+      }
+
+      var f = readForm();
+      if (!f.subject || f.facts.length === 0) {
+        statusEl.textContent = 'Still need a subject line and at least one fact — add one (or upload a file that has them) and hit Generate again.';
+        statusEl.className = 'status';
+        btn.disabled = false;
+        return;
+      }
+      setLetterhead(f);
 
       var prompt = buildPrompt(f, textExcerpts);
       statusEl.textContent = 'Drafting…';
@@ -899,6 +1237,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
         statusEl.textContent = 'One of the attached images couldn’t be sent (too large or wrong format) — remove it and try again.';
       } else if (code === 'images_unavailable') {
         statusEl.textContent = 'This view can’t send images — attach text files instead, or type the details into the facts list.';
+      } else if (code === 'network') {
+        statusEl.textContent = 'Could not reach the drafting service — check your internet connection and try again.';
       } else {
         statusEl.textContent = 'Could not draft that one. Try again.';
       }
@@ -947,21 +1287,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--focus); outline-
   });
 
   document.getElementById('downloadBtn').addEventListener('click', async function(){
-    if (!lastFinal || !downloadsFn) return;
+    if (!lastFinal) return;
     var f = readForm();
     var name = (f.subject || 'letter').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'letter';
-    try {
-      await downloadsFn.save({ filename: name + '.txt', data: lastFinal });
-      statusFlash(this, 'Saved');
-    } catch (e) {
-      statusFlash(this, 'Declined');
-    }
+    var result = await saveFile(name + '.txt', lastFinal, 'text/plain');
+    if (result === 'saved') statusFlash(this, 'Saved');
+    else if (result === 'copied') statusFlash(this, 'Copied');
+    else statusFlash(this, 'Failed');
   });
 
   function statusFlash(btn, word){
+    var icon = btn.querySelector('svg');
     var old = btn.textContent;
     btn.textContent = word;
-    setTimeout(function(){ btn.textContent = old; }, 1200);
+    if (icon) btn.insertBefore(icon, btn.firstChild);
+    setTimeout(function(){
+      btn.textContent = old;
+      if (icon) btn.insertBefore(icon, btn.firstChild);
+    }, 1200);
   }
 
   // ---------- recent log (localStorage, per-browser convenience only) ----------
@@ -1044,9 +1387,10 @@ chatbot did.
 A single self-contained file: \`fieldhand.html\`. No install, no build step,
 no dependencies. Open it in any modern browser.
 
-## What works offline, right out of this zip
+## What works fully offline
 
-- The job-ticket form (letter type, tone, parties, project, facts, the ask)
+- The job-ticket form (letter type, tone, length, parties, project, facts,
+  the ask)
 - The Upload tab — any file type; text files are read in, images are staged,
   everything else attaches for your own record
 - The scrub pass that strips stock AI phrasing, em dashes, curly quotes, and
@@ -1054,21 +1398,18 @@ no dependencies. Open it in any modern browser.
 - Copy / download of a finished letter as \`.txt\`
 - The Recent list (kept in your browser's local storage on this machine)
 
-## What needs Claude
+## What needs an internet connection
 
-The **Draft Letter** button asks Claude to write the first pass from your
-ticket. That call only works when this page is opened as a Claude artifact
-(claude.ai), signed in — it is not bundled into this offline file, because
-it runs on Claude's own infrastructure, not in your browser.
+The **Generate** button drafts the letter (and, when you upload a file,
+fills in the ticket from it first). It calls a small drafting service
+(\`multinicheai.com/api/fieldhand-draft\`) rather than running the model in
+your browser, so it needs internet — but nothing else. No Claude account, no
+sign-in, no dependency on this page being open inside claude.ai. It works the
+same whether you're on the hosted copy or this file downloaded to your
+phone or laptop.
 
-Two ways to use the AI drafting step:
-
-1. Open the hosted copy at the link on your order confirmation page and work
-   from there directly — the Upload tab, the scrub pass, and the Recent list
-   all work there too.
-2. Or draft the letter in any chat model you already use, paste the result
-   into this offline copy, and run it through the scrub pass here before you
-   send it — the scrub pass itself needs nothing but the browser.
+Everything else in the list above runs entirely in the file itself, with no
+connection at all.
 
 ## License
 
